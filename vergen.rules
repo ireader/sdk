@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioToolFile
+	Name="ver generator"
+	Version="8.00"
+	>
+	<Rules>
+		<CustomBuildRule
+			Name="vergenerator"
+			DisplayName="vergenerator"
+			CommandLine="poversion.bat $(InputDir)"
+			Outputs="$(InputName).obj"
+			FileExtensions="*.ver"
+			ExecutionDescription="Generating version info from SVN workcopy..."
+			>
+			<Properties>
+			</Properties>
+		</CustomBuildRule>
+	</Rules>
+</VisualStudioToolFile>
