@@ -7,6 +7,7 @@
 #include <time.h>
 #include "sys/process.h"
 #include "sys/sync.hpp"
+#include "sys/path.h"
 #include "log.h"
 
 static int g_logLevel = LOG_WARNING;
@@ -27,15 +28,7 @@ static int log_open()
 		if(0 != process_selfname(procname, sizeof(procname)))
 			return errno;
 
-		const char* p = strrchr(procname, '/');
-#if defined(_WIN32) || defined(_WIN64)
-		if(!p)
-			p = strrchr(procname, '\\');
-#endif
-		if(!p)
-			p = procname;
-
-		sprintf(g_logFile, "%s.%d.log", p, process_self());
+		sprintf(g_logFile, "%s.%d.log", path_basename(procname), process_self());
 	}
 
 	g_fp = fopen(g_logFile, "w+");

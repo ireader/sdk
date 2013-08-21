@@ -1,10 +1,6 @@
 #ifndef _dllexport_h_
 #define _dllexport_h_
 
-#ifdef  __cplusplus
-extern "C" {
-#endif
-
 #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
 	#define DLL_EXPORT_API __declspec(dllexport)
 	#define DLL_IMPORT_API __declspec(dllimport)
@@ -16,10 +12,6 @@ extern "C" {
 		#define DLL_EXPORT_API
 		#define DLL_IMPORT_API
 	#endif
-#endif
-
-#ifdef  __cplusplus
-}
 #endif
 
 #endif /* !_dllexport_h_ */

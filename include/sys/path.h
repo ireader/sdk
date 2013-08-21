@@ -117,25 +117,19 @@ inline int path_realpath(const char* path, char* resolved_path, unsigned int byt
 inline const char* path_basename(const char* fullname)
 {
 	const char* p = strrchr(fullname, '/');
-#if defined(OS_WINDOWS)
-	if(!p)
-		p = strrchr(fullname, '\\');
-#endif
+	const char* p2 = strrchr(fullname, '\\');
+	if(p2 > p) p = p2;
 	return p ? p+1 : fullname;
 }
 
 inline int path_dirname(const char* fullname, char* dir)
 {
-	const char* p = strrchr(fullname, '/');
-#if defined(OS_WINDOWS)
-	if(!p)
-		p = strrchr(fullname, '\\');
-#endif
-	if(!p)
-		return -1;
+	const char* p = path_basename(fullname);
+	if(p == fullname)
+		return -1; // don't valid path name
 
 	memmove(dir, fullname, p-fullname);
-	dir[p-fullname] = 0;
+	dir[p-fullname - (p-fullname>1? 1 : 0)] = 0;
 	return 0;
 }
 

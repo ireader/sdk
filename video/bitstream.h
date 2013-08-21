@@ -7,7 +7,7 @@ extern "C" {
 
 typedef struct _bitstream_t
 {
-	const unsigned char* stream;
+	unsigned char* stream;
 	int bytes;
 	int offsetBytes;
 	int offsetBits;

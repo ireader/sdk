@@ -6,14 +6,23 @@
 
 bitstream_t* bitstream_create(const unsigned char* stream, int bytes)
 {
+	int i, j;
 	bitstream_t* o;
 
-	o = (bitstream_t*)malloc(sizeof(bitstream_t));
+	o = (bitstream_t*)malloc(sizeof(bitstream_t) + bytes);
 	if(!o)
 		return o;
 
-	o->stream = stream;
-	o->bytes = bytes;
+	//o->stream = stream;
+	o->stream = (unsigned char*)(o + 1);
+	for(i=j=0; i<bytes; i++)
+	{
+		if(stream[i] == 0x03 && i>1 && stream[i-1]==0 && stream[i-2]==0)
+			continue;
+
+		o->stream[j++] = stream[i];
+	}
+	o->bytes = j;
 	o->offsetBits = 0;
 	o->offsetBytes = 0;
 	return o;
