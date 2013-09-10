@@ -70,7 +70,7 @@ inline int path_rmdir(const char* path)
 	BOOL r = RemoveDirectoryA(path);
 	return TRUE==r?0:(int)GetLastError();
 #else
-	int r = ::rmdir(path);
+	int r = rmdir(path);
 	return 0 == r? 0 : errno;
 #endif
 }
@@ -83,7 +83,7 @@ inline int path_getcwd(char* path, unsigned int bytes)
 	DWORD r = GetCurrentDirectoryA(bytes, path);
 	return 0==r ? GetLastError() : 0;
 #else
-	char* p = ::getcwd(path, bytes);
+	char* p = getcwd(path, bytes);
 	return p ? 0 : errno;
 #endif
 }
@@ -96,7 +96,7 @@ inline int path_chcwd(const char* path)
 	BOOL r = SetCurrentDirectoryA(path);
 	return TRUE==r ? 0 : (int)GetLastError();
 #else
-	int r = ::chdir(path);
+	int r = chdir(path);
 	return 0 == r? 0 : errno;
 #endif
 }
@@ -141,7 +141,7 @@ inline int path_rmfile(const char* file)
 	BOOL r = DeleteFileA(file);
 	return TRUE==r ? 0 : (int)GetLastError();
 #else
-	int r = ::remove(file);
+	int r = remove(file);
 	return 0 == r? 0 : errno;
 #endif
 }
@@ -154,7 +154,7 @@ inline int path_rename(const char* oldpath, const char* newpath)
 	BOOL r = MoveFileA(oldpath, newpath);
 	return TRUE==r?0:(int)GetLastError();
 #else
-	int r = ::rename(oldpath, newpath);
+	int r = rename(oldpath, newpath);
 	return 0 == r? 0 : errno;
 #endif
 }

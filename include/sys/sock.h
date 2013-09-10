@@ -32,6 +32,7 @@ typedef WSABUF	socket_bufvec_t;
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
+#include <poll.h>
 
 typedef int socket_t;
 typedef struct iovec socket_bufvec_t;
@@ -399,21 +400,34 @@ inline int socket_select_writefds(IN int n, IN fd_set* fds, IN struct timeval* t
 
 inline int socket_select_read(IN socket_t sock, IN int timeout)
 {
+#if defined(OS_LINUX)
+	struct pollfd fds;
+	fds.fd = sock;
+	fds.events = POLLIN;
+	fds.revents = 0;
+	return poll(&fds, 1, timeout);
+#else
 	fd_set fds;
 	struct timeval tv;
-
 	assert(socket_invalid != sock); // linux: FD_SET error
-
 	FD_ZERO(&fds);
 	FD_SET(sock, &fds);
 
 	tv.tv_sec = timeout/1000;
 	tv.tv_usec = (timeout%1000) * 1000;
-	return socket_select_readfds(sock+1, &fds, -1==timeout?NULL:&tv);
+	return socket_select_readfds(sock+1, &fds, timeout<0?NULL:&tv);
+#endif
 }
 
 inline int socket_select_write(IN socket_t sock, IN int timeout)
 {
+#if defined(OS_LINUX)
+	struct pollfd fds;
+	fds.fd = sock;
+	fds.events = POLLOUT;
+	fds.revents = 0;
+	return poll(&fds, 1, timeout);
+#else
 	fd_set fds;
 	struct timeval tv;
 
@@ -424,7 +438,8 @@ inline int socket_select_write(IN socket_t sock, IN int timeout)
 
 	tv.tv_sec = timeout/1000;
 	tv.tv_usec = (timeout%1000) * 1000;
-	return socket_select_writefds(sock+1, &fds, -1==timeout?NULL:&tv);
+	return socket_select_writefds(sock+1, &fds, timeout<0?NULL:&tv);
+#endif
 }
 
 inline int socket_readable(IN socket_t sock)
@@ -440,24 +455,8 @@ inline int socket_writeable(IN socket_t sock)
 inline int socket_send_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout)
 {
 	int r;
-	fd_set fds;
-	struct timeval tv;
 
-	FD_ZERO(&fds);
-	FD_SET(sock, &fds);
-
-	// check timeout
-	if(-1 != timeout)
-	{
-		tv.tv_sec = timeout/1000;
-		tv.tv_usec = (timeout%1000) * 1000;
-		r = socket_select_writefds(sock+1, &fds, &tv);
-	}
-	else
-	{
-		r = socket_select_writefds(sock+1, &fds, NULL); // block indefinitely
-	}
-
+	r = socket_select_write(sock, timeout);
 	if(r <= 0)
 		return r;
 
@@ -485,24 +484,8 @@ inline int socket_send_all_by_time(IN socket_t sock, IN const void* buf, IN size
 inline int socket_recv_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout)
 {
 	int r;
-	fd_set fds;
-	struct timeval tv;
 
-	FD_ZERO(&fds);
-	FD_SET(sock, &fds);
-
-	// check timeout
-	if(-1 != timeout)
-	{
-		tv.tv_sec = timeout/1000;
-		tv.tv_usec = (timeout%1000) * 1000;
-		r = socket_select_readfds(sock+1, &fds, &tv);
-	}
-	else
-	{
-		r = socket_select_readfds(sock+1, &fds, NULL);
-	}
-
+	r = socket_select_read(sock, timeout);
 	if(r <= 0)
 		return r;
 

@@ -40,7 +40,7 @@ typedef struct
 	size_t	len;
 
 	// reserved
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
 	HANDLE	_fd;
 #else
 	int		_fd;
@@ -48,9 +48,9 @@ typedef struct
 } mmap_t;
 
 /// 0-success, other-error
-inline int mmap_create(OUT mmap_t* view, IN const char* filename, IN int flags, IN size_t offset, IN size_t length);
+inline int mmap_create(IN mmap_t* view, IN const char* filename, IN int flags, IN size_t offset, IN size_t length);
 /// 0-success, other-error
-inline int mmap_open(OUT mmap_t* view, IN const char* filename, IN int flags, IN size_t offset, IN size_t length);
+inline int mmap_open(IN mmap_t* view, IN const char* filename, IN int flags, IN size_t offset, IN size_t length);
 /// 0-success, other-error
 inline int mmap_flush(IN mmap_t* view);
 inline void mmap_close(IN mmap_t* view);
@@ -61,7 +61,7 @@ inline void mmap_close(IN mmap_t* view);
 /// flags: mmap_mode
 ///
 //////////////////////////////////////////////////////////////////////////
-inline int mmap_create(OUT mmap_t* view, IN const char* filename, IN int flags, IN size_t offset, IN size_t length)
+inline int mmap_create(IN mmap_t* view, IN const char* filename, IN int flags, IN size_t offset, IN size_t length)
 {
 	void* p = NULL;
 
@@ -170,7 +170,7 @@ inline int mmap_create(OUT mmap_t* view, IN const char* filename, IN int flags, 
 #endif
 }
 
-inline int mmap_open(OUT mmap_t* view, IN const char* filename, IN int flags, IN size_t offset, IN size_t length)
+inline int mmap_open(IN mmap_t* view, IN const char* filename, IN int flags, IN size_t offset, IN size_t length)
 {
 #if defined(OS_WINDOWS)
 	HANDLE mapping;

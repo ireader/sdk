@@ -79,7 +79,7 @@ typedef struct
 ///	multi-processor: no
 ///
 //////////////////////////////////////////////////////////////////////////
-inline int locker_create(OUT locker_t* locker);
+inline int locker_create(IN locker_t* locker);
 inline int locker_destroy(IN locker_t* locker);
 inline int locker_lock(IN locker_t* locker);
 inline int locker_unlock(IN locker_t* locker); // linux: unlock thread must is the lock thread
@@ -92,7 +92,7 @@ inline int locker_trylock(IN locker_t* locker);
 ///	multi-processor: no
 ///
 //////////////////////////////////////////////////////////////////////////
-inline int event_create(OUT event_t* event);
+inline int event_create(IN event_t* event);
 inline int event_destroy(IN event_t* event);
 // 0-success, other-error
 inline int event_wait(IN event_t* event);
@@ -110,9 +110,9 @@ inline int event_reset(IN event_t* event);
 //////////////////////////////////////////////////////////////////////////
 // Windows: the name can contain any character except the backslash
 // 0-success, other-error
-inline int semaphore_create(OUT semaphore_t* semaphore, IN const char* name, IN long maximumCount);
+inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN long maximumCount);
 // 0-success, other-error
-inline int semaphore_open(OUT semaphore_t* semaphore, IN const char* name);
+inline int semaphore_open(IN semaphore_t* semaphore, IN const char* name);
 // 0-success, other-error
 inline int semaphore_wait(IN semaphore_t* semaphore);
 // 0-success, WAIT_TIMEOUT-timeout, other-error
@@ -178,7 +178,7 @@ inline long atomic_decrement(INOUT volatile long* v)
 /// locker: Windows CriticalSection/Linux mutex
 /// 
 //////////////////////////////////////////////////////////////////////////
-inline int locker_create(OUT locker_t* locker)
+inline int locker_create(IN locker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	InitializeCriticalSection(locker);
@@ -238,7 +238,7 @@ inline int locker_trylock(IN locker_t* locker)
 /// event: Windows Event/Linux condition variable
 /// 
 //////////////////////////////////////////////////////////////////////////
-inline int event_create(OUT event_t* event)
+inline int event_create(IN event_t* event)
 {
 #if defined(OS_WINDOWS)
 	HANDLE h = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -341,7 +341,7 @@ inline int event_reset(IN event_t* event)
 /// named semaphore
 ///
 //////////////////////////////////////////////////////////////////////////
-inline int semaphore_create(OUT semaphore_t* semaphore, IN const char* name, IN long initValue)
+inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN long initValue)
 {
 #if defined(OS_WINDOWS)
 	HANDLE handle = CreateSemaphoreA(NULL, initValue, 0x7FFFFFFF, name);
@@ -372,7 +372,7 @@ inline int semaphore_create(OUT semaphore_t* semaphore, IN const char* name, IN 
 }
 
 // 0-success, other-error
-inline int semaphore_open(OUT semaphore_t* semaphore, IN const char* name)
+inline int semaphore_open(IN semaphore_t* semaphore, IN const char* name)
 {
 	if(!name || !*name)
 		return EINVAL;
