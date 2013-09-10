@@ -1,6 +1,7 @@
 #include "cstringext.h"
 #include "sysprocess.h"
 #include "sys/system.h"
+#include "sys/path.h"
 #include "tools.h"
 
 #include <stdio.h>
@@ -18,18 +19,7 @@ static int on_process(void* param, const char* name, process_t pid)
 	const char* p;
 	const char* process = (const char*)param;
 
-	// basename
-	p = strrchr(name, '/');
-#if defined(OS_WINDOWS)
-	if(!p)
-		p = strrchr(name, '\\');
-#endif
-
-	if(p)
-		p = p + 1;
-	else
-		p = name;
-
+	p = path_basename(name);
 #if defined(OS_WINDOWS)
 	if(0 == stricmp(process, p))
 #else
@@ -43,20 +33,7 @@ static int on_process(void* param, const char* name, process_t pid)
 
 int process_kill_all(const char* name)
 {
-	const char* p;
-
-	// basename
-	p = strrchr(name, '/');
-#if defined(OS_WINDOWS)
-	if(!p)
-		p = strrchr(name, '\\');
-#endif
-
-	if(p)
-		p = p + 1;
-	else
-		p = name;
-
+	const char* p = path_basename(name);
 	return process_list(on_process, (void*)p);
 }
 
@@ -129,15 +106,13 @@ int process_list(fcb_process_list callback, void* param)
 			if(0 == pid)
 				continue;
 
-			sprintf(filename, "/proc/%d/exe", pid);
-			r = readlink(filename, filename, sizeof(filename)-1);
-			if(r <= 0)
-				continue;
-			
-			filename[r] = 0;
-			r = callback(param, filename, pid);
-			if(0 != r)
-				break;
+			r = process_name(pid, filename, sizeof(filename));
+			if(0 == r)
+			{
+				r = callback(param, filename, pid);
+				if(0 != r)
+					break;
+			}
 		}
 	}
 
