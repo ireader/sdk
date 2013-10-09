@@ -8,7 +8,7 @@
 #endif
 #include "unicode.h"
 
-int unicode_to_utf8(IN CONST wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes)
+int unicode_to_utf8(IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes)
 {
 #if (defined(_WIN32) || defined(_WIN64)) && 0
 	srcLen = 0==srcLen?wcslen(src)+1:srcLen;
@@ -63,7 +63,7 @@ int unicode_to_utf8(IN CONST wchar_t* src, IN size_t srcLen, OUT char* tgt, IN s
 #endif
 }
 
-int unicode_from_utf8(IN CONST char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes)
+int unicode_from_utf8(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes)
 {
 #if (defined(_WIN32) || defined(_WIN64)) && 0
 	srcLen = 0==srcLen?strlen(src)+1:srcLen;
@@ -129,7 +129,7 @@ int unicode_from_utf8(IN CONST char* src, IN size_t srcLen, OUT wchar_t* tgt, IN
 #endif
 }
 
-int unicode_to_mbcs(IN CONST wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes)
+int unicode_to_mbcs(IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes)
 {
 	srcLen = 0==srcLen?wcslen(src)+1:srcLen;
 
@@ -146,7 +146,7 @@ int unicode_to_mbcs(IN CONST wchar_t* src, IN size_t srcLen, OUT char* tgt, IN s
 #endif
 }
 
-int unicode_from_mbcs(IN CONST char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes)
+int unicode_from_mbcs(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes)
 {
 	srcLen = 0==srcLen?strlen(src)+1:srcLen;
 
@@ -163,7 +163,7 @@ int unicode_from_mbcs(IN CONST char* src, IN size_t srcLen, OUT wchar_t* tgt, IN
 #endif
 }
 
-int unicode_to_gb18030(IN CONST wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes)
+int unicode_to_gb18030(IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes)
 {
 	srcLen = 0==srcLen?wcslen(src)+1:srcLen;
 
@@ -181,7 +181,7 @@ int unicode_to_gb18030(IN CONST wchar_t* src, IN size_t srcLen, OUT char* tgt, I
 #endif
 }
 
-int unicode_from_gb18030(IN CONST char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes)
+int unicode_from_gb18030(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes)
 {
 	srcLen = 0==srcLen?strlen(src)+1:srcLen;
 

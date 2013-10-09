@@ -299,8 +299,8 @@ int thread_pool_push(thread_pool_t pool, thread_pool_proc proc, void *param)
 
 	// add new thread to do task
 	if(context->thread_count_idle<1 
-		&& context->thread_count<context->thread_count_max
-		&& context->task_count>context->threshold)
+		&& context->thread_count<context->thread_count_max)
+		//&& context->task_count>context->threshold)
 		thread_pool_create_threads(context, 1);
 
 	event_signal(&context->event);

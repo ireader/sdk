@@ -374,3 +374,106 @@ int process_getmodulename(const void *address, char *name, int len)
 	return r;
 #endif
 }
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <winternl.h>
+typedef NTSTATUS (NTAPI *_NtQueryInformationProcess) (
+	IN HANDLE ProcessHandle,
+	IN PROCESSINFOCLASS ProcessInformationClass,
+	OUT PVOID ProcessInformation,
+	IN ULONG ProcessInformationLength,
+	OUT PULONG ReturnLength OPTIONAL
+);
+
+int process_getcommandline(process_t pid, char* cmdline, int bytes)
+{
+	HANDLE handle;
+	NTSTATUS status;
+	PVOID rtlUserProcParamsAddress;
+	WCHAR *commandLineContents;
+	UNICODE_STRING commandLine;
+	PROCESS_BASIC_INFORMATION pbi;
+	_NtQueryInformationProcess api;
+
+	handle = OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_READ, FALSE, pid);
+	if(!handle)
+		return (int)GetLastError();
+
+	api = (_NtQueryInformationProcess)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtQueryInformationProcess");
+	if(0 == api(handle, ProcessBasicInformation, &pbi, sizeof(pbi), NULL))
+	{
+		if(ReadProcessMemory(handle, (PCHAR)pbi.PebBaseAddress + 0x10, &rtlUserProcParamsAddress, sizeof(PVOID), NULL))
+		{
+			if(ReadProcessMemory(handle, (PCHAR)rtlUserProcParamsAddress + 0x40, &commandLine, sizeof(commandLine), NULL))
+			{
+				commandLineContents = (WCHAR *)malloc(commandLine.Length);
+				if(ReadProcessMemory(handle, commandLine.Buffer, commandLineContents, commandLine.Length, NULL))
+				{
+					WideCharToMultiByte(CP_ACP, 0, commandLineContents, commandLine.Length, cmdline, bytes/sizeof(wchar_t), NULL, NULL);
+					status = 0;
+				}
+				free(commandLineContents);
+			}
+		}
+	}
+
+	CloseHandle(handle);
+	return GetLastError();
+}
+#else
+int process_getcommandline(process_t pid, char* cmdline, int bytes)
+{
+	char file[128];
+	char content[256];
+	void *p, *pe;
+	FILE *fp;
+	int r, n, total, remain;
+
+	sprintf(file, "/proc/%d/cmdline", pid);
+	fp = fopen(file, "rb");
+	if(!fp)
+		return errno;
+
+	total = 0;
+	remain = 0;
+	r = fread(content, 1, sizeof(content), fp);
+	while(r > 0)
+	{
+		r += remain;
+		p =  content;
+		do
+		{
+			pe = memchr(p, '\0', r);
+			if(!pe)
+				break;
+
+			n = (char*)pe - (char*)p;
+			if(total + 1 + n + 1 > bytes)
+			{
+				r = ENOBUFS;
+				break;
+			}
+
+			if(total > 0)
+				cmdline[total++] = ' '; // args seperator
+			memcpy(cmdline+total, p, n);
+			total += n; // string + blank
+			cmdline[total] = '\0';
+
+			p = (char*)pe + 1;
+			assert((char*)p <= content + r);
+		} while((char*)p < content+r);
+
+		// move remain data
+		assert(p != content); // len(argument) > sizeof(content)
+		remain = r - ((char*)p- content);
+		memmove(content, p, remain);
+
+		// read more data
+		r = fread(content+remain, 1, sizeof(content)-remain, fp);
+	}
+
+	fclose(fp);
+	return r;
+}
+#endif

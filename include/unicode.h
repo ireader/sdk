@@ -11,14 +11,6 @@
 #define OUT
 #endif
 
-#ifndef CONST
-	#ifdef  __cplusplus
-		#define CONST const
-	#else
-		#define CONST
-	#endif
-#endif
-
 #ifdef  __cplusplus
 extern "C" {
 #endif
@@ -29,7 +21,7 @@ extern "C" {
 /// @param[out] tgt utf8字符串缓冲区
 /// @param[in] tgtBytes in-缓冲区长度, 单位字节
 /// @return 转换后字符串长度
-int unicode_to_utf8(IN CONST wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes);
+int unicode_to_utf8(IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes);
 
 /// UTF-8字符串转换成Unicode字符串
 /// @param[in] src utf-8字符串
@@ -37,7 +29,7 @@ int unicode_to_utf8(IN CONST wchar_t* src, IN size_t srcLen, OUT char* tgt, IN s
 /// @param[out] tgt unicode字符串缓冲区
 /// @param[in] tgtBytes in-缓冲区长度, 单位字节
 /// @return 转换后字符串长度
-int unicode_from_utf8(IN CONST char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes);
+int unicode_from_utf8(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes);
 
 /// Unicode字符串转换成多字节字符串(Windows平台是Unicode UTF-16)
 /// @param[in] src Unicode字符串
@@ -45,7 +37,7 @@ int unicode_from_utf8(IN CONST char* src, IN size_t srcLen, OUT wchar_t* tgt, IN
 /// @param[out] tgt 多字节字符串缓冲区
 /// @param[in] tgtBytes 多字节字符串缓冲区长度, 单位: 字节
 /// @return 转换后字符串长度
-int unicode_to_mbcs(IN CONST wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes);
+int unicode_to_mbcs(IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes);
 
 /// 多字节字符串转换成Unicode字符串(Windows平台是Unicode UTF-16)
 /// @param[in] src 多字节字符串
@@ -53,7 +45,7 @@ int unicode_to_mbcs(IN CONST wchar_t* src, IN size_t srcLen, OUT char* tgt, IN s
 /// @param[out] tgt Unicode字符串缓冲区
 /// @param[in] tgtBytes Unicode字符串缓冲区长度, 单位: 字节
 /// @return 转换后字符串长度
-int unicode_from_mbcs(IN CONST char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes);
+int unicode_from_mbcs(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes);
 
 /// 多字节字符串转换成Unicode字符串(Windows平台是Unicode UTF-16)
 /// @param[in] charset 多字节字符串编码类型
@@ -62,7 +54,7 @@ int unicode_from_mbcs(IN CONST char* src, IN size_t srcLen, OUT wchar_t* tgt, IN
 /// @param[out] tgt Unicode字符串缓冲区
 /// @param[in] tgtBytes Unicode字符串缓冲区长度, 单位: 字节
 /// @return
-//int unicode_encode(IN CONST char* charset, IN CONST char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes);
+//int unicode_encode(IN const char* charset, IN const char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes);
 
 /// Unicode字符串转换成多字节字符串(Windows平台是Unicode UTF-16)
 /// @param[in] charset 多字节字符串编码类型
@@ -71,15 +63,15 @@ int unicode_from_mbcs(IN CONST char* src, IN size_t srcLen, OUT wchar_t* tgt, IN
 /// @param[out] tgt 多字节字符串缓冲区
 /// @param[in] tgtBytes 多字节字符串缓冲区长度, 单位: 字节
 /// @return
-//int unicode_decode(IN CONST char* charset, IN CONST wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes);
+//int unicode_decode(IN const char* charset, IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes);
 
 #define unicode_to_gb2312 unicode_to_gb18030
 #define unicode_from_gb2312 unicode_from_gb18030
 #define unicode_to_gbk unicode_to_gb18030
 #define unicode_from_gbk unicode_from_gb18030
 
-int unicode_to_gb18030(IN CONST wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes);
-int unicode_from_gb18030(IN CONST char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes);
+int unicode_to_gb18030(IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes);
+int unicode_from_gb18030(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt, IN size_t tgtBytes);
 
 #ifdef  __cplusplus
 } // extern "C" 

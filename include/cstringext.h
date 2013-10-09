@@ -11,10 +11,6 @@
 	#ifndef OS_WINDOWS
 		#define OS_WINDOWS
 	#endif
-#else
-	#ifndef OS_LINUX
-		#define OS_LINUX
-	#endif
 #endif
 
 #if defined(OS_WINDOWS)

@@ -23,6 +23,8 @@ int process_getmodules(process_t pid, fcb_process_getmodules callback, void* par
 
 int process_getmodulename(const void *address, char *name, int len);
 
+int process_getcommandline(process_t pid, char* cmdline, int len);
+
 #ifdef __cplusplus
 }
 #endif
