@@ -165,9 +165,6 @@ void* url_parse(const char* url)
 
 int url_geturl(void* id, char* url, int len)
 {
-	int i;
-	char buffer[MAX_PATH];
-
 	int n;
 	url_t* uri = (url_t*)id;
 	if(!uri || !url || !uri->host)
@@ -189,27 +186,39 @@ int url_geturl(void* id, char* url, int len)
 	if(uri->port)
 		sprintf(url+strlen(url), ":%d", uri->port);
 
+	n = strlen(url);
+	return url_geturlpath(id, url+n, len-n);
+}
+
+int url_geturlpath(void* id, char* url, int len)
+{
+	int i;
+	char buffer[MAX_PATH];
+
+	int n;
+	url_t* uri = (url_t*)id;
+
 	if(uri->path)
 	{
-		if('/' != uri->path[0])
-			strcat(url, "/");
-		strcat(url, uri->path);
+		assert('/'==uri->path[0]);
+		strcpy(url, uri->path);
 	}
 	else
 	{
-		strcat(url, "/");
+		strcpy(url, "/");
 	}
 
 	for(i=0; i<uri->count; i++)
 	{
 		strcat(url, 0==i ? "?" : "&");
-		
+
 		url_encode(uri->params[i].name, -1, buffer, sizeof(buffer));
 		strcat(url, buffer);
 		strcat(url, "=");
 		url_encode(uri->params[i].value, -1, buffer, sizeof(buffer));
 		strcat(url, buffer);
 	}
+
 	return 0;
 }
 
