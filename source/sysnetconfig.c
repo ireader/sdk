@@ -12,6 +12,10 @@
 #pragma comment(lib, "Iphlpapi.lib")
 #pragma comment(lib, "Mpr.lib")
 
+#ifndef IF_TYPE_IEEE80211
+#define IF_TYPE_IEEE80211 71
+#endif
+
 #else
 #include <stdlib.h>
 #include <stdarg.h>
@@ -62,7 +66,7 @@ int system_getip(system_getip_fcb fcb, void* param)
 		pAdapter = pAdapterInfo;
 		while(pAdapter)
 		{
-			if(pAdapter->Type == MIB_IF_TYPE_ETHERNET)
+			if(MIB_IF_TYPE_ETHERNET==pAdapter->Type || IF_TYPE_IEEE80211==pAdapter->Type)
 			{
 				// mac address
 				for(i=0; i<pAdapter->AddressLength; i++)
