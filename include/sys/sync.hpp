@@ -125,6 +125,11 @@ class CSemaphore
 	CSemaphore& operator =(const CSemaphore&){ return *this; }
 
 public:
+	CSemaphore(int initValue)
+	{
+		semaphore_create(&m_sema, NULL, initValue);
+	}
+
 	CSemaphore(const char* name)
 	{
 		int r = semaphore_open(&m_sema, name);

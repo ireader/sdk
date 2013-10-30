@@ -1,6 +1,10 @@
 #ifndef _platform_timer_h_
 #define _platform_timer_h_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void* systimer_t;
 typedef void (*systimer_func)(systimer_t id, void* param);
 
@@ -32,5 +36,9 @@ int systimer_start(systimer_t *id, unsigned int period, systimer_func callback, 
 /// @param[in] id timer id
 /// @return 0-ok, <0-error
 int systimer_stop(systimer_t id);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !_platform_timer_h_ */

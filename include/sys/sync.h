@@ -110,7 +110,7 @@ inline int event_reset(IN event_t* event);
 //////////////////////////////////////////////////////////////////////////
 // Windows: the name can contain any character except the backslash
 // 0-success, other-error
-inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN long maximumCount);
+inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN long value);
 // 0-success, other-error
 inline int semaphore_open(IN semaphore_t* semaphore, IN const char* name);
 // 0-success, other-error
@@ -341,10 +341,10 @@ inline int event_reset(IN event_t* event)
 /// named semaphore
 ///
 //////////////////////////////////////////////////////////////////////////
-inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN long initValue)
+inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN long value)
 {
 #if defined(OS_WINDOWS)
-	HANDLE handle = CreateSemaphoreA(NULL, initValue, 0x7FFFFFFF, name);
+	HANDLE handle = CreateSemaphoreA(NULL, value, 0x7FFFFFFF, name);
 	if(NULL == handle)
 		return GetLastError();
 	*semaphore = handle;
@@ -354,7 +354,7 @@ inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN l
 	if(name && *name)
 	{
 		// Named semaphores(process-shared semaphore)
-		semaphore->semaphore = sem_open(name, O_CREAT|O_EXCL|O_RDWR, 0777, initValue);
+		semaphore->semaphore = sem_open(name, O_CREAT|O_EXCL|O_RDWR, 0777, value);
 		if(SEM_FAILED == semaphore->semaphore)
 			return errno;
 		strncpy(semaphore->name, name, sizeof(semaphore->name)-1);
@@ -366,7 +366,7 @@ inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN l
 		semaphore->semaphore = (sem_t*)malloc(sizeof(sem_t));
 		if(!semaphore->semaphore)
 			return ENOMEM;
-		return 0==sem_init(semaphore->semaphore, 0, initValue) ? 0 : errno;
+		return 0==sem_init(semaphore->semaphore, 0, value) ? 0 : errno;
 	}
 #endif
 }

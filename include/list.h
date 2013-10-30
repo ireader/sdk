@@ -6,28 +6,28 @@ struct list_head
 	struct list_head *next, *prev;
 };
 
-inline void list_insert_after(struct list_head *new, struct list_head *head)
+inline void list_insert_after(struct list_head *item, struct list_head *head)
 {
 	struct list_head *prev, *next;
 	prev = head;
 	next = head->next;
 
-	new->prev = prev;
-	new->next = next;
-	next->prev = new;
-	prev->next = new;
+	item->prev = prev;
+	item->next = next;
+	next->prev = item;
+	prev->next = item;
 }
 
-inline void list_insert_before(struct list_head *new, struct list_head *head)
+inline void list_insert_before(struct list_head *item, struct list_head *head)
 {
 	struct list_head *prev, *next;
 	prev = head->prev;
 	next = head;
 
-	new->prev = prev;
-	new->next = next;
-	next->prev = new;
-	prev->next = new;
+	item->prev = prev;
+	item->next = next;
+	next->prev = item;
+	prev->next = item;
 }
 
 inline void list_remove(struct list_head *head)
