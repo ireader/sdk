@@ -28,6 +28,11 @@ typedef HMODULE module_t;
 #include <errno.h>
 
 typedef void* module_t;
+
+#ifndef FAR
+#define FAR
+#endif
+
 #endif
 
 #include <sys/timeb.h>
@@ -223,7 +228,7 @@ inline int system_unload(module_t module)
 #endif
 }
 
-inline void* system_getproc(module_t module, const char* producer)
+inline FAR void* system_getproc(module_t module, const char* producer)
 {
 #if defined(OS_WINDOWS)
 	return GetProcAddress(module, producer);

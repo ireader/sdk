@@ -3,7 +3,6 @@
 // Linux link with -lrt
 
 #if defined(OS_WINDOWS)
-#include "thread-pool.h"
 #include <Windows.h>
 #pragma comment(lib, "Winmm.lib")
 #else
@@ -18,7 +17,7 @@
 
 typedef struct _timer_context_t
 {
-	systimer_func callback;
+	systimer_proc callback;
 	void* cbparam;
 
 #if defined(OS_WINDOWS)
@@ -90,25 +89,22 @@ static int timer_schd_worker(void *param)
 }
 #endif
 
-int systimer_init(void)
+int systimer_init(thread_pool_t pool)
 {
 #if defined(OS_WINDOWS)
 	timeGetDevCaps(&g_ctx.tc, sizeof(TIMECAPS));
-	g_ctx.pool = thread_pool_create(2, 4, 1000);
+	g_ctx.pool = pool;
 #endif
 	return 0;
 }
 
 int systimer_clean(void)
 {
-#if defined(OS_WINDOWS)
-	thread_pool_destroy(g_ctx.pool);
-#endif
 	return 0;
 }
 
 #if defined(OS_WINDOWS)
-static int systimer_create(systimer_t* id, unsigned int period, int oneshot, systimer_func callback, void* cbparam)
+static int systimer_create(systimer_t* id, unsigned int period, int oneshot, systimer_proc callback, void* cbparam)
 {
 	UINT fuEvent;
 	timer_context_t* ctx;
@@ -140,7 +136,7 @@ static int systimer_create(systimer_t* id, unsigned int period, int oneshot, sys
 	return 0;
 }
 #elif defined(OS_LINUX)
-static int systimer_create(systimer_t* id, unsigned int period, int oneshot, systimer_func callback, void* cbparam)
+static int systimer_create(systimer_t* id, unsigned int period, int oneshot, systimer_proc callback, void* cbparam)
 {
 	struct sigevent sev;
 	struct itimerspec tv;
@@ -179,7 +175,7 @@ static int systimer_create(systimer_t* id, unsigned int period, int oneshot, sys
 	return 0;
 }
 #elif defined(OS_WINDOWS_ASYNC)
-static int systimer_create(systimer_t* id, unsigned int period, int oneshot, systimer_func callback, void* cbparam)
+static int systimer_create(systimer_t* id, unsigned int period, int oneshot, systimer_proc callback, void* cbparam)
 {
 	LARGE_INTEGER tv;
 	timer_context_t* ctx;
@@ -210,18 +206,18 @@ static int systimer_create(systimer_t* id, unsigned int period, int oneshot, sys
 	return 0;
 }
 #else
-static int systimer_create(systimer_t* id, int period, systimer_func callback, void* cbparam)
+static int systimer_create(systimer_t* id, int period, systimer_proc callback, void* cbparam)
 {
 	ERROR: dont implemention
 }
 #endif
 
-int systimer_oneshot(systimer_t *id, unsigned int period, systimer_func callback, void* cbparam)
+int systimer_oneshot(systimer_t *id, unsigned int period, systimer_proc callback, void* cbparam)
 {
 	return systimer_create(id, period, 1, callback, cbparam);
 }
 
-int systimer_start(systimer_t* id, unsigned int period, systimer_func callback, void* cbparam)
+int systimer_start(systimer_t* id, unsigned int period, systimer_proc callback, void* cbparam)
 {
 	return systimer_create(id, period, 0, callback, cbparam);
 }

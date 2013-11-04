@@ -33,8 +33,9 @@ static int url_parse_param(const char* param, url_t* uri)
 
 	for(pn = param; param && *param && uri->count < MAX_PARAMS; pn=param+1)
 	{
+		param = strchr(pn, '&');
 		pv = strchr(pn, '=');
-		if(!pv || pv == pn) // name is null
+		if(!pv || pv == pn || (param && pv>param)) // name is null
 			continue;
 
 		memset(buffer, 0, sizeof(buffer));
@@ -44,7 +45,6 @@ static int url_parse_param(const char* param, url_t* uri)
 		pp->name = strdup(buffer);
 
 		++pv;
-		param = strchr(pv, '&');
 		if(param)
 		{
 			url_decode(pv, param-pv, buffer, sizeof(buffer));

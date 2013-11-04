@@ -153,7 +153,7 @@ inline long atomic_add(INOUT long volatile *v, long incr)
 #else
 inline long atomic_add(INOUT long volatile *v, long incr)
 {
-	asm volatile ("lock; xaddl %0,%1"
+	asm volatile ("lock; xaddl %k0,%1"
 		: "=r" (incr), "=m" (*v)
 		: "0" (incr), "m" (*v)
 		: "memory", "cc");

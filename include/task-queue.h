@@ -7,13 +7,13 @@
 extern "C" {
 #endif
 
-typedef unsigned int task_t;
-typedef void (*task_proc)(task_t id, void* param);
+typedef void* task_queue_t;
+typedef void (*task_proc)(void* param);
 
-int task_queue_create(thread_pool_t pool, int maxWorker);
-int task_queue_destroy();
+task_queue_t task_queue_create(thread_pool_t pool, int maxWorker);
+int task_queue_destroy(task_queue_t taskQ);
 
-int task_queue_post(task_t id, task_proc proc, void* param);
+int task_queue_post(task_queue_t taskQ, task_proc proc, void* param);
 
 #ifdef __cplusplus
 }

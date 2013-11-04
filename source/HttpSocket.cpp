@@ -5,6 +5,7 @@
 #include "StrConvert.h"
 #include "cookie.h"
 #include "error.h"
+#include "url.h"
 
 HttpSocket::HttpSocket()
 {
@@ -696,7 +697,21 @@ int HttpSocket::MakeHttpHeader(mmptr& reply, const char* method, const char* uri
 	SetVersion(reply, method, (uri && *uri) ? uri : "/"); // default to /
 	
 	// host
-	SetHost(reply, m_ip.c_str(), m_port);
+	void* url = url_parse(uri);
+	if(url)
+	{
+		int port = url_getport(url);
+		const char* host = url_gethost(url);
+		if(host)
+			SetHost(reply, host, 0==port?80:port);
+		else
+			SetHost(reply, m_ip.c_str(), m_port);
+		url_free(url);
+	}
+	else
+	{
+		SetHost(reply, m_ip.c_str(), m_port);
+	}
 
 	// http headers
 	for(THttpHeaders::const_iterator it=m_headers.begin(); it!=m_headers.end(); ++it)
@@ -704,7 +719,7 @@ int HttpSocket::MakeHttpHeader(mmptr& reply, const char* method, const char* uri
 		const std::string& name = it->first;
 		const std::string& value = it->second;
 
-		assert(0 != stricmp("HOST", name.c_str())); // Host = m_host
+		assert(0 != stricmp("HOST", name.c_str())); // Host
 		assert(0 != stricmp("Content-Length", name.c_str())); // ignore Content-Length
 		AddHeader(reply, name.c_str(), value.c_str());
 	}

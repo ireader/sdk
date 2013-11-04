@@ -9,22 +9,7 @@
 
 enum { PRIORITY_IDLE=0, PRIORITY_LOWEST, PRIORITY_NORMAL, PRIORITY_CRITICAL };
 
-typedef struct
-{
-	struct list_head head;
-
-	task_t id;
-	int timeout;
-	task_proc proc;
-	void* param;
-	
-	time64_t stime;
-	time64_t etime;
-	int thread;
-	int priority;
-} task_context_t;
-
-typedef struct
+typedef struct _task_queue_context_t
 {
 	int running;
 	int maxWorker;
@@ -41,21 +26,34 @@ typedef struct
 	size_t tasks_recycle_count;
 } task_queue_context_t;
 
-static task_queue_context_t g_ctx;
+typedef struct _task_context_t
+{
+	struct list_head head;
 
-static task_context_t* task_alloc()
+	task_queue_context_t *taskQ;
+	int timeout;
+	task_proc proc;
+	void* param;
+	
+	time64_t stime;
+	time64_t etime;
+	int thread;
+	int priority;
+} task_context_t;
+
+static task_context_t* task_alloc(task_queue_context_t* taskQ)
 {
 	task_context_t* task;
-	if(list_empty(&g_ctx.tasks_recycle))
+	if(list_empty(&taskQ->tasks_recycle))
 	{
 		task = (task_context_t*)malloc(sizeof(task_context_t));
 	}
 	else
 	{
-		task = list_entry(g_ctx.tasks_recycle.next, task_context_t, head);
-		list_remove(g_ctx.tasks_recycle.next);
-		assert(g_ctx.tasks_recycle_count > 0);
-		--g_ctx.tasks_recycle_count;
+		task = list_entry(taskQ->tasks_recycle.next, task_context_t, head);
+		list_remove(taskQ->tasks_recycle.next);
+		assert(taskQ->tasks_recycle_count > 0);
+		--taskQ->tasks_recycle_count;
 	}
 
 	if(task)
@@ -67,66 +65,74 @@ static task_context_t* task_alloc()
 	return task;
 }
 
-static void task_recycle(task_context_t* task)
+static void task_recycle(task_queue_context_t* taskQ, task_context_t* task)
 {
 	// max recycle count
-	if(g_ctx.tasks_recycle_count > 500)
+	if(taskQ->tasks_recycle_count > 500)
 	{
 		free(task);
 		return;
 	}
 
-	list_insert_after(&task->head, g_ctx.tasks_recycle.prev);
-	assert(g_ctx.tasks_recycle_count >= 0);
-	++g_ctx.tasks_recycle_count;
+	list_insert_after(&task->head, taskQ->tasks_recycle.prev);
+	assert(taskQ->tasks_recycle_count >= 0);
+	++taskQ->tasks_recycle_count;
 }
 
-static void task_clean()
+static void task_clean(task_queue_context_t* taskQ)
 {
 	task_context_t *task;
 	struct list_head *p, *n;
-	list_for_each_safe(p, n, &g_ctx.tasks_recycle)
+	list_for_each_safe(p, n, &taskQ->tasks_recycle)
+	{
+		task = list_entry(p, task_context_t, head);
+		free(task);
+	}
+
+	list_for_each_safe(p, n, &taskQ->tasks)
 	{
 		task = list_entry(p, task_context_t, head);
 		free(task);
 	}
 }
 
-static void task_push(task_context_t* task)
+static void task_push(task_queue_context_t* taskQ, task_context_t* task)
 {
-	list_insert_after(&task->head, g_ctx.tasks.prev);
-	assert(g_ctx.tasks_count >= 0);
-	++g_ctx.tasks_count;
+	list_insert_after(&task->head, taskQ->tasks.prev);
+	assert(taskQ->tasks_count >= 0);
+	++taskQ->tasks_count;
 }
 
-static task_context_t* task_pop()
+static task_context_t* task_pop(task_queue_context_t* taskQ)
 {
 	task_context_t* task;
-	if(list_empty(&g_ctx.tasks))
+	if(list_empty(&taskQ->tasks))
 		return NULL;
 
-	assert(g_ctx.tasks_count > 0);
-	--g_ctx.tasks_count;
-	task = list_entry(g_ctx.tasks.next, task_context_t, head);
-	list_remove(g_ctx.tasks.next);
+	assert(taskQ->tasks_count > 0);
+	--taskQ->tasks_count;
+	task = list_entry(taskQ->tasks.next, task_context_t, head);
+	list_remove(taskQ->tasks.next);
 	return task;
 }
 
 static void task_action(void* param)
 {
 	task_context_t* task;
+	task_queue_context_t* taskQ;
 	task = (task_context_t*)param;
+	taskQ = task->taskQ;
 
 	if(task->proc)
-		task->proc(task->id, task->param);
+		task->proc(task->param);
 
 	task->etime = time64_now();
 	task->thread = thread_self();
-	locker_lock(&g_ctx.locker);
-	task_recycle(task); // recycle task
-	locker_unlock(&g_ctx.locker);
+	locker_lock(&taskQ->locker);
+	task_recycle(taskQ, task); // recycle task
+	locker_unlock(&taskQ->locker);
 
-	semaphore_post(&g_ctx.sema_worker); // add worker
+	semaphore_post(&taskQ->sema_worker); // add worker
 }
 
 static int task_queue_scheduler(void* param)
@@ -134,110 +140,125 @@ static int task_queue_scheduler(void* param)
 	int r;
 	time64_t tnow;
 	task_context_t *task;
+	task_queue_context_t *taskQ;
 	struct list_head *p, *next;
 
-	while(g_ctx.running)
+	taskQ = (task_queue_context_t*)param;
+	while(taskQ->running)
 	{
-		r = semaphore_wait(&g_ctx.sema_request);
-		r = semaphore_timewait(&g_ctx.sema_worker, 1000);
+		r = semaphore_wait(&taskQ->sema_request);
+		r = semaphore_timewait(&taskQ->sema_worker, 1000);
 		if(0 == r)
 		{
-			locker_lock(&g_ctx.locker);
-			task = task_pop();
-			locker_unlock(&g_ctx.locker);
+			locker_lock(&taskQ->locker);
+			task = task_pop(taskQ);
+			locker_unlock(&taskQ->locker);
 
 			if(task)
 			{
-				r = thread_pool_push(g_ctx.pool, task_action, task);
+				r = thread_pool_push(taskQ->pool, task_action, task);
 				assert(0 == r);
 				if(0 == r) continue;
 			}
 
-			semaphore_post(&g_ctx.sema_worker);
+			semaphore_post(&taskQ->sema_worker);
 		}
 		else
 		{
 			// timeout
 			tnow = time64_now();
 
-			locker_lock(&g_ctx.locker);
-			list_for_each_safe(p, next, &g_ctx.tasks)
+			locker_lock(&taskQ->locker);
+			list_for_each_safe(p, next, &taskQ->tasks)
 			{
 				task = list_entry(p, task_context_t, head);
 				if(task->stime + task->timeout > tnow)
 				{
 					if(task->proc)
-						task->proc(task->id, task->param);
+						task->proc(task->param);
 					list_remove(p);
 				}
 			}
-			locker_unlock(&g_ctx.locker);
+			locker_unlock(&taskQ->locker);
 		}
 	}
 
 	return 0;
 }
 
-int task_queue_post(task_t id, task_proc proc, void* param)
+int task_queue_post(task_queue_t q, task_proc proc, void* param)
 {
 	task_context_t* task;
-	locker_lock(&g_ctx.locker);
-	task = task_alloc();
-	locker_unlock(&g_ctx.locker);
+	task_queue_context_t *taskQ;
+
+	taskQ = (task_queue_context_t *)q;
+	locker_lock(&taskQ->locker);
+	task = task_alloc(taskQ);
+	locker_unlock(&taskQ->locker);
 	if(!task)
 		return -ENOMEM;
 
-	task->id = id;
+	task->taskQ = taskQ;
 	task->stime = time64_now();
 	task->timeout = 5000;
 	task->priority = 0;
 	task->proc = proc;
 	task->param = param;
-	locker_lock(&g_ctx.locker);
-	task_push(task);
-	locker_unlock(&g_ctx.locker);
+	locker_lock(&taskQ->locker);
+	task_push(taskQ, task);
+	locker_unlock(&taskQ->locker);
 
-	return semaphore_post(&g_ctx.sema_request);
+	return semaphore_post(&taskQ->sema_request);
 }
 
-int task_queue_create(thread_pool_t pool, int maxWorker)
+task_queue_t task_queue_create(thread_pool_t pool, int maxWorker)
 {
 	int r;
+	task_queue_context_t* taskQ;
+	taskQ = (task_queue_context_t*)malloc(sizeof(task_queue_context_t));
+	if(taskQ)
+	{
+		taskQ->running = 1;
+		taskQ->pool = pool;
+		taskQ->maxWorker = maxWorker;
+		taskQ->tasks_recycle_count = 0;
+		LIST_INIT_HEAD(&taskQ->tasks);
+		LIST_INIT_HEAD(&taskQ->tasks_recycle);
 
-	g_ctx.running = 1;
-	g_ctx.pool = pool;
-	g_ctx.maxWorker = maxWorker;
-	g_ctx.tasks_recycle_count = 0;
-	LIST_INIT_HEAD(&g_ctx.tasks);
-	LIST_INIT_HEAD(&g_ctx.tasks_recycle);
+		r = locker_create(&taskQ->locker);
+		assert(0 == r);
 
-	r = locker_create(&g_ctx.locker);
-	assert(0 == r);
+		// create worker semaphore
+		r = semaphore_create(&taskQ->sema_worker, NULL, maxWorker);
+		assert(0 == r);
 
-	// create worker semaphore
-	r = semaphore_create(&g_ctx.sema_worker, NULL, maxWorker);
-	assert(0 == r);
+		// create request semaphore
+		r = semaphore_create(&taskQ->sema_request, NULL, 0);
+		assert(0 == r);
 
-	// create request semaphore
-	r = semaphore_create(&g_ctx.sema_request, NULL, 0);
-	assert(0 == r);
-
-	// create schedule thread
-	return thread_create(&g_ctx.thread_scheduler, task_queue_scheduler, NULL);
+		// create schedule thread
+		r = thread_create(&taskQ->thread_scheduler, task_queue_scheduler, taskQ);
+		assert(0 == r);
+	}
+	return taskQ;
 }
 
-int task_queue_destroy()
+int task_queue_destroy(task_queue_t q)
 {
+	task_queue_context_t* taskQ;
+	taskQ = (task_queue_context_t*)q;
+
 	// notify exit
-	g_ctx.running = 0;
-	semaphore_post(&g_ctx.sema_request);
-	semaphore_post(&g_ctx.sema_worker);
+	taskQ->running = 0;
+	semaphore_post(&taskQ->sema_request);
+	semaphore_post(&taskQ->sema_worker);
 
-	thread_destroy(g_ctx.thread_scheduler);
-	semaphore_destroy(&g_ctx.sema_request);
-	semaphore_destroy(&g_ctx.sema_worker);
-	locker_destroy(&g_ctx.locker);
+	thread_destroy(taskQ->thread_scheduler);
+	semaphore_destroy(&taskQ->sema_request);
+	semaphore_destroy(&taskQ->sema_worker);
+	locker_destroy(&taskQ->locker);
 
-	task_clean();
+	task_clean(taskQ);
+	free(taskQ);
 	return 0;
 }
