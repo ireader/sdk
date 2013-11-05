@@ -48,8 +48,8 @@ HttpSocket::~HttpSocket()
 int HttpSocket::Connect(const char* ip, int port)
 {
 	assert(ip);
-	if(!m_ip.empty())
-		return -1; // already initialize
+	//if(!m_ip.empty())
+	//	return -1; // already initialize
 
 	m_ip = ip;
 	m_port = port;
