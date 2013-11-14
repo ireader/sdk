@@ -14,6 +14,7 @@ public:
 	UTF8Encode(const char* gb18030) : m_p(NULL)
 	{
 		assert(gb18030);
+		m_null[0] = 0;
 		int n = strlen(gb18030) + 1;
 		wchar_t* wbuf = new wchar_t[n];
 		n = unicode_from_gb18030(gb18030, n, wbuf, sizeof(wchar_t)*n);
@@ -29,6 +30,7 @@ public:
 	UTF8Encode(const wchar_t* unicode) : m_p(NULL)
 	{
 		assert(unicode);
+		m_null[0] = 0;
 		int n = wcslen(unicode) + 1;
 		m_p = new char[n * 4];
 		memset(m_p, 0, n * 4);
@@ -38,6 +40,7 @@ public:
 	UTF8Encode(const char* text, const char* encoding) : m_p(NULL)
 	{
 		assert(text && encoding);
+		m_null[0] = 0;
 		if(0==stricmp("utf-8", encoding) || 0==stricmp("utf8", encoding))
 		{
 			int n = strlen(text) + 1;
@@ -55,6 +58,7 @@ public:
 				memset(m_p, 0, (n + 1) * 4);
 				unicode_to_utf8(wbuf, n, m_p, (n + 1) * 4);
 			}
+			delete wbuf;
 		}
 		else
 		{
@@ -70,11 +74,12 @@ public:
 
 	operator const char* () const
 	{
-		return m_p;
+		return m_p ? m_p : m_null;
 	}
 
 private:
 	char* m_p;
+	char   m_null[1];
 };
 
 class UTF8Decode
