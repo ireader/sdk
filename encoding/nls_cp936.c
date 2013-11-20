@@ -11109,7 +11109,7 @@ static int char2uni(const unsigned char *rawstring, int boundlen,
 //MODULE_LICENSE("Dual BSD/GPL");
 //MODULE_ALIAS_NLS(gb2312);
 
-int gb2312_to_unicode(const unsigned char *src, wchar_t *tgt, int tgtLen)
+int gb2312_mbtowc(const unsigned char *src, wchar_t *tgt, int tgtLen)
 {
 	int i, j, n;
 	int srcLen = src?strlen((const char*)src):0;
@@ -11127,7 +11127,7 @@ int gb2312_to_unicode(const unsigned char *src, wchar_t *tgt, int tgtLen)
 	return i;
 }
 
-int unicode_to_gb2312(const wchar_t* src, unsigned char *tgt, int tgtLen)
+int gb2312_wctomb(const wchar_t* src, unsigned char *tgt, int tgtLen)
 {
 	int i, j, n;
 	int srcLen = src?wcslen(src):0;

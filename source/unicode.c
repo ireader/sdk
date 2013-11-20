@@ -1,12 +1,10 @@
+#include "unicode.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
-#else
-#include <iconv.h>
 #endif
-#include "unicode.h"
 
 int unicode_to_utf8(IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes)
 {
@@ -163,6 +161,9 @@ int unicode_from_mbcs(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt, IN
 #endif
 }
 
+extern int gb2312_mbtowc(const unsigned char *src, wchar_t *tgt, int tgtLen);
+extern int gb2312_wctomb(const wchar_t* src, unsigned char *tgt, int tgtLen);
+
 int unicode_to_gb18030(IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, IN size_t tgtBytes)
 {
 	srcLen = 0==srcLen?wcslen(src)+1:srcLen;
@@ -177,7 +178,8 @@ int unicode_to_gb18030(IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, I
 		assert(0);
 		return -1;
 	}
-	return wcstombs(tgt, src, tgtBytes);
+	return gb2312_wctomb(src, (unsigned char*)tgt, tgtBytes);
+	//return wcstombs(tgt, src, tgtBytes);
 #endif
 }
 
@@ -195,6 +197,7 @@ int unicode_from_gb18030(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt,
 		assert(0);
 		return -1;
 	}
-	return mbstowcs(tgt, src, tgtBytes);
+	return gb2312_mbtowc((unsigned char*)src, tgt, tgtBytes);
+	//return mbstowcs(tgt, src, tgtBytes);
 #endif
 }
