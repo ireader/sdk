@@ -324,7 +324,7 @@ static bool ParseHttpHeader(char* reply, size_t len, HttpResponse& response)
 	{
 		// < 50 M
 		int len = atoi(value);
-		assert(len > 0 && len < 50*1024*1024);
+		assert(len >= 0 && len < 50*1024*1024);
 		response.SetContentLength(len);
 	}
 	//else if(0 == stricmp("Set-Cookie", name))
