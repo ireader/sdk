@@ -201,3 +201,7 @@ int unicode_from_gb18030(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt,
 	//return mbstowcs(tgt, src, tgtBytes);
 #endif
 }
+
+#if defined(OS_LINUX)
+#include "../i18n/nls_cp936.c"
+#endif
