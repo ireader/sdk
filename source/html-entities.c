@@ -12,26 +12,28 @@
 
 typedef struct _html_entities
 {
-	wchar_t name[10];
+	char name[10];
 	wchar_t number; // Entity Number
 } html_entities;
 
+#define html_entity(entity, code) { entity, code }
+
 static html_entities s_entities[] = {
 	// HTML and XHTML processors must support the five special characters listed in the table below:
-	{ L"quot",	34 }, // quotation mark(")
-	{ L"apos",	39 }, // apostrophe(')
-	{ L"amp",	38 }, // ampersand(&)
-	{ L"lt",	60 }, // less-than(<)
-	{ L"gt",	62 }, // greater-than(>)
+	html_entity("quot",	34), // quotation mark(")
+	html_entity("apos",	39), // apostrophe(')
+	html_entity("amp",	38), // ampersand(&)
+	html_entity("lt",	60), // less-than(<)
+	html_entity("gt",	62), // greater-than(>)
 
 	// ISO 8859-1 Symbols
-	{ L"nbsp",	160 }, // non-breaking space( )
-	{ L"pound",	163 }, // pound(£)
-	{ L"yen",	165 }, // yen(¥)
-	{ L"sect",	167 }, // section(§)
-	{ L"copy",	169 }, // copyright(©)
-	{ L"reg",	174 }, // registered trademark(®)
-	{ L"euro",	8364 }, // euro(€)
+	html_entity("nbsp",	160), // non-breaking space( )
+	html_entity("pound",163), // pound(£)
+	html_entity("yen",	165), // yen(¥)
+	html_entity("sect",	167), // section(§)
+	html_entity("copy",	169), // copyright(©)
+	html_entity("reg",	174), // registered trademark(®)
+	html_entity("euro",	8364), // euro(€)
 };
 
 int html_entities_count()
@@ -50,13 +52,13 @@ void html_entities_get(int index, char name[16], wchar_t *number)
 	}
 }
 
-static int html_entities_find_by_name(const wchar_t* name)
+static int html_entities_find_by_name(const char* name)
 {
 	int i;
 	for(i = 0; i < sizeof(s_entities)/sizeof(s_entities[0]); i++)
 	{
-		if(0==wcsncmp(s_entities[i].name, name, wcslen(s_entities[i].name)) 
-			&& ';'==name[wcslen(s_entities[i].name)])
+		if(0==strncmp(s_entities[i].name, name, strlen(s_entities[i].name)) 
+			&& ';'==name[strlen(s_entities[i].name)])
 			return i;
 	}
 	return -1;
@@ -67,52 +69,82 @@ static int html_entities_find_by_number(wchar_t number)
 	int i;
 	for(i = 0; i < sizeof(s_entities)/sizeof(s_entities[0]); i++)
 	{
-
 		if(s_entities[i].number == number)
 			return i;
 	}
 	return -1;
 }
 
-static int html_entities_numeric(const char **p, wchar_t *number)
+static int html_entities_value(char* p, wchar_t number)
 {
-	long code_l;
-	int hexadecimal = (**p == 'x' || **p == 'X'); /* TODO: XML apparently disallows "X" */
-	char *endptr;
-
-	if (hexadecimal && (**p != '\0'))
-		(*p)++;
-			
-	/* strtol allows whitespace and other stuff in the beginning
-		* we're not interested */
-	if ((hexadecimal && !isxdigit(**p)) ||
-			(!hexadecimal && !isdigit(**p))) {
-		return -1;
+	if(number <= 0x7F)
+	{
+		*p = (char)number;
+		return 1;
 	}
-
-	code_l = strtol(*p, &endptr, hexadecimal ? 16 : 10);
-	/* we're guaranteed there were valid digits, so *endptr > buf */
-	*p = endptr;
-
-	if (*endptr != ';')
-		return -1;
-
-	/* many more are invalid, but that depends on whether it's HTML
-	 * (and which version) or XML. */
-	if (code_l > 0x10FFFFL)
-		return -1;
-
-	if (number != NULL)
-		*number = (wchar_t)code_l;
+	else if(number <= 0x7FF)
+	{
+		*p++ = (char)(0xc0 | ((number>>6)&0x1F));
+		*p++ = (char)(0x80 | (number&0x3F));
+		return 2;
+	}
+	else if(number <= 0xFFFF)
+	{
+		*p++ = (char)(0xe0 | ((number>>12)&0x0F));
+		*p++ = (char)(0x80 | ((number>>6)&0x3F));
+		*p++ = (char)(0x80 | (number&0x3F));
+		return 3;
+	}
+	else if(number <= 0x10FFFF)
+	{
+		*p++ = (char)(0xF0 | (((int)number>>18)&0x07));
+		*p++ = (char)(0x80 | ((number>>12)&0x3F));
+		*p++ = (char)(0x80 | ((number>>6)&0x3F));
+		*p++ = (char)(0x80 | (number&0x3F));
+		return 4;
+	}
 
 	return 0;
 }
 
-int html_entities_decode(wchar_t* dst, const wchar_t* src, int srcLen)
+static const char* html_entities_numeric(const char *p, wchar_t *number)
 {
-	int j;
+	long code_l;
+	int hexadecimal = (*p == 'x' || *p == 'X'); /* TODO: XML apparently disallows "X" */
+	char *endptr;
+
+	if (hexadecimal && (*p != '\0'))
+		p++;
+			
+	/* strtol allows whitespace and other stuff in the beginning
+		* we're not interested */
+	if ((hexadecimal && !isxdigit(*p)) ||
+			(!hexadecimal && !isdigit(*p))) {
+		return NULL;
+	}
+
+	code_l = strtol(p, &endptr, hexadecimal ? 16 : 10);
+	/* we're guaranteed there were valid digits, so *endptr > buf */
+
+	if (*endptr != ';')
+		return NULL;
+
+	/* many more are invalid, but that depends on whether it's HTML
+	 * (and which version) or XML. */
+	if (code_l > 0x10FFFFL)
+		return NULL;
+
+	if (number != NULL)
+		*number = (wchar_t)code_l;
+
+	return endptr+1;
+}
+
+int html_entities_decode(char* dst, const char* src, int srcLen)
+{
+	int i, j;
 	wchar_t n;
-	const wchar_t* p;
+	const char* p, *p0;
 
 	j = 0;
 	for(p = src; *p && p < src + srcLen; )
@@ -126,51 +158,86 @@ int html_entities_decode(wchar_t* dst, const wchar_t* src, int srcLen)
 		n = 0;
 		if('#' == p[1])
 		{
-			// TODO:
-			//if(0 == html_entities_numeric(&p, &n))
-			//	src = p;
+			p0 = html_entities_numeric(p+2, &n);
+			if(p0)
+			{
+				j += html_entities_value(dst+j, n);
+				p = p0;
+				continue;
+			}
 		}
 		else
 		{
-			n = html_entities_find_by_name(p+1);
-			if(n >= 0)
+			i = html_entities_find_by_name(p+1);
+			if(i >= 0)
 			{
-				n = s_entities[n].number;
-				p += wcslen(s_entities[n].name) + 2; // with '&' and ';'
+				n = s_entities[i].number;
+				p += strlen(s_entities[i].name) + 2; // with '&' and ';'
+				j += html_entities_value(dst+j, n);
+				continue;
 			}
 		}
 
-		if(n > 0)
-		{
-			dst[j++] = n;
-		}
-		else
-		{
-			dst[j++] = *src++; // don't decode '&'
-		}
+		dst[j++] = *src++; // don't decode '&'
 	}
 
 	dst[j] = '\0';
 	return j;
 }
 
-int html_entities_encode(wchar_t* dst, const wchar_t* src, int srcLen)
+static const unsigned char* get_next_char(const unsigned char* s, wchar_t* w)
+{
+	if(0xF0 == (0xF0 & s[0]))
+	{
+		*w = ((((wchar_t)s[0])&0x07) << 18)
+			| ((((wchar_t)s[1])&0x3F) << 12)
+			| ((((wchar_t)s[2])&0x3F) << 6)
+			| (((wchar_t)s[3])&0x3F);
+		return s + 4;
+	}
+	else if(0xE0 == (0xE0 & s[0]))
+	{
+		*w = ((((wchar_t)s[0])&0x0F) << 12)
+			| ((((wchar_t)s[1])&0x3F) << 6)
+			| (((wchar_t)s[2])&0x3F);
+		return s + 3;
+	}
+	else if(0xC0 == (0xC0 & s[0]))
+	{
+		*w = ((((wchar_t)s[0])&0x1F) << 6)
+			| (((wchar_t)s[1])&0x3F);
+		return s + 2;
+	}
+	else
+	{
+		*w = ((wchar_t)s[0]) & 0xFF;
+		return s + 1;
+	}
+}
+
+int html_entities_encode(char* dst, const char* src, int srcLen)
 {
 	int i, j;
-	const wchar_t *p;
+	wchar_t n;
+	const unsigned char* p, *p2;
 
 	j = 0;
-	for(p = src; p < src+srcLen && *p; p++)
+	p = (const unsigned char*)src;
+	while(p < (const unsigned char*)src+srcLen && *p)
 	{
-		i = html_entities_find_by_number(*p);
+		p2 = get_next_char(p, &n);
+
+		i = html_entities_find_by_number(n);
 		if(i >= 0)
 		{
-			wsprintf(dst+j, L"&%s;", s_entities[i].name);
-			j += wcslen(s_entities[i].name) + 2;
+			sprintf(dst+j, "&%s;", s_entities[i].name);
+			j += strlen(s_entities[i].name) + 2;
+			p = p2;
 		}
 		else
 		{
-			dst[j++] = *p;
+			while(p < p2)
+				dst[j++] = *p++;
 		}
 	}
 
