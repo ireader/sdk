@@ -2,9 +2,11 @@
 #define _aio_socket_h_
 
 #if defined(OS_LINUX)
+typedef int socket_t;
 typedef struct iovec socket_bufvec_t;
 #else
 #include <WinSock2.h>
+typedef SOCKET	socket_t;
 typedef WSABUF socket_bufvec_t;
 #endif
 
@@ -18,8 +20,8 @@ typedef void (*aio_onrecv)(void* p, int code, int bytes);
 int aio_socket_init();
 int aio_socket_clean();
 
-aio_socket_t aio_socket_create_tcp();
-aio_socket_t aio_socket_create_udp();
+/// @param[in] own 1-close socket on aio_socket_close, 0-don't close socket
+aio_socket_t aio_socket_create(socket_t socket, int own);
 int aio_socket_close(aio_socket_t socket);
 
 /// cancel pending IO
@@ -33,7 +35,7 @@ int aio_socket_cancel(aio_socket_t socket);
 /// @param[in] proc callback procedure
 /// @param[in] param user-defined parameter
 /// @return 0-ok, <0-error
-int aio_socket_accept(const char* ip, int port, aio_onaccept proc, void* param);
+int aio_socket_accept(aio_socket_t socket, const char* ip, int port, aio_onaccept proc, void* param);
 
 /// connect to remote server
 /// @param[in] socket aio socket

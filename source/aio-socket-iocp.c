@@ -30,15 +30,49 @@ enum {
 	POST_IO_WRITE_VEC,
 };
 
-static HANDLE s_iocp = INVALID_HANDLE_VALUE;
-static struct OverlpappedList s_overlappeds;
-
-static DWORD system_cpu()
+struct aio_context_accept
 {
-	SYSTEM_INFO sysinfo;
-	GetSystemInfo(&sysinfo);
-	return sysinfo.dwNumberOfProcessors;
-}
+	WSAOVERLAPPED overlapped;
+	aio_onaccept proc;
+	void* param;
+	
+	SOCKET socket;
+	char buffer[(sizeof(sockaddr_in)+16)*2];
+};
+
+struct aio_context_connect
+{
+	WSAOVERLAPPED overlapped;
+	aio_onconnect proc;
+	void* param;
+};
+
+struct aio_context_recv
+{
+	WSAOVERLAPPED overlapped;
+	aio_onrecv proc;
+	void* param;
+};
+
+struct aio_context_send
+{
+	WSAOVERLAPPED overlapped;
+	aio_onsend proc;
+	void* param;
+};
+
+struct aio_context
+{
+	int own;
+	SOCKET socket;
+	aio_context_accept accept;
+	aio_context_connect connect;
+	aio_context_recv recv;
+	aio_context_send send;
+};
+
+static int s_processors = 0; // cpu count
+static HANDLE s_iocp = INVALID_HANDLE_VALUE;
 
 static int iocp_init()
 {
@@ -63,140 +97,61 @@ static int iocp_init()
 
 static int iocp_create()
 {
+	SYSTEM_INFO sysinfo;
+	GetSystemInfo(&sysinfo);
+	s_processors = sysinfo.dwNumberOfProcessors;
+
 	assert(INVALID_HANDLE_VALUE == s_iocp);
-	s_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, system_cpu());
+	s_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, s_processors);
 	return NULL==s_iocp ? GetLastError() : 0;
 }
 
 static int iocp_destroy()
 {
+	int i;
 	if(INVALID_HANDLE_VALUE != s_iocp)
+	{
+		for(i = 0; i < s_processors; i++)
+			PostQueuedCompletionStatus(s_iocp, 0, 0, NULL); // notify to exit
 		CloseHandle(s_iocp);
-	return 0;
-}
-
-static int iocp_connect(aio_socket_t socket, const char* ip, int port)
-{
-	DWORD dwBytes = 0;
-	WSAOVERLAPPED overlapped;
-	struct sockaddr_in addr;
-
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	addr.sin_addr.s_addr = inet_addr(ip);
-
-	memset(&overlapped, 0, sizeof(overlapped));
-	if(!ConnectEx(socket, &addr, sizeof(addr), NULL, 0, &dwBytes, &overlapped))
-	{
-		DWORD ret = WSAGetLastError();
-		if(ERROR_IO_PENDING == ret)
-		{
-		}
-		else
-		{
-			return ret;
-		}
 	}
 	return 0;
 }
 
-static int iocp_disconnect(aio_socket_t socket)
+static int iocp_bind(SOCKET socket, ULONG_PTR key)
 {
-	WSAOVERLAPPED overlapped;
-	memset(&overlapped, 0, sizeof(overlapped));
-	if(!DisconnectEx(socket, &overlapped, 0, 0))
-	{
-		DWORD ret = WSAGetLastError();
-		if(ERROR_IO_PENDING == ret)
-		{
-		}
-		else
-		{
-			return ret;
-		}
-	}
+	HANDLE iocp;
+	if(INVALID_HANDLE_VALUE == s_iocp)
+		return -1;
+
+	iocp = CreateIoCompletionPort(socket, s_iocp, key, 0);
+	assert(iocp == s_iocp);
 	return 0;
 }
 
-static int iocp_recv(aio_socket_t socket)
-{
-	DWORD dwBytes = 0;
-	WSAOVERLAPPED overlapped;
-	WSABUF wsa[1];
-	wsa[0].buf = 0;
-	wsa[0].len = 0;
-	memset(&overlapped, 0, sizeof(overlapped));
-	if(SOCKET_ERROR == WSARecv(socket, wsa, 1, &dwBytes, 0, &overlapped, NULL))
-	{
-		DWORD ret = WSAGetLastError();
-		if(WSA_IO_PENDING == ret)
-		{
-		}
-		else
-		{
-			return ret;
-		}
-	}
-
-	PostQueuedCompletionStatus();
-}
-
-static int iocp_send()
-{
-	DWORD dwBytes = 0;
-	WSAOVERLAPPED overlapped;
-	WSABUF wsa[1];
-	wsa[0].buf = 0;
-	wsa[0].len = 0;
-	memset(&overlapped, 0, sizeof(overlapped));
-	if(SOCKET_ERROR == WSASend(socket, wsa, 1, &dwBytes, 0, &overlapped, NULL))
-	{
-		DWORD ret = WSAGetLastError();
-		if(WSA_IO_PENDING == ret)
-		{
-		}
-		else
-		{
-			return ret;
-		}
-	}
-}
-
-int iocp_process()
+static int STDCALL iocp_process()
 {
 	DWORD bytes;
 	ULONG completionKey;
 	OVERLAPPED *pOverlapped;
+	aio_context *aio;
 
 	if(GetQueuedCompletionStatus(s_iocp, &bytes, &completionKey, &pOverlapped, INFINITE))
 	{
 		if(0 == completionKey)
 		{
-			// start accept
-			switch(bytes)
-			{
-			case POST_IO_ACCEPT:
-				Accept();
-				break;
-			case POST_IO_READ:
-				break;
-			case POST_IO_WRITE:
-				break;
-			case POST_IO_DISCONNECT:
-				break;
-			default:
-				printf("post io unknow action\n");
-			}
+			return 0;
 		}
 		else
 		{
 			// action
+			aio = (aio_context*)completionKey;
 		}
 	}
 	else
 	{
 		DWORD err = GetLastError();
-		if(NULL==pOverlapped)
+		if(NULL==*pOverlapped)
 		{
 			if(WAIT_TIMEOUT == err)
 			{
@@ -207,7 +162,6 @@ int iocp_process()
 			{
 				// exception
 			}
-			.
 		}
 		else
 		{
@@ -226,23 +180,57 @@ int aio_socket_init()
 	wVersionRequested = MAKEWORD(2, 2);
 	WSAStartup(wVersionRequested, &wsaData);
 
-	return iocp_init();
+	iocp_init();
+	return iocp_create();
 }
 
 int aio_socket_clean()
 {
+	iocp_destroy();
 	return WSACleanup();
 }
 
-int aio_socket_accept(aio_socket_t socket)
+aio_socket_t aio_socket_create(socket_t socket, int own)
 {
-	WSAOVERLAPPED overlapped;
-	SOCKET client;
-	DWORD dwBytes = sizeof(struct sockaddr_in)+16;
+	aio_context *aio = NULL;
+	aio = (aio_context*)malloc(sizeof(aio_context));
+	if(!aio)
+		return NULL;
 
-	memset(&overlapped, 0, sizeof(overlapped));
-	client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if(!AcceptEx(socket, client, buffer, 0, dwBytes, dwBytes, &dwBytes, &overlapped))
+	memset(aio, 0, sizeof(aio_context));
+	aio->socket = socket;
+	aio->own = own;
+
+	if(0 != iocp_bind(aio->socket, aio))
+	{
+		free(aio);
+		return NULL;
+	}
+
+	return aio;
+}
+
+int aio_socket_close(aio_socket_t socket)
+{
+	aio_context *aio = (aio_context*)socket;
+	if(aio->own)
+		closesocket(aio->socket);
+	free(aio);
+	return 0;
+}
+
+int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
+{
+	aio_context *aio = (aio_context*)socket;
+	DWORD dwBytes = sizeof(struct sockaddr_in)+16;
+	struct sockaddr_in local;
+	struct sockaddr_in remote;
+	char ip[16];
+
+	aio->accept.proc = proc;
+	aio->accept.param = param;
+	aio->accept.socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+	if(!AcceptEx(socket, aio->accept.socket, aio->accept.buffer, 0, dwBytes, dwBytes, &dwBytes, &aio->accept.overlapped))
 	{
 		DWORD ret = WSAGetLastError();
 		if(ERROR_IO_PENDING == ret)
@@ -251,7 +239,7 @@ int aio_socket_accept(aio_socket_t socket)
 		}
 		else
 		{
-			closesocket(client);
+			closesocket(aio->accept.socket);
 			return ret;
 		}
 	}
@@ -261,37 +249,150 @@ int aio_socket_accept(aio_socket_t socket)
 	// the socket sAcceptSocket is in the default state for a connected socket. 
 	// The socket sAcceptSocket does not inherit the properties of the socket associated 
 	// with sListenSocket parameter until SO_UPDATE_ACCEPT_CONTEXT is set on the socket
-	setsockopt(client, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char*)&socket, sizeof(socket));
+	setsockopt(aio->accept.socket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char*)&socket, sizeof(socket));
 
+	dwBytes = sizeof(struct sockaddr_in)+16;
+	GetAcceptExSockaddrs(aio->accept.buffer, 0, dwBytes, dwBytes, &local, &dwBytes, &remote, &dwBytes);
+
+	sprintf(ip, "%d.%d.%d.%d", addr.sin_addr.s_net, addr.sin_addr.s_host, addr.sin_addr.s_lh, addr.sin_addr.s_impno);
+	proc(param, 0, aio->accept.socket, ip, ntohs(remote.sin_port));
 	return 0;
 }
 
 int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconnect proc, void* param)
 {
-	PostQueuedCompletionStatus(s_iocp, POST_IO_CONNECT, 0, NULL);
-}
+	aio_context *aio = (aio_context*)socket;
+	struct sockaddr_in addr;
 
-int aio_socket_disconnect(aio_socket_t socket, aio_ondisconnect proc, void* param)
-{
-	PostQueuedCompletionStatus(s_iocp, POST_IO_DISCONNECT, 0, NULL);
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);
+	addr.sin_addr.s_addr = inet_addr(ip);
+
+	aio->connect.proc = proc;
+	aio->connect.param = param;
+	if(!ConnectEx(aio->socket, addr, sizeof(addr), NULL, 0, NULL, &aio->connect.overlapped))
+	{
+		DWORD ret = WSAGetLastError();
+		if(ERROR_IO_PENDING == ret)
+		{
+			return 0;
+		}
+		else
+		{
+			return ret;
+		}
+	}
+
+	proc(param, 0);
+	return 0;
 }
 
 int aio_socket_recv(aio_socket_t socket, void* buffer, int bytes, aio_onrecv proc, void* param)
 {
-	PostQueuedCompletionStatus(s_iocp, POST_IO_READ, 0, NULL);
+	DWORD dwBytes;
+	WSABUF wsa[1];
+	aio_context *aio;
+
+	wsa[0].buf = buffer;
+	wsa[0].len = bytes;
+
+	aio = (aio_context*)socket;
+	aio->recv.proc = proc;
+	aio->recv.param = param;
+
+	if(SOCKET_ERROR == WSARecv(socket, wsa, 1, &dwBytes, 0, &aio->recv.overlapped, NULL))
+	{
+		DWORD ret = WSAGetLastError();
+		if(WSA_IO_PENDING == ret)
+		{
+			return 0;
+		}
+		else
+		{
+			return ret;
+		}
+	}
+
+	proc(param, 0, dwBytes);
+	return 0;
 }
 
 int aio_socket_send(aio_socket_t socket, const void* buffer, int bytes, aio_onsend proc, void* param)
 {
-	PostQueuedCompletionStatus(s_iocp, POST_IO_WRITE, 0, NULL);
-}
+	DWORD dwBytes;
+	WSABUF wsa[1];
+	aio_context *aio;
 
-int aio_socket_send_v(aio_socket_t socket, const socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param)
-{
-	PostQueuedCompletionStatus(s_iocp, POST_IO_READ_VEC, 0, NULL);
+	wsa[0].buf = buffer;
+	wsa[0].len = bytes;
+
+	aio = (aio_context*)socket;
+	aio->send.proc = proc;
+	aio->send.param = param;
+
+	if(SOCKET_ERROR == WSASend(socket, wsa, 1, &dwBytes, 0, &aio->send.overlapped, NULL))
+	{
+		DWORD ret = WSAGetLastError();
+		if(WSA_IO_PENDING == ret)
+		{
+			return 0;
+		}
+		else
+		{
+			return ret;
+		}
+	}
+	
+	proc(param, 0, dwBytes);
+	return 0;
 }
 
 int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecv proc, void* param)
 {
-	PostQueuedCompletionStatus(s_iocp, POST_IO_WRITE_VEC, 0, NULL);
+	DWORD dwBytes = 0;
+	aio_context *aio = (aio_context*)socket;
+
+	aio->recv.proc = proc;
+	aio->recv.param = param;
+
+	if(SOCKET_ERROR == WSARecv(socket, vec, n, &dwBytes, 0, &aio->recv.overlapped, NULL))
+	{
+		DWORD ret = WSAGetLastError();
+		if(WSA_IO_PENDING == ret)
+		{
+			return 0;
+		}
+		else
+		{
+			return ret;
+		}
+	}
+
+	proc(param, 0, dwBytes);
+	return 0;
+}
+
+int aio_socket_send_v(aio_socket_t socket, const socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param)
+{
+	DWORD dwBytes = 0;
+	aio_context *aio = (aio_context*)socket;
+
+	aio->send.proc = proc;
+	aio->send.param = param;
+
+	if(SOCKET_ERROR == WSASend(socket, vec, n, &dwBytes, 0, &aio->send.overlapped, NULL))
+	{
+		DWORD ret = WSAGetLastError();
+		if(WSA_IO_PENDING == ret)
+		{
+			return 0;
+		}
+		else
+		{
+			return ret;
+		}
+	}
+
+	proc(param, 0, dwBytes);
+	return 0;
 }

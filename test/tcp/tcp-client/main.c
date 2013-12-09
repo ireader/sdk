@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 	const char *echo = "hello server";
 	const char *host = "127.0.0.1";
 	int port = 2012;
-	int count = 10000;
+	int work = 10000;
 	int i, r, n;
 	time64_t lt, lt1;
 
@@ -28,6 +28,11 @@ int main(int argc, char* argv[])
 			if(i + 1 >= argc) exit(1);
 			port = atoi(argv[++i]);
 		}
+		else if(0 == strcmp("-w", argv[i]))
+		{
+			if(i+1 >= argc) exit(1);
+			work = atoi(argv[++i]);
+		}
 	}
 
 	socket_init();
@@ -41,7 +46,7 @@ int main(int argc, char* argv[])
 
 	n = strlen(echo);
 	lt = time64_now();
-	for(i = 0; i < count; i++)
+	for(i = 0; i < work; i++)
 	{
 		r = socket_send(tcp, echo, n, 0);
 		if(r < 0)
@@ -59,7 +64,7 @@ int main(int argc, char* argv[])
 	}
 	
 	lt1 = time64_now();
-	printf("tcp[%s:%d] send/recv %d time: %ll\n", host, port, count, lt1-lt);
+	printf("tcp[%s:%d] send/recv %d time: %ll\n", host, port, work, lt1-lt);
 
 	socket_close(tcp);
 	socket_cleanup();
