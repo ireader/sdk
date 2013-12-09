@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tcp-client", "tcp-client.vcproj", "{5479B20B-DCDB-42C2-AC96-62E2E943F041}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tcp-server", "..\tcp-server\tcp-server.vcproj", "{1F1D488C-3778-44D5-B1F3-EAF5204E0CA8}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tcp-server-aio", "..\tcp-server-aio\tcp-server-aio.vcproj", "{B8AD285F-2727-45D8-A6AA-2BE7D0DAE03B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5479B20B-DCDB-42C2-AC96-62E2E943F041}.Debug|Win32.ActiveCfg = Debug|Win32
+		{5479B20B-DCDB-42C2-AC96-62E2E943F041}.Debug|Win32.Build.0 = Debug|Win32
+		{5479B20B-DCDB-42C2-AC96-62E2E943F041}.Release|Win32.ActiveCfg = Release|Win32
+		{5479B20B-DCDB-42C2-AC96-62E2E943F041}.Release|Win32.Build.0 = Release|Win32
+		{1F1D488C-3778-44D5-B1F3-EAF5204E0CA8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{1F1D488C-3778-44D5-B1F3-EAF5204E0CA8}.Debug|Win32.Build.0 = Debug|Win32
+		{1F1D488C-3778-44D5-B1F3-EAF5204E0CA8}.Release|Win32.ActiveCfg = Release|Win32
+		{1F1D488C-3778-44D5-B1F3-EAF5204E0CA8}.Release|Win32.Build.0 = Release|Win32
+		{B8AD285F-2727-45D8-A6AA-2BE7D0DAE03B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B8AD285F-2727-45D8-A6AA-2BE7D0DAE03B}.Debug|Win32.Build.0 = Debug|Win32
+		{B8AD285F-2727-45D8-A6AA-2BE7D0DAE03B}.Release|Win32.ActiveCfg = Release|Win32
+		{B8AD285F-2727-45D8-A6AA-2BE7D0DAE03B}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
