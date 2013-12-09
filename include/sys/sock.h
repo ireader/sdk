@@ -98,8 +98,8 @@ inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_
 inline int socket_select(IN int n, IN fd_set* rfds, IN fd_set* wfds, IN fd_set* efds, IN struct timeval* timeout);
 inline int socket_select_readfds(IN int n, IN fd_set* fds, IN struct timeval* timeout);
 inline int socket_select_writefds(IN int n, IN fd_set* fds, IN struct timeval* timeout);
-inline int socket_select_read(IN socket_t sock, IN int timeout); // 1-read able, 0-timeout, <0-error
-inline int socket_select_write(IN socket_t sock, IN int timeout); // 1-write able, 0-timeout, <0-error
+inline int socket_select_read(IN socket_t sock, IN int timeout); // 1-read able, 0-timeout, <0-forever
+inline int socket_select_write(IN socket_t sock, IN int timeout); // 1-write able, 0-timeout, <0-forever
 inline int socket_readable(IN socket_t sock); // 1-read able, 0-can't, <0-error
 inline int socket_writeable(IN socket_t sock); // 1-write able, 0-can't, <0-error
 
