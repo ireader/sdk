@@ -5,10 +5,6 @@
 #include <Winsock2.h>
 #include <ws2ipdef.h>
 
-#ifndef OS_WINDOWS
-#define OS_WINDOWS
-#endif
-
 typedef SOCKET	socket_t;
 typedef int		socklen_t;
 typedef WSABUF	socket_bufvec_t;

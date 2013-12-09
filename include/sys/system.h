@@ -4,19 +4,11 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 
-#ifndef OS_WINDOWS
-#define OS_WINDOWS
-#endif
-
 typedef HMODULE module_t;
 
 #elif defined(_MAC_)
 #include <sys/param.h>
 #include <sys/sysctl.h>
-
-#ifndef OS_MAC
-#define OS_MAC
-#endif
 
 #else
 #include <sys/types.h>
@@ -28,11 +20,6 @@ typedef HMODULE module_t;
 #include <errno.h>
 
 typedef void* module_t;
-
-#ifndef FAR
-#define FAR
-#endif
-
 #endif
 
 #include <sys/timeb.h>
@@ -228,7 +215,7 @@ inline int system_unload(module_t module)
 #endif
 }
 
-inline FAR void* system_getproc(module_t module, const char* producer)
+inline void* system_getproc(module_t module, const char* producer)
 {
 #if defined(OS_WINDOWS)
 	return GetProcAddress(module, producer);

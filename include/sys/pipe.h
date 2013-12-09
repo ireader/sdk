@@ -4,10 +4,6 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 
-#ifndef OS_WINDOWS
-#define OS_WINDOWS
-#endif
-
 typedef HANDLE pipe_t;
 #define invalid_pipe_value INVALID_HANDLE_VALUE
 
