@@ -4,14 +4,17 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 #include <Psapi.h>
+#include <process.h>
 
 #if defined(_MSC_VER)
 #pragma comment(lib, "Psapi.lib")
 #endif
 
-#ifndef OS_WINDOWS
-#define OS_WINDOWS
+#ifndef STDCALL
+#define STDCALL __stdcall
 #endif
+
+typedef unsigned int (__stdcall *thread_routine)(void *);
 
 typedef struct
 {
@@ -34,6 +37,10 @@ typedef DWORD			process_t;
 typedef pthread_t		thread_t;
 typedef pid_t			process_t;
 
+#ifndef STDCALL
+#define STDCALL
+#endif
+
 extern char** environ;
 #endif
 
@@ -53,7 +60,7 @@ extern char** environ;
 /// thread: Windows CreateThread/Linux pthread
 ///
 //////////////////////////////////////////////////////////////////////////
-typedef int (*thread_proc)(IN void* param);
+typedef int (STDCALL *thread_proc)(IN void* param);
 
 inline int thread_create(OUT thread_t* thread, IN thread_proc func, IN void* param);
 inline int thread_destroy(IN thread_t thread);
@@ -102,7 +109,13 @@ inline int process_createve(IN const char* filename, IN process_create_param_t *
 inline int thread_create(OUT thread_t* thread, IN thread_proc func, IN void* param)
 {
 #if defined(OS_WINDOWS)
-	thread->handle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, param, 0, &thread->id);
+	// http://msdn.microsoft.com/en-us/library/windows/desktop/ms682453%28v=vs.85%29.aspx
+	// A thread in an executable that calls the C run-time library (CRT) 
+	// should use the _beginthreadex and _endthreadex functions for thread management 
+	// rather than CreateThread and ExitThread;
+
+	//thread->handle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, param, 0, &thread->id);
+	thread->handle = (HANDLE)_beginthreadex(NULL, 0, (thread_routine)func, param, 0, (unsigned int*)&thread->id);
 	if(NULL == thread->handle)
 		return -1;
 	return 0;

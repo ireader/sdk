@@ -5,10 +5,6 @@
 #include <Windows.h>
 #include <direct.h>
 
-#ifndef OS_WINDOWS
-#define OS_WINDOWS
-#endif
-
 #else
 #include <unistd.h>
 #include <limits.h>

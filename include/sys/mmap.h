@@ -4,10 +4,6 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 
-#ifndef OS_WINDOWS
-#define OS_WINDOWS
-#endif
-
 #else
 #include <sys/types.h>
 #include <sys/stat.h>

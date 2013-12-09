@@ -19,7 +19,7 @@ public:
 	int GetPeriod(timer_t id, int& period);
 
 private:
-	static int ThreadProc(void* param);
+	static int STDCALL ThreadProc(void* param);
 
 private:
 	struct TimerItem
@@ -128,7 +128,7 @@ int TimerManager::GetPeriod(timer_t id, int &period)
 	return 0;
 }
 
-int TimerManager::ThreadProc(void *param)
+int STDCALL TimerManager::ThreadProc(void *param)
 {
 	assert(param);
 	//TimerManager* self = (TimerManager*)&g_timermgr;

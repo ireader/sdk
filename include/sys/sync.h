@@ -6,10 +6,6 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 
-#ifndef OS_WINDOWS
-#define OS_WINDOWS
-#endif
-
 typedef CRITICAL_SECTION	locker_t;
 typedef HANDLE				event_t;
 typedef HANDLE				semaphore_t;

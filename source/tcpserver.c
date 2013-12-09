@@ -19,7 +19,7 @@ typedef struct _tcpserver_info
 	unsigned short port;
 } tcpserver_info;
 
-static int worker(IN void* param)
+static int STDCALL worker(IN void* param)
 {
 	int ret;
 	socket_t server;

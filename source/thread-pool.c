@@ -44,7 +44,7 @@ typedef struct _thread_pool_context_t
 
 static void thread_pool_destroy_thread(thread_pool_context_t *context, int tid);
 
-static int thread_pool_worker(void *param)
+static int STDCALL thread_pool_worker(void *param)
 {
 	thread_list_t* threads;
 	thread_task_list_t *task;

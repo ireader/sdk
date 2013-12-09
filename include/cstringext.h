@@ -7,12 +7,6 @@
 #include <assert.h>
 #include <errno.h>
 
-#if defined(_WIN32) || defined(_WIN64)
-	#ifndef OS_WINDOWS
-		#define OS_WINDOWS
-	#endif
-#endif
-
 #if defined(OS_WINDOWS)
 	#if !defined(__cplusplus)
 		#ifndef inline

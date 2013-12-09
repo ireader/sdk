@@ -149,9 +149,9 @@ public:
 
 public:
 	operator void* () { return m_ptr; }
-	operator char* () { return (char*)m_ptr; }
+	operator char* () { return (char*)(m_ptr?m_ptr:""); }
 	operator const void* () const { return m_ptr; }
-	operator const char* () const { return (char*)m_ptr; }
+	operator const char* () const { return (char*)(m_ptr?m_ptr:""); }
 
 	void* get() { return m_ptr; }
 	const void* get() const { return m_ptr; }
