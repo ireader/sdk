@@ -697,7 +697,11 @@ inline int socket_getname(IN socket_t sock, OUT char* ip, OUT unsigned short* po
 	if(socket_error == getsockname(sock, (struct sockaddr*)&addr, &addrlen))
 		return socket_error;
 
-	strcpy(ip, inet_ntoa(addr.sin_addr));
+	// The string returned is guaranteed to be valid only 
+	// until the next Windows Sockets function call is made within the same thread. 
+	// Therefore, the data should be copied before another Windows Sockets call is made.
+	//strcpy(ip, inet_ntoa(addr.sin_addr));
+	sprintf(ip, "%d.%d.%d.%d", addr.sin_addr.s_net, addr.sin_addr.s_host, addr.sin_addr.s_lh, addr.sin_addr.s_impno);
 	*port = addr.sin_port;
 	return 0;
 }
@@ -709,7 +713,7 @@ inline int socket_getpeername(IN socket_t sock, OUT char* ip, OUT unsigned short
 	if(socket_error == getpeername(sock, (struct sockaddr*)&addr, &addrlen))
 		return socket_error;
 
-	strcpy(ip, inet_ntoa(addr.sin_addr));
+	sprintf(ip, "%d.%d.%d.%d", addr.sin_addr.s_net, addr.sin_addr.s_host, addr.sin_addr.s_lh, addr.sin_addr.s_impno);
 	*port = addr.sin_port;
 	return 0;
 }
