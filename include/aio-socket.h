@@ -2,11 +2,20 @@
 #define _aio_socket_h_
 
 #if defined(OS_LINUX)
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+
 typedef int socket_t;
 typedef struct iovec socket_bufvec_t;
 #else
 #include <WinSock2.h>
-typedef SOCKET	socket_t;
+
+typedef SOCKET socket_t;
 typedef WSABUF socket_bufvec_t;
 #endif
 
@@ -44,11 +53,6 @@ int aio_socket_accept(aio_socket_t socket, const char* ip, int port, aio_onaccep
 /// @return 0-ok, <0-error
 int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconnect proc, void* param);
 
-/// disconnect
-/// @param[in] socket aio socket
-/// @return 0-ok, <0-error
-int aio_socket_disconnect(aio_socket_t socket, aio_ondisconnect proc, void* param);
-
 /// aio send
 /// @param[in] socket aio socket
 /// @param[in] buffer outbound buffer
@@ -63,5 +67,20 @@ int aio_socket_send_v(aio_socket_t socket, const socket_bufvec_t* vec, size_t n,
 
 /// @return 0-ok, <0-error
 int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecv proc, void* param);
+
+/// aio send
+/// @param[in] socket aio socket
+/// @param[in] buffer outbound buffer
+/// @return 0-ok, <0-error
+int aio_socket_sendto(aio_socket_t socket, const void* buffer, int bytes, aio_onsend proc, void* param);
+
+/// @return 0-ok, <0-error
+int aio_socket_recvfrom(aio_socket_t socket, void* buffer, int bytes, aio_onrecv proc, void* param);
+
+/// @return 0-ok, <0-error
+int aio_socket_sendto_v(aio_socket_t socket, const socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param);
+
+/// @return 0-ok, <0-error
+int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecv proc, void* param);
 
 #endif /* !_aio_socket_h_ */

@@ -28,6 +28,7 @@ typedef WSABUF	socket_bufvec_t;
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
 #include <poll.h>
 
 typedef int socket_t;
@@ -670,7 +671,12 @@ inline int socket_setnonblock(IN socket_t sock, IN int noblock)
 #if defined(OS_WINDOWS)
 	return ioctlsocket(sock, FIONBIO, (u_long*)&noblock);
 #else
-	return ioctl(sock, FIONBIO, &noblock);
+	// http://stackoverflow.com/questions/1150635/unix-nonblocking-i-o-o-nonblock-vs-fionbio
+	// Prior to standardization there was ioctl(...FIONBIO...) and fcntl(...O_NDELAY...) ...
+	// POSIX addressed this with the introduction of O_NONBLOCK.
+	int flags = fcntl(sock, F_GETFL, 0);
+	return fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+	//return ioctl(sock, FIONBIO, &noblock);
 #endif
 }
 
