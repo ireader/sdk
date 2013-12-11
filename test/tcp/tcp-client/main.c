@@ -1,5 +1,6 @@
 #include "cstringext.h"
 #include "sys/sock.h"
+#include "sys/system.h"
 #include "time64.h"
 #include <stdio.h>
 
@@ -61,6 +62,8 @@ int main(int argc, char* argv[])
 			printf("socket receive[%d] error: %d/%d\n", i, r, socket_geterror());
 			return 1;
 		}
+
+		system_sleep(2000);
 	}
 	
 	lt1 = time64_now();
