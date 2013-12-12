@@ -9,7 +9,7 @@ static char reply[128];
 int main(int argc, char* argv[])
 {
 	socket_t tcp;
-	const char *echo = "hello server";
+	const char *msg = "hello server";
 	const char *host = "127.0.0.1";
 	int port = 2012;
 	int work = 10000;
@@ -34,6 +34,11 @@ int main(int argc, char* argv[])
 			if(i+1 >= argc) exit(1);
 			work = atoi(argv[++i]);
 		}
+		else if(0 == strcmp("-m", argv[i]))
+		{
+			if(i+1 >= argc) exit(1);
+			msg = argv[++i];
+		}
 	}
 
 	socket_init();
@@ -47,11 +52,11 @@ int main(int argc, char* argv[])
 
 	socket_setnonblock(tcp, 1);
 
-	n = strlen(echo);
+	n = strlen(msg);
 	lt = time64_now();
 	for(i = 0; i < work; i++)
 	{
-		r = socket_send(tcp, echo, n, 0);
+		r = socket_send(tcp, msg, n, 0);
 		if(r < 0)
 		{
 			printf("socket send[%d] error: %d/%d\n", i, r, socket_geterror());
@@ -75,7 +80,7 @@ int main(int argc, char* argv[])
 			printf("socket receive[%d] bytes=%d: %d/%d\n", i, bytes);
 		}
 
-		system_sleep(2000);
+		system_sleep(1000);
 	}
 	
 	lt1 = time64_now();

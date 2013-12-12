@@ -1,6 +1,7 @@
 #include "cstringext.h"
 #include "sys/sock.h"
 #include "sys/system.h"
+#include "sys/process.h"
 #include "aio-socket.h"
 #include "thread-pool.h"
 #include "aio-thread-pool.h"
@@ -28,7 +29,7 @@ static void OnWrite(void* param, int code, int bytes)
 	aio = *(aio_socket_t*)param;
 	ptr = (aio_socket_t*)param + 1;
 
-	printf("OnWrite[%p] code=%d, bytes=%d, recv=%s\n", aio, code, bytes, ptr);
+	printf("[%u] OnWrite[%p] code=%d, bytes=%d\n", thread_self(), aio, code, bytes);
 
 	memset(ptr, 0, 1024);
 	aio_socket_recv(aio, ptr, 1023, OnRead, param);
@@ -42,7 +43,7 @@ static void OnRead(void* param, int code, int bytes)
 	aio = *(aio_socket_t*)param;
 	ptr = (aio_socket_t*)param + 1;
 
-	printf("OnRead[%p] code=%d, bytes=%d, recv=%s\n", aio, code, bytes, ptr);
+	printf("[%u]OnRead[%p] code=%d, bytes=%d, recv=%s\n", thread_self(), aio, code, bytes, ptr);
 
 	aio_socket_send(aio, s_buffer, sizeof(s_buffer), OnWrite, param);
 }
@@ -51,6 +52,7 @@ static void OnAccept(void* param, int code, socket_t socket, const char* ip, int
 {
 	void* ptr;
 	aio_socket_t aio;
+	aio_socket_t server = (aio_socket_t)param;
 
 	printf("OnAccept ==> %d; %s:%d\n", code, ip, port);
 
@@ -61,13 +63,15 @@ static void OnAccept(void* param, int code, socket_t socket, const char* ip, int
 
 	memset((aio_socket_t*)ptr+1, 0, 1024);
 	aio_socket_recv(aio, (aio_socket_t*)ptr+1, 1023, OnRead, ptr);
+
+	// continue accept
+	aio_socket_accept(server, OnAccept, server);
 }
 
 static socket_t Listen(int port)
 {
 	int r;
 	socket_t server;
-	struct sockaddr_in addr;
 
 	server = socket_tcp();
 	if(socket_error == server)
@@ -77,7 +81,7 @@ static socket_t Listen(int port)
 	r = socket_setreuseaddr(server, 1);
 
 	// bind
-	r = socket_bind_any(server, port);
+	r = socket_bind_any(server, (unsigned short)port);
 
 	// listen
 	r = socket_listen(server, 64);
@@ -104,7 +108,7 @@ int main(int argc, char* argv[])
 
 	server = Listen(50000);
 	aioserver = aio_socket_create(server, 1);
-	aio_socket_accept(aioserver, OnAccept, NULL);
+	aio_socket_accept(aioserver, OnAccept, aioserver);
 
 	while('q' != getchar()) continue;
 
