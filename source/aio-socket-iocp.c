@@ -1,7 +1,4 @@
 #include "aio-socket.h"
-#include "cstringext.h"
-#include "thread-pool.h"
-#include "list.h"
 #include <assert.h>
 
 typedef BOOL (PASCAL FAR * FAcceptEx)(SOCKET, SOCKET, PVOID, DWORD, DWORD, DWORD, LPDWORD, LPOVERLAPPED);
@@ -72,79 +69,22 @@ struct aio_context_action
 		struct aio_context_recv recv;
 		struct aio_context_recvfrom recvfrom;
 	};
+
+	struct aio_context_action *next;
 };
 
 struct aio_context
 {
 	int own;
 	SOCKET socket;
-	struct list_head actions;
 };
 
 static int s_cpu = 0; // cpu count
+static int s_timeout = 5000;
 static HANDLE s_iocp = 0;
-static thread_pool_t s_thpool;
-
-static void iocp_timeout()
-{
-	assert(0);
-}
-
-static void iocp_process(void* param)
-{
-	BOOL status;
-	DWORD bytes;
-	ULONG completionKey;
-	OVERLAPPED *pOverlapped;
-	struct aio_context *ctx;
-	struct aio_context_action *aio;
-
-	status = GetQueuedCompletionStatus(s_iocp, &bytes, &completionKey, &pOverlapped, INFINITE);
-
-	// handle exit notify
-	if(status && 0==completionKey && 0==bytes && 0==pOverlapped)
-		return;
-
-	// avoid thread switch
-	// notify another thread to do this
-	thread_pool_push(s_thpool, iocp_process, NULL);
-
-	if(status)
-	{
-		assert(completionKey && pOverlapped);
-
-		// action
-		ctx = (struct aio_context*)completionKey;
-		aio = (struct aio_context_action*)pOverlapped;
-		aio->action(ctx, aio, 0, bytes);
-	}
-	else
-	{
-		DWORD err = GetLastError();
-		if(NULL == pOverlapped)
-		{
-			if(WAIT_TIMEOUT == err)
-			{
-				iocp_timeout();
-			}
-			else
-			{
-				// exception
-				assert(0);
-			}
-		}
-		else
-		{
-			// io failed
-			assert(completionKey);
-			ctx = (struct aio_context*)completionKey;
-			aio = (struct aio_context_action*)pOverlapped;
-			aio->action(ctx, aio, err, bytes);
-		}
-	}
-
-	param;
-}
+static CRITICAL_SECTION s_locker;
+static struct aio_context_action *s_actions = NULL;
+static int s_actions_count = 0;
 
 static int iocp_init()
 {
@@ -167,41 +107,46 @@ static int iocp_init()
 	return (AcceptEx && GetAcceptExSockaddrs && ConnectEx && DisconnectEx) ? 0 : -1;
 }
 
-static int iocp_create()
+static int iocp_create(int threads)
 {
-	int i;
 	SYSTEM_INFO sysinfo;
-	GetSystemInfo(&sysinfo);
-	s_cpu = sysinfo.dwNumberOfProcessors;
+	s_cpu = threads;
+	if(0 == threads)
+	{
+		GetSystemInfo(&sysinfo);
+		s_cpu = sysinfo.dwNumberOfProcessors;
+	}
 
 	// create IOCP with n-thread
-	assert(INVALID_HANDLE_VALUE == s_iocp);
+	assert(0 == s_iocp);
 	s_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, s_cpu);
 	if(NULL == s_iocp)
 		return GetLastError();
 
-	// create worker thread pool
-	s_thpool = thread_pool_create(s_cpu, s_cpu, s_cpu*2);
-	for(i = 0; i < s_cpu; i++)
-		thread_pool_push(s_thpool, iocp_process, NULL); // start worker
+	InitializeCriticalSection(&s_locker);
 	return 0;
 }
 
 static int iocp_destroy()
 {
-	int i;
+	struct aio_context_action *action;
+
 	if(NULL != s_iocp)
 	{
-		for(i = 0; i < s_cpu; i++)
-			PostQueuedCompletionStatus(s_iocp, 0, 0, NULL); // notify to exit
-
 		CloseHandle(s_iocp);
 		s_iocp = 0;
 	}
 
-	thread_pool_destroy(s_thpool);
+	// clear memory
+	for(action = s_actions; action; action = s_actions)
+	{
+		--s_actions_count;
+		s_actions = action->next;
+		free(action);
+	}
+	assert(0 == s_actions_count);
 
-	// free actions memory
+	DeleteCriticalSection(&s_locker);
 	return 0;
 }
 
@@ -222,11 +167,11 @@ static int iocp_bind(SOCKET socket, ULONG_PTR key)
 static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
 	char ip[16];
-	struct sockaddr_in local;
-	struct sockaddr_in remote;
-	int addrlen = sizeof(struct sockaddr_in)+16;
+	int locallen, remotelen;
+	struct sockaddr_in *local;
+	struct sockaddr_in *remote;
+	bytes = sizeof(struct sockaddr_in)+16;
 
-	bytes;
 	if(0 == error)
 	{
 		// http://msdn.microsoft.com/en-us/library/windows/desktop/ms737524%28v=vs.85%29.aspx
@@ -236,14 +181,16 @@ static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio,
 		// with sListenSocket parameter until SO_UPDATE_ACCEPT_CONTEXT is set on the socket
 		setsockopt(aio->accept.socket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char*)&ctx->socket, sizeof(ctx->socket));
 
-		GetAcceptExSockaddrs(aio->accept.buffer, 0, (DWORD)addrlen, (DWORD)addrlen, (struct sockaddr **)&local, &addrlen, (struct sockaddr **)&remote, &addrlen);
+		local = remote = NULL;
+		locallen = remotelen = 0;
+		GetAcceptExSockaddrs(aio->accept.buffer, 0, bytes, bytes, (struct sockaddr **)&local, &locallen, (struct sockaddr **)&remote, &remotelen);
 
-		sprintf(ip, "%d.%d.%d.%d", remote.sin_addr.s_net, remote.sin_addr.s_host, remote.sin_addr.s_lh, remote.sin_addr.s_impno);
-		aio->accept.proc(aio->accept.param, 0, ip, (int)ntohs(remote.sin_port));
+		strcpy(ip, inet_ntoa(remote->sin_addr));
+		aio->accept.proc(aio->accept.param, 0, aio->accept.socket, ip, (int)ntohs(remote->sin_port));
 	}
 	else
 	{
-		aio->accept.proc(aio->accept.param, error, NULL, 0);
+		aio->accept.proc(aio->accept.param, error, 0, NULL, 0);
 	}
 }
 
@@ -272,7 +219,7 @@ static void iocp_recvfrom(struct aio_context* ctx, struct aio_context_action* ai
 
 	ctx;
 	if(0 == error)
-		sprintf(ip, "%d.%d.%d.%d", remote->sin_addr.s_net, remote->sin_addr.s_host, remote->sin_addr.s_lh, remote->sin_addr.s_impno);
+		strcpy(ip, inet_ntoa(remote->sin_addr));
 
 	aio->recvfrom.proc(aio->recvfrom.param, error, bytes, ip, ntohs(remote->sin_port));
 }
@@ -282,15 +229,39 @@ static void iocp_recvfrom(struct aio_context* ctx, struct aio_context_action* ai
 //////////////////////////////////////////////////////////////////////////
 static struct aio_context_action* util_alloc()
 {
-	struct aio_context_action* aio;
-	aio = (struct aio_context_action*)malloc(sizeof(struct aio_context_action*));
-	if(aio)
-		memset(aio, 0, sizeof(struct aio_context_action));
+	struct aio_context_action* aio = NULL;
+
+	EnterCriticalSection(&s_locker);
+	if(s_actions)
+	{
+		assert(s_actions_count > 0);
+		aio = s_actions;
+		s_actions = s_actions->next;
+		--s_actions_count;
+	}
+	LeaveCriticalSection(&s_locker);
+
+	if(!aio)
+	{
+		aio = (struct aio_context_action*)malloc(sizeof(struct aio_context_action));
+		if(aio)
+			memset(aio, 0, sizeof(struct aio_context_action));
+	}
 	return aio;
 }
 
 static void util_free(struct aio_context_action* aio)
 {
+	EnterCriticalSection(&s_locker);
+	if(s_actions_count < s_cpu+1)
+	{
+		aio->next = s_actions;
+		s_actions = aio;
+		++s_actions_count;
+		aio = NULL; // stop free
+	}
+	LeaveCriticalSection(&s_locker);
+
 	if(aio)
 		free(aio);
 }
@@ -298,7 +269,7 @@ static void util_free(struct aio_context_action* aio)
 //////////////////////////////////////////////////////////////////////////
 /// aio functions
 //////////////////////////////////////////////////////////////////////////
-int aio_socket_init()
+int aio_socket_init(int threads, int timeout)
 {
 	WORD wVersionRequested;
 	WSADATA wsaData;
@@ -306,14 +277,64 @@ int aio_socket_init()
 	wVersionRequested = MAKEWORD(2, 2);
 	WSAStartup(wVersionRequested, &wsaData);
 
+	s_timeout = timeout;
+
 	iocp_init();
-	return iocp_create();
+	return iocp_create(threads);
 }
 
 int aio_socket_clean()
 {
 	iocp_destroy();
 	return WSACleanup();
+}
+
+int aio_socket_process()
+{
+	BOOL status;
+	DWORD bytes;
+	ULONG completionKey;
+	OVERLAPPED *pOverlapped;
+	struct aio_context *ctx;
+	struct aio_context_action *aio;
+
+	status = GetQueuedCompletionStatus(s_iocp, &bytes, &completionKey, &pOverlapped, s_timeout);
+	if(status)
+	{
+		assert(completionKey && pOverlapped);
+
+		// action
+		ctx = (struct aio_context*)completionKey;
+		aio = (struct aio_context_action*)pOverlapped;
+		aio->action(ctx, aio, 0, bytes);
+		util_free(aio);
+	}
+	else
+	{
+		DWORD err = GetLastError();
+		if(NULL == pOverlapped)
+		{
+			if(WAIT_TIMEOUT == err)
+			{
+				return 0; // timeout
+			}
+			else
+			{
+				// exception
+				assert(0);
+			}
+		}
+		else
+		{
+			// io failed
+			assert(completionKey);
+			ctx = (struct aio_context*)completionKey;
+			aio = (struct aio_context_action*)pOverlapped;
+			aio->action(ctx, aio, err, bytes);
+			util_free(aio);
+		}
+	}
+	return 0;
 }
 
 aio_socket_t aio_socket_create(socket_t socket, int own)
@@ -324,7 +345,6 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 		return NULL;
 
 	memset(ctx, 0, sizeof(struct aio_context));
-	LIST_INIT_HEAD(&ctx->actions);
 	ctx->socket = socket;
 	ctx->own = own;
 
@@ -340,8 +360,6 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 int aio_socket_close(aio_socket_t socket)
 {
 	struct aio_context *ctx = (struct aio_context*)socket;
-	assert(ctx->actions.next == &ctx->actions);
-	assert(ctx->actions.prev == &ctx->actions);
 	if(ctx->own)
 		closesocket(ctx->socket);
 	free(ctx);
@@ -372,6 +390,7 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 	}
 
 	iocp_accept(ctx, aio, 0, 0);
+	util_free(aio);
 	return 0;
 }
 
@@ -401,6 +420,7 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
 	}
 
 	iocp_connect(ctx, aio, 0, 0);
+	util_free(aio);
 	return 0;
 }
 
@@ -422,6 +442,7 @@ int aio_socket_send(aio_socket_t socket, const void* buffer, int bytes, aio_onse
 
 int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecv proc, void* param)
 {
+	DWORD flags = 0;
 	DWORD dwBytes = 0;
 	struct aio_context *ctx = (struct aio_context*)socket;
 	struct aio_context_action *aio;
@@ -431,7 +452,7 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 	aio->recv.proc = proc;
 	aio->recv.param = param;
 
-	if(SOCKET_ERROR == WSARecv(ctx->socket, vec, n, &dwBytes, 0, &aio->overlapped, NULL))
+	if(SOCKET_ERROR == WSARecv(ctx->socket, vec, n, &dwBytes, &flags, &aio->overlapped, NULL))
 	{
 		DWORD ret = WSAGetLastError();
 		if(WSA_IO_PENDING == ret)
@@ -442,6 +463,7 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 	}
 
 	iocp_recv(ctx, aio, 0, dwBytes);
+	util_free(aio);
 	return 0;
 }
 
@@ -467,6 +489,7 @@ int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onse
 	}
 
 	iocp_send(ctx, aio, 0, dwBytes);
+	util_free(aio);
 	return 0;
 }
 
@@ -488,6 +511,7 @@ int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void*
 
 int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param)
 {
+	DWORD flags = 0;
 	DWORD dwBytes = 0;
 	struct aio_context *ctx = (struct aio_context*)socket;
 	struct aio_context_action *aio;
@@ -498,7 +522,7 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 	aio->recvfrom.param = param;
 	aio->recvfrom.addrlen = sizeof(aio->recvfrom.addr);
 
-	if(SOCKET_ERROR == WSARecvFrom(ctx->socket, vec, (DWORD)n, &dwBytes, 0, (struct sockaddr *)&aio->recvfrom.addr, &aio->recvfrom.addrlen, &aio->overlapped, NULL))
+	if(SOCKET_ERROR == WSARecvFrom(ctx->socket, vec, (DWORD)n, &dwBytes, &flags, (struct sockaddr *)&aio->recvfrom.addr, &aio->recvfrom.addrlen, &aio->overlapped, NULL))
 	{
 		DWORD ret = WSAGetLastError();
 		if(WSA_IO_PENDING == ret)
@@ -509,6 +533,7 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 	}
 
 	iocp_recvfrom(ctx, aio, 0, dwBytes);
+	util_free(aio);
 	return 0;
 }
 
@@ -539,5 +564,6 @@ int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bu
 	}
 
 	iocp_send(ctx, aio, 0, dwBytes);
+	util_free(aio);
 	return 0;
 }

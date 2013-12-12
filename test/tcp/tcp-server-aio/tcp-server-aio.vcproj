@@ -173,11 +173,19 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\..\..\source\aio-socket-epoll.c"
+				RelativePath="..\..\..\source\aio-socket-iocp.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\source\aio-socket-iocp.c"
+				RelativePath=".\aio-thread-pool.c"
+				>
+			</File>
+			<File
+				RelativePath=".\main.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\source\thread-pool.c"
 				>
 			</File>
 		</Filter>
@@ -188,6 +196,10 @@
 			>
 			<File
 				RelativePath="..\..\..\include\aio-socket.h"
+				>
+			</File>
+			<File
+				RelativePath=".\aio-thread-pool.h"
 				>
 			</File>
 		</Filter>

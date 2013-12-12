@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 	const char *host = "127.0.0.1";
 	int port = 2012;
 	int work = 10000;
-	int i, r, n;
+	int i, r, n, bytes;
 	time64_t lt, lt1;
 
 	for(i = 1; i < argc; i++)
@@ -45,6 +45,8 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	socket_setnonblock(tcp, 1);
+
 	n = strlen(echo);
 	lt = time64_now();
 	for(i = 0; i < work; i++)
@@ -56,11 +58,21 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
-		r = socket_recv(tcp, reply, sizeof(reply), 0);
-		if(r < 0)
+		bytes = 0;
+		do
+		{
+			r = socket_recv(tcp, reply, sizeof(reply)-1, 0);
+			if(r > 0) bytes += r;
+		} while(r > 0);
+
+		if(r < 0 && WSAGetLastError()!=WSAEWOULDBLOCK)
 		{
 			printf("socket receive[%d] error: %d/%d\n", i, r, socket_geterror());
 			return 1;
+		}
+		else
+		{
+			printf("socket receive[%d] bytes=%d: %d/%d\n", i, bytes);
 		}
 
 		system_sleep(2000);

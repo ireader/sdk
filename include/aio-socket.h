@@ -19,6 +19,10 @@ typedef SOCKET socket_t;
 typedef WSABUF socket_bufvec_t;
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void* aio_socket_t;
 
 /// aio_socket_accept callback
@@ -123,5 +127,9 @@ int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bu
 
 /// @return 0-ok, <0-error, don't call proc if return error
 int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !_aio_socket_h_ */
