@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// gcc epoll-wait-multithread.c -o epoll-wait-multithread -I../../../include -lrt -lpthread -ldl
+
 #define MAX_EVENT 64
 #define MAX_THREAD 4
 
