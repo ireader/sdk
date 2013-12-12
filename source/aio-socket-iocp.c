@@ -381,16 +381,13 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 	if(!AcceptEx(ctx->socket, aio->accept.socket, aio->accept.buffer, 0, dwBytes, dwBytes, &dwBytes, &aio->overlapped))
 	{
 		DWORD ret = WSAGetLastError();
-		if(ERROR_IO_PENDING == ret)
-			return 0;
-
-		closesocket(aio->accept.socket);
-		util_free(aio);
-		return ret;
+		if(ERROR_IO_PENDING != ret)
+		{
+			closesocket(aio->accept.socket);
+			util_free(aio);
+			return ret;
+		}
 	}
-
-	iocp_accept(ctx, aio, 0, 0);
-	util_free(aio);
 	return 0;
 }
 
@@ -412,15 +409,12 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
 	if(!ConnectEx(ctx->socket, (const struct sockaddr *)&addr, sizeof(addr), NULL, 0, NULL, &aio->overlapped))
 	{
 		DWORD ret = WSAGetLastError();
-		if(ERROR_IO_PENDING == ret)
-			return 0;
-
-		util_free(aio);
-		return ret;
+		if(ERROR_IO_PENDING != ret)
+		{
+			util_free(aio);
+			return ret;
+		}
 	}
-
-	iocp_connect(ctx, aio, 0, 0);
-	util_free(aio);
 	return 0;
 }
 
@@ -455,15 +449,12 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 	if(SOCKET_ERROR == WSARecv(ctx->socket, vec, n, &dwBytes, &flags, &aio->overlapped, NULL))
 	{
 		DWORD ret = WSAGetLastError();
-		if(WSA_IO_PENDING == ret)
-			return 0;
-
-		util_free(aio);
-		return ret;
+		if(WSA_IO_PENDING != ret)
+		{
+			util_free(aio);
+			return ret;
+		}
 	}
-
-	iocp_recv(ctx, aio, 0, dwBytes);
-	util_free(aio);
 	return 0;
 }
 
@@ -481,15 +472,12 @@ int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onse
 	if(SOCKET_ERROR == WSASend(ctx->socket, vec, n, &dwBytes, 0, &aio->overlapped, NULL))
 	{
 		DWORD ret = WSAGetLastError();
-		if(WSA_IO_PENDING == ret)
-			return 0;
-
-		util_free(aio);
-		return ret;
+		if(WSA_IO_PENDING != ret)
+		{
+			util_free(aio);
+			return ret;
+		}
 	}
-
-	iocp_send(ctx, aio, 0, dwBytes);
-	util_free(aio);
 	return 0;
 }
 
@@ -525,15 +513,12 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 	if(SOCKET_ERROR == WSARecvFrom(ctx->socket, vec, (DWORD)n, &dwBytes, &flags, (struct sockaddr *)&aio->recvfrom.addr, &aio->recvfrom.addrlen, &aio->overlapped, NULL))
 	{
 		DWORD ret = WSAGetLastError();
-		if(WSA_IO_PENDING == ret)
-			return 0;
-
-		util_free(aio);
-		return ret;
+		if(WSA_IO_PENDING != ret)
+		{
+			util_free(aio);
+			return ret;
+		}
 	}
-
-	iocp_recvfrom(ctx, aio, 0, dwBytes);
-	util_free(aio);
 	return 0;
 }
 
@@ -556,14 +541,11 @@ int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bu
 	if(SOCKET_ERROR == WSASendTo(ctx->socket, vec, (DWORD)n, &dwBytes, 0, (const struct sockaddr *)&addr, (int)dwBytes, &aio->overlapped, NULL))
 	{
 		DWORD ret = WSAGetLastError();
-		if(WSA_IO_PENDING == ret)
-			return 0;
-
-		util_free(aio);
-		return ret;
+		if(WSA_IO_PENDING != ret)
+		{
+			util_free(aio);
+			return ret;
+		}
 	}
-
-	iocp_send(ctx, aio, 0, dwBytes);
-	util_free(aio);
 	return 0;
 }
