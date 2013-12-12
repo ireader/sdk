@@ -117,8 +117,8 @@ inline int socket_setreuseaddr(IN socket_t sock, IN int enable); // reuse addr.
 inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable);
 
 // socket status
-inline int socket_setnonblock(IN socket_t sock, IN int noblock); // non-block io, 0-disable nonblock, 1-enable nonblock
-inline int socket_setnodelay(IN socket_t sock, IN int nodelay); // no-delay io, 0-disable nonblock, 1-enable nonblock
+inline int socket_setnonblock(IN socket_t sock, IN int noblock); // non-block io, 0-block, 1-nonblock
+inline int socket_setnondelay(IN socket_t sock, IN int nodelay); // non-delay io(Nagle Algorithm), 0-delay, 1-nodelay
 inline int socket_getunread(IN socket_t sock, OUT size_t* size); // MSDN: Use to determine the amount of data pending in the network's input buffer that can be read from socket s
 
 inline int socket_getname(IN socket_t sock, OUT char* ip, OUT unsigned short* port);
@@ -680,7 +680,7 @@ inline int socket_setnonblock(IN socket_t sock, IN int noblock)
 #endif
 }
 
-inline int socket_setnodelay(IN socket_t sock, IN int nodelay)
+inline int socket_setnondelay(IN socket_t sock, IN int nodelay)
 {
 	// 0-delay(enable the Nagle algorithm)
 	// 1-no-delay(disable the Nagle algorithm)
