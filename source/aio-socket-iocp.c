@@ -165,12 +165,6 @@ static int iocp_bind(SOCKET socket, ULONG_PTR key)
 //////////////////////////////////////////////////////////////////////////
 /// iocp action
 //////////////////////////////////////////////////////////////////////////
-__forceinline int iocp_check_closed(struct aio_context* ctx)
-{
-	LONG r = InterlockedCompareExchange(&ctx->closed, 2, 0);
-	return r;
-}
-
 static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
 	char ip[16];
@@ -178,9 +172,6 @@ static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio,
 	struct sockaddr_in *local;
 	struct sockaddr_in *remote;
 	bytes = sizeof(struct sockaddr_in)+16;
-
-	if(0 != iocp_check_closed(ctx))
-		return;
 
 	if(0 == error)
 	{
@@ -200,29 +191,26 @@ static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio,
 	}
 	else
 	{
+		closesocket(aio->accept.socket); // close handle
 		aio->accept.proc(aio->accept.param, error, 0, NULL, 0);
 	}
 }
 
 static void iocp_connect(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
-	bytes;
-	if(0 != iocp_check_closed(ctx))
-		return;
+	ctx, bytes;
 	aio->connect.proc(aio->connect.param, error);
 }
 
 static void iocp_recv(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
-	if(0 != iocp_check_closed(ctx))
-		return;
+	ctx;
 	aio->recv.proc(aio->recv.param, error, bytes);
 }
 
 static void iocp_send(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
-	if(0 != iocp_check_closed(ctx))
-		return;
+	ctx;
 	aio->send.proc(aio->send.param, error, bytes);
 }
 
@@ -231,9 +219,7 @@ static void iocp_recvfrom(struct aio_context* ctx, struct aio_context_action* ai
 	char ip[16] = {0};
 	struct sockaddr_in *remote = &aio->recvfrom.addr;
 
-	if(0 != iocp_check_closed(ctx))
-		return;
-
+	ctx;
 	if(0 == error)
 		strcpy(ip, inet_ntoa(remote->sin_addr));
 
@@ -292,6 +278,16 @@ static void util_free(struct aio_context_action* aio)
 		free(aio);
 }
 
+__forceinline int iocp_check_closed(struct aio_context_action* aio)
+{
+	LONG r = InterlockedCompareExchange(&aio->context->closed, 2, 0);
+
+	if(0 != r && aio->action == iocp_accept)
+		closesocket(aio->accept.socket); // close socket
+
+	return r;
+}
+
 //////////////////////////////////////////////////////////////////////////
 /// aio functions
 //////////////////////////////////////////////////////////////////////////
@@ -332,7 +328,9 @@ int aio_socket_process(void)
 		// action
 		ctx = (struct aio_context*)completionKey;
 		aio = (struct aio_context_action*)pOverlapped;
-		aio->action(ctx, aio, 0, bytes);
+
+		if(0 == iocp_check_closed(aio))
+			aio->action(ctx, aio, 0, bytes);
 		util_free(aio);
 	}
 	else
@@ -356,7 +354,8 @@ int aio_socket_process(void)
 			assert(completionKey);
 			ctx = (struct aio_context*)completionKey;
 			aio = (struct aio_context_action*)pOverlapped;
-			aio->action(ctx, aio, err, bytes);
+			if(0 == iocp_check_closed(aio))
+				aio->action(ctx, aio, err, bytes);
 			util_free(aio);
 		}
 	}
@@ -409,6 +408,12 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 	aio->accept.proc = proc;
 	aio->accept.param = param;
 	aio->accept.socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+	if(INVALID_SOCKET == aio->accept.socket)
+	{
+		closesocket(aio->accept.socket);
+		util_free(aio);
+		return WSAGetLastError();
+	}
 
 	if(!AcceptEx(ctx->socket, aio->accept.socket, aio->accept.buffer, 0, dwBytes, dwBytes, &dwBytes, &aio->overlapped))
 	{
