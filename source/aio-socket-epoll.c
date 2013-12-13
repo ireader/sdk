@@ -189,7 +189,7 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	return ctx;
 }
 
-int aio_socket_close(aio_socket_t socket)
+int aio_socket_destroy(aio_socket_t socket)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(ctx->ev.data.ptr == ctx);
