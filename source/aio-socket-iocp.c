@@ -18,7 +18,13 @@ static FGetAcceptExSockaddrs GetAcceptExSockaddrs;
 static FConnectEx ConnectEx;
 static FDisconnectEx DisconnectEx;
 
-struct aio_context;
+struct aio_context
+{
+	LONG ref;
+	LONG closed;
+	int own;
+	SOCKET socket;
+};
 
 struct aio_context_accept
 {
@@ -70,13 +76,8 @@ struct aio_context_action
 		struct aio_context_recvfrom recvfrom;
 	};
 
+	struct aio_context *context;
 	struct aio_context_action *next;
-};
-
-struct aio_context
-{
-	int own;
-	SOCKET socket;
 };
 
 static int s_cpu = 0; // cpu count
@@ -164,6 +165,12 @@ static int iocp_bind(SOCKET socket, ULONG_PTR key)
 //////////////////////////////////////////////////////////////////////////
 /// iocp action
 //////////////////////////////////////////////////////////////////////////
+__forceinline int iocp_check_closed(struct aio_context* ctx)
+{
+	LONG r = InterlockedCompareExchange(&ctx->closed, 2, 0);
+	return r;
+}
+
 static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
 	char ip[16];
@@ -171,6 +178,9 @@ static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio,
 	struct sockaddr_in *local;
 	struct sockaddr_in *remote;
 	bytes = sizeof(struct sockaddr_in)+16;
+
+	if(0 != iocp_check_closed(ctx))
+		return;
 
 	if(0 == error)
 	{
@@ -196,19 +206,23 @@ static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio,
 
 static void iocp_connect(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
-	ctx, bytes;
+	bytes;
+	if(0 != iocp_check_closed(ctx))
+		return;
 	aio->connect.proc(aio->connect.param, error);
 }
 
 static void iocp_recv(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
-	ctx;
+	if(0 != iocp_check_closed(ctx))
+		return;
 	aio->recv.proc(aio->recv.param, error, bytes);
 }
 
 static void iocp_send(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
-	ctx;
+	if(0 != iocp_check_closed(ctx))
+		return;
 	aio->send.proc(aio->send.param, error, bytes);
 }
 
@@ -217,7 +231,9 @@ static void iocp_recvfrom(struct aio_context* ctx, struct aio_context_action* ai
 	char ip[16] = {0};
 	struct sockaddr_in *remote = &aio->recvfrom.addr;
 
-	ctx;
+	if(0 != iocp_check_closed(ctx))
+		return;
+
 	if(0 == error)
 		strcpy(ip, inet_ntoa(remote->sin_addr));
 
@@ -227,7 +243,7 @@ static void iocp_recvfrom(struct aio_context* ctx, struct aio_context_action* ai
 //////////////////////////////////////////////////////////////////////////
 /// utility functions
 //////////////////////////////////////////////////////////////////////////
-static struct aio_context_action* util_alloc()
+static struct aio_context_action* util_alloc(struct aio_context *ctx)
 {
 	struct aio_context_action* aio = NULL;
 
@@ -242,16 +258,26 @@ static struct aio_context_action* util_alloc()
 	LeaveCriticalSection(&s_locker);
 
 	if(!aio)
-	{
 		aio = (struct aio_context_action*)malloc(sizeof(struct aio_context_action));
-		if(aio)
-			memset(aio, 0, sizeof(struct aio_context_action));
+
+	if(aio)
+	{
+		memset(aio, 0, sizeof(struct aio_context_action));
+		InterlockedIncrement(&ctx->ref);
+		aio->context = ctx;
 	}
+
 	return aio;
 }
 
 static void util_free(struct aio_context_action* aio)
 {
+	if(0 == InterlockedDecrement(&aio->context->ref))
+	{
+		assert(1 == aio->context->closed);
+		free(aio->context);
+	}
+
 	EnterCriticalSection(&s_locker);
 	if(s_actions_count < s_cpu+1)
 	{
@@ -347,6 +373,8 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	memset(ctx, 0, sizeof(struct aio_context));
 	ctx->socket = socket;
 	ctx->own = own;
+	ctx->ref = 1;
+	ctx->closed = 0;
 
 	if(0 != iocp_bind(ctx->socket, (ULONG_PTR)ctx))
 	{
@@ -357,12 +385,16 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	return ctx;
 }
 
-int aio_socket_close(aio_socket_t socket)
+int aio_socket_destroy(aio_socket_t socket)
 {
 	struct aio_context *ctx = (struct aio_context*)socket;
+	InterlockedExchange(&ctx->closed, 1);
+
 	if(ctx->own)
 		closesocket(ctx->socket);
-	free(ctx);
+
+	if(0 == InterlockedDecrement(&ctx->ref))
+		free(ctx);
 	return 0;
 }
 
@@ -372,7 +404,7 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 	DWORD dwBytes = sizeof(struct sockaddr_in)+16;
 	struct aio_context_action *aio;
 
-	aio = util_alloc();
+	aio = util_alloc(ctx);
 	aio->action = iocp_accept;
 	aio->accept.proc = proc;
 	aio->accept.param = param;
@@ -401,7 +433,7 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
 	addr.sin_port = htons((u_short)port);
 	addr.sin_addr.s_addr = inet_addr(ip);
 
-	aio = util_alloc();
+	aio = util_alloc(ctx);
 	aio->action = iocp_connect;
 	aio->connect.proc = proc;
 	aio->connect.param = param;
@@ -441,7 +473,7 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 	struct aio_context *ctx = (struct aio_context*)socket;
 	struct aio_context_action *aio;
 
-	aio = util_alloc();
+	aio = util_alloc(ctx);
 	aio->action = iocp_recv;
 	aio->recv.proc = proc;
 	aio->recv.param = param;
@@ -464,7 +496,7 @@ int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onse
 	struct aio_context *ctx = (struct aio_context*)socket;
 	struct aio_context_action *aio;
 
-	aio = util_alloc();
+	aio = util_alloc(ctx);
 	aio->action = iocp_send;
 	aio->send.proc = proc;
 	aio->send.param = param;
@@ -504,7 +536,7 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 	struct aio_context *ctx = (struct aio_context*)socket;
 	struct aio_context_action *aio;
 
-	aio = util_alloc();
+	aio = util_alloc(ctx);
 	aio->action = iocp_recvfrom;
 	aio->recvfrom.proc = proc;
 	aio->recvfrom.param = param;
@@ -533,7 +565,7 @@ int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bu
 	addr.sin_port = htons((u_short)port);
 	addr.sin_addr.s_addr = inet_addr(ip);
 
-	aio = util_alloc();
+	aio = util_alloc(ctx);
 	aio->action = iocp_send;
 	aio->send.proc = proc;
 	aio->send.param = param;

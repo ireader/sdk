@@ -55,6 +55,8 @@ static void OnAccept(void* param, int code, socket_t socket, const char* ip, int
 	aio_socket_t server = (aio_socket_t)param;
 
 	printf("OnAccept ==> %d; %s:%d\n", code, ip, port);
+	if(0 != code)
+		return;
 
 	ptr = malloc(1024+sizeof(aio));
 	aio = aio_socket_create(socket, 1);
@@ -91,6 +93,7 @@ static socket_t Listen(int port)
 
 int main(int argc, char* argv[])
 {
+	char c;
 	int cpu = system_getcpucount();
 	socket_t server;
 	aio_socket_t aioserver;
@@ -110,9 +113,21 @@ int main(int argc, char* argv[])
 	aioserver = aio_socket_create(server, 1);
 	aio_socket_accept(aioserver, OnAccept, aioserver);
 
-	while('q' != getchar()) continue;
+	printf("server listen at: %d\n", 50000);
+	for(c = getchar(); 'q' != c; c = getchar())
+	{
+		switch(c)
+		{
+		case 'c': // close socket
+			aio_socket_destroy(aioserver);
+			break;
 
-	aio_socket_close(aioserver);
+		default:
+			printf("unknown command.\nc : close socket\n");
+		}
+	}
+
+	aio_socket_destroy(aioserver);
 	thread_pool_destroy(s_thpool);
 	aio_socket_clean();
 	return 0;

@@ -73,7 +73,11 @@ int aio_socket_process();
 
 /// @param[in] own 1-close socket on aio_socket_close, 0-don't close socket
 aio_socket_t aio_socket_create(socket_t socket, int own);
-int aio_socket_close(aio_socket_t socket);
+
+/// close aio-socket
+/// Remark: don't call any callback after this function
+/// @return 0-ok, other-error
+int aio_socket_destroy(aio_socket_t socket);
 
 /// listen and accept client
 /// @param[in] ip local ip address for bind, NULL if bind all
