@@ -135,7 +135,7 @@ static void task_action(void* param)
 	semaphore_post(&taskQ->sema_worker); // add worker
 }
 
-static int task_queue_scheduler(void* param)
+static int STDCALL task_queue_scheduler(void* param)
 {
 	int r;
 	time64_t tnow;
