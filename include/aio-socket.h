@@ -65,11 +65,11 @@ int aio_socket_init(int threads, int timeout);
 
 /// aio cleanup
 /// @return 0-ok, other-error
-int aio_socket_clean();
+int aio_socket_clean(void);
 
 /// aio worker
 /// @return 0-timeout, <0-error, >0-work number
-int aio_socket_process();
+int aio_socket_process(void);
 
 /// @param[in] own 1-close socket on aio_socket_close, 0-don't close socket
 aio_socket_t aio_socket_create(socket_t socket, int own);

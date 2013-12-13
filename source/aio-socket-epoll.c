@@ -123,14 +123,14 @@ int aio_socket_init(int threads, int timeout)
 	return -1 == s_epoll ? errno : 0;
 }
 
-int aio_socket_clean()
+int aio_socket_clean(void)
 {
 	if(-1 != s_epoll)
 		close(s_epoll);
 	return 0;
 }
 
-int aio_socket_process()
+int aio_socket_process(void)
 {
 	int i, r;
 	struct epoll_context* ctx;

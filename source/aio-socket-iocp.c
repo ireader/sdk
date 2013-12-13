@@ -309,13 +309,13 @@ int aio_socket_init(int threads, int timeout)
 	return iocp_create(threads);
 }
 
-int aio_socket_clean()
+int aio_socket_clean(void)
 {
 	iocp_destroy();
 	return WSACleanup();
 }
 
-int aio_socket_process()
+int aio_socket_process(void)
 {
 	BOOL status;
 	DWORD bytes;
