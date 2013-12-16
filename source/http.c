@@ -38,7 +38,8 @@ struct http_context
 		struct http_status_line reply;
 	};
 
-	struct list_head head;
+	struct http_header headers[16];
+	struct list_head headers2;
 	size_t content_length;
 };
 
@@ -63,48 +64,74 @@ static size_t s_body_max_size = 2*1024*1024;
 //////////////////////////////////////////////////////////////////////////
 static int http_parse_request_line(struct http_context *ctx, const char* line, size_t size)
 {
+	// H5.1 Request-Line
+	// Request-Line = Method SP Request-URI SP HTTP-Version CRLF
+	// GET http://www.w3.org/pub/WWW/TheProject.html HTTP/1.1
 	const char* p;
 	const char* end = line + size;
-	for(p = line; p < end && isalpha(*p); ++p);
 
+	// Method
+	for(p = line; p < end; ++p)
+	{
+		if(!isalpha(*p)) break;
+	}
+
+	assert(p - line < sizeof(ctx->req.method)-1);
 	memmove(ctx->req.method, line, p-line);
+	ctx->req.method[p-line] = '\0';
 
+	// SP
 	assert(isspace(*p));
-	while(isspace(*p)) ++p;
+	while(p < end && isspace(*p)) ++p;
 
-	while(isalnum(*p) || ':'==*p || '/'==*p || '\\'==*p || '+'==*p || '%'==*p)
+	// H5.1.2 Request-URI
+	// Request-URI = "*" | absoluteURI | abs_path | authority
+	while(p < end && (isalnum(*p) || ':'==*p || '/'==*p || '\\'==*p || '+'==*p || '%'==*p))
 		++p;
 
+	// SP
 	assert(isspace(*p));
-	while(isspace(*p)) ++p;
+	while(p < end && isspace(*p)) ++p;
 
+	// HTTP/1.1
 	assert(0 == strnicmp("HTTP/", p, 5));
 	if(2 != sscanf(p, "HTTP/%d.%d", &ctx->vermajor, &ctx->verminor))
-		return -1;
-	return 0;
+		return -1; // format error
+
+	assert('\r'==p[5] && '\n'==p[6]);
+	return p - line + 8;
 }
 
 static int http_parse_status_line(struct http_context *ctx, const char* line, size_t size)
 {
+	// H6.1 Status-Line
+	// Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
 	const char* p = line + 8;
 	const char* end = line + size;
 
-	if(2 != sscanf(line, "HTTP/%1d.%1",&ctx->vermajor, &ctx->verminor))
+	// HTTP/1.1
+	if(2 != sscanf(line, "HTTP/%1d.%1d",&ctx->vermajor, &ctx->verminor))
 		return -1;
 
+	// SP
 	assert(isspace(*p));
-	while(isspace(*p)) ++p;
+	while(p < end && isspace(*p)) ++p;
 
+	// Status-Code
 	ctx->reply.code = atoi(p);
 	assert(ctx->reply.code >= 100 && ctx->reply.code <= 999);
 
+	// SP
 	p = p + 3;
 	assert(isspace(*p));
-	while(isspace(*p)) ++p;
+	while(p < end && isspace(*p)) ++p;
 
-	while(p < end && *p != '\r' && *p != '\n') ++p;
+	// Reason
+	ctx->reply.reason_off = p - line;
+	while(p < end && *p != '\n') ++p;
 
-	return 0;
+	ctx->reply.reason_len = p - line - ctx->reply.reason_off;
+	return p - line;
 }
 
 inline int is_valid_token(const char* s, int len)
@@ -194,6 +221,12 @@ static const char* http_parse_line(const char* s, int len, struct http_header *h
 	return s;
 }
 
+static int http_header_content_length(struct http_context *ctx, const char* value)
+{
+	ctx->content_length = atoi(value);
+	return 0;
+}
+
 static int http_parse_header(HttpServer* ctx, char* reply, size_t len)
 {
 	char* name;
@@ -232,7 +265,7 @@ int http_set_max_size(size_t bytes)
 	return 0;
 }
 
-int http_parser_create()
+int http_create()
 {
 }
 
@@ -246,6 +279,7 @@ int http_clear(void* http)
 
 int http_input(void* parser, const void* data, int bytes)
 {
+	int r;
 	const char *line, *next;
 	struct http_header header;
 	http_context *ctx = (http_context*)parser;
@@ -255,18 +289,15 @@ int http_input(void* parser, const void* data, int bytes)
 		assert(0 == ctx->offset);
 
 		// response status
-		if(0 == http_parse_request_line(ctx, ctx->raw, ctx->raw.size()))
-		{
-		}
-		else if(0 == http_parse_status_line(ctx, ctx->raw, ctx->raw.size()))
-		{
-		}
-		else
-		{
-			return -1;
-		}
+		r = http_parse_request_line(ctx, ctx->raw, ctx->raw.size());
+		if(r < 0)
+			r = http_parse_status_line(ctx, ctx->raw, ctx->raw.size());
 
-		ctx->stateM = SM_HEADER;
+		if(r > 0)
+		{
+			ctx->offset = r + 2; // \r\n
+			ctx->stateM = SM_HEADER;
+		}
 	}
 
 	if(SM_HEADER == ctx->stateM)
