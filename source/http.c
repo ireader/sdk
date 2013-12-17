@@ -1,12 +1,13 @@
 #include "http.h"
+#include "cstringext.h"
 #include "list.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 #define KB (1024)
 #define MB (1024*1024)
 
-enum { SM_FIRSTLINE=0, SM_HEADER, SM_BODY };
-enum { SM_HEADER_NAME = 0, SM_HEADER_SEPARATOR, SM_HEADER_VALUE };
-
+enum { SM_FIRSTLINE = 0, SM_HEADER = 100, SM_BODY = 200 };
 
 struct http_status_line
 {
@@ -18,8 +19,8 @@ struct http_status_line
 struct http_request_line
 {
 	char method[16];
-	size_t requri_pos;
-	size_t requri_len;
+	size_t uri_pos;
+	size_t uri_len;
 };
 
 struct http_header
@@ -34,20 +35,22 @@ struct http_context
 	char *raw;
 	size_t raw_size;
 	size_t raw_capacity;
-	int mode; // 0-client, 1-server
+	int server_mode; // 0-client, 1-server
 	int stateM;
 	size_t offset;
-	size_t headers; // the number of http header
-
+	
+	// start line
 	int verminor, vermajor;
-	enum
+	union
 	{
 		struct http_request_line req;
 		struct http_status_line reply;
 	};
 
+	// headers
 	struct http_header headers[16];
 	struct list_head headers2;
+	size_t headers; // the number of http header
 	size_t content_length;
 };
 
@@ -60,11 +63,7 @@ static size_t s_body_max_size = 2*MB;
 //				| "," | ";" | ":" | "\" | <">
 //				| "/" | "[" | "]" | "?" | "="
 //				| "{" | "}" | SP | HT
-#define isseparators(c)	((c)=='(' || (c)==')' || (c)=='<' || (c)=='>' || (c)=='@' \
-						|| (c)==',' || (c)==';' || (c)==':' || (c)=='\\' || (c)=='"' \ 
-						|| (c)=='/' || (c)=='[' || (c)==']' || (c)=='?' || (c)=='=' \
-						|| (c)=='{' || (c)=='}' || (c)==' ' || (c)=='\t')
-
+#define isseparators(c)	(!!strchr("()<>@,;:\\\"/[]?={} \t", (c)))
 #define isspace(c)		((c)==' ')
 
 inline int is_valid_token(const char* s, int len)
@@ -101,7 +100,7 @@ static int http_rawdata(struct http_context *ctx, const void* data, int bytes)
 	void *p;
 	int capacity;
 
-	if(ctx->raw_capacity - ctx->raw_size < bytes)
+	if(ctx->raw_capacity - ctx->raw_size < (size_t)bytes)
 	{
 		capacity = (ctx->raw_capacity > 4*MB) ? 50*MB : (ctx->raw_capacity > 16*KB ? 2*MB : 8*KB);
 		p = realloc(ctx->raw, ctx->raw_capacity + max(bytes, capacity));
@@ -113,7 +112,7 @@ static int http_rawdata(struct http_context *ctx, const void* data, int bytes)
 		ctx->raw = p;
 	}
 
-	assert(ctx->raw_capacity - ctx->raw_size > bytes);
+	assert(ctx->raw_capacity - ctx->raw_size > (size_t)bytes);
 	memmove((char*)ctx->raw + ctx->raw_size, data, bytes);
 	ctx->raw_size += bytes;
 	return 0;
@@ -125,7 +124,7 @@ static int http_parse_request_line(struct http_context *ctx)
 	// Request-Line = Method SP Request-URI SP HTTP-Version CRLF
 	// GET http://www.w3.org/pub/WWW/TheProject.html HTTP/1.1
 
-	enum { SM_REQUEST_METHOD = 0, SM_REQUEST_URI, SM_REQUEST_VERSION, SM_REQUEST_END };
+	enum { SM_REQUEST_METHOD=SM_FIRSTLINE, SM_REQUEST_URI, SM_REQUEST_VERSION, SM_REQUEST_END };
 
 	for(; ctx->offset < ctx->raw_size; ctx->offset++)
 	{
@@ -197,7 +196,7 @@ static int http_parse_request_line(struct http_context *ctx)
 			case '\r':
 				break;
 			case '\n':
-				ctx->stateM = SM_HEADER_NAME;
+				ctx->stateM = SM_HEADER;
 				break;
 			default:
 				assert(0);
@@ -220,7 +219,7 @@ static int http_parse_status_line(struct http_context *ctx)
 	// Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
 
 	int i;
-	enum { SM_STATUS_VERSION = 0, SM_STATUS_CODE, SM_STATUS_REASON };
+	enum { SM_STATUS_VERSION=SM_FIRSTLINE, SM_STATUS_CODE, SM_STATUS_REASON };
 
 	for(; ctx->offset < ctx->raw_size; ctx->offset++)
 	{
@@ -254,7 +253,7 @@ static int http_parse_status_line(struct http_context *ctx)
 			if(ctx->offset + 3 > ctx->raw_size)
 				return 0; // wait for more data
 
-			assert(0 == ctx->reply.status_code);
+			assert(0 == ctx->reply.code);
 			for(i = 0; i < 3; i++)
 				ctx->reply.code = ctx->reply.code * 10 + (ctx->raw[ctx->offset+i] - '0');
 
@@ -273,7 +272,7 @@ static int http_parse_status_line(struct http_context *ctx)
 				assert('\r' == ctx->raw[ctx->offset-1]);
 				ctx->reply.reason_len = ctx->offset - 2 - ctx->reply.reason_pos;
 				trim_left_right(ctx->raw, &ctx->reply.reason_pos, &ctx->reply.reason_len);
-				ctx->stateM = SM_HEADER_NAME;
+				ctx->stateM = SM_HEADER;
 				break;
 
 			default:
@@ -290,65 +289,7 @@ static int http_parse_status_line(struct http_context *ctx)
 	return 0;
 }
 
-static const char* http_parse_line(const char* s, int len, struct http_header *header)
-{
-	// message-header = field-name ":" [ field-value ]
-	// field-name = token
-	// field-value = *( field-content | LWS )
-	// field-content = <the OCTETs making up the field-value
-	//					and consisting of either *TEXT or combinations
-	//					of token, separators, and quoted-string>
-
-	const char *name, *value;
-	const char *end = s + len;
-
-	// filed name
-	for(name = s; s < end && *s; ++s, ++name)
-	{
-		if(':' == *s || '\n' == *s)
-			break;
-	}
-
-	if(s >= end)
-		return NULL;
-
-	// check ':'
-	if(':' != *s)
-		return s; // \r\n
-
-	header->name_len = s - name;
-
-	// filed value
-	for(value = ++s; s < end && *s; ++s)
-	{
-		if('\n' == *s)
-			break;
-	}
-
-	if(s >= end)
-		return NULL;
-
-	header->value_len = s - value;
-
-	trim_left_right(name, &header->name_len);
-	trim_left_right(value, &header->value_len);
-
-	// filter \"
-	if(header->value_len > 0 && '"' == value[0])
-	{
-		++value;
-		--header->value_len;
-		if(header->value_len > 0 && '"' == value[header->value_len-1])
-			--header->value_len;
-	}
-
-	assert(header->name_len > 0 && is_valid_token(name, header->name_len));
-	header->name_off = name - s;
-	header->value_len = value - s;
-	return s;
-}
-
-static const char* http_parse_header_line(struct http_context *ctx, struct http_header *header)
+static int http_parse_header_line(struct http_context *ctx, struct http_header *header)
 {
 	// H4.2 Message Headers
 	// message-header = field-name ":" [ field-value ]
@@ -358,11 +299,12 @@ static const char* http_parse_header_line(struct http_context *ctx, struct http_
 	//					and consisting of either *TEXT or combinations
 	//					of token, separators, and quoted-string>
 
+	enum { SM_HEADER_START=SM_HEADER, SM_HEADER_NAME, SM_HEADER_VALUE };
 	for(; ctx->offset < ctx->raw_size; ctx->offset++)
 	{
 		switch(ctx->stateM)
 		{
-		case SM_HEADER:
+		case SM_HEADER_START:
 			switch(ctx->raw[ctx->offset])
 			{
 			case '\r':
@@ -410,13 +352,16 @@ static const char* http_parse_header_line(struct http_context *ctx, struct http_
 		case SM_HEADER_VALUE:
 			switch(ctx->raw[ctx->offset])
 			{
-			case '\r':
 			case '\n':
+				assert('\r' == ctx->raw[ctx->offset-1]);
+				header->vlen = ctx->offset - 2 - header->vpos;
+				trim_left_right(ctx->raw, &header->vpos, &header->vlen);
+				ctx->stateM = SM_HEADER;
+				break;
+
+			default:
 				break;
 			}
-			break;
-
-		case SM_HEADER_CR:
 			break;
 
 		default:
@@ -434,30 +379,22 @@ static int http_header_content_length(struct http_context *ctx, const char* valu
 	return 0;
 }
 
-static int http_parse_header(HttpServer* ctx, char* reply, size_t len)
+static int http_parse_header(struct http_context *ctx)
 {
-	char* name;
-	char* value;
-	assert(len > 2 && reply[len]=='\n' && reply[len-1]=='\r');
+	//if(0 == stricmp("Content-Length", name))
+	//{
+	//	// < 50 M
+	//	int contentLen = atoi(value);
+	//	assert(contentLen >= 0 && contentLen < 50*1024*1024);
+	//	ctx->contentLength = contentLen;
+	//}
+	//else if(0 == stricmp("Connection", name))
+	//{
+	//	ctx->connection = strieq("close", value) ? 1 : 0;
+	//}
 
-	// *--p = 0; // \r -> 0
-	if(0 != http_parse_name_value(reply, len, name, value))
-		return -1;
-
-	if(0 == stricmp("Content-Length", name))
-	{
-		// < 50 M
-		int contentLen = atoi(value);
-		assert(contentLen >= 0 && contentLen < 50*1024*1024);
-		ctx->contentLength = contentLen;
-	}
-	else if(0 == stricmp("Connection", name))
-	{
-		ctx->connection = strieq("close", value) ? 1 : 0;
-	}
-
-	//response.SetHeader(name, value);
-	ctx->headers.insert(std::make_pair(name, value));
+	////response.SetHeader(name, value);
+	//ctx->headers.insert(std::make_pair(name, value));
 	return 0;
 }
 
@@ -472,15 +409,43 @@ int http_set_max_size(size_t bytes)
 	return 0;
 }
 
-int http_create(int mode)
+void* http_create(int mode)
 {
+	struct http_context *ctx;
+	ctx = (struct http_context*)malloc(sizeof(struct http_context));
+	if(!ctx)
+		return NULL;
+
+	memset(ctx, 0, sizeof(struct http_context));
+	ctx->server_mode = mode;
+	http_clear();
+	return ctx;
+}
+
+int http_destroy(void* http)
+{
+	struct http_context *ctx;
+	ctx = (struct http_context*)http;
+	if(ctx->raw)
+	{
+		assert(ctx->raw_capacity > 0);
+		free(ctx->raw);
+		ctx->raw = 0;
+		ctx->raw_size = 0;
+		ctx->raw_capacity = 0;
+	}
+	return 0;
 }
 
 int http_clear(void* http)
 {
-	http_context *ctx = (http_context*)http;
-	ctx->content_length = -1;
+	struct http_context *ctx;
+	ctx = (struct http_context*)http;
+	memset(&ctx->req, 0, sizeof(ctx->req));
+	memset(&ctx->reply, 0, sizeof(ctx->reply));
 	ctx->stateM = SM_FIRSTLINE;
+	ctx->content_length = -1;
+	ctx->headers = 0;
 	return 0;
 }
 
@@ -489,101 +454,37 @@ int http_input(void* parser, const void* data, int bytes)
 	int i, r;
 	const char *line, *next;
 	struct http_header header;
-	http_context *ctx = (http_context*)parser;
+	struct http_context *ctx;
 
 	// save raw data
+	ctx = (struct http_context*)parser;
 	r = http_rawdata(ctx, data, bytes);
 	if(0 != r)
+	{
+		assert(r < 0);
 		return r;
-
-	if(ctx->raw_size < 11)
-		return bytes; // HTTP/1.1 need more data
-
-	for(i = ctx->offset; i < ctx->raw_size; i++)
-	{
-		switch(ctx->stateM)
-		{
-		case SM_FIRSTLINE:
-			break;
-
-		case SM_HEADER_TOKEN:
-			break;
-
-		case SM_HEADER_VALUE:
-			break;
-
-		case SM_BODY:
-			if(0 == ctx->content_length)
-			{
-				return bytes - (ctx->raw.size() - ctx->offset);
-			}
-			else if(0 < ctx->content_length)
-			{
-				return bytes - (ctx->raw.size() - ctx->offset - ctx->content_length);
-			}
-			else
-			{
-				// don't specify content length, 
-				// receive all until socket closed
-				return bytes;
-			}
-			break;
-		}
 	}
 
-	if(SM_FIRSTLINE == ctx->stateM)
+	if(SM_FIRSTLINE <= ctx->stateM && ctx->stateM < SM_HEADER)
 	{
-		assert(0 == ctx->offset);
-
-		// response status
-		r = http_parse_request_line(ctx, ctx->raw, ctx->raw.size());
-		if(r < 0)
-			r = http_parse_status_line(ctx, ctx->raw, ctx->raw.size());
-
-		if(r > 0)
-		{
-			ctx->offset = r + 2; // \r\n
-			ctx->stateM = SM_HEADER;
-		}
+		r = ctx->server_mode ? http_parse_request_line(ctx) : http_parse_status_line(ctx);
 	}
 
-	if(SM_HEADER == ctx->stateM)
+	if(SM_HEADER <= ctx->stateM && ctx->stateM < SM_BODY)
 	{
-		// parse header
-		memset(&header, 0, sizeof(header));
-		line = (const char*)ctx->raw + ctx->offset;
-		next = http_parse_line(line, ctx->raw.size() - ctx->offset, &header);
-		while(next)
-		{
-			assert('\n'==*next && '\r'==*(next-1));
-
-			// \r\n or \n\r or \n only
-			ctx->offset += next + 1 - line;
-
-			if(line == next-1)
-			{
-				// recv "\r\n\r\n"
-				ctx->stateM = SM_BODY;
-				break;
-			}
-			else
-			{
-				http_parse_header(ctx, &header);
-			}
-
-			next = http_parse_line(line, ctx->raw.size() - ctx->offset, &header);
-		}
+		r = http_parse_header_line(ctx);
 	}
 
+	assert(r <= 0);
 	if(SM_BODY == ctx->stateM)
 	{
 		if(0 == ctx->content_length)
 		{
-			return bytes - (ctx->raw.size() - ctx->offset);
+			return bytes - (ctx->raw_size - ctx->offset);
 		}
 		else if(0 < ctx->content_length)
 		{
-			return bytes - (ctx->raw.size() - ctx->offset - ctx->content_length);
+			return bytes - (ctx->raw_size - ctx->offset - ctx->content_length);
 		}
 		else
 		{
@@ -593,5 +494,5 @@ int http_input(void* parser, const void* data, int bytes)
 		}
 	}
 
-	return bytes; // eat all
+	return 0 == r ? bytes : r; // eat all
 }
