@@ -4,7 +4,7 @@
 #include "sys/sock.h"
 
 /// create a new TCP socket, bind, and listen
-/// @param[in] ip socket bind local address
+/// @param[in] ip socket bind local address, NULL-bind any address
 /// @param[in] port bind local port
 /// @param[in] backlog the maximum length to which the queue of pending connections for socket may grow
 /// @return 0-error, use socket_geterror() to get error code, other-ok 
@@ -25,13 +25,13 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 	// bind
 	if(ip && ip[0])
 	{
-		ret = socket_addr_ipv4(&addr, ip, port);
+		ret = socket_addr_ipv4(&addr, ip, (unsigned short)port);
 		if(0 == ret)
 			ret = socket_bind(socket, (struct sockaddr*)&addr, sizeof(addr));
 	}
 	else
 	{
-		ret = socket_bind_any(socket, port);
+		ret = socket_bind_any(socket, (unsigned short)port);
 	}
 
 	// listen
@@ -53,7 +53,7 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 /// @param[in/out] addrlen addr length in bytes
 /// @param[in] mstimeout timeout in millisecond
 /// @return 0-timeout, -1-error, use socket_geterror() to get error code, other-ok  
-inline int tcpserver_accept(socket_t socket, struct sockaddr* addr, int* addrlen, int mstimeout)
+inline socket_t tcpserver_accept(socket_t socket, struct sockaddr* addr, int* addrlen, int mstimeout)
 {
 	int ret;
 	socket_t client;
@@ -61,7 +61,7 @@ inline int tcpserver_accept(socket_t socket, struct sockaddr* addr, int* addrlen
 	ret = socket_select_read(socket, mstimeout);
 	if(socket_error == ret)
 	{
-		return -1;
+		return (socket_t)(-1);
 	}
 	else if(0 == ret)
 	{
@@ -70,7 +70,7 @@ inline int tcpserver_accept(socket_t socket, struct sockaddr* addr, int* addrlen
 
 	client = socket_accept(socket, addr, addrlen);
 	if(socket_invalid == client)
-		return -1;
+		return (socket_t)(-1);
 
 	return client;
 }
