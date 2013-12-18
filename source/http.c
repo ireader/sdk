@@ -63,7 +63,7 @@ struct http_context
 	int transfer_encoding;
 };
 
-static unsigned int s_body_max_size = 2*MB;
+static unsigned int s_body_max_size = 0*MB;
 
 
 // RFC 2612 H2.2
@@ -198,7 +198,7 @@ static int http_header_handler(struct http_context *ctx, size_t npos, size_t vpo
 			ctx->content_length = -1;
 		else
 			ctx->content_length = atoi(value);
-		assert(ctx->content_length >= 0 && ctx->content_length < (int)s_body_max_size);
+		assert(ctx->content_length >= 0 && (0==s_body_max_size || ctx->content_length < (int)s_body_max_size));
 	}
 	else if(0 == stricmp("Connection", name))
 	{
@@ -803,7 +803,7 @@ static int http_parse_chunked(struct http_context *ctx)
 	return 0;
 }
 
-void* http_create(int mode)
+void* http_parser_create(int mode)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)malloc(sizeof(struct http_context));
@@ -812,14 +812,14 @@ void* http_create(int mode)
 
 	memset(ctx, 0, sizeof(struct http_context));
 	ctx->server_mode = mode;
-	http_clear(ctx);
+	http_parser_clear(ctx);
 	return ctx;
 }
 
-int http_destroy(void* http)
+int http_parser_destroy(void* parser)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	if(ctx->raw)
 	{
 		assert(ctx->raw_capacity > 0);
@@ -842,13 +842,14 @@ int http_destroy(void* http)
 	return 0;
 }
 
-void http_clear(void* http)
+void http_parser_clear(void* parser)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	memset(&ctx->req, 0, sizeof(ctx->req));
 	memset(&ctx->reply, 0, sizeof(ctx->reply));
 	ctx->stateM = SM_FIRSTLINE;
+	ctx->offset = 0;
 	ctx->header_size = 0;
 	ctx->content_length = -1; // -1-don't have header, 0-server close, >0-Content-Length
 	ctx->chunked_length = 0;
@@ -857,7 +858,7 @@ void http_clear(void* http)
 	ctx->transfer_encoding = 0;
 }
 
-int http_input(void* http, const void* data, int *bytes)
+int http_parser_input(void* parser, const void* data, int *bytes)
 {
 	enum { INPUT_NEEDMORE = 1, INPUT_DONE = 0, };
 
@@ -865,7 +866,7 @@ int http_input(void* http, const void* data, int *bytes)
 	struct http_context *ctx;
 
 	// save raw data
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	r = http_rawdata(ctx, data, *bytes);
 	if(0 != r)
 	{
@@ -935,62 +936,62 @@ int http_set_max_size(unsigned int bytes)
 	return 0;
 }
 
-int http_get_version(void* http, int *major, int *minor)
+int http_get_version(void* parser, int *major, int *minor)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	*major = ctx->vermajor;
 	*minor = ctx->verminor;
 	return 0;
 }
 
-int http_get_status_code(void* http)
+int http_get_status_code(void* parser)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	return ctx->reply.code;
 }
 
-const char* http_get_status_reason(void* http)
+const char* http_get_status_reason(void* parser)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	return ctx->raw + ctx->reply.reason_pos;
 }
 
-const char* http_get_request_method(void* http)
+const char* http_get_request_method(void* parser)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	return ctx->req.method;
 }
 
-const char* http_get_request_uri(void* http)
+const char* http_get_request_uri(void* parser)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	return ctx->raw + ctx->req.uri_pos;
 }
 
-const void* http_get_content(void* http)
+const void* http_get_content(void* parser)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	assert(ctx->offset <= ctx->raw_size);
 	return ctx->raw + ctx->offset;
 }
 
-int http_get_header_count(void* http)
+int http_get_header_count(void* parser)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	return ctx->header_size;
 }
 
-int http_get_header(void* http, int idx, const char** name, const char** value)
+int http_get_header(void* parser, int idx, const char** name, const char** value)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 
 	if(idx < 0 || idx >= ctx->header_size)
 		return EINVAL;
@@ -1000,11 +1001,11 @@ int http_get_header(void* http, int idx, const char** name, const char** value)
 	return 0;
 }
 
-const char* http_get_header_by_name(void* http, const char* name)
+const char* http_get_header_by_name(void* parser, const char* name)
 {
 	int i;
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 
 	for(i = 0; i < ctx->header_size; i++)
 	{
@@ -1015,11 +1016,11 @@ const char* http_get_header_by_name(void* http, const char* name)
 	return NULL; // not found
 }
 
-int http_get_header_by_name2(void* http, const char* name, int *value)
+int http_get_header_by_name2(void* parser, const char* name, int *value)
 {
 	int i;
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 
 	for(i = 0; i < ctx->header_size; i++)
 	{
@@ -1033,10 +1034,10 @@ int http_get_header_by_name2(void* http, const char* name, int *value)
 	return -1;
 }
 
-int http_get_content_length(void* http)
+int http_get_content_length(void* parser)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 
 	// Transfer-Encoding : chunked
 	if(is_transfer_encoding_chunked(ctx))
@@ -1056,26 +1057,26 @@ int http_get_content_length(void* http)
 	return ctx->raw_size - ctx->offset;
 }
 
-int http_get_connection(void* http)
+int http_get_connection(void* parser)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	return ctx->connection;
 }
 
-const char* http_get_content_encoding(void* http)
+const char* http_get_content_encoding(void* parser)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	if(0 == ctx->content_encoding)
 		return NULL;
 	return ctx->raw + ctx->content_encoding;
 }
 
-const char* http_get_transfer_encoding(void* http)
+const char* http_get_transfer_encoding(void* parser)
 {
 	struct http_context *ctx;
-	ctx = (struct http_context*)http;
+	ctx = (struct http_context*)parser;
 	if(0 == ctx->transfer_encoding)
 		return NULL;
 	return ctx->raw + ctx->transfer_encoding;
