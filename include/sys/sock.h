@@ -81,9 +81,13 @@ inline int socket_recv(IN socket_t sock, OUT void* buf, IN size_t len, IN int fl
 inline int socket_sendto(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen);
 inline int socket_recvfrom(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, OUT struct sockaddr* from, OUT socklen_t* fromlen);
 
+/// @return <0-timeout/error, >0-read bytes
 inline int socket_send_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, -1==infinite
+/// @return <0-timeout/error, >0-read bytes
 inline int socket_send_all_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, -1==infinite
+/// @return 0-connection closed, <0-timeout/error, >0-read bytes
 inline int socket_recv_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, -1==infinite
+/// @return 0-connection closed, <0-timeout/error, >0-read bytes(always is len)
 inline int socket_recv_all_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout);  // timeout: ms, -1==infinite
 
 inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags);
@@ -455,9 +459,12 @@ inline int socket_send_by_time(IN socket_t sock, IN const void* buf, IN size_t l
 
 	r = socket_select_write(sock, timeout);
 	if(r <= 0)
-		return r;
+#if defined(OS_WINDOWS)
+		return 0==r?-WSAETIMEDOUT:r;
+#else
+		return 0==r?-ETIMEDOUT:r;
+#endif
 
-	// read
 	r = socket_send(sock, buf, len, flags);
 	return r;
 }
@@ -471,7 +478,7 @@ inline int socket_send_all_by_time(IN socket_t sock, IN const void* buf, IN size
 	{
 		r = socket_send_by_time(sock, (const char*)buf+bytes, len-bytes, flags, timeout);
 		if(r <= 0)
-			return r;	// <0-error / 0-timeout(server close connection)
+			return r;	// <0-error
 
 		bytes += r;
 	}
@@ -484,9 +491,12 @@ inline int socket_recv_by_time(IN socket_t sock, OUT void* buf, IN size_t len, I
 
 	r = socket_select_read(sock, timeout);
 	if(r <= 0)
-		return r;
+#if defined(OS_WINDOWS)
+		return 0==r?-WSAETIMEDOUT:r;
+#else
+		return 0==r?-ETIMEDOUT:r;
+#endif
 
-	// read
 	r = socket_recv(sock, buf, len, flags);
 	return r;
 }
@@ -500,7 +510,7 @@ inline int socket_recv_all_by_time(IN socket_t sock, OUT void* buf, IN size_t le
 	{
 		r = socket_recv_by_time(sock, (char*)buf+bytes, len-bytes, flags, timeout);
 		if(r <= 0)
-			return r;	// <0-error / 0-timeout(server close connection)
+			return r;	// <0-error / 0-connection closed
 
 		bytes += r;
 	}
