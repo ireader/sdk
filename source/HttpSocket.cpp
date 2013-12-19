@@ -9,23 +9,27 @@
 
 HttpSocket::HttpSocket()
 {
-	m_ptr.reserve(512);
+	m_ptr.reserve(4*1024);
 	m_connFailed = 0;
 	m_autoconnect = true;
 	m_socket = socket_invalid;
 	m_connTimeout = 5000;
-	m_recvTimeout = 5000;	
+	m_recvTimeout = 5000;
+	m_http = http_parser_create(HTTP_PARSER_CLIENT);
+	m_response.m_http = m_http;
 	InitHttpHeader();
 }
 
 HttpSocket::HttpSocket(const char* ip, int port, int connTimeout/* =3000 */, int recvTimeout/* =5000 */)
 {
-	m_ptr.reserve(512);
+	m_ptr.reserve(4*1024);
 	m_connFailed = 0;
 	m_autoconnect = true;
 	m_socket = socket_invalid;
 	m_connTimeout = connTimeout;
 	m_recvTimeout = recvTimeout;
+	m_http = http_parser_create(HTTP_PARSER_CLIENT);
+	m_response.m_http = m_http;
 	InitHttpHeader();
 
 	Connect(ip, port);
@@ -38,6 +42,9 @@ HttpSocket::~HttpSocket()
 		socket_close(m_socket);
 		m_socket = socket_invalid;
 	}
+
+	if(m_http)
+		http_parser_destroy(m_http);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -217,338 +224,6 @@ int HttpSocket::_Post(const char* uri, const void* content, size_t len)
 	}
 
 	assert(r == (int)(n+len));
-	return 0;
-}
-
-//////////////////////////////////////////////////////////////////////////
-///
-/// reply
-///
-//////////////////////////////////////////////////////////////////////////
-static int SocketRecvLine(mmptr& reply, socket_t socket, int timeout)
-{
-	const size_t c_length = 20; // content minimum length
-	size_t n = reply.size();
-	char* p;
-
-	do
-	{
-		if(reply.capacity()<n+c_length)
-		{
-			if(reply.reserve(n+c_length))
-				return ERROR_MEMORY;
-		}
-
-		p = (char*)reply.get() + n;
-		int r = socket_recv_by_time(socket, p, c_length-1, 0, timeout);
-		if(r <= 0)
-			return r;
-
-		n += r;
-		p[r] = 0;
-	} while(!strchr(p, '\n') && n<20*1024*1024);
-
-	assert(reply.capacity()>n);
-	return n;
-}
-
-//static int SocketRecvAll(mmptr& reply, socket_t socket, size_t size, int timeout)
-//{
-//	if(reply.capacity()<reply.size()+size+1)
-//	{
-//		if(reply.reserve(reply.size()+size+1))
-//			return ERROR_MEMORY;
-//	}
-//
-//	char* p = (char*)reply.get()+reply.size();
-//	int r = socket_recv_all_by_time(socket, p, size, 0, timeout);
-//	if(r <= 0)
-//		return r;
-//
-//	p[r] = 0;
-//	return r;
-//}
-
-static bool ParseNameValue(char* s, int len, char*& name, char*& value)
-{
-	// parse response header name value
-	// name: value
-	char* p = strchr(s, ':');
-	if(NULL == p)
-	{
-		assert(false);
-		return false;
-	}
-
-	name = s;
-	value = p+1; // skip ':'
-
-	while(' ' == *name) ++name; // trim left space
-	do{ --p; } while(p>name && ' '==*p); // skip ':' and trim right space
-	*++p = 0;
-
-	while(' ' == *value) ++value; // trim left space
-	p = s+len;
-	do{ --p; } while(p>value && (' '==*p||'\r'==*p)); // trim right space
-	*++p = 0;
-
-	return 0 != *name; // name can't be empty
-}
-
-static bool ParseHttpStatus(const char* s, HttpResponse& response)
-{
-	int status;
-	char version[16];
-	char majorv, minorv;
-	if(3 != sscanf(s, "HTTP/%c.%c %d", &majorv, &minorv, &status))
-		return false;
-
-	memset(version, 0, sizeof(version));
-	snprintf(version, sizeof(version)-1, "%c.%c", majorv, minorv);
-	response.SetStatusCode(status);
-	response.SetHttpVersion(version);
-	return true;
-}
-
-static bool ParseHttpHeader(char* reply, size_t len, HttpResponse& response)
-{
-	char* name;
-	char* value;
-	assert(len > 2 && reply[len]=='\n' && reply[len-1]=='\r');
-
-	// *--p = 0; // \r -> 0
-	if(!ParseNameValue(reply, len, name, value))
-		return false;
-
-	if(0 == stricmp("Content-Length", name))
-	{
-		// < 50 M
-		int len = atoi(value);
-		assert(len >= 0 && len < 50*1024*1024);
-		response.SetContentLength(len);
-	}
-	//else if(0 == stricmp("Set-Cookie", name))
-	//{
-	//	std::string cookien, cookiev;
-	//	Cookie cookie(value);
-	//	if(cookie.GetNameValue(cookien, cookiev))
-	//		SetCookie((cookien+'='+cookiev).c_str());
-	//}
-	else if(0 == stricmp("Connection", name))
-	{
-		response.SetConnectionClose(0 == stricmp("close", value));
-	}
-		
-	response.SetHeader(name, value);
-	return true;
-}
-
-int HttpSocket::RecvHeader(HttpResponse& response)
-{
-	m_ptr.clear();
-
-	int r = 0;
-	int lineNo = 0;	// line number
-	do
-	{
-		// recv header
-		r = SocketRecvLine(m_ptr, m_socket, m_recvTimeout);
-		if(r <= 0)
-			return ERROR_RECV_TIMEOUT;
-
-		// parse header
-		char* line = m_ptr;
-		char* p = strchr(line, '\n');
-		assert(p);
-		while(p)
-		{
-			assert(p>line && *(p-1)=='\r');
-			if(0 == lineNo)
-			{
-				// response status
-				if(!ParseHttpStatus(line, response))
-					return ERROR_REPLY;
-			}
-			else
-			{
-				if(p-1 == line)
-				{
-					// recv "\r\n\r\n"
-					// copy content data(don't copy with '\0')
-					m_ptr.set(p+1, r-(p+1-(char*)m_ptr));
-					return 0;
-				}
-
-				ParseHttpHeader(line, p-line, response);
-			}
-
-			++lineNo;
-			line = p+1;
-			p = strchr(line, '\n');
-		}
-
-		// copy remain data
-		m_ptr.set(line, r-(line-(char*)m_ptr));
-	} while(r > 0);
-
-	return 0;
-}
-
-int HttpSocket::RecvContent(size_t contentLength, mmptr& reply)
-{
-	assert(contentLength>0 && contentLength<1024*1024*1024);
-	if(reply.capacity() < contentLength)
-	{
-		if(0 != reply.reserve(contentLength))
-			return ERROR_MEMORY;
-	}
-
-	// copy receive data
-	reply.set(m_ptr.get(), m_ptr.size());
-
-	// receive content
-	assert(contentLength>=m_ptr.size());
-	int n = (int)(contentLength-m_ptr.size());
-	if(n > 0)
-	{
-		void* p = (char*)reply.get() + reply.size();
-		int r = socket_recv_all_by_time(m_socket, p, n, 0, m_recvTimeout);
-		if(0 == r)
-			return ERROR_RECV_TIMEOUT; // timeout
-		else if(r < 0)
-			return ERROR_RECV;
-		assert(r == n);
-	}
-
-	reply.set(reply.get(), contentLength); // set reply size
-	return 0;
-}
-
-static int RecvChunkedHelper(const char* src, int srcLen, char* dst, int chunkLen, socket_t socket, int timeout)
-{
-	if(chunkLen > 0)
-	{
-		// chunk
-		if(srcLen < chunkLen) // chunk content
-		{
-			if(srcLen > 0)
-				memmove(dst, src, srcLen);
-
-			int r = socket_recv_all_by_time(socket, dst+srcLen, chunkLen-srcLen, 0, timeout);
-			if(r != chunkLen-srcLen)
-				return r;
-		}
-		else
-		{
-			memmove(dst, src, chunkLen);
-		}
-	}
-
-	// recv chunked tail "\r\n"
-	if(srcLen < chunkLen+2)
-	{
-		int n = 2-(MAX(srcLen-chunkLen, 0));
-		assert(n > 0);
-
-		char dummy[2];
-		int r = socket_recv_all_by_time(socket, dummy, n, 0, timeout);
-		if(r != n)
-			return r;
-	}
-	return chunkLen+2;
-}
-
-int HttpSocket::RecvChunked(mmptr& reply)
-{
-	reply.clear();
-	reply.reserve(m_ptr.size()+3000);
-	size_t total = 0;
-	int chunkLen = 0;
-
-	int r = m_ptr.size();
-	char* line = m_ptr.size()?(char*)m_ptr.get():NULL;
-
-	do
-	{
-		// chunk header
-		char* p = line?strchr(line, '\n'):NULL;
-		if(!p)
-		{
-			// recv header
-			r = SocketRecvLine(m_ptr, m_socket, m_recvTimeout);
-			if(r <= 0)
-				return ERROR_RECV;
-
-			line = m_ptr;
-			p = strchr(line, '\n');
-			assert(p);
-		}
-		
-		// chunk size
-		assert(p>line && *(p-1)=='\r');
-		chunkLen = str2int_radix16(line);
-		if(chunkLen > 50*1024*1024)
-		{
-			assert(false);
-			return ERROR_REPLY;
-		}
-		
-		// alloc memory
-		if(reply.capacity() < total+chunkLen)
-		{
-			if(reply.reserve(total+chunkLen+3000))
-				return ERROR_MEMORY;
-		}
-
-		++p; // skip '\n'
-		int n = r - (p-(char*)m_ptr.get());
-		if(chunkLen+2!=RecvChunkedHelper(p, n, (char*)reply.get()+total, chunkLen, m_socket, m_recvTimeout))
-			return ERROR_RECV;
-
-		total += chunkLen;
-		
-		if(n < chunkLen+2)
-		{
-			line = NULL;
-			m_ptr.clear();
-		}
-		else
-		{
-			line = p + chunkLen + 2;
-		}
-	} while(chunkLen > 0);
-
-	reply.set(reply.get(), total); // set reply size
-	return 0;
-}
-
-int HttpSocket::RecvAllServerReply(mmptr& reply)
-{
-	// copy receive data
-	size_t total = m_ptr.size();
-	reply.reserve(total+3000);
-	reply.set(m_ptr.get(), m_ptr.size());
-
-	// receive all until server close connection
-	while(reply.capacity() > total)
-	{
-		// receive content
-		void* p = (char*)reply.get() + total;
-		size_t n = reply.capacity() - total;
-		int r = socket_recv_by_time(m_socket, p, n, 0, m_recvTimeout);
-		if(0 == r)
-			break; // timeout or server close connection
-		else if(r < 0)
-			return ERROR_RECV;
-		
-		total += r;
-		if(reply.capacity()<=total)
-			reply.reserve(total+3000);
-	}
-
-	// server close socket, client should close it.
-	reply.set(reply.get(), total); // set reply size
-	Disconnect();
 	return 0;
 }
 
@@ -779,61 +454,46 @@ int HttpSocket::Post(const char* uri, const void* content, size_t len, mmptr& re
 
 int HttpSocket::GetReply(mmptr& reply)
 {
-	// http header
-	int r = RecvHeader(m_response);
-	if(r)
+	int status = 0;
+	http_parser_clear(m_http);
+
+	do
 	{
-		assert(r < 0);
-		Disconnect();
-		return r;
-	}
+		void* p = m_ptr.get();
+		int r = socket_recv_by_time(m_socket, p, m_ptr.capacity(), 0, m_recvTimeout);
+		if(r < 0)
+		{
+			Disconnect();
+			return ERROR_RECV;
+		}
+
+		status = http_parser_input(m_http, p, &r);
+		if(status < 0)
+		{
+			Disconnect();
+			return status; // parse error
+		}
+
+		assert(0 == r);
+	} while(1 == status);
+
+	// set reply
+	reply.set(http_get_content(m_http), http_get_content_length(m_http));
 
 	// set cookie
-	std::string value;
-	if(m_response.GetHeader("Set-Cookie", value))
+	const char* cookie = http_get_cookie(m_http);
+	if(cookie)
 	{
 		std::string cookien, cookiev;
-		Cookie cookie(value.c_str());
-		if(cookie.GetNameValue(cookien, cookiev))
+		Cookie c(cookie);
+		if(c.GetNameValue(cookien, cookiev))
 			SetCookie((cookien+'='+cookiev).c_str());
 	}
 
+	if(1 == http_get_connection(m_http))
+		Disconnect();
+
 	// url redirect(3xx: move)
-	int status = m_response.GetStatusCode();
-	if(status>=300 && status<400)
-	{
-		std::string location;
-		assert(m_response.HasHeader("location"));
-		m_response.GetHeader("location", location);
-		reply.set(location.c_str());
-	}
-	else if(m_response.HasHeader("Content-Length"))
-	{
-		r = m_response.GetContentLength();
-		if(r > 0)
-			r = RecvContent(r, reply);
-	}
-	else if(m_response.IsTransferEncodingTrunked())
-	{
-		r = RecvChunked(reply);
-	}
-	else
-	{
-		r = RecvAllServerReply(reply);
-	}
-
-	if(r)
-	{
-		assert(r < 0);
-		Disconnect();
-		return r;
-	}
-
-	// auto fill '\0'
-	reply.reserve(reply.size()+1);
-	reply[reply.size()] = 0;
-	
-	if(m_response.ShouldCloseConnection())
-		Disconnect();
-	return (status>=300 && status<400)?ERROR_HTTP_REDIRECT:0;
+	int code = http_get_status_code(m_http);
+	return (code>=300 && code<400)?ERROR_HTTP_REDIRECT:0;
 }

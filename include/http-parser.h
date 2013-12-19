@@ -56,10 +56,14 @@ int http_get_header_by_name2(void* parser, const char* name, int *value);
 int http_get_content_length(void* parser);
 /// @return 1-close, 0-keep-alive, <0-don't have connection header
 int http_get_connection(void* parser);
-/// @return Content-Encoding, 0-don't have content-encoding header
+/// @return Content-Encoding, 0-don't have this header
 const char* http_get_content_encoding(void* parser);
-/// @return Transfer-Encoding, 0-don't have content-encoding header
+/// @return Transfer-Encoding, 0-don't have this header
 const char* http_get_transfer_encoding(void* parser);
+/// @return Set-Cookie, 0-don't have this header
+const char* http_get_cookie(void* parser);
+/// @return Location, 0-don't have this header
+const char* http_get_location(void* parser);
 
 #ifdef __cplusplus
 }

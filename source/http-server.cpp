@@ -19,9 +19,16 @@ void* http_server_create(socket_t sock)
 {
 	HttpServer* ctx;
 	ctx = new HttpServer;
+	ctx->recvTimeout = 5000;
+	ctx->sendTimeout = 5000;
 	ctx->remain = 0;
 	ctx->socket = sock;
 	ctx->http = http_parser_create(HTTP_PARSER_SERVER);
+	if(!ctx->http)
+	{
+		delete ctx;
+		return NULL;
+	}
 	return ctx;
 }
 
