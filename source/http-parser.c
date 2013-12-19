@@ -31,6 +31,7 @@ struct http_header
 
 struct http_chunk
 {
+	size_t offset;
 	size_t len;
 	size_t pos;
 };
@@ -44,8 +45,6 @@ struct http_context
 	int stateM;
 	size_t offset;
 
-	int chunked_length;
-	int chunked_offset;
 	struct http_chunk chunk;
 
 	// start line
@@ -638,12 +637,16 @@ static int http_parse_chunked(struct http_context *ctx)
 
 	char c;
 	assert(is_transfer_encoding_chunked(ctx));
-	if(0 == ctx->chunked_offset)
-		ctx->chunked_offset = ctx->offset;
-
-	for(; ctx->chunked_offset < ctx->raw_size; ctx->chunked_offset++)
+	if(0 == ctx->chunk.offset)
 	{
-		c = ctx->raw[ctx->chunked_offset];
+		ctx->chunk.offset = ctx->offset;
+		assert(-1 == ctx->content_length);
+		ctx->content_length = 0;
+	}
+
+	for(; ctx->chunk.offset < ctx->raw_size; ctx->chunk.offset++)
+	{
+		c = ctx->raw[ctx->chunk.offset];
 
 		switch(ctx->stateM)
 		{
@@ -698,7 +701,7 @@ static int http_parse_chunked(struct http_context *ctx)
 					break;
 
 				case '\n':
-					ctx->chunk.pos = ctx->chunked_offset + 1;
+					ctx->chunk.pos = ctx->chunk.offset + 1;
 					ctx->stateM = 0==ctx->chunk.len ? CHUNK_TRAILER_START : CHUNK_DATA;
 					break;
 
@@ -717,7 +720,7 @@ static int http_parse_chunked(struct http_context *ctx)
 				break;
 
 			case '\n':
-				ctx->chunk.pos = ctx->chunked_offset + 1;
+				ctx->chunk.pos = ctx->chunk.offset + 1;
 				ctx->stateM = 0==ctx->chunk.len ? CHUNK_TRAILER_START : CHUNK_DATA;
 				break;
 			}
@@ -730,7 +733,7 @@ static int http_parse_chunked(struct http_context *ctx)
 				return -1;
 			}
 
-			ctx->chunk.pos = ctx->chunked_offset + 1;
+			ctx->chunk.pos = ctx->chunk.offset + 1;
 			ctx->stateM = 0==ctx->chunk.len ? CHUNK_TRAILER_START : CHUNK_DATA;
 			break;
 
@@ -746,13 +749,13 @@ static int http_parse_chunked(struct http_context *ctx)
 				return -1;
 			}
 
-			memmove(ctx->raw+ctx->offset+ctx->chunked_length, ctx->raw+ctx->chunk.pos, ctx->chunk.len);
-			ctx->raw[ctx->offset+ctx->chunked_length+ctx->chunk.len] = '\0';
-			ctx->chunked_length += ctx->chunk.len;
-			ctx->chunked_offset += ctx->chunk.len + 1; // skip \r\n
+			memmove(ctx->raw+ctx->offset+ctx->content_length, ctx->raw+ctx->chunk.pos, ctx->chunk.len);
+			ctx->raw[ctx->offset+ctx->content_length+ctx->chunk.len] = '\0';
+			ctx->content_length += ctx->chunk.len;
 			ctx->stateM = CHUNK_START;
 
-			memset(&ctx->chunk, 0, sizeof(struct http_chunk)); // reuse chunk
+			ctx->chunk.offset += ctx->chunk.len + 1; // skip \r\n
+			ctx->chunk.pos = ctx->chunk.len = 0; // reuse chunk
 			break;
 
 		case CHUNK_TRAILER_START:
@@ -763,6 +766,7 @@ static int http_parse_chunked(struct http_context *ctx)
 				break;
 
 			case '\n':
+				++ctx->chunk.offset;
 				ctx->stateM = SM_DONE;
 				return 0;
 
@@ -802,6 +806,7 @@ static int http_parse_chunked(struct http_context *ctx)
 				break;
 
 			case '\n':
+				++ctx->chunk.offset;
 				ctx->stateM = SM_DONE;
 				return 0;
 
@@ -818,6 +823,7 @@ static int http_parse_chunked(struct http_context *ctx)
 				return -1;
 			}
 			ctx->stateM = SM_DONE;
+			++ctx->chunk.offset;
 			return 0;
 		}
 	}
@@ -871,16 +877,12 @@ void http_parser_clear(void* parser)
 
 	memset(&ctx->req, 0, sizeof(ctx->req));
 	memset(&ctx->reply, 0, sizeof(ctx->reply));
+	memset(&ctx->chunk, 0, sizeof(struct http_chunk));
 	ctx->stateM = SM_FIRSTLINE;
 	ctx->offset = 0;
 	ctx->raw_size = 0;
 	ctx->header_size = 0;
-
-	memset(&ctx->chunk, 0, sizeof(struct http_chunk));
-	ctx->chunked_length = 0;
-	ctx->chunked_offset = 0;
-
-	ctx->content_length = -1; // -1-don't have header, 0-server close, >0-Content-Length
+	ctx->content_length = -1;
 	ctx->connection = -1;
 	ctx->content_encoding = 0;
 	ctx->transfer_encoding = 0;
@@ -895,21 +897,6 @@ int http_parser_input(void* parser, const void* data, int *bytes)
 	int r;
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-
-	if(0 == *bytes)
-	{
-		assert(SM_DONE != ctx->stateM);
-
-		// connection closed
-		if(-1 == ctx->content_length && SM_BODY == ctx->stateM)
-		{
-			// H4.4 Message Length, section 5, server closing the connection
-			ctx->content_length = ctx->raw_size - ctx->offset;
-			ctx->stateM = SM_DONE;
-			return INPUT_DONE;
-		}
-		return INPUT_NEEDMORE;
-	}
 
 	// save raw data
 	r = http_rawdata(ctx, data, *bytes);
@@ -938,26 +925,30 @@ int http_parser_input(void* parser, const void* data, int *bytes)
 		}
 		else
 		{
-			if(0 <= ctx->content_length)
+			if(-1 == ctx->content_length)
 			{
-				if(ctx->raw_size >= ctx->offset + ctx->content_length)
+				if(is_server_mode(ctx))
 				{
-					ctx->raw[ctx->offset + ctx->content_length] = '\0';
+					ctx->content_length = 0;
 					ctx->stateM = SM_DONE;
 				}
-			}
-			else if(is_server_mode(ctx))
-			{
-				assert(0 == stricmp("GET", ctx->req.method) || 0==stricmp("HEAD", ctx->req.method));
-				ctx->content_length = 0;
-				ctx->raw[ctx->offset] = '\0';
-				ctx->stateM = SM_DONE;
+				else
+				{
+					// H4.4 Message Length, section 5, server closing the connection
+					// receive all until socket closed
+					assert(!is_server_mode(ctx));
+					if(0 == *bytes)
+					{
+						ctx->content_length = ctx->raw_size - ctx->offset;
+						ctx->stateM = SM_DONE;
+					}
+				}
 			}
 			else
 			{
-				// H4.4 Message Length, section 5, server closing the connection
-				// receive all until socket closed
-				assert(!is_server_mode(ctx));
+				assert(ctx->raw_size <= ctx->offset + ctx->content_length);
+				if(ctx->raw_size >= ctx->offset + ctx->content_length)
+					ctx->stateM = SM_DONE;
 			}
 		}
 	}
@@ -965,17 +956,10 @@ int http_parser_input(void* parser, const void* data, int *bytes)
 	if(r < 0)
 		return r;
 
-	if(ctx->stateM == SM_DONE)
-	{
-		*bytes = ctx->raw_size - (ctx->offset + ctx->content_length);
-		ctx->raw_size = ctx->offset + http_get_content_length(ctx); // update length
-		return INPUT_DONE;
-	}
-	else
-	{
-		*bytes = 0;
-		return INPUT_NEEDMORE;
-	}
+	// HTTP/1.0 HTTP/1.1
+	assert(ctx->vermajor==1 && ctx->verminor <= 1);
+	*bytes = 0;
+	return ctx->stateM == SM_DONE ? INPUT_DONE : INPUT_NEEDMORE;
 }
 
 int http_get_max_size()
@@ -993,7 +977,7 @@ int http_get_version(void* parser, int *major, int *minor)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 	*major = ctx->vermajor;
 	*minor = ctx->verminor;
 	return 0;
@@ -1003,7 +987,7 @@ int http_get_status_code(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 	assert(!is_server_mode(ctx));
 	return ctx->reply.code;
 }
@@ -1012,7 +996,7 @@ const char* http_get_status_reason(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 	assert(!is_server_mode(ctx));
 	return ctx->raw + ctx->reply.reason_pos;
 }
@@ -1021,7 +1005,7 @@ const char* http_get_request_method(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 	assert(is_server_mode(ctx));
 	return ctx->req.method;
 }
@@ -1030,7 +1014,7 @@ const char* http_get_request_uri(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 	assert(is_server_mode(ctx));
 	return ctx->raw + ctx->req.uri_pos;
 }
@@ -1039,7 +1023,7 @@ const void* http_get_content(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 	assert(ctx->offset <= ctx->raw_size);
 	return ctx->raw + ctx->offset;
 }
@@ -1048,7 +1032,7 @@ int http_get_header_count(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 	return ctx->header_size;
 }
 
@@ -1056,7 +1040,7 @@ int http_get_header(void* parser, int idx, const char** name, const char** value
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 
 	if(idx < 0 || idx >= ctx->header_size)
 		return EINVAL;
@@ -1071,7 +1055,7 @@ const char* http_get_header_by_name(void* parser, const char* name)
 	int i;
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 
 	for(i = 0; i < ctx->header_size; i++)
 	{
@@ -1087,7 +1071,7 @@ int http_get_header_by_name2(void* parser, const char* name, int *value)
 	int i;
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 
 	for(i = 0; i < ctx->header_size; i++)
 	{
@@ -1105,31 +1089,20 @@ int http_get_content_length(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
-
-	// Transfer-Encoding : chunked
-	if(is_transfer_encoding_chunked(ctx))
+	assert(ctx->stateM>=SM_BODY);
+	if(-1 == ctx->content_length)
 	{
-		assert(-1 == ctx->content_length);
-		return ctx->chunked_length;
+		assert(!is_server_mode(ctx));
+		return ctx->raw_size - ctx->offset;
 	}
-
-	if(ctx->content_length >= 0)
-	{
-		assert((size_t)ctx->content_length == ctx->raw_size - ctx->offset);
-		return ctx->content_length;
-	}
-
-	// don't have Content-Length
-	// H4.4 Message Length, section 5, server closing the connection?
-	return ctx->raw_size - ctx->offset;
+	return ctx->content_length;
 }
 
 int http_get_connection(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 	return ctx->connection;
 }
 
@@ -1137,7 +1110,7 @@ const char* http_get_content_encoding(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 	if(0 == ctx->content_encoding)
 		return NULL;
 	return ctx->raw + ctx->content_encoding;
@@ -1147,7 +1120,7 @@ const char* http_get_transfer_encoding(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 	if(0 == ctx->transfer_encoding)
 		return NULL;
 	return ctx->raw + ctx->transfer_encoding;
@@ -1157,7 +1130,7 @@ const char* http_get_cookie(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 	assert(!is_server_mode(ctx));
 	if(0 == ctx->cookie)
 		return NULL;
@@ -1168,7 +1141,7 @@ const char* http_get_location(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
-	assert(ctx->stateM==SM_DONE);
+	assert(ctx->stateM>=SM_BODY);
 	assert(!is_server_mode(ctx));
 	if(0 == ctx->location)
 		return NULL;
