@@ -5,6 +5,11 @@
 extern "C" {
 #endif
 
+enum HTTP_PARSER_MODE { 
+	HTTP_PARSER_CLIENT = 0, 
+	HTTP_PARSER_SERVER = 1
+};
+
 /// get/set maximum body size(global setting)
 /// @param[in] bytes 0-unlimit, other-limit bytes
 int http_get_max_size();
@@ -13,7 +18,7 @@ int http_set_max_size(unsigned int bytes);
 /// create
 /// @param[in] mode 1-server mode, 0-client mode
 /// @return parser instance
-void* http_parser_create(int mode);
+void* http_parser_create(enum HTTP_PARSER_MODE mode);
 
 /// destroy
 /// @return 0-ok, other-error

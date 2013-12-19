@@ -1,18 +1,8 @@
 #include "http-server.h"
+#include "http-parser.h"
 #include "cstringext.h"
-#include "mmptr.h"
 #include "error.h"
-#include <map>
 #include <string>
-
-struct less
-{
-	bool operator()(const std::string& l, const std::string& r) const
-	{
-		return stricmp(l.c_str(), r.c_str())<0;
-	}
-};
-typedef std::map<std::string, std::string, less> HttpHeaders;
 
 typedef struct _http_server_context
 {
@@ -20,23 +10,18 @@ typedef struct _http_server_context
 	int recvTimeout;
 	int sendTimeout;
 	std::string reply;
-
-	std::string path;
-	std::string method;
-	std::string version;
-	HttpHeaders headers;
-	size_t contentLength;
-	int connection;
-
-	mmptr postdata;
-	mmptr ptr;
+	void* http;
+	char buffer[8*1024];
+	int remain;
 } HttpServer;
 
 void* http_server_create(socket_t sock)
 {
 	HttpServer* ctx;
 	ctx = new HttpServer;
+	ctx->remain = 0;
 	ctx->socket = sock;
+	ctx->http = http_parser_create(HTTP_PARSER_SERVER);
 	return ctx;
 }
 
@@ -46,6 +31,7 @@ int http_server_destroy(void **server)
 	if(server && *server)
 	{
 		ctx = (HttpServer*)*server;
+		http_parser_destroy(ctx->http);
 		if(ctx->socket != socket_invalid)
 			socket_close(ctx->socket);
 		delete ctx;
@@ -71,229 +57,57 @@ void http_server_get_timeout(void *server, int *recv, int *send)
 const char* http_server_get_path(void *server)
 {
 	HttpServer* ctx = (HttpServer*)server;
-	return ctx->path.c_str();
+	return http_get_request_uri(ctx->http);
 }
 
 const char* http_server_get_method(void *server)
 {
 	HttpServer* ctx = (HttpServer*)server;
-	return ctx->method.c_str();
+	return http_get_request_method(ctx->http);
 }
 
 int http_server_get_content(void *server, void **content, int *length)
 {
 	HttpServer* ctx = (HttpServer*)server;
-	*content = ctx->postdata.get();
-	*length = ctx->postdata.size();
+	*content = (void*)http_get_content(ctx->http);
+	*length = http_get_content_length(ctx->http);
 	return 0;
 }
 
 const char* http_server_get_header(void *server, const char *name)
 {
-	HttpHeaders& headers = ((HttpServer*)server)->headers;
-	HttpHeaders::iterator it;
-	it = headers.find(name);
-	if(it == headers.end())
-		return NULL;
-	return it->second.c_str();
-}
-
-//////////////////////////////////////////////////////////////////////////
-/// receive
-//////////////////////////////////////////////////////////////////////////
-static int http_parse_name_value(char* s, int len, char*& name, char*& value)
-{
-	// parse response header name value
-	// name: value
-	char* p = strchr(s, ':');
-	if(NULL == p)
-	{
-		assert(false);
-		return -1;
-	}
-
-	name = s;
-	value = p+1; // skip ':'
-
-	while(' ' == *name) ++name; // trim left space
-	do{ --p; } while(p>name && ' '==*p); // skip ':' and trim right space
-	*++p = 0;
-
-	while(' ' == *value) ++value; // trim left space
-	p = s+len;
-	do{ --p; } while(p>value && (' '==*p||'\r'==*p)); // trim right space
-	*++p = 0;
-
-	return 0 == *name ? -1 : 0; // name can't be empty
-}
-
-static int http_parse_firstline(HttpServer* ctx, const char* s)
-{
-	char url[256] = {0};
-	char method[16] = {0};
-	int majorv, minorv;
-	if(4 != sscanf(s, "%15s %255s HTTP/%d.%d", method, url, &majorv, &minorv))
-		return -1;
-
-	ctx->path.assign(url);
-	ctx->method.assign(method);
-
-	sprintf(method, "%d.%d", majorv, minorv);
-	ctx->version.assign(method);
-	return 0;
-}
-
-static int http_parse_header(HttpServer* ctx, char* reply, size_t len)
-{
-	char* name;
-	char* value;
-	assert(len > 2 && reply[len]=='\n' && reply[len-1]=='\r');
-
-	// *--p = 0; // \r -> 0
-	if(0 != http_parse_name_value(reply, len, name, value))
-		return -1;
-
-	if(0 == stricmp("Content-Length", name))
-	{
-		// < 50 M
-		int contentLen = atoi(value);
-		assert(contentLen >= 0 && contentLen < 50*1024*1024);
-		ctx->contentLength = contentLen;
-	}
-	else if(0 == stricmp("Connection", name))
-	{
-		ctx->connection = strieq("close", value) ? 1 : 0;
-	}
-
-	//response.SetHeader(name, value);
-	ctx->headers.insert(std::make_pair(name, value));
-	return 0;
-}
-
-static int http_recv_line(mmptr& reply, socket_t socket, int timeout)
-{
-	const size_t c_length = 20; // content minimum length
-	size_t n = reply.size();
-	char* p;
-
-	do
-	{
-		if(reply.capacity()<n+c_length)
-		{
-			if(reply.reserve(n+c_length))
-				return ERROR_MEMORY;
-		}
-
-		p = (char*)reply.get() + n;
-		int r = socket_recv_by_time(socket, p, c_length-1, 0, timeout);
-		if(r <= 0)
-			return r;
-
-		n += r;
-		p[r] = 0;
-	} while(!strchr(p, '\n') && n<20*1024*1024);
-
-	assert(reply.capacity()>n);
-	return n;
-}
-
-static int http_recv_header(HttpServer* ctx)
-{
-	int r = 0;
-	int lineNo = 0;	// line number
-	do
-	{
-		// recv header
-		r = http_recv_line(ctx->ptr, ctx->socket, ctx->recvTimeout);
-		if(r <= 0)
-			return ERROR_RECV_TIMEOUT;
-
-		// parse header
-		char* line = ctx->ptr;
-		char* p = strchr(line, '\n');
-		assert(p);
-		while(p)
-		{
-			assert(p>line && *(p-1)=='\r');
-			if(0 == lineNo)
-			{
-				// response status
-				if(0!=http_parse_firstline(ctx, line))
-					return ERROR_REPLY;
-			}
-			else
-			{
-				if(p-1 == line)
-				{
-					// recv "\r\n\r\n"
-					// copy content data(don't copy with '\0')
-					ctx->ptr.set(p+1, r-(p+1-(char*)(ctx->ptr)));
-					return 0;
-				}
-
-				http_parse_header(ctx, line, p-line);
-			}
-
-			++lineNo;
-			line = p+1;
-			p = strchr(line, '\n');
-		}
-
-		// copy remain data
-		ctx->ptr.set(line, r-(line-(char*)(ctx->ptr)));
-	} while(r > 0);
-
-	return 0;
-}
-
-int http_recv_content(HttpServer* ctx)
-{
-	assert(ctx->contentLength>0 && ctx->contentLength<1024*1024*1024);
-	if(ctx->postdata.capacity() < ctx->contentLength)
-	{
-		if(0 != ctx->postdata.reserve(ctx->contentLength))
-			return ERROR_MEMORY;
-	}
-
-	// copy receive data
-	ctx->postdata.set(ctx->ptr.get(), ctx->ptr.size());
-
-	// receive content
-	assert(ctx->contentLength >= ctx->ptr.size());
-	int n = (int)(ctx->contentLength-ctx->ptr.size());
-	if(n > 0)
-	{
-		void* p = (char*)ctx->postdata.get() + ctx->postdata.size();
-		int r = socket_recv_all_by_time(ctx->socket, p, n, 0, ctx->recvTimeout);
-		if(0 == r)
-			return ERROR_RECV_TIMEOUT; // timeout
-		else if(r < 0)
-			return ERROR_RECV;
-		assert(r == n);
-	}
-
-	ctx->postdata.set(ctx->postdata.get(), ctx->contentLength); // set request size
-	ctx->postdata.append('\0');
-	return 0;
+	HttpServer* ctx = (HttpServer*)server;
+	return http_get_header_by_name(ctx->http, name);
 }
 
 int http_server_recv(void *server)
 {
-	int r;
+	int status;
 	HttpServer* ctx = (HttpServer*)server;
-	ctx->headers.clear();
-	ctx->version.clear();
-	ctx->method.clear();
-	ctx->path.clear();
-	ctx->ptr.clear();
-	ctx->postdata.clear();
+	http_parser_clear(ctx->http);
 	ctx->reply.clear();
-	ctx->contentLength = 0;
 
-	r = http_recv_header(ctx);
-	if(0==r && ctx->contentLength > 0)
-		r = http_recv_content(ctx);
-	return r;
+	do
+	{
+		void* p = ctx->buffer + ctx->remain;
+		int r = socket_recv_by_time(ctx->socket, p, sizeof(ctx->buffer) - ctx->remain, 0, ctx->recvTimeout);
+		if(r < 0)
+			return ERROR_RECV;
+
+		ctx->remain = r;
+		status = http_parser_input(ctx->http, ctx->buffer, &ctx->remain);
+		if(status < 0)
+			return status; // parse error
+
+		if(0 == status)
+		{
+			if(ctx->remain > 0)
+				memmove(ctx->buffer, ctx->buffer+(r-ctx->remain), ctx->remain);
+		}
+
+	} while(1 == status);
+
+	return 0;
 }
 
 int http_server_send(void* server, int code, const void* data, int bytes)

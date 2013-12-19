@@ -1,4 +1,4 @@
-#include "http.h"
+#include "http-parser.h"
 #include "cstringext.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -122,7 +122,7 @@ static int http_rawdata(struct http_context *ctx, const void* data, int bytes)
 			return ENOMEM;
 
 		memmove(p, ctx->raw, ctx->raw_size);
-		ctx->raw_capacity += max(bytes, capacity);
+		ctx->raw_capacity += max(bytes+1, capacity);
 		ctx->raw = p;
 	}
 
@@ -231,20 +231,22 @@ static int http_header_add(struct http_context *ctx, struct http_header* header)
 	if(ctx->header_size+1 >= ctx->header_capacity)
 	{
 		size = ctx->header_capacity < 16 ? 16 : (ctx->header_size * 3 / 2);
-		p = (struct http_header*)realloc(ctx->headers, sizeof(struct http_header) * size);
+		p = (struct http_header*)malloc(sizeof(struct http_header) * size);
 		if(!p)
 			return ENOMEM;
 
-		memmove(p, ctx->headers, (sizeof(struct http_header)*ctx->header_size));
-		ctx->raw_capacity = size;
+		if(ctx->header_size > 0)
+			memmove(p, ctx->headers, (sizeof(struct http_header)*ctx->header_size));
+		ctx->headers = p;
+		ctx->header_capacity = size;
 	}
 
 	assert(header->npos > 0);
 	assert(header->nlen > 0);
 	assert(header->vpos > 0);
 	assert(is_valid_token(ctx->raw+header->npos, header->nlen));
-	ctx->raw[header->nlen] = '\0';
-	ctx->raw[header->vlen] = '\0';
+	ctx->raw[header->npos+header->nlen] = '\0';
+	ctx->raw[header->vpos+header->vlen] = '\0';
 	memmove(ctx->headers + ctx->header_size, header, sizeof(struct http_header));
 	++ctx->header_size;
 
@@ -266,6 +268,7 @@ static int http_parse_request_line(struct http_context *ctx)
 		SM_REQUEST_END
 	};
 
+	assert(0 == ctx->offset);
 	for(; ctx->offset < ctx->raw_size; ctx->offset++)
 	{
 		switch(ctx->stateM)
@@ -309,8 +312,8 @@ static int http_parse_request_line(struct http_context *ctx)
 			}
 			else
 			{
-				// validate uri
-				assert(isalnum(ctx->raw[ctx->offset]) || strchr(".:?/\\+-%", ctx->raw[ctx->offset]));
+				// validate URI
+				assert(isalnum(ctx->raw[ctx->offset]) || strchr(".:?/\\+-%&=", ctx->raw[ctx->offset]));
 			}
 			break;
 
@@ -340,8 +343,9 @@ static int http_parse_request_line(struct http_context *ctx)
 			case '\r':
 				break;
 			case '\n':
+				++ctx->offset; // skip '\n'
 				ctx->stateM = SM_HEADER;
-				break;
+				return 0;
 			default:
 				assert(0);
 				return -1; // invalid
@@ -432,7 +436,8 @@ static int http_parse_status_line(struct http_context *ctx)
 				trim_right(ctx->raw, &ctx->reply.reason_pos, &ctx->reply.reason_len);
 				ctx->raw[ctx->reply.reason_pos + ctx->reply.reason_len] = '\0';
 				ctx->stateM = SM_HEADER;
-				break;
+				++ctx->offset; // skip \n
+				return 0;
 
 			default:
 				break;
@@ -484,6 +489,7 @@ static int http_parse_header_line(struct http_context *ctx)
 				assert('\n' == ctx->raw[ctx->offset]);
 
 			case '\n':
+				++ctx->offset;
 				ctx->stateM = SM_BODY;
 				return 0;
 
@@ -498,6 +504,7 @@ static int http_parse_header_line(struct http_context *ctx)
 				header.npos = ctx->offset;
 				ctx->stateM = SM_HEADER_NAME;
 			}
+			break;
 
 		case SM_HEADER_NAME:
 			switch(ctx->raw[ctx->offset])
@@ -560,7 +567,7 @@ static int http_parse_header_line(struct http_context *ctx)
 			{
 			case '\n':
 				assert('\r' == ctx->raw[ctx->offset-1]);
-				header.vlen = ctx->offset - 2 - header.vpos;
+				header.vlen = ctx->offset - 1 - header.vpos;
 				trim_right(ctx->raw, &header.vpos, &header.vlen);
 				ctx->stateM = SM_HEADER;
 
@@ -803,7 +810,7 @@ static int http_parse_chunked(struct http_context *ctx)
 	return 0;
 }
 
-void* http_parser_create(int mode)
+void* http_parser_create(enum HTTP_PARSER_MODE mode)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)malloc(sizeof(struct http_context));
@@ -850,6 +857,7 @@ void http_parser_clear(void* parser)
 	memset(&ctx->reply, 0, sizeof(ctx->reply));
 	ctx->stateM = SM_FIRSTLINE;
 	ctx->offset = 0;
+	ctx->raw_size = 0;
 	ctx->header_size = 0;
 	ctx->content_length = -1; // -1-don't have header, 0-server close, >0-Content-Length
 	ctx->chunked_length = 0;
@@ -864,9 +872,24 @@ int http_parser_input(void* parser, const void* data, int *bytes)
 
 	int r;
 	struct http_context *ctx;
+	ctx = (struct http_context*)parser;
+
+	if(0 == *bytes)
+	{
+		assert(SM_DONE != ctx->stateM);
+
+		// connection closed
+		if(-1 == ctx->content_length && SM_BODY == ctx->stateM)
+		{
+			// H4.4 Message Length, section 5, server closing the connection
+			ctx->content_length = ctx->raw_size - ctx->offset;
+			ctx->stateM = SM_DONE;
+			return INPUT_DONE;
+		}
+		return INPUT_NEEDMORE;
+	}
 
 	// save raw data
-	ctx = (struct http_context*)parser;
 	r = http_rawdata(ctx, data, *bytes);
 	if(0 != r)
 	{
@@ -876,7 +899,7 @@ int http_parser_input(void* parser, const void* data, int *bytes)
 
 	if(SM_FIRSTLINE <= ctx->stateM && ctx->stateM < SM_HEADER)
 	{
-		r = ctx->server_mode ? http_parse_request_line(ctx) : http_parse_status_line(ctx);
+		r = (HTTP_PARSER_SERVER==ctx->server_mode) ? http_parse_request_line(ctx) : http_parse_status_line(ctx);
 	}
 
 	if(SM_HEADER <= ctx->stateM && ctx->stateM < SM_BODY)
@@ -897,14 +920,22 @@ int http_parser_input(void* parser, const void* data, int *bytes)
 			{
 				if(ctx->raw_size >= ctx->offset + ctx->content_length)
 				{
+					ctx->raw[ctx->offset + ctx->content_length] = '\0';
 					ctx->stateM = SM_DONE;
 				}
 			}
+			else if(HTTP_PARSER_SERVER == ctx->server_mode)
+			{
+				assert(0 == stricmp("GET", ctx->req.method) || 0==stricmp("HEAD", ctx->req.method));
+				ctx->content_length = 0;
+				ctx->raw[ctx->offset] = '\0';
+				ctx->stateM = SM_DONE;
+			}
 			else
 			{
-				// 4.4 Message Length, section 5, server closing the connection
+				// H4.4 Message Length, section 5, server closing the connection
 				// receive all until socket closed
-				assert(0 == ctx->server_mode);
+				assert(HTTP_PARSER_CLIENT == ctx->server_mode);
 			}
 		}
 	}
@@ -940,6 +971,7 @@ int http_get_version(void* parser, int *major, int *minor)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
 	*major = ctx->vermajor;
 	*minor = ctx->verminor;
 	return 0;
@@ -949,6 +981,8 @@ int http_get_status_code(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
+	assert(ctx->server_mode == HTTP_PARSER_CLIENT);
 	return ctx->reply.code;
 }
 
@@ -956,6 +990,8 @@ const char* http_get_status_reason(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
+	assert(ctx->server_mode == HTTP_PARSER_CLIENT);
 	return ctx->raw + ctx->reply.reason_pos;
 }
 
@@ -963,6 +999,8 @@ const char* http_get_request_method(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
+	assert(ctx->server_mode == HTTP_PARSER_SERVER);
 	return ctx->req.method;
 }
 
@@ -970,6 +1008,8 @@ const char* http_get_request_uri(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
+	assert(ctx->server_mode == HTTP_PARSER_SERVER);
 	return ctx->raw + ctx->req.uri_pos;
 }
 
@@ -977,6 +1017,7 @@ const void* http_get_content(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
 	assert(ctx->offset <= ctx->raw_size);
 	return ctx->raw + ctx->offset;
 }
@@ -985,6 +1026,7 @@ int http_get_header_count(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
 	return ctx->header_size;
 }
 
@@ -992,6 +1034,7 @@ int http_get_header(void* parser, int idx, const char** name, const char** value
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
 
 	if(idx < 0 || idx >= ctx->header_size)
 		return EINVAL;
@@ -1006,6 +1049,7 @@ const char* http_get_header_by_name(void* parser, const char* name)
 	int i;
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
 
 	for(i = 0; i < ctx->header_size; i++)
 	{
@@ -1021,6 +1065,7 @@ int http_get_header_by_name2(void* parser, const char* name, int *value)
 	int i;
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
 
 	for(i = 0; i < ctx->header_size; i++)
 	{
@@ -1038,6 +1083,7 @@ int http_get_content_length(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
 
 	// Transfer-Encoding : chunked
 	if(is_transfer_encoding_chunked(ctx))
@@ -1061,6 +1107,7 @@ int http_get_connection(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
 	return ctx->connection;
 }
 
@@ -1068,6 +1115,7 @@ const char* http_get_content_encoding(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
 	if(0 == ctx->content_encoding)
 		return NULL;
 	return ctx->raw + ctx->content_encoding;
@@ -1077,6 +1125,7 @@ const char* http_get_transfer_encoding(void* parser)
 {
 	struct http_context *ctx;
 	ctx = (struct http_context*)parser;
+	assert(ctx->stateM==SM_DONE);
 	if(0 == ctx->transfer_encoding)
 		return NULL;
 	return ctx->raw + ctx->transfer_encoding;
