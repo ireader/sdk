@@ -154,9 +154,9 @@ inline size_t system_tickcount(void)
 	QueryPerformanceCounter(&count);
 	return (size_t)(count.QuadPart * 1000 / freq.QuadPart);
 #else
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return (size_t)(tv.tv_sec*1000 + tv.tv_usec/1000);
+	struct timespec tp;
+	clock_gettime(CLOCK_MONOTONIC, &tp);
+	return (size_t)((size_t)tp.tv_sec*1000 + tp.tv_nsec/1000000);
 #endif
 }
 
