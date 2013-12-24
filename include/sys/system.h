@@ -46,7 +46,7 @@ inline long long system_getcyclecount(void);
 ///@return second.milliseconds
 inline double system_time(void);
 ///@return milliseconds
-inline size_t system_tickcount(void);
+inline size_t system_clock(void);
 
 inline int system_version(int* major, int* minor);
 
@@ -145,7 +145,7 @@ inline double system_time(void)
 	return t.time+t.millitm*0.001;
 }
 
-inline size_t system_tickcount(void)
+inline size_t system_clock(void)
 {
 #if defined(OS_WINDOWS)
 	LARGE_INTEGER freq;
