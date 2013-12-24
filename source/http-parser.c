@@ -957,8 +957,6 @@ int http_parser_input(void* parser, const void* data, int *bytes)
 	if(r < 0)
 		return r;
 
-	// HTTP/1.0 HTTP/1.1
-	assert(ctx->vermajor==1 && ctx->verminor <= 1);
 	*bytes = 0;
 	return ctx->stateM == SM_DONE ? INPUT_DONE : INPUT_NEEDMORE;
 }
