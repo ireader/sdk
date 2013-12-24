@@ -2,9 +2,11 @@
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <unistd.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <assert.h>
 
 //#define MAX_EVENT 64
 
@@ -201,7 +203,7 @@ int aio_socket_destroy(aio_socket_t socket)
 	}
 
 	if(ctx->own)
-		closesocket(ctx->socket);
+		close(ctx->socket);
 	free(ctx);
 	return 0;
 }
@@ -211,7 +213,7 @@ static int epoll_accept(struct epoll_context* ctx, int flags)
 	char ip[16];
 	socket_t client;
 	struct sockaddr_in addr;
-	int addrlen = sizeof(addr);
+	socklen_t addrlen = sizeof(addr);
 
 	memset(&addr, 0, sizeof(addr));
 	client = accept(ctx->socket, (struct sockaddr*)&addr, &addrlen);
@@ -498,7 +500,7 @@ static int epoll_recvfrom(struct epoll_context* ctx, int flags)
 	int r;
 	char ip[16] = {0};
 	struct sockaddr_in addr;
-	int addrlen = sizeof(addr);
+	socklen_t addrlen = sizeof(addr);
 
 	memset(&addr.sin_addr, 0, sizeof(addr.sin_addr));
 	r = recvfrom(ctx->socket, ctx->in.recv.buffer, ctx->in.recv.bytes, 0, (struct sockaddr*)&addr, &addrlen);

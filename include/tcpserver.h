@@ -53,7 +53,7 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 /// @param[in/out] addrlen addr length in bytes
 /// @param[in] mstimeout timeout in millisecond
 /// @return 0-timeout, -1-error, use socket_geterror() to get error code, other-ok  
-inline socket_t tcpserver_accept(socket_t socket, struct sockaddr* addr, int* addrlen, int mstimeout)
+inline socket_t tcpserver_accept(socket_t socket, struct sockaddr* addr, socklen_t* addrlen, int mstimeout)
 {
 	int ret;
 	socket_t client;

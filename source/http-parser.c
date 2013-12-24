@@ -2,6 +2,7 @@
 #include "cstringext.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <ctype.h>
 
 #define KB (1024)
@@ -126,11 +127,11 @@ static int http_rawdata(struct http_context *ctx, const void* data, int bytes)
 	if(ctx->raw_capacity - ctx->raw_size < (size_t)bytes + 1)
 	{
 		capacity = (ctx->raw_capacity > 4*MB) ? 50*MB : (ctx->raw_capacity > 16*KB ? 2*MB : 8*KB);
-		p = realloc(ctx->raw, ctx->raw_capacity + max(bytes+1, capacity));
+		p = realloc(ctx->raw, ctx->raw_capacity + MAX(bytes+1, capacity));
 		if(!p)
 			return ENOMEM;
 
-		ctx->raw_capacity += max(bytes+1, capacity);
+		ctx->raw_capacity += MAX(bytes+1, capacity);
 		ctx->raw = p;
 	}
 
