@@ -280,7 +280,7 @@ static void util_free(struct aio_context_action* aio)
 
 __forceinline int iocp_check_closed(struct aio_context_action* aio)
 {
-	LONG r = InterlockedCompareExchange(&aio->context->closed, 2, 0);
+	LONG r = InterlockedCompareExchange(&aio->context->closed, 1, 1);
 
 	if(0 != r && aio->action == iocp_accept)
 		closesocket(aio->accept.socket); // close socket
