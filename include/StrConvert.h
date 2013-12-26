@@ -14,6 +14,11 @@ public:
 		sprintf(_buffer, "%i", v);
 	}
 
+	ToAString(unsigned int v)
+	{
+		sprintf(_buffer, "%u", v);
+	}
+
 	ToAString(bool v)
 	{
 		if(v)
@@ -52,6 +57,11 @@ public:
 	ToWString(int v)
 	{
 		swprintf(_buffer, sizeof(_buffer)/sizeof(_buffer[0]), L"%i", v);
+	}
+
+	ToWString(unsigned int v)
+	{
+		swprintf(_buffer, sizeof(_buffer)/sizeof(_buffer[0]), L"%u", v);
 	}
 
 	ToWString(bool v)
