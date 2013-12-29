@@ -494,6 +494,6 @@ int HttpSocket::GetReply(mmptr& reply)
 		Disconnect();
 
 	// url redirect(3xx: move)
-	int code = http_get_status_code(m_http);
-	return (code>=300 && code<400)?ERROR_HTTP_REDIRECT:0;
+	//int code = http_get_status_code(m_http);
+	return 0;
 }
