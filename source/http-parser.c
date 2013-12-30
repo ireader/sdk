@@ -328,7 +328,10 @@ static int http_parse_request_line(struct http_context *ctx)
 			else
 			{
 				// validate URI
-				assert(isalnum(ctx->raw[ctx->offset]) || strchr(".:?/\\+-%&=", ctx->raw[ctx->offset]));
+				// RFC 1738: 
+				// only alphanumerics, the special characters "$-_.+!*'(),", and reserved characters 
+				// used for their reserved purposes may be used unencoded within a URL.
+				assert(isalnum(ctx->raw[ctx->offset]) || strchr("$-_.+!*'(),;/?:@=&", ctx->raw[ctx->offset]));
 			}
 			break;
 
