@@ -283,7 +283,6 @@ static int http_parse_request_line(struct http_context *ctx)
 		SM_REQUEST_END
 	};
 
-	assert(0 == ctx->offset);
 	for(; ctx->offset < ctx->raw_size; ctx->offset++)
 	{
 		switch(ctx->stateM)
