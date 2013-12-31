@@ -18,16 +18,16 @@ public:
 
 	bool IsTransferEncodingTrunked() const
 	{
-		std::string value;
-		if(!GetHeader("Transfer-Encoding", value))
-			return false;
-
-		return 0==stricmp("chunked", value.c_str());
+		const char* p = http_get_transfer_encoding(m_http);
+		return p && 0==stricmp("chunked", p);
 	}
 
 	bool GetContentEncoding(std::string& value) const
 	{
-		return GetHeader("Content-Encoding", value);
+		const char* p = http_get_content_encoding(m_http);
+		if(p)
+			value.assign(p);
+		return !!p;
 	}
 
 	bool GetHeader(const std::string& name, std::string& value) const
