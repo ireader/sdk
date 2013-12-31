@@ -112,6 +112,9 @@ int http_server_recv(void *server)
 				memmove(ctx->buffer, ctx->buffer+(r-ctx->remain), ctx->remain);
 		}
 
+		if(0 == r && 1 == status)
+			return ERROR_RECV; // peer close socket, don't receive all data
+
 	} while(1 == status);
 
 	return 0;

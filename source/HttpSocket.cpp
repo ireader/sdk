@@ -139,6 +139,8 @@ bool HttpSocket::IsConnected() const
 	if(socket_invalid == m_socket)
 		return false; // linux: FD_SET error
 
+	// MSDN: readfds: Connection has been closed/reset/terminated.
+	// return 1 if connection has been closed, 0 if connection ok
 	int r = socket_readable(m_socket);
 	return 0==r;
 }
@@ -467,14 +469,21 @@ int HttpSocket::GetReply(mmptr& reply)
 			return ERROR_RECV;
 		}
 
-		status = http_parser_input(m_http, p, &r);
+		int bytes = r;
+		status = http_parser_input(m_http, p, &bytes);
 		if(status < 0)
 		{
 			Disconnect();
 			return status; // parse error
 		}
 
-		assert(0 == r);
+		assert(0 == bytes);
+		if(0 == r && 1 == status)
+		{
+			Disconnect();
+			return ERROR_RECV; // peer close socket, don't receive all data
+		}
+
 	} while(1 == status);
 
 	// set reply
