@@ -229,6 +229,54 @@ int HttpSocket::_Post(const char* uri, const void* content, size_t len)
 	return 0;
 }
 
+int HttpSocket::_GetReply()
+{
+	int status = 0;
+	http_parser_clear(m_http);
+
+	do
+	{
+		void* p = m_ptr.get();
+		int r = socket_recv_by_time(m_socket, p, m_ptr.capacity(), 0, m_recvTimeout);
+		if(r < 0)
+		{
+			Disconnect();
+			return ERROR_RECV;
+		}
+
+		int bytes = r;
+		status = http_parser_input(m_http, p, &bytes);
+		if(status < 0)
+		{
+			Disconnect();
+			return status; // parse error
+		}
+
+		assert(0 == bytes);
+		if(0 == r && 1 == status)
+		{
+			Disconnect();
+			return ERROR_RECV; // peer close socket, don't receive all data
+		}
+
+	} while(1 == status);
+
+	// set cookie
+	const char* cookie = http_get_cookie(m_http);
+	if(cookie)
+	{
+		std::string cookien, cookiev;
+		Cookie c(cookie);
+		if(c.GetNameValue(cookien, cookiev))
+			SetCookie((cookien+'='+cookiev).c_str());
+	}
+
+	if(1 == http_get_connection(m_http))
+		Disconnect();
+
+	return 0;
+}
+
 //////////////////////////////////////////////////////////////////////////
 ///
 /// Http Header
@@ -436,73 +484,20 @@ int HttpSocket::MakeHttpHeader(mmptr& reply, const char* method, const char* uri
 //	m_headersUpdate = true;
 //}
 
-int HttpSocket::Get(const char* uri, mmptr& reply)
+int HttpSocket::Get(const char* uri)
 {
 	int r = _Get(uri);
 	if(r < 0)
 		return r;
 
-	return GetReply(reply);
+	return _GetReply();
 }
 
-int HttpSocket::Post(const char* uri, const void* content, size_t len, mmptr& reply)
+int HttpSocket::Post(const char* uri, const void* content, size_t len)
 {
 	int r = _Post(uri, content, len);
 	if(r < 0)
 		return r;
 
-	return GetReply(reply);
-}
-
-int HttpSocket::GetReply(mmptr& reply)
-{
-	int status = 0;
-	http_parser_clear(m_http);
-
-	do
-	{
-		void* p = m_ptr.get();
-		int r = socket_recv_by_time(m_socket, p, m_ptr.capacity(), 0, m_recvTimeout);
-		if(r < 0)
-		{
-			Disconnect();
-			return ERROR_RECV;
-		}
-
-		int bytes = r;
-		status = http_parser_input(m_http, p, &bytes);
-		if(status < 0)
-		{
-			Disconnect();
-			return status; // parse error
-		}
-
-		assert(0 == bytes);
-		if(0 == r && 1 == status)
-		{
-			Disconnect();
-			return ERROR_RECV; // peer close socket, don't receive all data
-		}
-
-	} while(1 == status);
-
-	// set reply
-	reply.set(http_get_content(m_http), http_get_content_length(m_http));
-
-	// set cookie
-	const char* cookie = http_get_cookie(m_http);
-	if(cookie)
-	{
-		std::string cookien, cookiev;
-		Cookie c(cookie);
-		if(c.GetNameValue(cookien, cookiev))
-			SetCookie((cookien+'='+cookiev).c_str());
-	}
-
-	if(1 == http_get_connection(m_http))
-		Disconnect();
-
-	// url redirect(3xx: move)
-	//int code = http_get_status_code(m_http);
-	return 0;
+	return _GetReply();
 }

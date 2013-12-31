@@ -13,8 +13,9 @@ class HttpResponse
 public:
 	int GetStatusCode() const			{ return http_get_status_code(m_http); }
 	int GetContentLength() const		{ return http_get_content_length(m_http); }
+	const char* GetReply() const		{ return (const char*)http_get_content(m_http); }
 	bool ShouldCloseConnection() const	{ return !!http_get_connection(m_http); } // Connection: close
-	
+
 	bool IsTransferEncodingTrunked() const
 	{
 		std::string value;
@@ -84,16 +85,15 @@ public:
 	const HttpResponse& GetResponse() const{ return m_response; }
 
 public:
-	int Get(const char* uri, mmptr& reply);
-	int Post(const char* uri, const void* content, size_t len, mmptr& reply);
-
-public:
-	int GetReply(mmptr& reply);
+	int Get(const char* uri);
+	int Post(const char* uri, const void* content, size_t len);
 
 private:
 	int _Get(const char* uri);
 	// @return send length
 	int _Post(const char* uri, const void* content, size_t len);
+
+	int _GetReply();
 
 	int CheckConnection();
 
