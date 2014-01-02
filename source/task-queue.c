@@ -1,8 +1,8 @@
 #include "task-queue.h"
 #include "cstringext.h"
 #include "sys/process.h"
+#include "sys/system.h"
 #include "sys/sync.h"
-#include "time64.h"
 #include "thread-pool.h"
 #include "list.h"
 #include <errno.h>
@@ -35,8 +35,8 @@ typedef struct _task_context_t
 	task_proc proc;
 	void* param;
 	
-	time64_t stime;
-	time64_t etime;
+	size_t stime;
+	size_t etime;
 	int thread;
 	int priority;
 } task_context_t;
@@ -126,7 +126,7 @@ static void task_action(void* param)
 	if(task->proc)
 		task->proc(task->param);
 
-	task->etime = time64_now();
+	task->etime = system_clock();
 	task->thread = thread_self();
 	locker_lock(&taskQ->locker);
 	task_recycle(taskQ, task); // recycle task
@@ -138,7 +138,7 @@ static void task_action(void* param)
 static int STDCALL task_queue_scheduler(void* param)
 {
 	int r;
-	time64_t tnow;
+	size_t tnow;
 	task_context_t *task;
 	task_queue_context_t *taskQ;
 	struct list_head *p, *next;
@@ -166,13 +166,13 @@ static int STDCALL task_queue_scheduler(void* param)
 		else
 		{
 			// timeout
-			tnow = time64_now();
+			tnow = system_clock();
 
 			locker_lock(&taskQ->locker);
 			list_for_each_safe(p, next, &taskQ->tasks)
 			{
 				task = list_entry(p, task_context_t, head);
-				if(task->stime + task->timeout > tnow)
+				if(tnow - task->stime > (size_t)task->timeout)
 				{
 					if(task->proc)
 						task->proc(task->param);
@@ -199,7 +199,7 @@ int task_queue_post(task_queue_t q, task_proc proc, void* param)
 		return -ENOMEM;
 
 	task->taskQ = taskQ;
-	task->stime = time64_now();
+	task->stime = system_clock();
 	task->timeout = 5000;
 	task->priority = 0;
 	task->proc = proc;
