@@ -145,7 +145,7 @@ static void url_without_host()
 	url_free(uri);
 }
 
-void url_test()
+void url_test(void)
 {
 	void *uri;
 	char *name, *value;

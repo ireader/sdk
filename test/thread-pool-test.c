@@ -1,5 +1,6 @@
 #include "thread-pool.h"
 #include "cstringext.h"
+#include "sys/sync.h"
 #include "sys/system.h"
 #include <stdlib.h>
 #include <assert.h>
@@ -27,7 +28,7 @@ void worker(void* param)
 	printf("[%d] done\n", n);
 }
 
-void thread_pool_test()
+void thread_pool_test(void)
 {
 	int i, r;
 	thread_pool_t pool;
