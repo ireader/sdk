@@ -81,7 +81,6 @@ struct aio_context_action
 };
 
 static int s_cpu = 0; // cpu count
-static int s_timeout = 5000;
 static HANDLE s_iocp = 0;
 static CRITICAL_SECTION s_locker;
 static struct aio_context_action *s_actions = NULL;
@@ -291,15 +290,13 @@ __forceinline int iocp_check_closed(struct aio_context_action* aio)
 //////////////////////////////////////////////////////////////////////////
 /// aio functions
 //////////////////////////////////////////////////////////////////////////
-int aio_socket_init(int threads, int timeout)
+int aio_socket_init(int threads)
 {
 	WORD wVersionRequested;
 	WSADATA wsaData;
 
 	wVersionRequested = MAKEWORD(2, 2);
 	WSAStartup(wVersionRequested, &wsaData);
-
-	s_timeout = timeout;
 
 	iocp_init();
 	return iocp_create(threads);
@@ -311,7 +308,7 @@ int aio_socket_clean(void)
 	return WSACleanup();
 }
 
-int aio_socket_process(void)
+int aio_socket_process(int timeout)
 {
 	BOOL status;
 	DWORD bytes;
@@ -320,7 +317,7 @@ int aio_socket_process(void)
 	struct aio_context *ctx;
 	struct aio_context_action *aio;
 
-	status = GetQueuedCompletionStatus(s_iocp, &bytes, &completionKey, &pOverlapped, s_timeout);
+	status = GetQueuedCompletionStatus(s_iocp, &bytes, &completionKey, &pOverlapped, timeout);
 	if(status)
 	{
 		assert(completionKey && pOverlapped);

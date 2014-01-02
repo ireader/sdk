@@ -24,7 +24,6 @@
 
 static int s_epoll = -1;
 static int s_threads = 0;
-static int s_timeout = 5000;
 
 struct epoll_context_accept
 {
@@ -117,10 +116,9 @@ struct epoll_context
 	} out;
 };
 
-int aio_socket_init(int threads, int timeout)
+int aio_socket_init(int threads)
 {
 	s_threads = threads;
-	s_timeout = timeout;
 	s_epoll = epoll_create(64);
 	return -1 == s_epoll ? errno : 0;
 }
@@ -132,13 +130,13 @@ int aio_socket_clean(void)
 	return 0;
 }
 
-int aio_socket_process(void)
+int aio_socket_process(int timeout)
 {
 	int i, r;
 	struct epoll_context* ctx;
 	struct epoll_event events[1];
 
-	r = epoll_wait(s_epoll, events, 1, s_timeout);
+	r = epoll_wait(s_epoll, events, 1, timeout);
 	for(i = 0; i < r; i++)
 	{
 		assert(events[i].data.ptr);
