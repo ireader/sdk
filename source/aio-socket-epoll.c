@@ -145,6 +145,7 @@ int aio_socket_process(void)
 		ctx = (struct epoll_context*)events[i].data.ptr;
 
 		// clear IN/OUT event
+		assert(events[i].events == (events[i].events & ctx->ev.events));
 		ctx->ev.events &= ~(events[i].events & (EPOLLIN|EPOLLOUT));
 		epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev);
 
@@ -503,7 +504,7 @@ static int epoll_recvfrom(struct epoll_context* ctx, int flags)
 	socklen_t addrlen = sizeof(addr);
 
 	memset(&addr.sin_addr, 0, sizeof(addr.sin_addr));
-	r = recvfrom(ctx->socket, ctx->in.recv.buffer, ctx->in.recv.bytes, 0, (struct sockaddr*)&addr, &addrlen);
+	r = recvfrom(ctx->socket, ctx->in.recvfrom.buffer, ctx->in.recvfrom.bytes, 0, (struct sockaddr*)&addr, &addrlen);
 	if(r >= 0)
 	{
 		strcpy(ip, inet_ntoa(addr.sin_addr));
