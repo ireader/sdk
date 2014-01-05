@@ -46,6 +46,7 @@ struct http_context
 	int stateM;
 	size_t offset;
 
+	struct http_header header;
 	struct http_chunk chunk;
 
 	// start line
@@ -488,9 +489,6 @@ static int http_parse_header_line(struct http_context *ctx)
 	};
 
 	int r;
-	struct http_header header;
-	memset(&header, 0, sizeof(struct http_header)); // init header
-
 	for(; ctx->offset < ctx->raw_size; ctx->offset++)
 	{
 		switch(ctx->stateM)
@@ -499,6 +497,8 @@ static int http_parse_header_line(struct http_context *ctx)
 			switch(ctx->raw[ctx->offset])
 			{
 			case '\r':
+				assert(0 == ctx->header.npos);
+				assert(0 == ctx->header.vpos);
 				if(ctx->offset + 2 > ctx->raw_size)
 					return 0; // wait more date
 
@@ -506,6 +506,8 @@ static int http_parse_header_line(struct http_context *ctx)
 				assert('\n' == ctx->raw[ctx->offset]);
 
 			case '\n':
+				assert(0 == ctx->header.npos);
+				assert(0 == ctx->header.vpos);
 				++ctx->offset;
 				ctx->stateM = SM_BODY;
 				return 0;
@@ -516,9 +518,9 @@ static int http_parse_header_line(struct http_context *ctx)
 				break;
 
 			default:
-				assert(0 == header.npos);
-				assert(0 == header.nlen);
-				header.npos = ctx->offset;
+				assert(0 == ctx->header.npos);
+				assert(0 == ctx->header.nlen);
+				ctx->header.npos = ctx->offset;
 				ctx->stateM = SM_HEADER_NAME;
 			}
 			break;
@@ -532,14 +534,14 @@ static int http_parse_header_line(struct http_context *ctx)
 				return -1; // invalid
 
 			case ' ':
-				header.nlen = ctx->offset - header.npos;
-				assert(header.nlen > 0 && is_valid_token(ctx->raw+header.npos, header.nlen));
+				ctx->header.nlen = ctx->offset - ctx->header.npos;
+				assert(ctx->header.nlen > 0 && is_valid_token(ctx->raw+ctx->header.npos, ctx->header.nlen));
 				ctx->stateM = SM_HEADER_NAME_SP;
 				break;
 
 			case ':':
-				header.nlen = ctx->offset - header.npos;
-				assert(header.nlen > 0 && is_valid_token(ctx->raw+header.npos, header.nlen));
+				ctx->header.nlen = ctx->offset - ctx->header.npos;
+				assert(ctx->header.nlen > 0 && is_valid_token(ctx->raw+ctx->header.npos, ctx->header.nlen));
 				ctx->stateM = SM_HEADER_SEPARATOR;
 				break;
 			}
@@ -565,16 +567,27 @@ static int http_parse_header_line(struct http_context *ctx)
 			switch(ctx->raw[ctx->offset])
 			{
 			case '\r':
+				// empty value
+				// e.g. x-wap-profile: \r\nx-forwarded-for: 10.25.110.244, 115.168.35.85\r\n
+				++ctx->offset;
+				assert('\n' == ctx->raw[ctx->offset]);
+
 			case '\n':
-				assert(0);
-				return -1; // invalid
+				ctx->header.vpos = ctx->offset;
+				ctx->header.nlen = 0;
+				r = http_header_add(ctx, &ctx->header);
+				if(0 != r)
+					return r;
+				memset(&ctx->header, 0, sizeof(struct http_header)); // reuse header
+				ctx->stateM = SM_HEADER;
+				break;
 
 			case ' ':
 				break; // skip SP
 
 			default:
 				ctx->stateM = SM_HEADER_VALUE;
-				header.vpos = ctx->offset;
+				ctx->header.vpos = ctx->offset;
 				break;
 			}
 			break;
@@ -584,15 +597,15 @@ static int http_parse_header_line(struct http_context *ctx)
 			{
 			case '\n':
 				assert('\r' == ctx->raw[ctx->offset-1]);
-				header.vlen = ctx->offset - 1 - header.vpos;
-				trim_right(ctx->raw, &header.vpos, &header.vlen);
+				ctx->header.vlen = ctx->offset - 1 - ctx->header.vpos;
+				trim_right(ctx->raw, &ctx->header.vpos, &ctx->header.vlen);
 				ctx->stateM = SM_HEADER;
 
 				// add new header
-				r = http_header_add(ctx, &header);
+				r = http_header_add(ctx, &ctx->header);
 				if(0 != r)
 					return r;
-				memset(&header, 0, sizeof(struct http_header)); // reuse header
+				memset(&ctx->header, 0, sizeof(struct http_header)); // reuse header
 				break;
 
 			default:
