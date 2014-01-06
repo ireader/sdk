@@ -574,7 +574,7 @@ static int http_parse_header_line(struct http_context *ctx)
 
 			case '\n':
 				ctx->header.vpos = ctx->offset;
-				ctx->header.nlen = 0;
+				ctx->header.vlen = 0;
 				r = http_header_add(ctx, &ctx->header);
 				if(0 != r)
 					return r;
