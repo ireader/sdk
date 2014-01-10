@@ -41,8 +41,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS"
+				AdditionalIncludeDirectories="../include;&quot;../../media-server/librtsp/include&quot;"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;OS_WINDOWS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -177,6 +177,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\sdp-test.c"
+				>
+			</File>
+			<File
 				RelativePath=".\thread-pool-test.c"
 				>
 			</File>
@@ -200,6 +204,14 @@
 		<Filter
 			Name="lib"
 			>
+			<File
+				RelativePath="..\..\media-server\librtsp\source\sdp.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\systimer.c"
+				>
+			</File>
 			<File
 				RelativePath="..\source\thread-pool.c"
 				>
