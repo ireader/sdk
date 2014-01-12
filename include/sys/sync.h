@@ -121,12 +121,24 @@ inline int semaphore_post(IN semaphore_t* semaphore);
 inline int semaphore_destroy(IN semaphore_t* semaphore);
 
 
-#if !defined(OS_WINDOWS)
+#if defined(OS_WINDOWS)
+// 1-success, other-error
+inline int atomic_cas(INOUT long volatile *d, long c, long v)
+{
+	return c == InterlockedCompareExchange(d, v, c) ? 1 : 0;
+}
+
+#else
 
 #if defined(__gcc__builtin_) && __GNUC__>=4 && __GNUC_MINOR__>=3
 inline long atomic_add(INOUT long volatile *v, long incr)
 {
 	return __sync_fetch_and_add(v, incr);
+}
+
+inline int atomic_cas(INOUT long volatile *d, long c, long v)
+{
+	return __sync_bool_compare_and_swap(d, c, v) ? 1 : 0;
 }
 
 #elif defined(__ARM__) || defined(__arm__)
@@ -166,7 +178,6 @@ inline long atomic_decrement(INOUT volatile long* v)
 {
 	return atomic_add(v, -1)-1;
 }
-
 #endif
 
 //////////////////////////////////////////////////////////////////////////
