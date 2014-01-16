@@ -51,6 +51,11 @@ inline struct stack_node* stack_pop(struct stack *stack)
 	return top;
 }
 
+inline struct stack_node* stack_top(struct stack *stack)
+{
+	return stack->top;
+}
+
 inline int stack_empty(struct stack *stack)
 {
 	return atomic_cas((long*)&stack->top, (long)NULL, (long)NULL) ? 1 : 0;

@@ -61,6 +61,11 @@ inline struct fifo_node* fifo_list_pop(struct fifo_list *list)
 	return node;
 }
 
+inline struct fifo_node* fifo_list_head(struct fifo_list *list)
+{
+	return list->head.next;
+}
+
 inline int fifo_list_empty(struct fifo_list *list)
 {
 	return atomic_cas((long*)&list->head.next, (long)NULL, (long)NULL) ? 1 : 0;
