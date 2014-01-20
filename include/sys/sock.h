@@ -66,6 +66,7 @@ inline int socket_close(socket_t sock);
 
 inline int socket_connect(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
 inline int socket_connect_ipv4(IN socket_t sock, IN const char* ip_or_dns, IN unsigned short port);
+inline int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dns, IN unsigned short port, IN int timeout);
 
 // MSDN: When using bind with the SO_EXCLUSIVEADDR or SO_REUSEADDR socket option, 
 //       the socket option must be set prior to executing bind to have any affect
@@ -241,6 +242,42 @@ inline int socket_connect_ipv4(IN socket_t sock, IN const char* ip_or_dns, IN un
 	if(r < 0)
 		return r;
 	return socket_connect(sock, (struct sockaddr*)&addr, sizeof(addr));
+}
+
+inline int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dns, IN unsigned short port, IN int timeout)
+{
+	int r;
+#if defined(OS_LINUX)
+	int errcode = 0;
+	int errlen = sizeof(errcode);
+#endif
+	r = socket_setnonblock(sock, 1);
+	r = socket_connect_ipv4(sock, ip_or_dns, (unsigned short)port);
+	assert(r <= 0);
+#if defined(OS_WINDOWS)
+	if(0!=r && WSAEWOULDBLOCK==WSAGetLastError())
+#else
+	if(0!=r && EINPROGRESS==errno)
+#endif
+	{
+		// check timeout
+		r = socket_select_write(sock, timeout);
+		if(1 == r)
+		{
+#if defined(OS_LINUX)
+			r = getsockopt(sock, SOL_SOCKET, SO_ERROR, (void*)&errcode, (socklen_t*)&errlen);
+			if(0 == r)
+				r = -errcode;
+#else
+			r = 0;
+#endif
+		}
+		else
+		{
+			r = -1;
+		}
+	}
+	return r;
 }
 
 inline int socket_bind(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen)
