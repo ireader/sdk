@@ -63,39 +63,6 @@ int HttpSocket::Connect(const char* ip, int port)
 	return Connect();
 }
 
-static int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dns, IN unsigned short port, int timeout)
-{
-	int r;
-	r = socket_setnonblock(sock, 1);
-	r = socket_connect_ipv4(sock, ip_or_dns, (unsigned short)port);
-	assert(r <= 0);
-#if defined(OS_WINDOWS)
-	if(0!=r && WSAEWOULDBLOCK==WSAGetLastError())
-#else
-	if(0!=r && EINPROGRESS==errno)
-#endif
-	{
-		// check timeout
-		r = socket_select_write(sock, timeout);
-		if(1 == r)
-		{
-#if defined(OS_LINUX)
-			int errcode = 0;
-			int errlen = sizeof(errcode);
-			r = getsockopt(sock, SOL_SOCKET, SO_ERROR, (void*)&errcode, (socklen_t*)&errlen);
-			if(0 == r)
-				r = -errcode;
-#endif
-		}
-		else
-		{
-			r = -1;
-		}
-	}
-	socket_setnonblock(sock, 0);
-	return r;
-}
-
 int HttpSocket::Connect()
 {
 	if(m_ip.empty())
@@ -115,6 +82,8 @@ int HttpSocket::Connect()
 		++m_connFailed;
 		return ERROR_CONNECT;
 	}
+
+	socket_setnonblock(m_socket, 0);
 	m_connFailed = 0;
 	return 0;
 }
