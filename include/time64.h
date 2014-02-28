@@ -5,7 +5,7 @@
 extern "C"{
 #endif
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(OS_WINDOWS)
 	typedef __int64 time64_t;
 #else
 	typedef long long time64_t;
@@ -33,7 +33,8 @@ time64_t time64_from(const char* format, const char* src);
 
 int time64_format(time64_t time, const char* format, char* str);
 
-time64_t time64_now(void); // UTC millisecond
+// millisecond since January 1, 1970(UTC)
+time64_t time64_now(void);
 
 #ifdef __cplusplus
 }

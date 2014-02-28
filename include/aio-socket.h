@@ -23,6 +23,8 @@ typedef WSABUF socket_bufvec_t;
 extern "C" {
 #endif
 
+#define invalid_aio_socket NULL
+
 typedef void* aio_socket_t;
 
 /// aio_socket_accept callback
@@ -72,6 +74,7 @@ int aio_socket_clean(void);
 int aio_socket_process(int timeout);
 
 /// @param[in] own 1-close socket on aio_socket_close, 0-don't close socket
+/// @return NULL-error, other-ok
 aio_socket_t aio_socket_create(socket_t socket, int own);
 
 /// close aio-socket
