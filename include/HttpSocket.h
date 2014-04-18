@@ -87,6 +87,7 @@ public:
 public:
 	int Get(const char* uri);
 	int Post(const char* uri, const void* content, size_t len);
+	int GetReply();
 
 private:
 	int _Get(const char* uri);

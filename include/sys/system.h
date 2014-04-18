@@ -43,9 +43,9 @@ inline void system_sleep(IN size_t millisecond);
 inline size_t system_getcpucount(void);
 inline long long system_getcyclecount(void);
 
-///@return second.milliseconds
+///@return second.milliseconds(absolute time)
 inline double system_time(void);
-///@return milliseconds
+///@return milliseconds(relative time)
 inline size_t system_clock(void);
 
 inline int system_version(int* major, int* minor);

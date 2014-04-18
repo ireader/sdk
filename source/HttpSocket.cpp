@@ -470,3 +470,8 @@ int HttpSocket::Post(const char* uri, const void* content, size_t len)
 
 	return _GetReply();
 }
+
+int HttpSocket::GetReply()
+{
+	return _GetReply();
+}

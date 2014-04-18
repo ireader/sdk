@@ -47,7 +47,7 @@ ifneq ($(OUTTYPE),2)
 	ifeq ($(NOVERSION),1)
 		OBJS_VER := 
 	else
-		OBJS_VER := poversion.o
+		OBJS_VER := poversion.h
 	endif
 endif
 
@@ -92,9 +92,9 @@ OBJECT_FILES := $(foreach file,$(OBJECT_FILES),$(OUTPATH)/$(notdir $(file)))
 #												done \
 #											)
 
-$(OUTPATH)/$(OUTFILE): $(OBJECT_FILES) $(STATIC_LIBS) $(OBJS_VER)
+$(OUTPATH)/$(OUTFILE): $(OBJS_VER) $(OBJECT_FILES) $(STATIC_LIBS)
 ifeq ($(OUTTYPE),0)
-	$(CXX) -o $@ -Wl,-rpath . $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS))
+	$(CXX) -o $@ -Wl,-rpath . $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS)) -static-libgcc
 else
 ifeq ($(OUTTYPE),1)
 	$(CXX) -o $@ -shared -fpic -rdynamic -Wl,-rpath . $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS))
@@ -126,9 +126,8 @@ include $(OBJECT_FILES:.o=.d)
 #	$(CXX) -c -o $@ $(addprefix -I,$(INCLUDES)) $(addprefix -D,$(DEFINES)) $(CFLAGS) -MMD $<
 #	$(COMPILE.CXX) -c -o $@ $(filter $(patsubst %.o, \%%.cpp, $(@F), $(SOURCE_FILES)) -MMD;
 
-poversion.o : poversion.ver
-	$(ROOT)/svnver.sh poversion.ver poversion.c
-	$(CC) -c poversion.c
+poversion.h : poversion.ver
+	$(ROOT)/svnver.sh poversion.ver poversion.h
 
 .PHONY: clean print
 clean:
