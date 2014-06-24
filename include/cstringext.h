@@ -60,7 +60,8 @@
 #define strieq(s, t)				(stricmp(s, t) ? 0 : 1)
 #define strneq(s, t, n)				(strncmp(s, t, n) ? 0 : 1)
 #define strnieq(s, t, n)			(strnicmp(s, t, n) ? 0 : 1)
-#define strstartswith(p, prefix)	(strnicmp(p, prefix, strlen(prefix))? 0 : 1)
+#define strstartswith(p, prefix)	(strncmp(p, prefix, strlen(prefix))? 0 : 1)
+#define strendswith(p, suffix)		(strncmp(p+strlen(p)-strlen(suffix), suffix, strlen(suffix))? 0 : 1)
 
 #define STRLEN(s)					(s?strlen(s):0)
 #define FREE(p)						do{if(p){free(p); p=NULL;}}while(p)
