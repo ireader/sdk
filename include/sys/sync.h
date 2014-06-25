@@ -195,7 +195,7 @@ inline int locker_create(IN locker_t* locker)
 	int r;
 	pthread_mutexattr_t attr;
 	pthread_mutexattr_init(&attr);
-	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
+	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 	r = pthread_mutex_init(locker, &attr);
 	pthread_mutexattr_destroy(&attr);
 	return r;
@@ -258,7 +258,9 @@ inline int event_create(IN event_t* event)
 	int r;
 	pthread_condattr_t attr;
 	pthread_condattr_init(&attr);
+#ifdef __USE_XOPEN2K
 	pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+#endif
 
 	event->count = 0;
 	pthread_mutex_init(&event->mutex, NULL);
@@ -309,15 +311,24 @@ inline int event_timewait(IN event_t* event, IN int timeout)
 	DWORD r = WaitForSingleObjectEx(*event, timeout, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
 #else
+#if defined(OS_MAC)
 	int r = 0;
-	struct timespec t;
+	struct timeval tv;
+	struct timespec ts;
+	gettimeofday(&tv, NULL);
+	ts.tv_sec = tv.tv_sec + timeout/1000;
+	ts.tv_nsec = tv.tv_usec * 1000 + (timeout%1000)*1000000;
+#else
+	int r = 0;
+	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &t);
-	t.tv_sec += timeout/1000;
-	t.tv_nsec += (timeout%1000)*1000000;
+	ts.tv_sec += timeout/1000;
+	ts.tv_nsec += (timeout%1000)*1000000;
+#endif
 
 	pthread_mutex_lock(&event->mutex);
 	if(0 == event->count)
-		r = pthread_cond_timedwait(&event->event, &event->mutex, &t);
+		r = pthread_cond_timedwait(&event->event, &event->mutex, &ts);
 	event->count = 0;
 	pthread_mutex_unlock(&event->mutex);
 	return r;
@@ -422,10 +433,18 @@ inline int semaphore_timewait(IN semaphore_t* semaphore, IN int timeout)
 	DWORD r = WaitForSingleObjectEx(*semaphore, timeout, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
 #else
+#if defined(OS_MAC)
+	struct timeval tv;
+	struct timespec ts;
+	gettimeofday(&tv, NULL);
+	ts.tv_sec = tv.tv_sec + timeout/1000;
+	ts.tv_nsec = tv.tv_usec * 1000 + (timeout%1000)*1000000;
+#else
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
 	ts.tv_sec += timeout/1000;
 	ts.tv_nsec += (timeout%1000)*1000000;
+#endif
 	return sem_timedwait(semaphore->semaphore, &ts);
 #endif
 }

@@ -154,7 +154,7 @@ inline int thread_getpriority(IN thread_t thread, OUT int* priority)
 	struct sched_param sched;
 	int r = pthread_getschedparam(thread, priority, &sched);
 	if(0 == r)
-		*priority = sched.__sched_priority;
+		*priority = sched.sched_priority;
 	return r;
 #endif
 }
@@ -166,7 +166,7 @@ inline int thread_setpriority(IN thread_t thread, IN int priority)
 	return TRUE==r?1:0;
 #else
 	struct sched_param sched;
-	sched.__sched_priority = 0;
+	sched.sched_priority = 0;
 	int r = pthread_setschedparam(thread, priority, &sched);
 	return r;
 #endif
@@ -202,7 +202,7 @@ inline int thread_isself(IN thread_t thread)
 #if defined(OS_WINDOWS)
 	return thread.id==GetCurrentThreadId() ? 1 : 0;
 #else
-	return pthread_equal(thread_self(),thread);
+	return pthread_equal(pthread_self(),thread);
 #endif
 }
 

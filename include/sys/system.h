@@ -6,10 +6,6 @@
 
 typedef HMODULE module_t;
 
-#elif defined(_MAC_)
-#include <sys/param.h>
-#include <sys/sysctl.h>
-
 #else
 #include <sys/types.h>
 #include <sys/time.h>
@@ -18,6 +14,28 @@ typedef HMODULE module_t;
 #include <pthread.h>
 #include <dlfcn.h>
 #include <errno.h>
+
+#if defined(OS_MAC)
+#include <sys/param.h>
+#include <sys/sysctl.h>
+
+#if 0
+#include <mach/mach_time.h>
+#define CLOCK_REALTIME 0
+#define CLOCK_MONOTONIC 0
+int clock_gettime(int clk_id, struct timespec *t){
+	mach_timebase_info_data_t timebase;
+	mach_timebase_info(&timebase);
+	uint64_t time;
+	time = mach_absolute_time();
+	double nseconds = ((double)time * (double)timebase.numer)/((double)timebase.denom);
+	double seconds = ((double)time * (double)timebase.numer)/((double)timebase.denom * 1e9);
+	t->tv_sec = seconds;
+	t->tv_nsec = nseconds;
+	return 0;
+}
+#endif
+#endif
 
 typedef void* module_t;
 #endif
@@ -153,6 +171,10 @@ inline size_t system_clock(void)
 	QueryPerformanceFrequency(&freq);
 	QueryPerformanceCounter(&count);
 	return (size_t)(count.QuadPart * 1000 / freq.QuadPart);
+#elif defined(OS_MAC)
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec*1000 + tv.tv_usec / 1000;
 #else
 	struct timespec tp;
 	clock_gettime(CLOCK_MONOTONIC, &tp);
