@@ -57,7 +57,7 @@ typedef void (*aio_onrecv)(void* param, int code, size_t bytes);
 /// @param[in] bytes 0-means socket closed, >0-transfered bytes
 /// @param[in] ip remote client ip address
 /// @param[in] port remote client ip port
-typedef void (*aio_onrecvfrom)(void* param, int code, int bytes, const char* ip, int port);
+typedef void (*aio_onrecvfrom)(void* param, int code, size_t bytes, const char* ip, int port);
 
 /// aio initialization
 /// @param[in] threads max concurrent thread call aio_socket_process
@@ -112,12 +112,12 @@ int aio_socket_recv(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv 
 /// @return 0-ok, <0-error, don't call proc if return error
 /// @param[in] vec buffer array(must valid before aio_onsend callback)
 /// @param[in] n vec item number
-int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param);
+int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onsend proc, void* param);
 
 /// @return 0-ok, <0-error, don't call proc if return error
 /// @param[in] vec buffer array(must valid before aio_onsend callback)
 /// @param[in] n vec item number
-int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecv proc, void* param);
+int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecv proc, void* param);
 
 /// aio send
 /// @param[in] socket aio socket
@@ -136,12 +136,12 @@ int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onr
 /// @return 0-ok, <0-error, don't call proc if return error
 /// @param[in] vec buffer array(must valid before aio_onsend callback)
 /// @param[in] n vec item number
-int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param);
+int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, int n, aio_onsend proc, void* param);
 
 /// @return 0-ok, <0-error, don't call proc if return error
 /// @param[in] vec buffer array(must valid before aio_onsend callback)
 /// @param[in] n vec item number
-int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecvfrom proc, void* param);
+int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param);
 
 #ifdef __cplusplus
 }

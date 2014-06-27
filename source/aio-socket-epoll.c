@@ -60,7 +60,7 @@ struct epoll_context_recv_v
 	aio_onrecv proc;
 	void *param;
 	socket_bufvec_t *vec;
-	size_t n;
+	int n;
 };
 
 struct epoll_context_send_v
@@ -68,7 +68,7 @@ struct epoll_context_send_v
 	aio_onsend proc;
 	void *param;
 	socket_bufvec_t *vec;
-	size_t n;
+	int n;
 	struct sockaddr_in addr;  // for send to
 };
 
@@ -85,7 +85,7 @@ struct epoll_context_recvfrom_v
 	aio_onrecvfrom proc;
 	void *param;
 	socket_bufvec_t *vec;
-	size_t n;
+	int n;
 };
 
 struct epoll_context
@@ -468,7 +468,7 @@ static int epoll_recv_v(struct epoll_context* ctx, int flags, int error)
 	}
 }
 
-int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecv proc, void* param)
+int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecv proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLIN));
@@ -512,6 +512,7 @@ static int epoll_send_v(struct epoll_context* ctx, int flags, int error)
 	if(r >= 0)
 	{
 		ctx->out.send_v.proc(ctx->out.send_v.param, 0, (size_t)r);
+        return 0;
 	}
 	else
 	{
@@ -521,11 +522,9 @@ static int epoll_send_v(struct epoll_context* ctx, int flags, int error)
 		ctx->out.send_v.proc(ctx->out.send_v.param, errno, 0);
 		return -1;
 	}
-
-	return r;
 }
 
-int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param)
+int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLOUT));	
@@ -696,7 +695,7 @@ static int epoll_recvfrom_v(struct epoll_context* ctx, int flags, int error)
 	}
 }
 
-int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecvfrom proc, void* param)
+int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLIN));
@@ -754,7 +753,7 @@ static int epoll_sendto_v(struct epoll_context* ctx, int flags, int error)
 	}
 }
 
-int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param)
+int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLOUT));	

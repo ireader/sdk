@@ -12,6 +12,7 @@ typedef HANDLE				semaphore_t;
 
 #else
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -97,28 +98,6 @@ inline int event_timewait(IN event_t* event, IN int timeout);
 inline int event_signal(IN event_t* event);
 inline int event_reset(IN event_t* event);
 
-//////////////////////////////////////////////////////////////////////////
-///
-/// semaphore:
-/// Named semaphores(process-shared semaphore)/Unnamed semaphores(thread-shared semaphore)
-///	multi-processor: yes
-///
-//////////////////////////////////////////////////////////////////////////
-// Windows: the name can contain any character except the backslash
-// 0-success, other-error
-inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN long value);
-// 0-success, other-error
-inline int semaphore_open(IN semaphore_t* semaphore, IN const char* name);
-// 0-success, other-error
-inline int semaphore_wait(IN semaphore_t* semaphore);
-// 0-success, WAIT_TIMEOUT-timeout, other-error
-inline int semaphore_timewait(IN semaphore_t* semaphore, IN int timeout);
-// 0-success, other-error
-inline int semaphore_trywait(IN semaphore_t* semaphore);
-// 0-success, other-error
-inline int semaphore_post(IN semaphore_t* semaphore);
-// 0-success, other-error
-inline int semaphore_destroy(IN semaphore_t* semaphore);
 
 
 #if defined(OS_WINDOWS)
@@ -363,9 +342,13 @@ inline int event_reset(IN event_t* event)
 
 //////////////////////////////////////////////////////////////////////////
 ///
-/// named semaphore
+/// semaphore:
+/// Named semaphores(process-shared semaphore)/Unnamed semaphores(thread-shared semaphore)
+///	multi-processor: yes
 ///
 //////////////////////////////////////////////////////////////////////////
+// Windows: the name can contain any character except the backslash
+// 0-success, other-error
 inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN long value)
 {
 #if defined(OS_WINDOWS)
@@ -385,6 +368,7 @@ inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN l
 		strncpy(semaphore->name, name, sizeof(semaphore->name)-1);
 		return 0;
 	}
+#ifndef OS_MAC
 	else
 	{
 		// Unnamed semaphores (memory-based semaphores, thread-shared semaphore)
@@ -393,6 +377,9 @@ inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN l
 			return ENOMEM;
 		return 0==sem_init(semaphore->semaphore, 0, value) ? 0 : errno;
 	}
+#else
+    return -1;
+#endif
 #endif
 }
 
@@ -426,28 +413,23 @@ inline int semaphore_wait(IN semaphore_t* semaphore)
 #endif
 }
 
+#if defined(OS_WINDOWS)
 // 0-success, WAIT_TIMEOUT-timeout, other-error
 inline int semaphore_timewait(IN semaphore_t* semaphore, IN int timeout)
 {
-#if defined(OS_WINDOWS)
 	DWORD r = WaitForSingleObjectEx(*semaphore, timeout, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
-#else
-#if defined(OS_MAC)
-	struct timeval tv;
-	struct timespec ts;
-	gettimeofday(&tv, NULL);
-	ts.tv_sec = tv.tv_sec + timeout/1000;
-	ts.tv_nsec = tv.tv_usec * 1000 + (timeout%1000)*1000000;
-#else
+}
+#elif !defined(OS_MAC)
+inline int semaphore_timewait(IN semaphore_t* semaphore, IN int timeout)
+{
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
 	ts.tv_sec += timeout/1000;
 	ts.tv_nsec += (timeout%1000)*1000000;
-#endif
 	return sem_timedwait(semaphore->semaphore, &ts);
-#endif
 }
+#endif
 
 // 0-success, other-error
 inline int semaphore_trywait(IN semaphore_t* semaphore)
@@ -477,7 +459,7 @@ inline int semaphore_destroy(IN semaphore_t* semaphore)
 #if defined(OS_WINDOWS)
 	return CloseHandle(*semaphore)?0:GetLastError();
 #else
-	int r;
+	int r = -1;
 	if(semaphore->name[0])
 	{
 		// sem_open
@@ -485,12 +467,14 @@ inline int semaphore_destroy(IN semaphore_t* semaphore)
 		if(0 == r)
 			r = sem_unlink(semaphore->name);
 	}
+#ifndef OS_MAC
 	else
 	{
 		// sem_init
 		r = sem_destroy(semaphore->semaphore);
 		free(semaphore->semaphore);
 	}
+#endif
 	return r;
 #endif
 }

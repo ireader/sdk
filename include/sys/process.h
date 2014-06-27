@@ -62,50 +62,6 @@ extern char** environ;
 //////////////////////////////////////////////////////////////////////////
 typedef int (STDCALL *thread_proc)(IN void* param);
 
-inline int thread_create(OUT thread_t* thread, IN thread_proc func, IN void* param);
-inline int thread_destroy(IN thread_t thread);
-
-// priority: [-15, 15]
-// 0: normal / -15: idle / 15: critical
-inline int thread_getpriority(IN thread_t thread, OUT int* priority);
-inline int thread_setpriority(IN thread_t thread, IN int priority);
-
-inline int thread_self(void);
-inline int thread_getid(IN thread_t thread, OUT int* id);
-inline int thread_isself(IN thread_t thread);
-
-inline int process_create(IN const char* filename, OUT process_t* pid);
-inline int process_kill(IN process_t pid);
-
-inline process_t process_self(void);
-inline int process_selfname(char* name, size_t size);
-inline int process_name(process_t pid, char* name, size_t size);
-
-typedef struct
-{
-	int bInheritHandles; // 1-inherit handles
-
-#if defined(OS_WINDOWS)
-	LPSTR lpCommandLine; // msdn: CreateProcessW, can modify the contents of this string
-	LPSECURITY_ATTRIBUTES lpProcessAttributes;
-	LPSECURITY_ATTRIBUTES lpThreadAttributes;
-	DWORD dwCreationFlags;
-	LPVOID lpEnvironment; // terminated by two zero bytes
-	LPCSTR lpCurrentDirectory;
-	STARTUPINFOA startupInfo;
-#else
-	char* const *argv;
-	char* const *envp;
-#endif
-} process_create_param_t;
-
-inline int process_createve(IN const char* filename, IN process_create_param_t *param, OUT process_t* pid);
-
-//////////////////////////////////////////////////////////////////////////
-///
-/// thread: Windows CreateThread/Linux pthread
-///
-//////////////////////////////////////////////////////////////////////////
 inline int thread_create(OUT thread_t* thread, IN thread_proc func, IN void* param)
 {
 #if defined(OS_WINDOWS)
@@ -134,13 +90,15 @@ inline int thread_destroy(IN thread_t thread)
 	return 0;
 #else
 	void* value = NULL;
-	if(!thread_isself(thread))
-		return pthread_join(thread, &value);
+	if(pthread_equal(pthread_self(),thread))
+        return pthread_detach(thread);
 	else
-		return pthread_detach(thread);
+        return pthread_join(thread, &value);
 #endif
 }
 
+// priority: [-15, 15]
+// 0: normal / -15: idle / 15: critical
 inline int thread_getpriority(IN thread_t thread, OUT int* priority)
 {
 #if defined(OS_WINDOWS)
@@ -215,20 +173,29 @@ inline int thread_valid(IN thread_t thread)
 #endif
 }
 
-inline int process_create(IN const char* filename, OUT process_t* pid)
-{
-	process_create_param_t param;
-#if defined(OS_WINDOWS)
-	memset(&param, 0, sizeof(param));
-	param.startupInfo.cb = sizeof(param.startupInfo);
-#else
-	char* const argv[2] = { (char*)filename, NULL };
-	memset(&param, 0, sizeof(param));
-	param.argv = argv;
-#endif
 
-	return process_createve(filename, &param, pid);
-}
+//////////////////////////////////////////////////////////////////////////
+///
+/// process
+///
+//////////////////////////////////////////////////////////////////////////
+typedef struct
+{
+    int bInheritHandles; // 1-inherit handles
+    
+#if defined(OS_WINDOWS)
+    LPSTR lpCommandLine; // msdn: CreateProcessW, can modify the contents of this string
+    LPSECURITY_ATTRIBUTES lpProcessAttributes;
+    LPSECURITY_ATTRIBUTES lpThreadAttributes;
+    DWORD dwCreationFlags;
+    LPVOID lpEnvironment; // terminated by two zero bytes
+    LPCSTR lpCurrentDirectory;
+    STARTUPINFOA startupInfo;
+#else
+    char* const *argv;
+    char* const *envp;
+#endif
+} process_create_param_t;
 
 inline int process_createve(IN const char* filename, IN process_create_param_t *param, OUT process_t* pid)
 {
@@ -283,6 +250,21 @@ inline int process_createve(IN const char* filename, IN process_create_param_t *
 #endif
 }
 
+inline int process_create(IN const char* filename, OUT process_t* pid)
+{
+    process_create_param_t param;
+#if defined(OS_WINDOWS)
+    memset(&param, 0, sizeof(param));
+    param.startupInfo.cb = sizeof(param.startupInfo);
+#else
+    char* const argv[2] = { (char*)filename, NULL };
+    memset(&param, 0, sizeof(param));
+    param.argv = argv;
+#endif
+
+    return process_createve(filename, &param, pid);
+}
+
 inline int process_kill(IN process_t pid)
 {
 #if defined(OS_WINDOWS)
@@ -321,7 +303,7 @@ inline int process_selfname(OUT char* name, IN size_t size)
 		return (int)GetLastError();
 	return 0;
 #else
-	int len = readlink("/proc/self/exe", name, size-1);
+	ssize_t len = readlink("/proc/self/exe", name, size-1);
 	if(len <= 0)
 		return (int)errno;
 	name[len] = 0;
@@ -341,7 +323,7 @@ inline int process_name(IN process_t pid, OUT char* name, IN size_t size)
 	CloseHandle(h);
 	return 0==r ? (int)GetLastError() : 0;
 #else
-	int len;
+	ssize_t len;
 	char filename[64] = {0};
 	sprintf(filename, "/proc/%d/exe", (int)pid);
 	len = readlink(filename, name, size-1);

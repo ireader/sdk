@@ -468,7 +468,7 @@ int aio_socket_send(aio_socket_t socket, const void* buffer, size_t bytes, aio_o
 	return aio_socket_send_v(socket, vec, 1, proc, param);
 }
 
-int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecv proc, void* param)
+int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecv proc, void* param)
 {
 	DWORD flags = 0;
 	DWORD dwBytes = 0;
@@ -492,7 +492,7 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_o
 	return 0;
 }
 
-int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param)
+int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
 {
 	DWORD dwBytes = 0;
 	struct aio_context *ctx = (struct aio_context*)socket;
@@ -531,7 +531,7 @@ int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void*
 	return aio_socket_sendto_v(socket, ip, port, vec, 1, proc, param);
 }
 
-int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecvfrom proc, void* param)
+int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param)
 {
 	DWORD flags = 0;
 	DWORD dwBytes = 0;
@@ -556,7 +556,7 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, a
 	return 0;
 }
 
-int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param)
+int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
 {
 	DWORD dwBytes = sizeof(struct sockaddr_in);
 	struct aio_context *ctx = (struct aio_context*)socket;

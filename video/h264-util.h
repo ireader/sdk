@@ -3,9 +3,9 @@
 
 typedef unsigned char uint8_t;
 
-inline const uint8_t* h264_startcode(const uint8_t *data, int bytes)
+inline const uint8_t* h264_startcode(const uint8_t *data, size_t bytes)
 {
-	int i;
+	size_t i;
 	for(i = 0; i + 3 < bytes; i++)
 	{
 		if(0x00 == data[i] && 0x00 == data[i+1] && 0x01 == data[i+2])
@@ -15,13 +15,13 @@ inline const uint8_t* h264_startcode(const uint8_t *data, int bytes)
 	return NULL;
 }
 
-inline uint8_t h264_type(const uint8_t *data, int bytes)
+inline uint8_t h264_type(const uint8_t *data, size_t bytes)
 {
 	data = h264_startcode(data, bytes);
 	return data ? data[0] & 0x1f  : 0x00;
 }
 
-inline uint8_t h264_idr(const uint8_t *data, int bytes)
+inline uint8_t h264_idr(const uint8_t *data, size_t bytes)
 {
 	uint8_t naltype;
 	const uint8_t *p;

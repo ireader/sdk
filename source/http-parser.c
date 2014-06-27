@@ -1,7 +1,7 @@
-#include "http-parser.h"
-#include "cstringext.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "http-parser.h"
+#include "cstringext.h"
 #include <assert.h>
 #include <ctype.h>
 
@@ -71,7 +71,7 @@ struct http_context
 	int location;
 };
 
-static unsigned int s_body_max_size = 0*MB;
+static size_t s_body_max_size = 0*MB;
 
 
 // RFC 2612 H2.2
@@ -80,7 +80,7 @@ static unsigned int s_body_max_size = 0*MB;
 //				| "," | ";" | ":" | "\" | <">
 //				| "/" | "[" | "]" | "?" | "="
 //				| "{" | "}" | SP | HT
-inline int is_valid_token(const char* s, int len)
+inline int is_valid_token(const char* s, size_t len)
 {
 	const char *p;
 	for(p = s; p < s + len && *p; ++p)
@@ -119,12 +119,12 @@ inline int is_transfer_encoding_chunked(struct http_context *ctx)
 	return (ctx->transfer_encoding>0 && 0==strnicmp("chunked", ctx->raw+ctx->transfer_encoding, 7)) ? 1 : 0;
 }
 
-static int http_rawdata(struct http_context *ctx, const void* data, int bytes)
+static int http_rawdata(struct http_context *ctx, const void* data, size_t bytes)
 {
 	void *p;
 	int capacity;
 
-	if(ctx->raw_capacity - ctx->raw_size < (size_t)bytes + 1)
+	if(ctx->raw_capacity - ctx->raw_size < bytes + 1)
 	{
 		capacity = (ctx->raw_capacity > 4*MB) ? 50*MB : (ctx->raw_capacity > 16*KB ? 2*MB : 8*KB);
 		p = realloc(ctx->raw, ctx->raw_capacity + MAX(bytes+1, capacity));
@@ -135,7 +135,7 @@ static int http_rawdata(struct http_context *ctx, const void* data, int bytes)
 		ctx->raw = p;
 	}
 
-	assert(ctx->raw_capacity - ctx->raw_size > (size_t)bytes+1);
+	assert(ctx->raw_capacity - ctx->raw_size > bytes+1);
 	memmove((char*)ctx->raw + ctx->raw_size, data, bytes);
 	ctx->raw_size += bytes;
 	ctx->raw[ctx->raw_size] = '\0'; // auto add ending '\0'
@@ -905,7 +905,7 @@ void http_parser_clear(void* parser)
 	ctx->location = 0;
 }
 
-int http_parser_input(void* parser, const void* data, int *bytes)
+int http_parser_input(void* parser, const void* data, size_t *bytes)
 {
 	enum { INPUT_NEEDMORE = 1, INPUT_DONE = 0, };
 
@@ -980,7 +980,7 @@ int http_get_max_size()
 	return s_body_max_size;
 }
 
-int http_set_max_size(unsigned int bytes)
+int http_set_max_size(size_t bytes)
 {
 	s_body_max_size = bytes;
 	return 0;

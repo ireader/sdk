@@ -40,9 +40,9 @@ typedef struct _system_time_t
 											&& TIME64_VALID_MINUTE_SECOND(st.wSecond) \
 											&& TIME64_VALID_MILLISECOND(st.wMilliseconds))
 
-static char* print_value(char padding, int width, WORD value, char* output)
+static char* print_value(char padding, size_t width, WORD value, char* output)
 {
-	int n;
+	size_t n;
 	char v[16] = {0};
 	sprintf(v, "%u", (unsigned int)value);
 
@@ -52,7 +52,7 @@ static char* print_value(char padding, int width, WORD value, char* output)
 		memset(output, padding, width-n);
 
 	strcpy(output+(n<width?width-n:0), v);
-	assert((int)strlen(output)==(n<width?width:n));
+	assert(strlen(output)==(n<width?width:n));
 	return output+(n<width?width:n);
 }
 
