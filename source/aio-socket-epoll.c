@@ -43,7 +43,7 @@ struct epoll_context_recv
 	aio_onrecv proc;
 	void *param;
 	void *buffer;
-	int bytes;
+	size_t bytes;
 };
 
 struct epoll_context_send
@@ -51,7 +51,7 @@ struct epoll_context_send
 	aio_onsend proc;
 	void *param;
 	const void *buffer;
-	int bytes;
+	size_t bytes;
 	struct sockaddr_in addr; // for send to
 };
 
@@ -60,7 +60,7 @@ struct epoll_context_recv_v
 	aio_onrecv proc;
 	void *param;
 	socket_bufvec_t *vec;
-	int n;
+	size_t n;
 };
 
 struct epoll_context_send_v
@@ -68,7 +68,7 @@ struct epoll_context_send_v
 	aio_onsend proc;
 	void *param;
 	socket_bufvec_t *vec;
-	int n;
+	size_t n;
 	struct sockaddr_in addr;  // for send to
 };
 
@@ -77,7 +77,7 @@ struct epoll_context_recvfrom
 	aio_onrecvfrom proc;
 	void *param;
 	void *buffer;
-	int bytes;
+	size_t bytes;
 };
 
 struct epoll_context_recvfrom_v
@@ -85,7 +85,7 @@ struct epoll_context_recvfrom_v
 	aio_onrecvfrom proc;
 	void *param;
 	socket_bufvec_t *vec;
-	int n;
+	size_t n;
 };
 
 struct epoll_context
@@ -339,7 +339,7 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
 
 static int epoll_recv(struct epoll_context* ctx, int flags, int error)
 {
-	int r;
+	ssize_t r;
 	if(0 != error)
 	{
 		ctx->in.recv.proc(ctx->in.recv.param, error, 0);
@@ -349,7 +349,7 @@ static int epoll_recv(struct epoll_context* ctx, int flags, int error)
 	r = recv(ctx->socket, ctx->in.recv.buffer, ctx->in.recv.bytes, 0);
 	if(r >= 0)
 	{
-		ctx->in.recv.proc(ctx->in.recv.param, 0, r);
+		ctx->in.recv.proc(ctx->in.recv.param, 0, (size_t)r);
 		return 0;
 	}
 	else
@@ -362,7 +362,7 @@ static int epoll_recv(struct epoll_context* ctx, int flags, int error)
 	}
 }
 
-int aio_socket_recv(aio_socket_t socket, void* buffer, int bytes, aio_onrecv proc, void* param)
+int aio_socket_recv(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLIN));
@@ -389,7 +389,7 @@ int aio_socket_recv(aio_socket_t socket, void* buffer, int bytes, aio_onrecv pro
 
 static int epoll_send(struct epoll_context* ctx, int flags, int error)
 {
-	int r;
+	ssize_t r;
 	if(0 != error)
 	{
 		ctx->out.send.proc(ctx->out.send.param, error, 0);
@@ -399,7 +399,7 @@ static int epoll_send(struct epoll_context* ctx, int flags, int error)
 	r = send(ctx->socket, ctx->out.send.buffer, ctx->out.send.bytes, 0);
 	if(r >= 0)
 	{
-		ctx->out.send.proc(ctx->out.send.param, 0, r);
+		ctx->out.send.proc(ctx->out.send.param, 0, (size_t)r);
 		return 0;
 	}
 	else
@@ -412,7 +412,7 @@ static int epoll_send(struct epoll_context* ctx, int flags, int error)
 	}
 }
 
-int aio_socket_send(aio_socket_t socket, const void* buffer, int bytes, aio_onsend proc, void* param)
+int aio_socket_send(aio_socket_t socket, const void* buffer, size_t bytes, aio_onsend proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLOUT));
@@ -439,7 +439,7 @@ int aio_socket_send(aio_socket_t socket, const void* buffer, int bytes, aio_onse
 
 static int epoll_recv_v(struct epoll_context* ctx, int flags, int error)
 {
-	int r;
+	ssize_t r;
 	struct msghdr msg;
 
 	if(0 != error)
@@ -455,7 +455,7 @@ static int epoll_recv_v(struct epoll_context* ctx, int flags, int error)
 	r = recvmsg(ctx->socket, &msg, 0);
 	if(r >= 0)
 	{
-		ctx->in.recv_v.proc(ctx->in.recv_v.param, 0, r);
+		ctx->in.recv_v.proc(ctx->in.recv_v.param, 0, (size_t)r);
 		return 0;
 	}
 	else
@@ -468,7 +468,7 @@ static int epoll_recv_v(struct epoll_context* ctx, int flags, int error)
 	}
 }
 
-int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecv proc, void* param)
+int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecv proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLIN));
@@ -495,7 +495,7 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 
 static int epoll_send_v(struct epoll_context* ctx, int flags, int error)
 {
-	int r;
+	ssize_t r;
 	struct msghdr msg;
 
 	if(0 != error)
@@ -511,7 +511,7 @@ static int epoll_send_v(struct epoll_context* ctx, int flags, int error)
 	r = sendmsg(ctx->socket, &msg, 0);
 	if(r >= 0)
 	{
-		ctx->out.send_v.proc(ctx->out.send_v.param, 0, r);
+		ctx->out.send_v.proc(ctx->out.send_v.param, 0, (size_t)r);
 	}
 	else
 	{
@@ -525,7 +525,7 @@ static int epoll_send_v(struct epoll_context* ctx, int flags, int error)
 	return r;
 }
 
-int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
+int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLOUT));	
@@ -552,7 +552,7 @@ int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onse
 
 static int epoll_recvfrom(struct epoll_context* ctx, int flags, int error)
 {
-	int r;
+	ssize_t r;
 	char ip[16] = {0};
 	struct sockaddr_in addr;
 	socklen_t addrlen = sizeof(addr);
@@ -568,7 +568,7 @@ static int epoll_recvfrom(struct epoll_context* ctx, int flags, int error)
 	if(r >= 0)
 	{
 		strcpy(ip, inet_ntoa(addr.sin_addr));
-		ctx->in.recvfrom.proc(ctx->in.recvfrom.param, 0, r, ip, (int)ntohs(addr.sin_port));
+		ctx->in.recvfrom.proc(ctx->in.recvfrom.param, 0, (size_t)r, ip, (int)ntohs(addr.sin_port));
 		return 0;
 	}
 	else
@@ -581,7 +581,7 @@ static int epoll_recvfrom(struct epoll_context* ctx, int flags, int error)
 	}
 }
 
-int aio_socket_recvfrom(aio_socket_t socket, void* buffer, int bytes, aio_onrecvfrom proc, void* param)
+int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecvfrom proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLIN));	
@@ -608,7 +608,7 @@ int aio_socket_recvfrom(aio_socket_t socket, void* buffer, int bytes, aio_onrecv
 
 static int epoll_sendto(struct epoll_context* ctx, int flags, int error)
 {
-	int r;
+	ssize_t r;
 	if(0 != error)
 	{
 		ctx->out.send.proc(ctx->out.send.param, error, 0);
@@ -618,7 +618,7 @@ static int epoll_sendto(struct epoll_context* ctx, int flags, int error)
 	r = sendto(ctx->socket, ctx->out.send.buffer, ctx->out.send.bytes, 0, (struct sockaddr*)&ctx->out.send.addr, sizeof(ctx->out.send.addr));
 	if(r >= 0)
 	{
-		ctx->out.send.proc(ctx->out.send.param, r>=0 ? 0 : r, r>0 ? r : 0);
+		ctx->out.send.proc(ctx->out.send.param, 0, (size_t)r);
 		return 0;
 	}
 	else
@@ -631,7 +631,7 @@ static int epoll_sendto(struct epoll_context* ctx, int flags, int error)
 	}
 }
 
-int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void* buffer, int bytes, aio_onsend proc, void* param)
+int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void* buffer, size_t bytes, aio_onsend proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLOUT));
@@ -661,7 +661,7 @@ int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void*
 
 static int epoll_recvfrom_v(struct epoll_context* ctx, int flags, int error)
 {
-	int r;
+	ssize_t r;
 	char ip[16] = {0};
 	struct msghdr msg;
 	struct sockaddr_in addr;
@@ -683,7 +683,7 @@ static int epoll_recvfrom_v(struct epoll_context* ctx, int flags, int error)
 	if(r >= 0)
 	{
 		strcpy(ip, inet_ntoa(addr.sin_addr));
-		ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, 0, r, ip, (int)ntohs(addr.sin_port));
+		ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, 0, (size_t)r, ip, (int)ntohs(addr.sin_port));
 		return 0;
 	}
 	else
@@ -696,7 +696,7 @@ static int epoll_recvfrom_v(struct epoll_context* ctx, int flags, int error)
 	}
 }
 
-int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param)
+int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecvfrom proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLIN));
@@ -723,7 +723,7 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 
 static int epoll_sendto_v(struct epoll_context* ctx, int flags, int error)
 {
-	int r;
+	ssize_t r;
 	struct msghdr msg;
 
 	if(0 != error)
@@ -741,7 +741,7 @@ static int epoll_sendto_v(struct epoll_context* ctx, int flags, int error)
 	r = sendmsg(ctx->socket, &msg, 0);
 	if(r >= 0)
 	{
-		ctx->out.send_v.proc(ctx->out.send_v.param, r>=0 ? 0 : r, r>0 ? r : 0);
+		ctx->out.send_v.proc(ctx->out.send_v.param, 0, (size_t)r);
 		return 0;
 	}
 	else
@@ -754,7 +754,7 @@ static int epoll_sendto_v(struct epoll_context* ctx, int flags, int error)
 	}
 }
 
-int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
+int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLOUT));	

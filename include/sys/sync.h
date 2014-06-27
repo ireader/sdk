@@ -321,7 +321,7 @@ inline int event_timewait(IN event_t* event, IN int timeout)
 #else
 	int r = 0;
 	struct timespec ts;
-	clock_gettime(CLOCK_MONOTONIC, &t);
+	clock_gettime(CLOCK_MONOTONIC, &ts);
 	ts.tv_sec += timeout/1000;
 	ts.tv_nsec += (timeout%1000)*1000000;
 #endif

@@ -3,6 +3,10 @@
 
 #include <stdarg.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// 写内存日志
 int dlog_log(const char* format, ...);
 
@@ -16,4 +20,7 @@ int dlog_setmodule(const char* module);
 ///@param[in] name 日志管道文件名
 int dlog_setpath(const char* name);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

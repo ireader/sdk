@@ -43,13 +43,13 @@ typedef void (*aio_onconnect)(void* param, int code);
 /// @param[in] param user-defined parameter
 /// @param[in] code 0-ok, other-error
 /// @param[in] bytes 0-means socket closed, >0-send bytes
-typedef void (*aio_onsend)(void* param, int code, int bytes); 
+typedef void (*aio_onsend)(void* param, int code, size_t bytes); 
 
 /// aio_socket_recv/aio_socket_recv_v callback
 /// @param[in] param user-defined parameter
 /// @param[in] code 0-ok, other-error
 /// @param[in] bytes 0-means socket closed, >0-received bytes
-typedef void (*aio_onrecv)(void* param, int code, int bytes);
+typedef void (*aio_onrecv)(void* param, int code, size_t bytes);
 
 /// aio_socket_recvfrom/aio_socket_recvfrom_v callback
 /// @param[in] param user-defined parameter
@@ -104,16 +104,20 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
 /// @param[in] proc user-defined callback
 /// @param[in] param user-defined parameter
 /// @return 0-ok, <0-error, don't call proc if return error
-int aio_socket_send(aio_socket_t socket, const void* buffer, int bytes, aio_onsend proc, void* param);
+int aio_socket_send(aio_socket_t socket, const void* buffer, size_t bytes, aio_onsend proc, void* param);
 
 /// @return 0-ok, <0-error, don't call proc if return error
-int aio_socket_recv(aio_socket_t socket, void* buffer, int bytes, aio_onrecv proc, void* param);
+int aio_socket_recv(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv proc, void* param);
 
 /// @return 0-ok, <0-error, don't call proc if return error
-int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onsend proc, void* param);
+/// @param[in] vec buffer array(must valid before aio_onsend callback)
+/// @param[in] n vec item number
+int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param);
 
 /// @return 0-ok, <0-error, don't call proc if return error
-int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecv proc, void* param);
+/// @param[in] vec buffer array(must valid before aio_onsend callback)
+/// @param[in] n vec item number
+int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecv proc, void* param);
 
 /// aio send
 /// @param[in] socket aio socket
@@ -124,16 +128,20 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 /// @param[in] proc user-defined callback
 /// @param[in] param user-defined parameter
 /// @return 0-ok, <0-error, don't call proc if return error
-int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void* buffer, int bytes, aio_onsend proc, void* param);
+int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void* buffer, size_t bytes, aio_onsend proc, void* param);
 
 /// @return 0-ok, <0-error, don't call proc if return error
-int aio_socket_recvfrom(aio_socket_t socket, void* buffer, int bytes, aio_onrecvfrom proc, void* param);
+int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecvfrom proc, void* param);
 
 /// @return 0-ok, <0-error, don't call proc if return error
-int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, int n, aio_onsend proc, void* param);
+/// @param[in] vec buffer array(must valid before aio_onsend callback)
+/// @param[in] n vec item number
+int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, size_t n, aio_onsend proc, void* param);
 
 /// @return 0-ok, <0-error, don't call proc if return error
-int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param);
+/// @param[in] vec buffer array(must valid before aio_onsend callback)
+/// @param[in] n vec item number
+int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, size_t n, aio_onrecvfrom proc, void* param);
 
 #ifdef __cplusplus
 }
