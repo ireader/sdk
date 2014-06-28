@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
+#include <pthread.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
@@ -108,6 +109,22 @@ struct kqueue_context
 		struct kqueue_context_send_v send_v;
 	} out;
 };
+
+#define KQueueRead(ctx, callback)   do {\
+    ctx->read = callback;   \
+    EV_SET(&ctx->ev[0], ctx->socket, EVFILT_READ, EV_ADD|EV_ONESHOT, 0, 0, ctx);    \
+    if(-1 != kevent(s_kqueue, &ctx->ev[0], 1, NULL, 0, NULL))   \
+        return 0;   \
+    ctx->ev[0].filter = 0; \
+} while(0)
+
+#define KQueueWrite(ctx, callback)  do {\
+    ctx->write = callback;         \
+    EV_SET(&ctx->ev[1], ctx->socket, EVFILT_WRITE, EV_ADD|EV_ONESHOT, 0, 0, ctx);   \
+    if(-1 != kevent(s_kqueue, &ctx->ev[1], 1, NULL, 0, NULL))   \
+        return 0;   \
+    ctx->ev[1].filter = 0;  \
+} while(0)
 
 int aio_socket_init(int threads)
 {
@@ -217,8 +234,8 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 
 int aio_socket_destroy(aio_socket_t socket)
 {
-	struct kqueue_context* ctx = (struct kqueue_context*)socket;
-	assert(ctx->ev[0].udata == ctx);
+    struct kqueue_context* ctx = (struct kqueue_context*)socket;
+    assert(ctx->ev[0].udata == ctx);
     assert(ctx->ev[1].udata == ctx);
 
 //    EV_SET(&ctx->ev[0], ctx->socket, 0, EV_DELETE, 0, 0, ctx);
@@ -283,15 +300,10 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
     r = kqueue_accept(ctx, 0, 0);
 	if(EAGAIN == r)
 	{
-		ctx->read = kqueue_accept;
-		EV_SET(&ctx->ev[0], ctx->socket, EVFILT_READ, EV_ADD|EV_ONESHOT, 0, 0, ctx);
-        if(-1 != kevent(s_kqueue, &ctx->ev[0], 1, NULL, 0, NULL))
-			return 0;
-
-		ctx->ev[0].filter = 0;
+        KQueueRead(ctx, kqueue_accept);
 	}
 
-	return r > 0 ? 0 : errno;
+	return 0 == r ? 0 : errno;
 }
 
 static int kqueue_connect(struct kqueue_context* ctx, int flags, int error)
@@ -342,15 +354,10 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
     r = kqueue_connect(ctx, 0, 0);
 	if(EINPROGRESS == r)
 	{
-		ctx->write = kqueue_connect;
-        EV_SET(&ctx->ev[1], ctx->socket, EVFILT_WRITE, EV_ADD|EV_ONESHOT, 0, 0, ctx);
-        if(-1 != kevent(s_kqueue, &ctx->ev[1], 1, NULL, 0, NULL))
-            return 0;
-        
-        ctx->ev[1].filter = 0;
+		KQueueWrite(ctx, kqueue_connect);
 	}
 
-	return r > 0 ? 0 : errno;
+	return 0 == r ? 0 : errno;
 }
 
 static int kqueue_recv(struct kqueue_context* ctx, int flags, int error)
@@ -394,15 +401,10 @@ int aio_socket_recv(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv 
     r = kqueue_recv(ctx, 0, 0);
 	if(EAGAIN == r)
 	{
-		ctx->read = kqueue_recv;
-        EV_SET(&ctx->ev[0], ctx->socket, EVFILT_READ, EV_ADD|EV_ONESHOT, 0, 0, ctx);
-        if(-1 != kevent(s_kqueue, &ctx->ev[0], 1, NULL, 0, NULL))
-            return 0;
-        
-        ctx->ev[0].filter = 0;
+		KQueueRead(ctx, kqueue_recv);
 	}
 
-	return r > 0 ? 0 : errno;
+    return 0 == r ? 0 : errno;
 }
 
 static int kqueue_send(struct kqueue_context* ctx, int flags, int error)
@@ -446,15 +448,10 @@ int aio_socket_send(aio_socket_t socket, const void* buffer, size_t bytes, aio_o
     r = kqueue_send(ctx, 0, 0);
 	if(EAGAIN == r)
 	{
-		ctx->write = kqueue_send;
-        EV_SET(&ctx->ev[1], ctx->socket, EVFILT_WRITE, EV_ADD|EV_ONESHOT, 0, 0, ctx);
-        if(-1 != kevent(s_kqueue, &ctx->ev[1], 1, NULL, 0, NULL))
-            return 0;
-        
-        ctx->ev[1].filter = 0;
+        KQueueWrite(ctx, kqueue_send);
 	}
 
-	return r > 0 ? 0 : errno;
+    return 0 == r ? 0 : errno;
 }
 
 static int kqueue_recv_v(struct kqueue_context* ctx, int flags, int error)
@@ -504,15 +501,10 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
     r = kqueue_recv_v(ctx, 0, 0);
 	if(EAGAIN == r)
 	{
-		ctx->read = kqueue_recv_v;
-        EV_SET(&ctx->ev[0], ctx->socket, EVFILT_READ, EV_ADD|EV_ONESHOT, 0, 0, ctx);
-        if(-1 != kevent(s_kqueue, &ctx->ev[0], 1, NULL, 0, NULL))
-            return 0;
-        
-        ctx->ev[0].filter = 0;
+        KQueueRead(ctx, kqueue_recv_v);
 	}
 
-	return r > 0 ? 0 : errno;
+    return 0 == r ? 0 : errno;
 }
 
 static int kqueue_send_v(struct kqueue_context* ctx, int flags, int error)
@@ -562,15 +554,10 @@ int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onse
     r = kqueue_send_v(ctx, 0, 0);
 	if(EAGAIN == r)
 	{
-		ctx->write = kqueue_send_v;
-        EV_SET(&ctx->ev[1], ctx->socket, EVFILT_WRITE, EV_ADD|EV_ONESHOT, 0, 0, ctx);
-        if(-1 != kevent(s_kqueue, &ctx->ev[1], 1, NULL, 0, NULL))
-            return 0;
-        
-        ctx->ev[1].filter = 0;
+        KQueueWrite(ctx, kqueue_send_v);
 	}
 
-    return r > 0 ? 0 : errno;
+    return 0 == r ? 0 : errno;
 }
 
 static int kqueue_recvfrom(struct kqueue_context* ctx, int flags, int error)
@@ -620,15 +607,10 @@ int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onr
     r = kqueue_recvfrom(ctx, 0, 0);
 	if(EAGAIN == r)
 	{
-		ctx->read = kqueue_recvfrom;
-        EV_SET(&ctx->ev[0], ctx->socket, EVFILT_READ, EV_ADD|EV_ONESHOT, 0, 0, ctx);
-        if(-1 != kevent(s_kqueue, &ctx->ev[0], 1, NULL, 0, NULL))
-            return 0;
-        
-        ctx->ev[0].filter = 0;
+        KQueueRead(ctx, kqueue_recvfrom);
 	}
 
-	return r > 0 ? 0 : errno;
+    return 0 == r ? 0 : errno;
 }
 
 static int kqueue_sendto(struct kqueue_context* ctx, int flags, int error)
@@ -675,15 +657,10 @@ int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void*
     r = kqueue_sendto(ctx, 0, 0);
 	if(EAGAIN == r)
 	{
-		ctx->write = kqueue_sendto;
-        EV_SET(&ctx->ev[1], ctx->socket, EVFILT_WRITE, EV_ADD|EV_ONESHOT, 0, 0, ctx);
-        if(-1 != kevent(s_kqueue, &ctx->ev[1], 1, NULL, 0, NULL))
-            return 0;
-        
-        ctx->ev[1].filter = 0;
+        KQueueWrite(ctx, kqueue_sendto);
 	}
 
-	return r > 0 ? 0 : errno;
+    return 0 == r ? 0 : errno;
 }
 
 static int kqueue_recvfrom_v(struct kqueue_context* ctx, int flags, int error)
@@ -739,15 +716,10 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
     r = kqueue_recvfrom_v(ctx, 0, 0);
 	if(EAGAIN == r)
 	{
-		ctx->read = kqueue_recvfrom_v;
-        EV_SET(&ctx->ev[0], ctx->socket, EVFILT_READ, EV_ADD|EV_ONESHOT, 0, 0, ctx);
-        if(-1 != kevent(s_kqueue, &ctx->ev[0], 1, NULL, 0, NULL))
-            return 0;
-        
-        ctx->ev[0].filter = 0;
+        KQueueRead(ctx, kqueue_recvfrom_v);
 	}
 
-	return r > 0 ? 0 : errno;
+    return 0 == r ? 0 : errno;
 }
 
 static int kqueue_sendto_v(struct kqueue_context* ctx, int flags, int error)
@@ -802,13 +774,8 @@ int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bu
     r = kqueue_sendto_v(ctx, 0, 0);
 	if(EAGAIN == r)
 	{
-		ctx->write = kqueue_sendto_v;
-        EV_SET(&ctx->ev[1], ctx->socket, EVFILT_WRITE, EV_ADD|EV_ONESHOT, 0, 0, ctx);
-        if(-1 != kevent(s_kqueue, &ctx->ev[1], 1, NULL, 0, NULL))
-            return 0;
-        
-        ctx->ev[1].filter = 0;
+        KQueueWrite(ctx, kqueue_sendto_v);
 	}
 
-	return r > 0 ? 0 : errno;
+    return 0 == r ? 0 : errno;
 }
