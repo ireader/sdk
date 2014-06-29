@@ -107,6 +107,38 @@ inline int atomic_cas(INOUT long volatile *d, long c, long v)
 	return c == InterlockedCompareExchange(d, v, c) ? 1 : 0;
 }
 
+#elif defined(OS_MAC)
+#include <libkern/OSAtomic.h>
+inline long atomic_increment(INOUT volatile long* v)
+{
+    return OSAtomicIncrement32Barrier(v);
+}
+
+inline long atomic_decrement(INOUT volatile long* v)
+{
+    return OSAtomicDecrement32(v);
+}
+
+inline long atomic_add(INOUT long volatile *v, long incr)
+{
+    return OSAtomicAdd32Barrier(incr, v);
+}
+
+inline int64_t atomic_add64(INOUT int64_t volatile *v, int64_t inc)
+{
+    return OSAtomicAdd64Barrier(inc, v);
+}
+
+inline int atomic_cas(INOUT long volatile *d, long c, long v)
+{
+    return OSAtomicCompareAndSwapLongBarrier(c, v, d) ? 1 : 0;
+}
+
+inline int64_t aotmic_cas64(INOUT int64_t volatile *d, int64_t c, int64_t v)
+{
+    return OSAtomicCompareAndSwap64Barrier(c, v, d);
+}
+
 #else
 
 #if defined(__gcc__builtin_) && __GNUC__>=4 && __GNUC_MINOR__>=3
@@ -118,18 +150,6 @@ inline long atomic_add(INOUT long volatile *v, long incr)
 inline int atomic_cas(INOUT long volatile *d, long c, long v)
 {
 	return __sync_bool_compare_and_swap(d, c, v) ? 1 : 0;
-}
-
-#elif defined(OS_MAC)
-#include <libkern/OSAtomic.h>
-inline long atomic_add(INOUT long volatile *v, long incr)
-{
-    return OSAtomicAdd32Barrier(incr, v);
-}
-
-inline int atomic_cas(INOUT long volatile *d, long c, long v)
-{
-    return OSAtomicCompareAndSwapLongBarrier(c, v, d) ? 1 : 0;
 }
 
 #elif defined(__ARM__) || defined(__arm__)
