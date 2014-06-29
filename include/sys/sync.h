@@ -120,6 +120,18 @@ inline int atomic_cas(INOUT long volatile *d, long c, long v)
 	return __sync_bool_compare_and_swap(d, c, v) ? 1 : 0;
 }
 
+#elif defined(OS_MAC)
+#include <libkern/OSAtomic.h>
+inline long atomic_add(INOUT long volatile *v, long incr)
+{
+    return OSAtomicAdd32Barrier(incr, v);
+}
+
+inline int atomic_cas(INOUT long volatile *d, long c, long v)
+{
+    return OSAtomicCompareAndSwapLongBarrier(c, v, d) ? 1 : 0;
+}
+
 #elif defined(__ARM__) || defined(__arm__)
 inline long atomic_add(INOUT long volatile *v, long incr)
 {
