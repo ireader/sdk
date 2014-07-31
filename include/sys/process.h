@@ -1,7 +1,7 @@
 #ifndef _platform_process_h_
 #define _platform_process_h_
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(OS_WINDOWS)
 #include <Windows.h>
 #include <Psapi.h>
 #include <process.h>
@@ -62,6 +62,50 @@ extern char** environ;
 //////////////////////////////////////////////////////////////////////////
 typedef int (STDCALL *thread_proc)(IN void* param);
 
+inline int thread_create(OUT thread_t* thread, IN thread_proc func, IN void* param);
+inline int thread_destroy(IN thread_t thread);
+
+// priority: [-15, 15]
+// 0: normal / -15: idle / 15: critical
+inline int thread_getpriority(IN thread_t thread, OUT int* priority);
+inline int thread_setpriority(IN thread_t thread, IN int priority);
+
+inline int thread_self(void);
+inline int thread_getid(IN thread_t thread, OUT int* id);
+inline int thread_isself(IN thread_t thread);
+
+inline int process_create(IN const char* filename, OUT process_t* pid);
+inline int process_kill(IN process_t pid);
+
+inline process_t process_self(void);
+inline int process_selfname(char* name, size_t size);
+inline int process_name(process_t pid, char* name, size_t size);
+
+typedef struct
+{
+	int bInheritHandles; // 1-inherit handles
+
+#if defined(OS_WINDOWS)
+	LPSTR lpCommandLine; // msdn: CreateProcessW, can modify the contents of this string
+	LPSECURITY_ATTRIBUTES lpProcessAttributes;
+	LPSECURITY_ATTRIBUTES lpThreadAttributes;
+	DWORD dwCreationFlags;
+	LPVOID lpEnvironment; // terminated by two zero bytes
+	LPCSTR lpCurrentDirectory;
+	STARTUPINFOA startupInfo;
+#else
+	char* const *argv;
+	char* const *envp;
+#endif
+} process_create_param_t;
+
+inline int process_createve(IN const char* filename, IN process_create_param_t *param, OUT process_t* pid);
+
+//////////////////////////////////////////////////////////////////////////
+///
+/// thread: Windows CreateThread/Linux pthread
+///
+//////////////////////////////////////////////////////////////////////////
 inline int thread_create(OUT thread_t* thread, IN thread_proc func, IN void* param)
 {
 #if defined(OS_WINDOWS)
@@ -84,7 +128,7 @@ inline int thread_create(OUT thread_t* thread, IN thread_proc func, IN void* par
 inline int thread_destroy(IN thread_t thread)
 {
 #if defined(OS_WINDOWS)
-	if(!thread_isself(thread))
+	if(thread.id != GetCurrentThreadId())
 		WaitForSingleObjectEx(thread.handle, INFINITE, TRUE);
 	CloseHandle(thread.handle);
 	return 0;
@@ -179,24 +223,6 @@ inline int thread_valid(IN thread_t thread)
 /// process
 ///
 //////////////////////////////////////////////////////////////////////////
-typedef struct
-{
-    int bInheritHandles; // 1-inherit handles
-    
-#if defined(OS_WINDOWS)
-    LPSTR lpCommandLine; // msdn: CreateProcessW, can modify the contents of this string
-    LPSECURITY_ATTRIBUTES lpProcessAttributes;
-    LPSECURITY_ATTRIBUTES lpThreadAttributes;
-    DWORD dwCreationFlags;
-    LPVOID lpEnvironment; // terminated by two zero bytes
-    LPCSTR lpCurrentDirectory;
-    STARTUPINFOA startupInfo;
-#else
-    char* const *argv;
-    char* const *envp;
-#endif
-} process_create_param_t;
-
 inline int process_createve(IN const char* filename, IN process_create_param_t *param, OUT process_t* pid)
 {
 #if defined(OS_WINDOWS)

@@ -1,7 +1,7 @@
 #ifndef _platform_system_h_
 #define _platform_system_h_
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(OS_WINDOWS)
 #include <Windows.h>
 
 typedef HMODULE module_t;
@@ -15,47 +15,13 @@ typedef HMODULE module_t;
 #include <dlfcn.h>
 #include <errno.h>
 
-#if defined(OS_MAC)
-#include <sys/param.h>
-#include <sys/sysctl.h>
-
-#if 0
-#include <mach/mach_time.h>
-#define CLOCK_REALTIME 0
-#define CLOCK_MONOTONIC 0
-int clock_gettime(int clk_id, struct timespec *t){
-	mach_timebase_info_data_t timebase;
-	mach_timebase_info(&timebase);
-	uint64_t time;
-	time = mach_absolute_time();
-	double nseconds = ((double)time * (double)timebase.numer)/((double)timebase.denom);
-	double seconds = ((double)time * (double)timebase.numer)/((double)timebase.denom * 1e9);
-	t->tv_sec = seconds;
-	t->tv_nsec = nseconds;
-	return 0;
-}
-#endif
-#endif
-
 typedef void* module_t;
 #endif
 
 #include <sys/timeb.h>
 #include <stdio.h>
 
-#ifndef IN
-#define IN 
-#endif
-
-#ifndef OUT
-#define OUT
-#endif
-
-#ifndef INOUT
-#define INOUT
-#endif
-
-inline void system_sleep(IN size_t millisecond);
+inline void system_sleep(size_t millisecond);
 
 // Get CPU count
 inline size_t system_getcpucount(void);
@@ -82,7 +48,7 @@ inline void* system_getproc(module_t module, const char* producer);
 /// implement
 ///
 //////////////////////////////////////////////////////////////////////////
-inline void system_sleep(IN size_t milliseconds)
+inline void system_sleep(size_t milliseconds)
 {
 #if defined(OS_WINDOWS)
 	Sleep(milliseconds);
@@ -98,7 +64,7 @@ inline size_t system_getcpucount(void)
 	GetSystemInfo(&sysinfo);
 	return sysinfo.dwNumberOfProcessors;
 
-#elif defined(_FREEBSD_) || defined(OS_MAC) || defined(_NETBSD_) || defined(_OPENBSD_)
+#elif defined(OS_MAC) || defined(_FREEBSD_) || defined(_NETBSD_) || defined(_OPENBSD_)
 	// FreeBSD, MacOS X, NetBSD, OpenBSD, etc.:
 	int mib[4];
 	size_t num;
@@ -156,6 +122,7 @@ inline long long system_getcyclecount(void)
 #endif
 }
 
+///@return second.milliseconds(absolute time)
 inline double system_time(void)
 {
 	struct timeb t;
@@ -163,6 +130,7 @@ inline double system_time(void)
 	return t.time+t.millitm*0.001;
 }
 
+///@return milliseconds(relative time)
 inline size_t system_clock(void)
 {
 #if defined(OS_WINDOWS)
@@ -171,16 +139,33 @@ inline size_t system_clock(void)
 	QueryPerformanceFrequency(&freq);
 	QueryPerformanceCounter(&count);
 	return (size_t)(count.QuadPart * 1000 / freq.QuadPart);
-#elif defined(OS_MAC)
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return tv.tv_sec*1000 + tv.tv_usec / 1000;
-#else
+#elif defined(OS_LINUX)
 	struct timespec tp;
 	clock_gettime(CLOCK_MONOTONIC, &tp);
 	return (size_t)((size_t)tp.tv_sec*1000 + tp.tv_nsec/1000000);
+#else
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec*1000 + tv.tv_usec / 1000;
 #endif
 }
+
+#if defined(OS_MAC)
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <mach/mach_time.h>
+inline int mac_gettime(struct timespec *t){
+	mach_timebase_info_data_t timebase;
+	mach_timebase_info(&timebase);
+	uint64_t time;
+	time = mach_absolute_time();
+	double nseconds = ((double)time * (double)timebase.numer)/((double)timebase.denom);
+	double seconds = ((double)time * (double)timebase.numer)/((double)timebase.denom * 1e9);
+	t->tv_sec = seconds;
+	t->tv_nsec = nseconds;
+	return 0;
+}
+#endif
 
 inline int system_version(int* major, int* minor)
 {

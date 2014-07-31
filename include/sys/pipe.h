@@ -1,7 +1,7 @@
 #ifndef _platform_pipe_h_
 #define _platform_pipe_h_
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(OS_WINDOWS)
 #include <Windows.h>
 
 typedef HANDLE pipe_t;

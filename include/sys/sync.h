@@ -3,7 +3,7 @@
 
 #include <errno.h>
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(OS_WINDOWS)
 #include <Windows.h>
 
 typedef CRITICAL_SECTION	locker_t;
@@ -322,19 +322,20 @@ inline int event_timewait(IN event_t* event, IN int timeout)
 	DWORD r = WaitForSingleObjectEx(*event, timeout, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
 #else
-#if defined(OS_MAC)
+
+#if defined(OS_LINUX)
+	int r = 0;
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	ts.tv_sec += timeout/1000;
+	ts.tv_nsec += (timeout%1000)*1000000;
+#else
 	int r = 0;
 	struct timeval tv;
 	struct timespec ts;
 	gettimeofday(&tv, NULL);
 	ts.tv_sec = tv.tv_sec + timeout/1000;
 	ts.tv_nsec = tv.tv_usec * 1000 + (timeout%1000)*1000000;
-#else
-	int r = 0;
-	struct timespec ts;
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	ts.tv_sec += timeout/1000;
-	ts.tv_nsec += (timeout%1000)*1000000;
 #endif
 
 	pthread_mutex_lock(&event->mutex);
@@ -409,9 +410,8 @@ inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN l
 			return ENOMEM;
 		return 0==sem_init(semaphore->semaphore, 0, value) ? 0 : errno;
 	}
-#else
-    return -1;
 #endif
+	return -1;
 #endif
 }
 
@@ -452,7 +452,7 @@ inline int semaphore_timewait(IN semaphore_t* semaphore, IN int timeout)
 	DWORD r = WaitForSingleObjectEx(*semaphore, timeout, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
 }
-#elif !defined(OS_MAC)
+#elif defined(OS_LINUX)
 inline int semaphore_timewait(IN semaphore_t* semaphore, IN int timeout)
 {
 	struct timespec ts;

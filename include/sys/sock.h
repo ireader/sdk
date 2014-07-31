@@ -1,7 +1,7 @@
 #ifndef _platform_socket_h_
 #define _platform_socket_h_
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(OS_WINDOWS)
 #include <Winsock2.h>
 #include <ws2ipdef.h>
 
@@ -247,7 +247,7 @@ inline int socket_connect_ipv4(IN socket_t sock, IN const char* ip_or_dns, IN un
 inline int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dns, IN unsigned short port, IN int timeout)
 {
 	int r;
-#if defined(OS_LINUX)
+#if !defined(OS_WINDOWS)
 	int errcode = 0;
 	int errlen = sizeof(errcode);
 #endif
@@ -264,7 +264,7 @@ inline int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dn
 		r = socket_select_write(sock, timeout);
 		if(1 == r)
 		{
-#if defined(OS_LINUX)
+#if !defined(OS_WINDOWS)
 			r = getsockopt(sock, SOL_SOCKET, SO_ERROR, (void*)&errcode, (socklen_t*)&errlen);
 			if(0 == r)
 				r = -errcode;
@@ -438,13 +438,7 @@ inline int socket_select_writefds(IN int n, IN fd_set* fds, IN struct timeval* t
 
 inline int socket_select_read(IN socket_t sock, IN int timeout)
 {
-#if defined(OS_LINUX)
-	struct pollfd fds;
-	fds.fd = sock;
-	fds.events = POLLIN;
-	fds.revents = 0;
-	return poll(&fds, 1, timeout);
-#else
+#if defined(OS_WINDOWS)
 	fd_set fds;
 	struct timeval tv;
 	assert(socket_invalid != sock); // linux: FD_SET error
@@ -454,18 +448,18 @@ inline int socket_select_read(IN socket_t sock, IN int timeout)
 	tv.tv_sec = timeout/1000;
 	tv.tv_usec = (timeout%1000) * 1000;
 	return socket_select_readfds(sock+1, &fds, timeout<0?NULL:&tv);
+#else
+	struct pollfd fds;
+	fds.fd = sock;
+	fds.events = POLLIN;
+	fds.revents = 0;
+	return poll(&fds, 1, timeout);
 #endif
 }
 
 inline int socket_select_write(IN socket_t sock, IN int timeout)
 {
-#if defined(OS_LINUX)
-	struct pollfd fds;
-	fds.fd = sock;
-	fds.events = POLLOUT;
-	fds.revents = 0;
-	return poll(&fds, 1, timeout);
-#else
+#if defined(OS_WINDOWS)
 	fd_set fds;
 	struct timeval tv;
 
@@ -477,6 +471,12 @@ inline int socket_select_write(IN socket_t sock, IN int timeout)
 	tv.tv_sec = timeout/1000;
 	tv.tv_usec = (timeout%1000) * 1000;
 	return socket_select_writefds(sock+1, &fds, timeout<0?NULL:&tv);
+#else
+	struct pollfd fds;
+	fds.fd = sock;
+	fds.events = POLLOUT;
+	fds.revents = 0;
+	return poll(&fds, 1, timeout);
 #endif
 }
 
