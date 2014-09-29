@@ -207,6 +207,7 @@ inline int locker_create(IN locker_t* locker)
 	pthread_mutexattr_t attr;
 	pthread_mutexattr_init(&attr);
 	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+	//pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
 	r = pthread_mutex_init(locker, &attr);
 	pthread_mutexattr_destroy(&attr);
 	return r;
@@ -411,6 +412,9 @@ inline int semaphore_create(IN semaphore_t* semaphore, IN const char* name, IN l
 		return 0==sem_init(semaphore->semaphore, 0, value) ? 0 : errno;
 	}
 #endif
+	// __APPLE__ / __MACH__
+	// https://github.com/joyent/libuv/blob/master/src/unix/thread.c
+	// semaphore_create/semaphore_destroy/semaphore_signal/semaphore_wait/semaphore_timedwait
 	return -1;
 #endif
 }
