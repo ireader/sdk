@@ -1,17 +1,14 @@
 #ifndef _http_server_internal_h_
 #define _http_server_internal_h_
 
-#include "aio-socket.h"
+#include "aio-tcp-transport.h"
 #include "http-server.h"
 
 struct http_session_t
 {
-	struct http_session_t *prev;
-	struct http_session_t *next;
-
 	struct http_server_t *server;
 
-	aio_socket_t socket;
+	void* session;
 	void* parser;
 
 	char data[2 * 1024];
@@ -24,14 +21,15 @@ struct http_session_t
 
 struct http_server_t
 {
-	aio_socket_t socket;
-
-//	struct http_session_t head;
+	void* transport;
 
 	http_server_handler handle;
 	void* param;
 };
 
-struct http_session_t* http_session_run(struct http_server_t *server, socket_t socket, const char* ip, int port);
+void* http_session_onconnected(void* ptr, void* session, const char* ip, int port);
+void http_session_ondisconnected(void* param);
+void http_session_onsend(void* param, int code, size_t bytes);
+void http_session_onrecv(void* param, const void* msg, size_t bytes);
 
 #endif /* !_http_server_internal_h_ */

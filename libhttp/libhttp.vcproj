@@ -177,6 +177,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\source\http-header-content-type.c"
+				>
+			</File>
+			<File
 				RelativePath=".\source\http-reason.c"
 				>
 			</File>
@@ -196,6 +200,10 @@
 			>
 			<File
 				RelativePath=".\include\http-bundle.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\http-header-content-type.h"
 				>
 			</File>
 			<File
@@ -225,11 +233,23 @@
 				>
 			</File>
 			<File
+				RelativePath="..\source\aio-tcp-transport.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\aio-udp-transport.c"
+				>
+			</File>
+			<File
 				RelativePath="..\source\http-parser.c"
 				>
 			</File>
 			<File
 				RelativePath="..\source\thread-pool.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\time64.c"
 				>
 			</File>
 		</Filter>

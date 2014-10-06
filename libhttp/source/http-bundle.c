@@ -63,7 +63,7 @@ int http_bundle_release(struct http_bundle_t *bundle)
 
 #if defined(_DEBUG)
 	assert(bundle->magic == 0xABCDEF10);
-	assert(((char*)bundle->ptr)[bundle->capacity] == (char)0xAB);
+	assert(((char*)bundle->ptr)[bundle->capacity] == (unsigned char)0xAB);
 #endif
 
 	if(0 == InterlockedDecrement(&bundle->ref))
