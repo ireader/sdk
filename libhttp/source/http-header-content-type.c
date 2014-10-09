@@ -22,6 +22,8 @@ int http_header_content_type(char* field, struct http_header_content_type_t *v)
 	const char* p1;
 	const char* p = field;
 
+	v->parameter_count = 0;
+
 	// parse media type
 	p1 = string_token(p, "/"SPECIAL_CHARS);
 	if('/' == *p1)
@@ -79,3 +81,19 @@ int http_header_content_type(char* field, struct http_header_content_type_t *v)
 
 	return 0;
 }
+
+#if defined(_DEBUG) || defined(DEBUG)
+void http_header_content_type_test()
+{
+	struct http_header_media_parameter parameters[16];
+	struct http_header_content_type_t content;
+	char contentType[32];
+	content.parameters = parameters;
+	strcpy(contentType, "text/html;charset=ISO-8859-4");
+	http_header_content_type(contentType, &content);
+	assert(0 == strcmp("text", content.media_type));
+	assert(0 == strcmp("html", content.media_subtype));
+	assert(1==content.parameter_count);
+	assert(0 == strcmp("charset", content.parameters[0].name) && 0 == strcmp("ISO-8859-4", content.parameters[0].value));
+}
+#endif
