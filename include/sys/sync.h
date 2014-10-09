@@ -111,17 +111,29 @@ inline int atomic_cas(INOUT long volatile *d, long c, long v)
 #include <libkern/OSAtomic.h>
 inline long atomic_increment(INOUT volatile long* v)
 {
+#if TARGET_CPU_X86_64 || TARGET_CPU_PPC64
+	return OSAtomicIncrement64Barrier(v);
+#else
     return OSAtomicIncrement32Barrier(v);
+#endif
 }
 
 inline long atomic_decrement(INOUT volatile long* v)
 {
+#if TARGET_CPU_X86_64 || TARGET_CPU_PPC64
+    return OSAtomicDecrement64(v);
+#else
     return OSAtomicDecrement32(v);
+#endif
 }
 
 inline long atomic_add(INOUT long volatile *v, long incr)
 {
+#if TARGET_CPU_X86_64 || TARGET_CPU_PPC64
+	return OSAtomicAdd64Barrier(inc, v);
+#else
     return OSAtomicAdd32Barrier(incr, v);
+#endif
 }
 
 inline int64_t atomic_add64(INOUT int64_t volatile *v, int64_t inc)
@@ -131,7 +143,11 @@ inline int64_t atomic_add64(INOUT int64_t volatile *v, int64_t inc)
 
 inline int atomic_cas(INOUT long volatile *d, long c, long v)
 {
+#if TARGET_CPU_X86_64 || TARGET_CPU_PPC64
+	return OSAtomicCompareAndSwap64Barrier(c, v, d);
+#else
     return OSAtomicCompareAndSwapLongBarrier(c, v, d) ? 1 : 0;
+#endif
 }
 
 inline int64_t aotmic_cas64(INOUT int64_t volatile *d, int64_t c, int64_t v)
