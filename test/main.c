@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <ctype.h>
 
 void url_test(void);
 void unicode_test(void);
