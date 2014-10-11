@@ -76,7 +76,7 @@ static void aio_udp_transport_onrecv(void* param, int code, size_t bytes, const 
 		assert(0 != bytes);
 		session->port = port;
 		strncpy(session->ip, ip, sizeof(session->ip));
-		session->data = transport->handler.onrecv(transport->ptr, session, session->msg, bytes, ip, port);
+		transport->handler.onrecv(transport->ptr, session, session->msg, bytes, ip, port, &session->data);
 	}
 
 	aio_udp_transport_release(session);
@@ -88,7 +88,7 @@ static void aio_udp_transport_onsend(void* param, int code, size_t bytes)
 	struct aio_udp_transport_t *transport;
 	session = (struct aio_udp_session_t *)param;
 	transport = session->transport;
-	transport->handler.onsend(transport->ptr, session->data, code, bytes);
+	transport->handler.onsend(transport->ptr, session, session->data, code, bytes);
 }
 
 static int aio_udp_transport_start(struct aio_udp_transport_t *transport)
@@ -153,6 +153,9 @@ int aio_udp_transport_destroy(void* t)
 	if(transport->socket)
 		aio_socket_destroy(transport->socket);
 
+#if defined(_DEBUG) || defined(DEBUG)
+	memset(transport, 0xCC, sizeof(*transport));
+#endif
 	free(transport);
 	return 0;
 }
@@ -197,6 +200,7 @@ int aio_udp_transport_release(void* s)
 		struct aio_udp_transport_t *transport;
 		transport = session->transport;
 		InterlockedDecrement(&transport->ref);
+		memset(session, 0xCC, sizeof(*session));
 #endif
 		free(session);
 	}

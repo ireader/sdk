@@ -183,6 +183,9 @@ int aio_tcp_transport_destroy(void* t)
 	if(transport->socket)
 		aio_socket_destroy(transport->socket);
 
+#if defined(_DEBUG) || defined(DEBUG)
+	memset(transport, 0xCC, sizeof(*transport));
+#endif
 	free(transport);
 	return 0;
 }
@@ -225,6 +228,7 @@ int aio_tcp_transport_release(void* s)
 		struct aio_tcp_transport_t *transport;
 		transport = session->transport;
 		InterlockedDecrement(&transport->ref);
+		memset(session, 0xCC, sizeof(*session));
 #endif
 
 		free(session);
