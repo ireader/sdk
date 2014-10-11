@@ -95,6 +95,8 @@ void http_session_onrecv(void* param, const void* msg, size_t bytes)
 	remain = bytes;
 	if(0 == http_parser_input(session->parser, msg, &remain))
 	{
+		session->data[0] = '\0'; // clear for save user-defined header
+
 		// call
 		// user must reply(send/send_vec/send_file) in handle
 		http_session_handle(session);

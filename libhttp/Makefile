@@ -3,8 +3,8 @@ ROOT:=..
 #--------------------------------Output------------------------------
 # OUTTYPE: 0-exe, 1-dll, 2-static
 #--------------------------------------------------------------------
-OUTTYPE = 1
-OUTFILE = libhttp.so
+OUTTYPE = 2
+OUTFILE = libhttp.a
 
 #-------------------------------Include------------------------------
 #
@@ -20,10 +20,6 @@ INCLUDES = . \
 SOURCE_PATHS = source
 SOURCE_FILES = $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.cpp))
 SOURCE_FILES += $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.c))
-
-SOURCE_FILES += $(ROOT)/source/aio-socket-epoll.c
-SOURCE_FILES += $(ROOT)/source/thread-pool.c
-SOURCE_FILES += $(ROOT)/source/http-parser.c
 
 #-----------------------------Library--------------------------------
 #
@@ -45,6 +41,6 @@ STATIC_LIBS =
 #
 # DEFINES := $(addprefix -D,$(DEFINES)) # add -L prefix
 #--------------------------------------------------------------------
-DEFINES = LIBHTTP_EXPORTS
+DEFINES = 
 
 include $(ROOT)/gcc.mk

@@ -20,7 +20,7 @@
 			Name="Debug|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="2"
+			ConfigurationType="4"
 			CharacterSet="2"
 			>
 			<Tool
@@ -60,17 +60,10 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				LinkIncremental="2"
-				GenerateDebugInformation="true"
-				SubSystem="2"
-				TargetMachine="1"
+				Name="VCLibrarianTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -82,9 +75,6 @@
 				Name="VCFxCopTool"
 			/>
 			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
@@ -92,7 +82,7 @@
 			Name="Release|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="2"
+			ConfigurationType="4"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -133,19 +123,10 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				LinkIncremental="1"
-				GenerateDebugInformation="true"
-				SubSystem="2"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
-				TargetMachine="1"
+				Name="VCLibrarianTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -155,9 +136,6 @@
 			/>
 			<Tool
 				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -226,30 +204,10 @@
 			>
 		</Filter>
 		<Filter
-			Name="util"
+			Name="test"
 			>
 			<File
-				RelativePath="..\source\aio-socket-iocp.c"
-				>
-			</File>
-			<File
-				RelativePath="..\source\aio-tcp-transport.c"
-				>
-			</File>
-			<File
-				RelativePath="..\source\aio-udp-transport.c"
-				>
-			</File>
-			<File
-				RelativePath="..\source\http-parser.c"
-				>
-			</File>
-			<File
-				RelativePath="..\source\thread-pool.c"
-				>
-			</File>
-			<File
-				RelativePath="..\source\time64.c"
+				RelativePath=".\test\benchmark.c"
 				>
 			</File>
 		</Filter>

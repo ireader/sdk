@@ -1,52 +1,18 @@
 #include <stdlib.h>
 #include "http-server.h"
 #include "cstringext.h"
-//#include "sys/sock.h"
-//#include "sys/sync.h"
-//#include "sys/system.h"
-//#include "sys/process.h"
-//#include "thread-pool.h"
 #include "tcpserver.h"
 #include "http-server-internal.h"
 
-//static int s_running;
-//static thread_pool_t s_pool;
-//
-//static void http_server_process(void* param)
-//{
-//	int r;
-//	do
-//	{
-//		r = aio_socket_process(2*60*1000);
-//		if(0 != r)
-//		{
-//			printf("http_server_process =>%d\n", r);
-//		}
-//	} while(*(int*)param && -1 != r);
-//}
-//
-//int http_server_init()
-//{
-//	int cpu = (int)system_getcpucount();
-//	s_pool = thread_pool_create(cpu, 1, 64);
-//	aio_socket_init(cpu);
-//
-//	s_running = 1;
-//	while(cpu-- > 0)
-//	{
-//		thread_pool_push(s_pool, http_server_process, &s_running); // start worker
-//	}
-//
-//	return 0;
-//}
-//
-//int http_server_cleanup()
-//{
-//	s_running = 0;
-//	thread_pool_destroy(s_pool);
-//	aio_socket_clean();
-//	return 0;
-//}
+int http_server_init()
+{
+	return 0;
+}
+
+int http_server_cleanup()
+{
+	return 0;
+}
 
 void* http_server_create(const char* ip, int port)
 {
