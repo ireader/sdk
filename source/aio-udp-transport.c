@@ -2,6 +2,11 @@
 #include "aio-socket.h"
 #include "sys/sync.h"
 #include "aio-udp-transport.h"
+#include "list.h"
+
+#if defined(_DEBUG) || defined(DEBUG)
+#define CHECK_MODE
+#endif
 
 //#define MAX_UDP_PACKET 65536 // 64KB
 #define MAX_UDP_PACKET 8192 // 8KB
@@ -18,6 +23,10 @@ struct aio_udp_session_t
 
 	void *data;
 	long ref;
+
+#if defined(CHECK_MODE)
+	struct list_head node;
+#endif
 };
 
 struct aio_udp_transport_t
@@ -27,8 +36,10 @@ struct aio_udp_transport_t
 	struct aio_udp_transport_handler_t handler;
 	void* ptr;
 
-#if defined(DEBUG) || defined(_DEBUG)
-	long ref;
+#if defined(CHECK_MODE)
+	long num;
+	struct list_head head;
+	locker_t locker;
 #endif
 };
 
@@ -44,8 +55,11 @@ static struct aio_udp_session_t* aio_udp_session_create(struct aio_udp_transport
 		memset(session, 0, sizeof(*session));
 		session->ref = 1;
 		session->transport = transport;
-#if defined(DEBUG) || defined(_DEBUG)
-		InterlockedIncrement(&transport->ref);
+#if defined(CHECK_MODE)
+		InterlockedIncrement(&transport->num);
+		locker_lock(&transport->locker);
+		list_insert_after(&session->node, transport->head.prev);
+		locker_unlock(&transport->locker);
 #endif
 	}
 
@@ -122,6 +136,11 @@ void* aio_udp_transport_create(socket_t socket, const struct aio_udp_transport_h
 		return NULL;
 
 	memset(transport, 0, sizeof(*transport));
+#if defined(CHECK_MODE)
+	transport->num = 0;
+	LIST_INIT_HEAD(&transport->head);
+	locker_create(&transport->locker);
+#endif
 	transport->socket = aio_socket_create(socket, 1);
 	if(invalid_aio_socket == transport->socket)
 	{
@@ -147,12 +166,14 @@ int aio_udp_transport_destroy(void* t)
 	struct aio_udp_transport_t *transport;
 	transport = (struct aio_udp_transport_t *)t;
 
-	// make sure all session have finished.
-	assert(0 == transport->ref);
-
 	if(transport->socket)
 		aio_socket_destroy(transport->socket);
 
+#if defined(CHECK_MODE)
+	assert(0 == transport->num);
+	assert(list_empty(&transport->head));
+	locker_destroy(&transport->locker);
+#endif
 #if defined(_DEBUG) || defined(DEBUG)
 	memset(transport, 0xCC, sizeof(*transport));
 #endif
@@ -196,10 +217,15 @@ int aio_udp_transport_release(void* s)
 
 	if(0 == InterlockedDecrement(&session->ref))
 	{
-#if defined(DEBUG) || defined(_DEBUG)
+#if defined(CHECK_MODE)
 		struct aio_udp_transport_t *transport;
 		transport = session->transport;
-		InterlockedDecrement(&transport->ref);
+		locker_lock(&transport->locker);
+		list_remove(&session->node);
+		locker_unlock(&transport->locker);
+		InterlockedDecrement(&transport->num);
+#endif
+#if defined(DEBUG) || defined(_DEBUG)
 		memset(session, 0xCC, sizeof(*session));
 #endif
 		free(session);
