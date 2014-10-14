@@ -173,11 +173,31 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\atomic-test.c"
+				>
+			</File>
+			<File
+				RelativePath=".\event-test.c"
+				>
+			</File>
+			<File
+				RelativePath=".\locker-test.c"
+				>
+			</File>
+			<File
 				RelativePath=".\main.c"
 				>
 			</File>
 			<File
 				RelativePath=".\sdp-test.c"
+				>
+			</File>
+			<File
+				RelativePath=".\semaphore-test.c"
+				>
+			</File>
+			<File
+				RelativePath=".\spinlock-test.c"
 				>
 			</File>
 			<File
