@@ -1,7 +1,9 @@
 #ifndef _platform_sync_hpp_
 #define _platform_sync_hpp_
 
-#include "sync.h"
+#include "locker.h"
+#include "event.h"
+#include "semaphore.h"
 #include <stdio.h>
 
 //////////////////////////////////////////////////////////////////////////
