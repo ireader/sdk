@@ -17,6 +17,9 @@ typedef WSABUF	socket_bufvec_t;
 #pragma warning(disable: 4127)
 #endif
 
+#define SHUT_RD SD_RECEIVE
+#define SHUT_WR SD_SEND
+#define SHUT_RDWR SD_BOTH
 #else
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -62,6 +65,7 @@ inline socket_t socket_tcp(void);
 inline socket_t socket_udp(void);
 inline socket_t socket_raw(void);
 inline socket_t socket_rdm(void);
+inline int socket_shutdown(socket_t sock, int flag); // SHUT_RD/SHUT_WR/SHUT_RDWR
 inline int socket_close(socket_t sock);
 
 inline int socket_connect(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
@@ -116,7 +120,7 @@ inline int socket_setrecvbuf(IN socket_t sock, IN size_t size); // recv buf
 inline int socket_getrecvbuf(IN socket_t sock, OUT size_t* size);
 inline int socket_setsendtimeout(IN socket_t sock, IN size_t seconds); // send timeout
 inline int socket_getsendtimeout(IN socket_t sock, OUT size_t* seconds);
-inline int socket_setrecvtimeout(IN socket_t sock, IN size_t* seconds); // recv timeout
+inline int socket_setrecvtimeout(IN socket_t sock, IN size_t seconds); // recv timeout
 inline int socket_getrecvtimeout(IN socket_t sock, OUT size_t* seconds);
 inline int socket_setreuseaddr(IN socket_t sock, IN int enable); // reuse addr. 
 inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable);
@@ -212,6 +216,11 @@ inline socket_t socket_rdm(void)
 #else
 	return socket(PF_INET, SOCK_RDM, 0);
 #endif
+}
+
+inline int socket_shutdown(socket_t sock, int flag)
+{
+	return shutdown(sock, flag);
 }
 
 inline int socket_close(socket_t sock)
@@ -673,13 +682,13 @@ inline int socket_getsendtimeout(IN socket_t sock, OUT size_t* seconds)
 #endif
 }
 
-inline int socket_setrecvtimeout(IN socket_t sock, IN size_t* seconds)
+inline int socket_setrecvtimeout(IN socket_t sock, IN size_t seconds)
 {
 #if defined(OS_WINDOWS)
 	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&seconds, sizeof(seconds));
 #else
 	struct timeval tv;
-	tv.tv_sec = *seconds;
+	tv.tv_sec = seconds;
 	tv.tv_usec = 0;
 	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 #endif
