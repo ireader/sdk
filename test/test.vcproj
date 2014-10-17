@@ -173,6 +173,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\aio-socket-test.c"
+				>
+			</File>
+			<File
 				RelativePath=".\atomic-test.c"
 				>
 			</File>
@@ -232,6 +236,10 @@
 		<Filter
 			Name="lib"
 			>
+			<File
+				RelativePath="..\source\aio-socket-iocp.c"
+				>
+			</File>
 			<File
 				RelativePath="..\..\media-server\librtsp\source\sdp.c"
 				>

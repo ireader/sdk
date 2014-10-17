@@ -1,7 +1,6 @@
 #if defined(_DEBUG) || defined(DEBUG)
 #include "cstringext.h"
 #include "sys/sock.h"
-#include "sys/sync.h"
 #include "sys/system.h"
 #include "sys/process.h"
 #include "aio-socket.h"

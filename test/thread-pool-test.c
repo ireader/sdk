@@ -1,6 +1,5 @@
 #include "thread-pool.h"
 #include "cstringext.h"
-#include "sys/sync.h"
 #include "sys/system.h"
 #include <stdlib.h>
 #include <assert.h>

@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <assert.h>
+#include "sys/atomic.h"
+#include "sys/spinlock.h"
 
 //#define MAX_EVENT 64
 
@@ -21,6 +23,15 @@
 // between the time select() returned and the I/O operations was performed). 
 // On Linux (and some other systems), closing the file descriptor in another thread has no effect on select(). 
 // In summary, any application that relies on a particular behavior in this scenario must be considered buggy. 
+
+// aio_socket_process(socket)
+// 1. socket_setrecvtimeout(socket, xxx) failed, don't callback
+// 2. socket_shutdown(socket, SHUT_WR) OK, call write callback (EPOLLOUT)
+// 3. socket_shutdown(socket, SHUT_RD) OK, call read callback (EPOLLHUP|EPOLLIN)
+// 4. socket_close(socket) failed, don't callback
+
+// SIGPIPE
+// 1. send after shutdown(SHUT_WR)
 
 static int s_epoll = -1;
 static int s_threads = 0;
@@ -90,11 +101,11 @@ struct epoll_context_recvfrom_v
 
 struct epoll_context
 {
+	spinlock_t locker; // memory alignment, see more about Apple Developer spinlock
 	struct epoll_event ev;
 	socket_t socket;
+	volatile int32_t ref;
 	int own;
-	//int ref;
-	//int closed;
 
 	int (*read)(struct epoll_context *ctx, int flags, int code);
 	int (*write)(struct epoll_context *ctx, int flags, int code);
@@ -116,6 +127,40 @@ struct epoll_context
 	} out;
 };
 
+#define EPollIn(ctx, callback)   do {\
+	ctx->read = callback;   \
+	atomic_increment32(&ctx->ref);	\
+	spinlock_lock(&ctx->locker); ctx->ev.events |= EPOLLIN; spinlock_unlock(&ctx->locker); \
+	if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))    \
+		return 0;   \
+	spinlock_lock(&ctx->locker); ctx->ev.events &= EPOLLIN; spinlock_unlock(&ctx->locker); \
+	atomic_decrement32(&ctx->ref);	\
+} while(0)
+
+#define EPollOut(ctx, callback)  do {\
+	ctx->write = callback;         \
+	atomic_increment32(&ctx->ref);	\
+	spinlock_lock(&ctx->locker); ctx->ev.events |= EPOLLOUT; spinlock_unlock(&ctx->locker); \
+	if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))  \
+		return 0;   \
+	spinlock_lock(&ctx->locker); ctx->ev.events &= EPOLLOUT; spinlock_unlock(&ctx->locker); \
+	atomic_decrement32(&ctx->ref);	\
+} while(0)
+
+static int aio_socket_release(struct epoll_context* ctx)
+{
+	if( 0 == atomic_decrement32(&ctx->ref) )
+	{
+		spinlock_destroy(&ctx->locker);
+
+#if defined(DEBUG) || defined(_DEBUG)
+		memset(ctx, 0xCC, sizeof(*ctx));
+#endif
+		free(ctx);
+	}
+	return 0;
+}
+
 int aio_socket_init(int threads)
 {
 	s_threads = threads;
@@ -133,6 +178,7 @@ int aio_socket_clean(void)
 int aio_socket_process(int timeout)
 {
 	int i, r;
+	uint32_t userevent;
 	struct epoll_context* ctx;
 	struct epoll_event events[1];
 
@@ -143,36 +189,58 @@ int aio_socket_process(int timeout)
 		ctx = (struct epoll_context*)events[i].data.ptr;
 		if(events[i].events & (EPOLLERR|EPOLLHUP))
 		{
+			// save event
+			// 1. thread-1 current ctx->ev.events = EPOLLIN
+			// 2. thread-2 user call aio_socket_send() set ctx->ev.events to EPOLLIN|EPOLLOUT
+			// 3. switch thread-1 call ctx->write and decrement ctx->ref
+			// 4. switch thread-2 aio_socket_send() epoll_ctl failed, then user set ctx->ev.events to EPOLLIN 
+			// 5. thread-2 redo decrement ctx->ref (decrement twice, crash)
+			spinlock_lock(&ctx->locker);
+			userevent = ctx->ev.events;
+			spinlock_unlock(&ctx->locker);
+
 			// error
-			if(EPOLLIN & ctx->ev.events)
+			if(EPOLLIN & userevent)
 			{
 				assert(ctx->read);
 				ctx->read(ctx, 1, -1);
+				aio_socket_release(ctx);
 			}
 
-			if(EPOLLOUT & ctx->ev.events)
+			if(EPOLLOUT & userevent)
 			{
 				assert(ctx->write);
 				ctx->write(ctx, 1, -1);
+				aio_socket_release(ctx);
 			}
 		}
 		else
 		{
 			// clear IN/OUT event
+			spinlock_lock(&ctx->locker);
 			assert(events[i].events == (events[i].events & ctx->ev.events));
 			ctx->ev.events &= ~(events[i].events & (EPOLLIN|EPOLLOUT));
+			spinlock_unlock(&ctx->locker);
 			epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev);
+
+			if(EPOLLRDHUP & events[i].events)
+			{
+				// closed
+				assert(EPOLLIN & events[i].events);
+			}
 
 			if(EPOLLIN & events[i].events)
 			{
 				assert(ctx->read);
 				ctx->read(ctx, 1, 0);
+				aio_socket_release(ctx);
 			}
 
 			if(EPOLLOUT & events[i].events)
 			{
 				assert(ctx->write);
 				ctx->write(ctx, 1, 0);
+				aio_socket_release(ctx);
 			}
 		}
 	}
@@ -189,9 +257,11 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 		return NULL;
 
 	memset(ctx, 0, sizeof(struct epoll_context));
+	spinlock_create(&ctx->locker);
 	ctx->own = own;
+	ctx->ref = 1;
 	ctx->socket = socket;
-	ctx->ev.events = EPOLLET; // Edge Triggered, for multi-thread epoll_wait(see more at epoll-wait-multithread.c)
+	ctx->ev.events = EPOLLET|EPOLLRDHUP; // Edge Triggered, for multi-thread epoll_wait(see more at epoll-wait-multithread.c)
 	ctx->ev.data.ptr = ctx;
 
 	if(0 != epoll_ctl(s_epoll, EPOLL_CTL_ADD, socket, &ctx->ev))
@@ -214,14 +284,19 @@ int aio_socket_destroy(aio_socket_t socket)
 
 	if(0 != epoll_ctl(s_epoll, EPOLL_CTL_DEL, ctx->socket, &ctx->ev))
 	{
-		assert(0);
-		return errno;
+		assert(EBADF == errno); // EBADF: socket close by user
+//		return errno;
 	}
 
-	if(ctx->own)
+	if(ctx->own && EBADF != errno)
+	{
+		shutdown(ctx->socket, SHUT_RDWR);
 		close(ctx->socket);
+	}
+
 	ctx->socket = -1;
-	free(ctx);
+
+	aio_socket_release(ctx);
 	return 0;
 }
 
@@ -269,12 +344,8 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 
 	if(EAGAIN == epoll_accept(ctx, 0, 0))
 	{
-		ctx->read = epoll_accept;
-		ctx->ev.events |= EPOLLIN; // man 2 accept to see more
-		if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))
-			return 0;
-
-		ctx->ev.events &= ~EPOLLIN;
+		// man 2 accept to see more
+		EPollIn(ctx, epoll_accept);
 	}
 
 	return errno;
@@ -326,12 +397,8 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
 
 	if(EINPROGRESS == epoll_connect(ctx, 0, 0))
 	{
-		ctx->write = epoll_connect;
-		ctx->ev.events |= EPOLLOUT; // man 2 connect to see more(ERRORS: EINPROGRESS)
-		if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))
-			return 0;
-
-		ctx->ev.events &= ~EPOLLOUT;
+		// man 2 connect to see more(ERRORS: EINPROGRESS)
+		EPollOut(ctx, epoll_connect);
 	}
 
 	return errno;
@@ -376,12 +443,7 @@ int aio_socket_recv(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv 
 
 	if(EAGAIN == epoll_recv(ctx, 0, 0))
 	{
-		ctx->read = epoll_recv;
-		ctx->ev.events |= EPOLLIN;
-		if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))
-			return 0;
-
-		ctx->ev.events &= ~EPOLLIN;
+		EPollIn(ctx, epoll_recv);
 	}
 
 	return errno;
@@ -426,12 +488,7 @@ int aio_socket_send(aio_socket_t socket, const void* buffer, size_t bytes, aio_o
 
 	if(EAGAIN == epoll_send(ctx, 0, 0))
 	{
-		ctx->write = epoll_send;
-		ctx->ev.events |= EPOLLOUT;
-		if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))
-			return 0;
-
-		ctx->ev.events &= ~EPOLLOUT;
+		EPollOut(ctx, epoll_send);
 	}
 
 	return errno;
@@ -482,12 +539,7 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 
 	if(EAGAIN == epoll_recv_v(ctx, 0, 0))
 	{
-		ctx->read = epoll_recv_v;
-		ctx->ev.events |= EPOLLIN;
-		if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))
-			return 0;
-
-		ctx->ev.events &= ~EPOLLIN;
+		EPollIn(ctx, epoll_recv_v);
 	}
 
 	return errno;
@@ -538,12 +590,7 @@ int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onse
 
 	if(EAGAIN == epoll_send_v(ctx, 0, 0))
 	{
-		ctx->write = epoll_send_v;
-		ctx->ev.events |= EPOLLOUT;
-		if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))
-			return 0;
-
-		ctx->ev.events &= ~EPOLLOUT;
+		EPollOut(ctx, epoll_send_v);
 	}
 
 	return errno;
@@ -594,12 +641,7 @@ int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onr
 
 	if(EAGAIN == epoll_recvfrom(ctx, 0, 0))
 	{
-		ctx->read = epoll_recvfrom;
-		ctx->ev.events |= EPOLLIN;
-		if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))
-			return 0;
-
-		ctx->ev.events &= ~EPOLLIN;
+		EPollIn(ctx, epoll_recvfrom);
 	}
 
 	return errno;
@@ -647,12 +689,7 @@ int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void*
 
 	if(EAGAIN == epoll_sendto(ctx, 0, 0))
 	{
-		ctx->write = epoll_sendto;
-		ctx->ev.events |= EPOLLOUT;
-		if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))
-			return 0;
-
-		ctx->ev.events &= ~EPOLLOUT;
+		EPollOut(ctx, epoll_sendto);
 	}
 
 	return errno;
@@ -709,12 +746,7 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 
 	if(EAGAIN == epoll_recvfrom_v(ctx, 0, 0))
 	{
-		ctx->read = epoll_recvfrom_v;
-		ctx->ev.events |= EPOLLIN;
-		if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))
-			return 0;
-
-		ctx->ev.events &= ~EPOLLIN;
+		EPollIn(ctx, epoll_recvfrom_v);
 	}
 
 	return errno;
@@ -770,12 +802,7 @@ int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bu
 
 	if(EAGAIN == epoll_sendto_v(ctx, 0, 0))
 	{
-		ctx->write = epoll_sendto_v;
-		ctx->ev.events |= EPOLLOUT;
-		if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))
-			return 0;
-
-		ctx->ev.events &= ~EPOLLOUT;
+		EPollOut(ctx, epoll_sendto_v);
 	}
 
 	return errno;

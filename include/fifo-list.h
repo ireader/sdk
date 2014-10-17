@@ -5,8 +5,9 @@
 // REF:
 // 1. http://en.wikipedia.org/wiki/ABA_problem
 // 2. http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.53.8674&rep=rep1&type=pdf
+// 3. http://coolshell.cn/articles/8239.html
 
-#include "sys/sync.h"
+#include "sys/atomic.h"
 #include <assert.h>
 
 struct fifo_node
@@ -36,10 +37,10 @@ inline void fifo_list_push(struct fifo_list *list, struct fifo_node* node)
 	{
 		// TODO: fixed ABA problem
 		tail = list->tail;
-	} while(!atomic_cas((long*)&tail->next, (long)NULL, (long)node));
+	} while(!atomic_cas_ptr(&tail->next, NULL, node));
 
 	assert(list->tail == tail);
-	atomic_cas((long*)&list->tail, (long)tail, (long)node);
+	atomic_cas_ptr(&list->tail, tail, node);
 }
 
 // Warning: only one thread can do pop action
@@ -56,7 +57,7 @@ inline struct fifo_node* fifo_list_pop(struct fifo_list *list)
 
 		// For simplicity, suppose that we can ensure that this dereference is safe
 		// (i.e., that no other thread has popped the stack in the meantime).
-	} while(!atomic_cas((long*)&list->head.next, (long)node, (long)node->next));
+	} while(!atomic_cas_ptr(&list->head.next, node, node->next));
 
 	return node;
 }
@@ -68,7 +69,7 @@ inline struct fifo_node* fifo_list_head(struct fifo_list *list)
 
 inline int fifo_list_empty(struct fifo_list *list)
 {
-	return atomic_cas((long*)&list->head.next, (long)NULL, (long)NULL) ? 1 : 0;
+	return atomic_cas_ptr(&list->head.next, NULL, NULL) ? 1 : 0;
 }
 
 inline int fifo_list_clear(struct fifo_list *list)
@@ -78,7 +79,7 @@ inline int fifo_list_clear(struct fifo_list *list)
 	do 
 	{
 		node = list->head.next;
-	} while (!atomic_cas((long*)&list->head.next, (long)node, (long)NULL));
+	} while (!atomic_cas_ptr(&list->head.next, node, NULL));
 
 	return 0;
 }

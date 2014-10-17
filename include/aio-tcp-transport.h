@@ -26,6 +26,8 @@ int aio_tcp_transport_destroy(void* transport);
 int aio_tcp_transport_send(void* session, const void* msg, size_t bytes);
 int aio_tcp_transport_sendv(void* session, socket_bufvec_t *vec, int n);
 
+int aio_tcp_transport_disconnect(void* session);
+
 int aio_tcp_transport_addref(void* session);
 int aio_tcp_transport_release(void* session);
 

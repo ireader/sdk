@@ -1,6 +1,12 @@
 #include "aio-socket.h"
 #include <assert.h>
 
+// aio_socket_process(socket)
+// 1. socket_setrecvtimeout(socket, xxx) failed, don't callback
+// 2. socket_shutdown(SD_SEND) failed, don't callback
+// 3. socket_shutdown(SD_RECEIVE) failed, don't callback
+// 4. socket_close ok, callback read and write
+
 typedef BOOL (PASCAL FAR * FAcceptEx)(SOCKET, SOCKET, PVOID, DWORD, DWORD, DWORD, LPDWORD, LPOVERLAPPED);
 typedef VOID (PASCAL FAR * FGetAcceptExSockaddrs)(PVOID, DWORD, DWORD, DWORD, struct sockaddr **, LPINT, struct sockaddr **, LPINT);
 typedef BOOL (PASCAL FAR * FConnectEx)(SOCKET, const struct sockaddr *, int, PVOID, DWORD, LPDWORD, LPOVERLAPPED);
@@ -20,8 +26,8 @@ static FDisconnectEx DisconnectEx;
 
 struct aio_context
 {
-	LONG ref;
-	LONG closed;
+	volatile LONG ref;
+	volatile LONG closed;
 	int own;
 	SOCKET socket;
 };
@@ -83,7 +89,7 @@ struct aio_context_action
 static int s_cpu = 0; // cpu count
 static HANDLE s_iocp = 0;
 static CRITICAL_SECTION s_locker;
-static struct aio_context_action *s_actions = NULL;
+static struct aio_context_action *s_actions = NULL; // TODO: lock-free queue
 static int s_actions_count = 0;
 
 static int iocp_init()
@@ -123,7 +129,11 @@ static int iocp_create(int threads)
 	if(NULL == s_iocp)
 		return GetLastError();
 
+#if (_WIN32_WINNT >= 0x0403)
+	InitializeCriticalSectionAndSpinCount(&s_locker, 0x00000400); // spin-lock
+#else
 	InitializeCriticalSection(&s_locker);
+#endif
 	return 0;
 }
 
@@ -232,6 +242,7 @@ static struct aio_context_action* util_alloc(struct aio_context *ctx)
 {
 	struct aio_context_action* aio = NULL;
 
+	// lock-free dequeue
 	EnterCriticalSection(&s_locker);
 	if(s_actions)
 	{
@@ -260,9 +271,13 @@ static void util_free(struct aio_context_action* aio)
 	if(0 == InterlockedDecrement(&aio->context->ref))
 	{
 		assert(1 == aio->context->closed);
+#if defined(DEBUG) || defined(_DEBUG)
+		memset(aio->context, 0xCC, sizeof(*aio->context));
+#endif
 		free(aio->context);
 	}
 
+	// lock-free enqueue
 	EnterCriticalSection(&s_locker);
 	if(s_actions_count < s_cpu+1)
 	{
@@ -282,7 +297,7 @@ __forceinline int iocp_check_closed(struct aio_context_action* aio)
 	LONG r = InterlockedCompareExchange(&aio->context->closed, 1, 1);
 
 	if(0 != r && aio->action == iocp_accept)
-		closesocket(aio->accept.socket); // close socket
+		closesocket(aio->accept.socket); // close socket(create in aio_socket_accept)
 
 	return r;
 }
@@ -326,7 +341,7 @@ int aio_socket_process(int timeout)
 		ctx = (struct aio_context*)completionKey;
 		aio = (struct aio_context_action*)pOverlapped;
 
-		if(0 == iocp_check_closed(aio))
+//		if(0 == iocp_check_closed(aio))
 			aio->action(ctx, aio, 0, bytes);
 		util_free(aio);
 	}
@@ -351,12 +366,12 @@ int aio_socket_process(int timeout)
 			assert(completionKey);
 			ctx = (struct aio_context*)completionKey;
 			aio = (struct aio_context_action*)pOverlapped;
-			if(0 == iocp_check_closed(aio))
+//			if(0 == iocp_check_closed(aio))
 				aio->action(ctx, aio, err, bytes);
 			util_free(aio);
 		}
 	}
-	return 0;
+	return 1;
 }
 
 aio_socket_t aio_socket_create(socket_t socket, int own)
@@ -390,7 +405,12 @@ int aio_socket_destroy(aio_socket_t socket)
 		closesocket(ctx->socket);
 
 	if(0 == InterlockedDecrement(&ctx->ref))
+	{
+#if defined(DEBUG) || defined(_DEBUG)
+		memset(ctx, 0xCC, sizeof(*ctx));
+#endif
 		free(ctx);
+	}
 	return 0;
 }
 
