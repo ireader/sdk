@@ -1,6 +1,8 @@
 #ifndef _url_h_
 #define _url_h_
 
+#include <stdlib.h>
+
 #ifdef  __cplusplus
 extern "C" {
 #endif
@@ -16,8 +18,8 @@ void* url_parse(const char* url);
 
 void url_free(void* id);
 
-int url_geturl(void* id, char* url, int len);
-int url_geturlpath(void* id, char* url, int len);
+int url_geturl(void* id, char* url, size_t len);
+int url_geturlpath(void* id, char* url, size_t len);
 
 int url_sethost(void* id, const char* host);
 const char* url_gethost(void* id);

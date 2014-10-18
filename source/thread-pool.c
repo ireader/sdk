@@ -11,7 +11,7 @@ typedef struct _thread_list_t
 {
 	struct _thread_list_t *next;
 	struct _thread_pool_context_t *pool;
-	thread_t thread;
+	pthread_t thread;
 } thread_list_t;
 
 typedef struct _thread_task_list_t

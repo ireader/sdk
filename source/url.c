@@ -84,7 +84,7 @@ void url_free(void* id)
 	FREE(uri);
 }
 
-static int url_parse_host(const char* url, int len, url_t* uri)
+static int url_parse_host(const char* url, size_t len, url_t* uri)
 {
 	const char* p;
 	p = strchr(url, ':');
@@ -102,7 +102,7 @@ static int url_parse_host(const char* url, int len, url_t* uri)
 
 void* url_parse(const char* url)
 {
-	int len;
+	size_t len;
 	url_t* uri;
 	const char *p;
 
@@ -163,16 +163,16 @@ void* url_parse(const char* url)
 	return uri;
 }
 
-int url_geturl(void* id, char* url, int len)
+int url_geturl(void* id, char* url, size_t len)
 {
-	int n;
+	size_t n;
 	url_t* uri = (url_t*)id;
 	if(!uri || !url || !uri->host)
 		return -1;
 
 	n = STRLEN(uri->scheme) + STRLEN(uri->host) + STRLEN(uri->path) + 8;
 	if(len < n)
-		return len;
+		return n;
 
 	if(uri->scheme)
 	{
@@ -190,12 +190,11 @@ int url_geturl(void* id, char* url, int len)
 	return url_geturlpath(id, url+n, len-n);
 }
 
-int url_geturlpath(void* id, char* url, int len)
+int url_geturlpath(void* id, char* url, size_t len)
 {
 	int i;
 	char buffer[MAX_PATH];
 
-	int n;
 	url_t* uri = (url_t*)id;
 
 	if(uri->path)
