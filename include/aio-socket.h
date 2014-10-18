@@ -1,7 +1,12 @@
 #ifndef _aio_socket_h_
 #define _aio_socket_h_
 
-#if defined(OS_LINUX)
+#if defined(OS_WINDOWS)
+#include <WinSock2.h>
+
+typedef SOCKET socket_t;
+typedef WSABUF socket_bufvec_t;
+#else
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -12,11 +17,6 @@
 
 typedef int socket_t;
 typedef struct iovec socket_bufvec_t;
-#else
-#include <WinSock2.h>
-
-typedef SOCKET socket_t;
-typedef WSABUF socket_bufvec_t;
 #endif
 
 #ifdef __cplusplus

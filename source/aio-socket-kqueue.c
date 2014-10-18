@@ -288,7 +288,7 @@ static int kqueue_accept(struct kqueue_context* ctx, int flags, int error)
 
 int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 {
-    int r;
+    int r = -1;
     struct kqueue_context* ctx = (struct kqueue_context*)socket;
 	assert(0 == ctx->ev[0].filter);
 	if(ctx->ev[0].filter)
@@ -297,8 +297,8 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 	ctx->in.accept.proc = proc;
 	ctx->in.accept.param = param;
 
-    r = kqueue_accept(ctx, 0, 0);
-	if(EAGAIN == r)
+//    r = kqueue_accept(ctx, 0, 0);
+//	if(EAGAIN == r)
 	{
         KQueueRead(ctx, kqueue_accept);
 	}
@@ -308,7 +308,7 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 
 static int kqueue_connect(struct kqueue_context* ctx, int flags, int error)
 {
-	int r;
+	int r = 0;
 	int addrlen = sizeof(ctx->out.connect.addr);
 
 	if(0 != error)
@@ -339,7 +339,7 @@ static int kqueue_connect(struct kqueue_context* ctx, int flags, int error)
 
 int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconnect proc, void* param)
 {
-    int r;
+    int r = -1;
     struct kqueue_context* ctx = (struct kqueue_context*)socket;
     assert(0 == ctx->ev[1].filter);
     if(ctx->ev[1].filter)
@@ -351,8 +351,8 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
 	ctx->out.connect.proc = proc;
 	ctx->out.connect.param = param;
 
-    r = kqueue_connect(ctx, 0, 0);
-	if(EINPROGRESS == r)
+//    r = kqueue_connect(ctx, 0, 0);
+//	if(EINPROGRESS == r)
 	{
 		KQueueWrite(ctx, kqueue_connect);
 	}
@@ -362,7 +362,7 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
 
 static int kqueue_recv(struct kqueue_context* ctx, int flags, int error)
 {
-	ssize_t r;
+	ssize_t r = 0;
 	if(0 != error)
 	{
 		ctx->in.recv.proc(ctx->in.recv.param, error, 0);
@@ -387,7 +387,7 @@ static int kqueue_recv(struct kqueue_context* ctx, int flags, int error)
 
 int aio_socket_recv(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv proc, void* param)
 {
-    int r;
+    int r = -1;
     struct kqueue_context* ctx = (struct kqueue_context*)socket;
     assert(0 == ctx->ev[0].filter);
     if(ctx->ev[0].filter)
@@ -398,8 +398,8 @@ int aio_socket_recv(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv 
 	ctx->in.recv.buffer = buffer;
 	ctx->in.recv.bytes = bytes;
 
-    r = kqueue_recv(ctx, 0, 0);
-	if(EAGAIN == r)
+//    r = kqueue_recv(ctx, 0, 0);
+//	if(EAGAIN == r)
 	{
 		KQueueRead(ctx, kqueue_recv);
 	}
@@ -409,7 +409,7 @@ int aio_socket_recv(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv 
 
 static int kqueue_send(struct kqueue_context* ctx, int flags, int error)
 {
-	ssize_t r;
+	ssize_t r = 0;
 	if(0 != error)
 	{
 		ctx->out.send.proc(ctx->out.send.param, error, 0);
@@ -434,7 +434,7 @@ static int kqueue_send(struct kqueue_context* ctx, int flags, int error)
 
 int aio_socket_send(aio_socket_t socket, const void* buffer, size_t bytes, aio_onsend proc, void* param)
 {
-    int r;
+    int r = -1;
     struct kqueue_context* ctx = (struct kqueue_context*)socket;
     assert(0 == ctx->ev[1].filter);
     if(ctx->ev[1].filter)
@@ -445,8 +445,8 @@ int aio_socket_send(aio_socket_t socket, const void* buffer, size_t bytes, aio_o
 	ctx->out.send.buffer = buffer;
 	ctx->out.send.bytes = bytes;
 
-    r = kqueue_send(ctx, 0, 0);
-	if(EAGAIN == r)
+//    r = kqueue_send(ctx, 0, 0);
+//	if(EAGAIN == r)
 	{
         KQueueWrite(ctx, kqueue_send);
 	}
@@ -456,7 +456,7 @@ int aio_socket_send(aio_socket_t socket, const void* buffer, size_t bytes, aio_o
 
 static int kqueue_recv_v(struct kqueue_context* ctx, int flags, int error)
 {
-	ssize_t r;
+	ssize_t r = 0;
 	struct msghdr msg;
 
 	if(0 != error)
@@ -487,7 +487,7 @@ static int kqueue_recv_v(struct kqueue_context* ctx, int flags, int error)
 
 int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecv proc, void* param)
 {
-    int r;
+    int r = -1;
     struct kqueue_context* ctx = (struct kqueue_context*)socket;
     assert(0 == ctx->ev[0].filter);
     if(ctx->ev[0].filter)
@@ -498,8 +498,8 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 	ctx->in.recv_v.vec = vec;
 	ctx->in.recv_v.n = n;
 
-    r = kqueue_recv_v(ctx, 0, 0);
-	if(EAGAIN == r)
+//    r = kqueue_recv_v(ctx, 0, 0);
+//	if(EAGAIN == r)
 	{
         KQueueRead(ctx, kqueue_recv_v);
 	}
@@ -509,7 +509,7 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 
 static int kqueue_send_v(struct kqueue_context* ctx, int flags, int error)
 {
-	ssize_t r;
+	ssize_t r = 0;
 	struct msghdr msg;
 
     if(0 != error)
@@ -540,7 +540,7 @@ static int kqueue_send_v(struct kqueue_context* ctx, int flags, int error)
 
 int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
 {
-    int r;
+    int r = -1;
     struct kqueue_context* ctx = (struct kqueue_context*)socket;
     assert(0 == ctx->ev[1].filter);
     if(ctx->ev[1].filter)
@@ -551,8 +551,8 @@ int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onse
 	ctx->out.send_v.vec = vec;
 	ctx->out.send_v.n = n;
 
-    r = kqueue_send_v(ctx, 0, 0);
-	if(EAGAIN == r)
+//    r = kqueue_send_v(ctx, 0, 0);
+//	if(EAGAIN == r)
 	{
         KQueueWrite(ctx, kqueue_send_v);
 	}
@@ -562,7 +562,7 @@ int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onse
 
 static int kqueue_recvfrom(struct kqueue_context* ctx, int flags, int error)
 {
-	ssize_t r;
+	ssize_t r = 0;
 	char ip[16] = {0};
 	struct sockaddr_in addr;
 	socklen_t addrlen = sizeof(addr);
@@ -593,7 +593,7 @@ static int kqueue_recvfrom(struct kqueue_context* ctx, int flags, int error)
 
 int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecvfrom proc, void* param)
 {
-    int r;
+    int r = -1;
     struct kqueue_context* ctx = (struct kqueue_context*)socket;
     assert(0 == ctx->ev[0].filter);
     if(ctx->ev[0].filter)
@@ -604,8 +604,8 @@ int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onr
 	ctx->in.recvfrom.buffer = buffer;
 	ctx->in.recvfrom.bytes = bytes;
 
-    r = kqueue_recvfrom(ctx, 0, 0);
-	if(EAGAIN == r)
+//    r = kqueue_recvfrom(ctx, 0, 0);
+//	if(EAGAIN == r)
 	{
         KQueueRead(ctx, kqueue_recvfrom);
 	}
@@ -615,7 +615,7 @@ int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onr
 
 static int kqueue_sendto(struct kqueue_context* ctx, int flags, int error)
 {
-	ssize_t r;
+	ssize_t r = 0;
 	if(0 != error)
 	{
 		ctx->out.send.proc(ctx->out.send.param, error, 0);
@@ -640,7 +640,7 @@ static int kqueue_sendto(struct kqueue_context* ctx, int flags, int error)
 
 int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void* buffer, size_t bytes, aio_onsend proc, void* param)
 {
-    int r;
+    int r = -1;
     struct kqueue_context* ctx = (struct kqueue_context*)socket;
     assert(0 == ctx->ev[1].filter);
     if(ctx->ev[1].filter)
@@ -654,8 +654,8 @@ int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void*
 	ctx->out.send.buffer = buffer;
 	ctx->out.send.bytes = bytes;
 
-    r = kqueue_sendto(ctx, 0, 0);
-	if(EAGAIN == r)
+//    r = kqueue_sendto(ctx, 0, 0);
+//	if(EAGAIN == r)
 	{
         KQueueWrite(ctx, kqueue_sendto);
 	}
@@ -702,7 +702,7 @@ static int kqueue_recvfrom_v(struct kqueue_context* ctx, int flags, int error)
 
 int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param)
 {
-    int r;
+    int r = -1;
     struct kqueue_context* ctx = (struct kqueue_context*)socket;
     assert(0 == ctx->ev[0].filter);
     if(ctx->ev[0].filter)
@@ -713,8 +713,8 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 	ctx->in.recvfrom_v.vec = vec;
 	ctx->in.recvfrom_v.n = n;
 
-    r = kqueue_recvfrom_v(ctx, 0, 0);
-	if(EAGAIN == r)
+//    r = kqueue_recvfrom_v(ctx, 0, 0);
+//	if(EAGAIN == r)
 	{
         KQueueRead(ctx, kqueue_recvfrom_v);
 	}
@@ -724,7 +724,7 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 
 static int kqueue_sendto_v(struct kqueue_context* ctx, int flags, int error)
 {
-	ssize_t r;
+	ssize_t r = 0;
 	struct msghdr msg;
 
 	if(0 != error)
@@ -757,7 +757,7 @@ static int kqueue_sendto_v(struct kqueue_context* ctx, int flags, int error)
 
 int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
 {
-    int r;
+    int r = -1;
 	struct kqueue_context* ctx = (struct kqueue_context*)socket;
 	assert(0 == ctx->ev[1].filter);
 	if(ctx->ev[1].filter)
@@ -771,8 +771,8 @@ int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bu
 	ctx->out.send_v.vec = vec;
 	ctx->out.send_v.n = n;
 
-    r = kqueue_sendto_v(ctx, 0, 0);
-	if(EAGAIN == r)
+//    r = kqueue_sendto_v(ctx, 0, 0);
+//	if(EAGAIN == r)
 	{
         KQueueWrite(ctx, kqueue_sendto_v);
 	}

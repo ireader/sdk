@@ -342,7 +342,7 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 	ctx->in.accept.proc = proc;
 	ctx->in.accept.param = param;
 
-	if(EAGAIN == epoll_accept(ctx, 0, 0))
+//	if(EAGAIN == epoll_accept(ctx, 0, 0))
 	{
 		// man 2 accept to see more
 		EPollIn(ctx, epoll_accept);
@@ -395,7 +395,7 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
 	ctx->out.connect.proc = proc;
 	ctx->out.connect.param = param;
 
-	if(EINPROGRESS == epoll_connect(ctx, 0, 0))
+//	if(EINPROGRESS == epoll_connect(ctx, 0, 0))
 	{
 		// man 2 connect to see more(ERRORS: EINPROGRESS)
 		EPollOut(ctx, epoll_connect);
@@ -441,7 +441,7 @@ int aio_socket_recv(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv 
 	ctx->in.recv.buffer = buffer;
 	ctx->in.recv.bytes = bytes;
 
-	if(EAGAIN == epoll_recv(ctx, 0, 0))
+//	if(EAGAIN == epoll_recv(ctx, 0, 0))
 	{
 		EPollIn(ctx, epoll_recv);
 	}
@@ -486,7 +486,7 @@ int aio_socket_send(aio_socket_t socket, const void* buffer, size_t bytes, aio_o
 	ctx->out.send.buffer = buffer;
 	ctx->out.send.bytes = bytes;
 
-	if(EAGAIN == epoll_send(ctx, 0, 0))
+//	if(EAGAIN == epoll_send(ctx, 0, 0))
 	{
 		EPollOut(ctx, epoll_send);
 	}
@@ -537,7 +537,7 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 	ctx->in.recv_v.vec = vec;
 	ctx->in.recv_v.n = n;
 
-	if(EAGAIN == epoll_recv_v(ctx, 0, 0))
+//	if(EAGAIN == epoll_recv_v(ctx, 0, 0))
 	{
 		EPollIn(ctx, epoll_recv_v);
 	}
@@ -588,7 +588,7 @@ int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onse
 	ctx->out.send_v.vec = vec;
 	ctx->out.send_v.n = n;
 
-	if(EAGAIN == epoll_send_v(ctx, 0, 0))
+//	if(EAGAIN == epoll_send_v(ctx, 0, 0))
 	{
 		EPollOut(ctx, epoll_send_v);
 	}
@@ -639,7 +639,7 @@ int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onr
 	ctx->in.recvfrom.buffer = buffer;
 	ctx->in.recvfrom.bytes = bytes;
 
-	if(EAGAIN == epoll_recvfrom(ctx, 0, 0))
+//	if(EAGAIN == epoll_recvfrom(ctx, 0, 0))
 	{
 		EPollIn(ctx, epoll_recvfrom);
 	}
@@ -687,7 +687,7 @@ int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void*
 	ctx->out.send.buffer = buffer;
 	ctx->out.send.bytes = bytes;
 
-	if(EAGAIN == epoll_sendto(ctx, 0, 0))
+//	if(EAGAIN == epoll_sendto(ctx, 0, 0))
 	{
 		EPollOut(ctx, epoll_sendto);
 	}
@@ -744,7 +744,7 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 	ctx->in.recvfrom_v.vec = vec;
 	ctx->in.recvfrom_v.n = n;
 
-	if(EAGAIN == epoll_recvfrom_v(ctx, 0, 0))
+//	if(EAGAIN == epoll_recvfrom_v(ctx, 0, 0))
 	{
 		EPollIn(ctx, epoll_recvfrom_v);
 	}
@@ -800,7 +800,7 @@ int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bu
 	ctx->out.send_v.vec = vec;
 	ctx->out.send_v.n = n;
 
-	if(EAGAIN == epoll_sendto_v(ctx, 0, 0))
+//	if(EAGAIN == epoll_sendto_v(ctx, 0, 0))
 	{
 		EPollOut(ctx, epoll_sendto_v);
 	}
