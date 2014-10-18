@@ -5,10 +5,12 @@
 #include <Windows.h>
 
 typedef HMODULE module_t;
+typedef DWORD   useconds_t;
 
 #else
 #include <sys/types.h>
 #include <sys/time.h>
+#include <sys/sysctl.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -21,7 +23,7 @@ typedef void* module_t;
 #include <sys/timeb.h>
 #include <stdio.h>
 
-inline void system_sleep(size_t millisecond);
+inline void system_sleep(useconds_t millisecond);
 
 // Get CPU count
 inline size_t system_getcpucount(void);
@@ -48,7 +50,7 @@ inline void* system_getproc(module_t module, const char* producer);
 /// implement
 ///
 //////////////////////////////////////////////////////////////////////////
-inline void system_sleep(size_t milliseconds)
+inline void system_sleep(useconds_t milliseconds)
 {
 #if defined(OS_WINDOWS)
 	Sleep(milliseconds);

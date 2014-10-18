@@ -6,7 +6,9 @@
 typedef HANDLE	event_t;
 
 #else
+#include <unistd.h>
 #include <pthread.h>
+#include <sys/time.h>
 typedef struct
 {
 	int count; // fixed pthread_cond_signal/pthread_cond_wait call order
