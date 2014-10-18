@@ -23,15 +23,25 @@ static struct http_session_t* http_session_new()
 
 	memset(session, 0, sizeof(session[0]));
 	session->parser = http_parser_create(HTTP_PARSER_SERVER);
+    locker_create(&session->locker);
+    session->ref = 1;
 	return session;
 }
 
-static void http_session_drop(struct http_session_t *session)
+static void http_session_release(struct http_session_t *session)
 {
-	if(session->parser)
-		http_parser_destroy(session->parser);
+    if(0 == atomic_decrement32(&session->ref))
+    {
+        if(session->parser)
+            http_parser_destroy(session->parser);
 
-	free(session);
+        locker_destroy(&session->locker);
+
+    #if defined(DEBUG) || defined(_DEBUG)
+        memset(session, 0xCC, sizeof(*session));
+    #endif
+        free(session);
+    }
 }
 
 // reuse/create a http session
@@ -60,28 +70,34 @@ static void http_session_handle(struct http_session_t *session)
 
 static int http_session_send(struct http_session_t *session, int idx)
 {
-	int r;
+	int r = -1;
 	int i;
-	r = aio_tcp_transport_sendv(session->session, session->vec + idx, session->vec_count-idx);
-	if(0 != r)
-	{
-		// release bundle data
-		for(i = 2; i < session->vec_count; i++)
-		{
-			http_bundle_free((struct http_bundle_t *)session->vec[i].iov_base - 1);
-		}
 
-		// free socket vector
-		if(session->vec3 != session->vec)
-			free(session->vec);
-		session->vec = NULL;
-		session->vec_count = 0;
+    locker_lock(&session->locker);
+    if(session->session)
+    {
+        r = aio_tcp_transport_sendv(session->session, session->vec + idx, session->vec_count-idx);
+    }
+    locker_unlock(&session->locker);
+    
+    if(0 != r)
+    {
+        // release bundle data
+        for(i = 2; i < session->vec_count; i++)
+        {
+            http_bundle_free((struct http_bundle_t *)session->vec[i].iov_base - 1);
+        }
 
-		// drop session
-		//		http_session_drop(session);
-	}
+        // free socket vector
+        if(session->vec3 != session->vec)
+            free(session->vec);
+        session->vec = NULL;
+        session->vec_count = 0;
 
-	return r;
+        locker_unlock(&session->locker);
+        http_session_release(session);
+    }
+    return r;
 }
 
 void http_session_onrecv(void* param, const void* msg, size_t bytes)
@@ -96,6 +112,8 @@ void http_session_onrecv(void* param, const void* msg, size_t bytes)
 	if(0 == http_parser_input(session->parser, msg, &remain))
 	{
 		session->data[0] = '\0'; // clear for save user-defined header
+
+        atomic_increment32(&session->ref); // for http reply
 
 		// call
 		// user must reply(send/send_vec/send_file) in handle
@@ -113,10 +131,10 @@ void http_session_onsend(void* param, int code, size_t bytes)
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
 
-	printf("http_session_onsend code: %d, bytes: %u\n", code, (unsigned int)bytes);
+//	printf("http_session_onsend code: %d, bytes: %u\n", code, (unsigned int)bytes);
 	if(code < 0 || 0 == bytes)
 	{
-//		http_session_drop(session);
+        http_session_release(session);
 	}
 	else
 	{
@@ -158,6 +176,9 @@ void http_session_onsend(void* param, int code, size_t bytes)
 			// restart
 			// clear parser status
 			http_parser_clear(session->parser);
+
+            // session done
+            http_session_release(session);
 		}
 	}
 }
@@ -179,7 +200,10 @@ void http_session_ondisconnected(void* param)
 {
 	struct http_session_t *session;
 	session = (	struct http_session_t *)param;
-	http_session_drop(session);
+    locker_lock(&session->locker);
+    session->session = NULL;
+    locker_unlock(&session->locker);
+	http_session_release(session);
 }
 
 // Request
@@ -247,9 +271,9 @@ int http_server_send_vec(void* param, int code, void** bundles, int num)
 		"Keep-Alive: timeout=5,max=100\r\n"
 		"Content-Length: %u\r\n\r\n", (unsigned int)len);
 	strcat(session->data, msg);
-	sprintf(msg, "HTTP/1.1 %d %s\r\n", code, http_reason_phrase(code));
+	sprintf(session->status_line, "HTTP/1.1 %d %s\r\n", code, http_reason_phrase(code));
 
-	socket_setbufvec(session->vec, 0, msg, strlen(msg));
+	socket_setbufvec(session->vec, 0, session->status_line, strlen(session->status_line));
 	socket_setbufvec(session->vec, 1, session->data, strlen(session->data));
 
 	return http_session_send(session, 0);

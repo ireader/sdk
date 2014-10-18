@@ -1,13 +1,15 @@
 #ifndef _http_header_content_type_h_
 #define _http_header_content_type_h_
 
+#include <stdlib.h>
+
 struct http_header_media_parameter
 {
 	const char* name;
-	int name_len;
+	size_t name_len;
 
 	const char* value;
-	int value_len;
+	size_t value_len;
 };
 
 struct http_header_content_type_t

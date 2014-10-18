@@ -3,7 +3,7 @@
 
 struct http_bundle_t
 {
-	long ref;
+	int32_t ref;
 
 	size_t len;  // used size
 	void* ptr;

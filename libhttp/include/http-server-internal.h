@@ -3,14 +3,19 @@
 
 #include "aio-tcp-transport.h"
 #include "http-server.h"
+#include "sys/atomic.h"
+#include "sys/locker.h"
 
 struct http_session_t
 {
+    int32_t ref;
+    locker_t locker;
 	struct http_server_t *server;
 
 	void* session;
 	void* parser;
 
+    char status_line[64];
 	char data[2 * 1024];
 
 	// send buffer vector

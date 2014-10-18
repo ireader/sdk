@@ -28,9 +28,6 @@ int aio_tcp_transport_sendv(void* session, socket_bufvec_t *vec, int n);
 
 int aio_tcp_transport_disconnect(void* session);
 
-int aio_tcp_transport_addref(void* session);
-int aio_tcp_transport_release(void* session);
-
 // recycle idle session
 int aio_tcp_transport_recycle(void* transport);
 
