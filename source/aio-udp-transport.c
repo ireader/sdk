@@ -25,7 +25,6 @@ struct aio_udp_session_t
 	int port;
 
 	void *data;
-	
 
 #if defined(CHECK_MODE)
 	struct list_head node;
@@ -114,8 +113,6 @@ static int aio_udp_session_destroy(struct aio_udp_session_t *session)
 
 	aio_udp_transport_unlink(transport);
 
-	assert(0 == session->used);
-	spinlock_destroy(&session->locker);
 	assert(0 == session->ref);
 #if defined(DEBUG) || defined(_DEBUG)
 	memset(session, 0xCC, sizeof(*session));
@@ -128,17 +125,10 @@ static void aio_udp_transport_onrecv(void* param, int code, size_t bytes, const 
 {
 	struct aio_udp_session_t *session;
 	struct aio_udp_transport_t *transport;
-
 	session = (struct aio_udp_session_t *)param;
 	transport = session->transport;
+	assert(session->ref > 0 && transport->ref > 0);
 
-	// start another session 
-	if(0 != aio_udp_transport_start(transport))
-	{
-		exit(1000);
-	}
-
-	assert(session->ref > 0);
 	if(0 != code)
 	{
 		assert(0);
@@ -149,6 +139,8 @@ static void aio_udp_transport_onrecv(void* param, int code, size_t bytes, const 
 		session->port = port;
 		strncpy(session->ip, ip, sizeof(session->ip));
 		transport->handler.onrecv(transport->ptr, session, session->msg, bytes, ip, port, &session->data);
+
+        aio_udp_transport_start(transport);
 	}
 
 	aio_udp_transport_release(session);
@@ -161,26 +153,47 @@ static void aio_udp_transport_onsend(void* param, int code, size_t bytes)
 	session = (struct aio_udp_session_t *)param;
 	transport = session->transport;
 	transport->handler.onsend(transport->ptr, session, session->data, code, bytes);
+    aio_udp_transport_release(session);
 }
 
 static int aio_udp_transport_start(struct aio_udp_transport_t *transport)
 {
-	int r;
+	int r = 0;
+    int closed = 0;
 	struct aio_udp_session_t *session;
-	session = aio_udp_session_create(transport);
-	if(!session)
-	{
-		assert(0);
-		return -1;
-	}
+    assert(transport->ref > 0);
 
-	r = aio_socket_recvfrom(transport->socket, session->msg, sizeof(session->msg), aio_udp_transport_onrecv, session);
-	if(0 != r)
-	{
-		assert(0);
-		aio_udp_transport_release(session);
-		return -1;
-	}
+    // check status
+    spinlock_lock(&transport->locker);
+    closed = transport->closed;
+    if(0 == closed) ++transport->used;
+    spinlock_unlock(&transport->locker);
+
+    if(0 == closed)
+    {
+        session = aio_udp_session_create(transport);
+        if(!session)
+        {
+            assert(0);
+            return -1;
+        }
+        else
+        {
+            r = aio_socket_recvfrom(transport->socket, session->msg, sizeof(session->msg), aio_udp_transport_onrecv, session);
+            
+            spinlock_lock(&transport->locker);
+            --transport->used;
+            assert(transport->used >= 0);
+            spinlock_unlock(&transport->locker);
+
+            if(0 != r)
+            {
+                assert(0);
+                aio_udp_transport_release(session);
+                return -1;
+            }
+        }
+    }
 
 	return 0;
 }
@@ -200,7 +213,10 @@ void* aio_udp_transport_create(socket_t socket, const struct aio_udp_transport_h
 	transport->num = 0;
 	LIST_INIT_HEAD(&transport->head);
 #endif
-	transport->socket = aio_socket_create(socket, 1);
+    memcpy(&transport->handler, handler, sizeof(transport->handler));
+    transport->ptr = ptr;
+
+    transport->socket = aio_socket_create(socket, 1);
 	if(invalid_aio_socket == transport->socket)
 	{
 		aio_udp_transport_destroy(transport);
@@ -208,17 +224,13 @@ void* aio_udp_transport_create(socket_t socket, const struct aio_udp_transport_h
 	}
 
 	// start recv
-	++transport->ref;
 	r = aio_udp_transport_start(transport);
 	if(0 != r)
 	{
-		--transport->ref;
 		aio_udp_transport_destroy(transport);
 		return NULL;
 	}
 
-	memcpy(&transport->handler, handler, sizeof(transport->handler));
-	transport->ptr = ptr;
 	return transport;
 }
 
@@ -247,8 +259,9 @@ int aio_udp_transport_send(void* s, const void* msg, size_t bytes)
 	session = (struct aio_udp_session_t *)s;
 	transport = session->transport;
 
-	assert(session->ref > 0);
-	return aio_socket_sendto(transport->socket, session->ip, session->port, msg, bytes, aio_udp_transport_onsend, session);
+	assert(session->ref > 0 && 0 == transport->closed && transport->socket);
+    atomic_increment32(&session->ref);
+    return aio_socket_sendto(transport->socket, session->ip, session->port, msg, bytes, aio_udp_transport_onsend, session);
 }
 
 int aio_udp_transport_sendv(void* s, socket_bufvec_t *vec, int n)
@@ -258,7 +271,8 @@ int aio_udp_transport_sendv(void* s, socket_bufvec_t *vec, int n)
 	session = (struct aio_udp_session_t *)s;
 	transport = session->transport;
 
-	assert(session->ref > 0);
+	assert(session->ref > 0 && 0 == transport->closed && transport->socket);
+    atomic_increment32(&session->ref);
 	return aio_socket_sendto_v(transport->socket, session->ip, session->port, vec, n, aio_udp_transport_onsend, session);
 }
 
@@ -266,7 +280,7 @@ int aio_udp_transport_addref(void* s)
 {
 	struct aio_udp_session_t *session;
 	session = (struct aio_udp_session_t *)s;
-	return InterlockedIncrement(&session->ref);
+    return atomic_increment32(&session->ref);
 }
 
 int aio_udp_transport_release(void* s)
@@ -274,7 +288,7 @@ int aio_udp_transport_release(void* s)
 	struct aio_udp_session_t *session;
 	session = (struct aio_udp_session_t *)s;
 
-	if(0 == InterlockedDecrement(&session->ref))
+	if(0 == atomic_decrement32(&session->ref))
 	{
 		aio_udp_session_destroy(session);
 	}

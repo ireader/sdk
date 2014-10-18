@@ -1,22 +1,22 @@
 #include "thread-pool.h"
 #include "cstringext.h"
 #include "sys/system.h"
+#include "sys/atomic.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
 
-static long total = 0;
+static int32_t total = 0;
 
 void worker(void* param)
 {
 	int i = 0;
-	int n = (int)param;
+	int n = *(int*)param + 1;
 
-	srand(time(NULL));
 	while(i++ < n)
 	{
 		system_sleep(rand() % 30);
-		if(210 == InterlockedIncrement(&total))
+		if(210 == atomic_increment32(&total))
 		{
 			printf("[%d] I'm the KING\n", n);
 			assert(i == n);
@@ -35,7 +35,7 @@ void thread_pool_test(void)
 
 	for(i=0; i<20; i++)
 	{
-		r = thread_pool_push(pool, worker, (void*)(i+1));
+		r = thread_pool_push(pool, worker, &i);
 		assert(0 == r);
 	}
 	

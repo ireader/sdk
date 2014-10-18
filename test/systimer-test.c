@@ -66,7 +66,7 @@ static void Test4(void)
 static void OnClockTimer(systimer_t id, void* param)
 {
 	char time[24];
-	printf("OnClockTimer tp.tv_sec: %u, tp.tv_nsec: %ld\n", tp.tv_sec, tp.tv_nsec);
+	//printf("OnClockTimer tp.tv_sec: %u, tp.tv_nsec: %ld\n", tp.tv_sec, tp.tv_nsec);
 }
 
 static void systimer_settimeofday(void)

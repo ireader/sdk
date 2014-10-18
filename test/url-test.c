@@ -148,7 +148,6 @@ static void url_without_host()
 void url_test(void)
 {
 	void *uri;
-	char *name, *value;
 	uri = url_parse("");
 	assert(0==strcmp("", url_gethost(uri)));
 	assert(0==strcmp("/", url_getpath(uri)));

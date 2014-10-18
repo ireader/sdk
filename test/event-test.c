@@ -7,9 +7,9 @@
 static event_t ev1;
 static event_t ev2;
 
-static int STDCALL thread0(IN void* param)
+static int STDCALL thread0(void* param)
 {
-	param;
+	param = param;
 	printf("event thread0 - 0\n");
 	assert(WAIT_TIMEOUT == event_timewait(&ev1, 1000));
 	printf("thread0 - timewait ok\n");
@@ -42,9 +42,9 @@ static int STDCALL thread0(IN void* param)
 	return 0;
 }
 
-static int STDCALL thread1(IN void* param)
+static int STDCALL thread1(void* param)
 {
-	param;
+    param = param;
 	printf("event thread1 - 0\n");
 	assert(0 == event_wait(&ev1));
 	printf("thread1 - wait 0 ok\n");
@@ -76,7 +76,7 @@ static int STDCALL thread1(IN void* param)
 
 void event_test(void)
 {
-	thread_t threads[2];
+	pthread_t threads[2];
 	assert(0 == event_create(&ev1));
 	assert(0 == event_create(&ev2));
 

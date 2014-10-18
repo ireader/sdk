@@ -8,11 +8,11 @@
 static unsigned char value[N_THREADS];
 static locker_t locker;
 
-static int STDCALL worker(IN void* param)
+static int STDCALL worker(void* param)
 {
 	int i, j;
 	unsigned char v[N_THREADS];
-	int p = (int)param;
+	int p = *(int*)param;
 
 	for(i = 0; i < 10000; i++)
 	{
@@ -32,12 +32,12 @@ static int STDCALL worker(IN void* param)
 void locker_test(void)
 {
 	int i;
-	thread_t threads[N_THREADS];
+	pthread_t threads[N_THREADS];
 
 	locker_create(&locker);
 	for(i = 0; i < N_THREADS; i++)
 	{
-		thread_create(&threads[i], worker, (void*)i);
+		thread_create(&threads[i], worker, &i);
 	}
 
 	for(i = 0; i < N_THREADS; i++)

@@ -18,7 +18,7 @@ static int STDCALL worker(IN void* param)
 	struct sockaddr_in addr;
 	socklen_t len = sizeof(addr);
 
-	param;
+	param = param;
 	socket = tcpserver_create(NULL, 8008, 64);
 
 	//while(1)
@@ -96,7 +96,9 @@ static int aio_socket_recv_test(void)
 
 static void onsend(void* param, int code, size_t bytes)
 {
-	param, code, bytes;
+	param = param;
+    code = code;
+    bytes = bytes;
 	//printf("aio_socket_send_test onsend: code=%d, bytes=%d\n", code, bytes);
 }
 
@@ -158,14 +160,14 @@ static int aio_socket_send_test(void)
 
 void aio_socket_test(void)
 {
-	thread_t thread;
+	pthread_t thread;
 
 	socket_init();
 	thread_create(&thread, worker, NULL);
 	system_sleep(1); // switch to worker thread
 
 	aio_socket_recv_test();
-#if defined(OS_LINUX)
+#if !defined(OS_WINDOWS)
 	/// windows send always ok
 	aio_socket_send_test();
 #endif

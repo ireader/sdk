@@ -18,7 +18,7 @@ static void worker(void* param)
 		r = aio_socket_process(2*60*1000);
 		if(0 != r)
 		{
-			printf("http_server_process =>%d\n", r);
+			//printf("http_server_process =>%d\n", r);
 		}
 	} while(*(int*)param && -1 != r);
 }

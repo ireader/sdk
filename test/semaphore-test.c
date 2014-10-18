@@ -7,12 +7,14 @@
 static semaphore_t sem1;
 static semaphore_t sem2;
 
-static int STDCALL thread0(IN void* param)
+static int STDCALL thread0(void* param)
 {
-	param;
+	param = param;
 	printf("semaphore thread0 - init\n");
+#if defined(OS_LINUX) || defined(OS_WINDOWS)
 	assert(WAIT_TIMEOUT == semaphore_timewait(&sem1, 1000));
 	printf("thread0 - timewait ok\n");
+#endif
 
 	assert(0 == semaphore_post(&sem1));
 	printf("thread0 - post 1 ok\n");
@@ -38,9 +40,9 @@ static int STDCALL thread0(IN void* param)
 	return 0;
 }
 
-static int STDCALL thread1(IN void* param)
+static int STDCALL thread1(void* param)
 {
-	param;
+	param = param;
 	printf("semaphore thread1 - init\n");
 
 	assert(0 == semaphore_wait(&sem1));
@@ -69,7 +71,7 @@ static int STDCALL thread1(IN void* param)
 
 void semaphore_test(void)
 {
-	thread_t threads[2];
+	pthread_t threads[2];
 	assert(0 == semaphore_create(&sem1, NULL, 3));
 	assert(0 == semaphore_create(&sem2, NULL, 0));
 	assert(0 == semaphore_wait(&sem1));

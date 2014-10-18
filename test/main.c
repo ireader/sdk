@@ -24,7 +24,9 @@ int main(int argc, char* argv[])
 	atomic_test();
 	spinlock_test();
 	event_test();
+#if !defined(OS_MAC)
 	semaphore_test();
+#endif
 	aio_socket_test();
 	//url_test();
 	//unicode_test();
