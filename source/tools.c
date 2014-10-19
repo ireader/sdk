@@ -5,19 +5,19 @@
 
 int tools_write(const char* filename, const void* ptr, int len)
 {
-	int n = 0;
+	size_t n = 0;
 	FILE* fp = fopen(filename, "wb");
 	if(!fp) 
 		return -(int)errno;
 
 	n = fwrite(ptr, 1, len, fp);	
 	fclose(fp);
-	return n;
+    return len == n ? len : -(int)errno;
 }
 
 int tools_append(const char* filename, const void* ptr, int len)
 {
-	int n = 0;
+	size_t n = 0;
 	FILE* fp = fopen(filename, "wb+");
 	if(!fp) 
 		return -(int)errno;
@@ -25,37 +25,37 @@ int tools_append(const char* filename, const void* ptr, int len)
 	fseek(fp, 0, SEEK_END);
 	n = fwrite(ptr, 1, len, fp);
 	fclose(fp);
-	return n;
+    return len == n ? len : -(int)errno;
 }
 
 int tools_cat(const char* filename, char* buf, int len)
 {
-	int n = 0;
+	size_t n = 0;
 	FILE* fp = fopen(filename, "r");
 	if(!fp) 
 		return -(int)errno;
 
 	n = fread(buf, 1, len, fp);	
 	fclose(fp);
-	return n;
+    return len == n ? len : -(int)errno;
 }
 
 int tools_cat_binary(const char* filename, char* buf, int len)
 {
-	int n = 0;
+	size_t n = 0;
 	FILE* fp = fopen(filename, "rb");
 	if(!fp) 
 		return -(int)errno;
 
 	n = fread(buf, 1, len, fp);	
 	fclose(fp);
-	return n;
+    return len == n ? len : -(int)errno;
 }
 
 // tools_grep("abc\ndef\ncf", "c") => "abc\ncf"
 int tools_grep(const char* in, const char* pattern, char* buf, int len)
 {
-	int n = 0;
+	size_t n = 0;
 	const char *l;
 	const char *r = in;
 	while(r && *r)

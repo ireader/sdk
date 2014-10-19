@@ -1,6 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "base64.h"
+#include <assert.h>
 
 static char encode_table[64] = {
 	'A','B','C','D','E','F','G','H','I','J','K','L','M',
@@ -12,49 +11,50 @@ static char encode_table[64] = {
 
 static unsigned char decode_table[256];
 
-char* base64_encode(IN CONST unsigned char * bufin, IN unsigned int nbytes)
+size_t base64_encode(char* target, const void *source, size_t bytes)
 {
 #define ENC(c) encode_table[c]
 
-	unsigned int i;
-	unsigned int n3bytes = nbytes/3*3;
-	register char *outptr = 0;
-	char* bufcoded = 0;
-	bufcoded = (char*)malloc((nbytes+2)/3*4+1);
-	if(0 == bufcoded)
-		return 0;
+	size_t i, j;
+	size_t n3bytes = bytes/3*3;
+    const unsigned char *ptr = (const unsigned char*)source;
 
-	outptr = bufcoded;
-	for (i=0; i<n3bytes; i += 3) {
-		*(outptr++) = ENC((*bufin >> 2) & 077);            /* c1 */
-		*(outptr++) = ENC(((*bufin << 4) & 060) | ((bufin[1] >> 4) & 017)); /*c2*/
-		*(outptr++) = ENC(((bufin[1] << 2) & 074) | ((bufin[2] >> 6) & 03));/*c3*/
-		*(outptr++) = ENC(bufin[2] & 077);         /* c4 */
+    i = j = 0;
+	for (i = 0; i < n3bytes; i += 3) {
+        target[j++] = ENC((ptr[i] >> 2) & 077);            /* c1 */
+        target[j++] = ENC(((ptr[i] << 4) & 060) | ((ptr[i+1] >> 4) & 017)); /*c2*/
+        target[j++] = ENC(((ptr[i+1] << 2) & 074) | ((ptr[i+2] >> 6) & 03));/*c3*/
+        target[j++] = ENC(ptr[i+2] & 077);         /* c4 */
 
-		bufin += 3;
+        // add '\n' per 76 bytes
+        // 54 = 76 / 4 * 3
+        if(0 == (i % 57)) target[j++] = '\n'; // RFC-2045 p25
+
+		ptr += 3;
 	}
 
-	if(nbytes >= n3bytes+1) {
+	if(bytes >= n3bytes+1) {
 		/* There were only 2 bytes in that last group */
-		(*outptr++) = ENC((*bufin >> 2) & 077);
+		target[j++] = ENC((ptr[i] >> 2) & 077);
 
-		if(nbytes < n3bytes+2) {
+		if(bytes < n3bytes+2) {
 			/* There was only 1 byte in that last group */
-			*(outptr++) = ENC(((*bufin << 4) & 060)); /*c2*/
-			*(outptr++) = '='; /*c3*/
+			target[j++] = ENC(((ptr[i] << 4) & 060)); /*c2*/
+			target[j++] = '='; /*c3*/
 		}
 		else{
-			*(outptr++) = ENC(((*bufin << 4) & 060) | ((bufin[1] >> 4) & 017)); /*c2*/
-			*(outptr++) = ENC(((bufin[1] << 2) & 074));/*c3*/
+			target[j++] = ENC(((ptr[i] << 4) & 060) | ((ptr[i+1] >> 4) & 017)); /*c2*/
+			target[j++] = ENC(((ptr[i+1] << 2) & 074));/*c3*/
 		}
-		*(outptr++) = '='; /*c4*/
+
+        target[j++] = '='; /*c4*/
 	} 
-	
-	*outptr = '\0';
-	return bufcoded;
+
+	target[j++] = '\0';
+	return j;
 }
 
-unsigned char* base64_decode(IN CONST char * bufcoded, IN unsigned int nbytes)
+size_t base64_decode(void* target, const char *source, size_t bytes)
 {
 	/* single character decode */
 #define DEC(c) decode_table[(int)c]
@@ -62,16 +62,10 @@ unsigned char* base64_decode(IN CONST char * bufcoded, IN unsigned int nbytes)
 
 	static int first = 1;
 
-	unsigned int j;
-	unsigned int n4bytes = nbytes/4*4;
-	register CONST char *bufin = bufcoded;
-	register unsigned char *bufout = NULL;
-	unsigned char* bufplain = NULL;
-	
-	bufplain = (unsigned char*)malloc((nbytes+3)/4*3+1);
-	if(0 == bufplain)
-		return 0;
-	bufout = bufplain;
+	size_t i, j;
+	size_t n4bytes = bytes/4*4;
+	register const unsigned char *bufin = (const unsigned char*)source;
+	register unsigned char *bufout = (unsigned char*)target;
 
 	/* If this is the first call, initialize the mapping table.
 	* This code should work even on non-ASCII machines.
@@ -101,18 +95,22 @@ unsigned char* base64_decode(IN CONST char * bufcoded, IN unsigned int nbytes)
 #endif
 	}
 
+    i = j = 0;
 	for(j=0; j<n4bytes; j += 4){
-		*(bufout++) = (unsigned char) (DEC(*bufin) << 2 | DEC(bufin[1]) >> 4);
-		*(bufout++) = (unsigned char) (DEC(bufin[1]) << 4 | DEC(bufin[2]) >> 2);
-		*(bufout++) = (unsigned char) (DEC(bufin[2]) << 6 | DEC(bufin[3]));
-		bufin += 4;
+		bufout[i++] = (DEC(bufin[j+0]) << 2) | (DEC(bufin[j+1]) >> 4);
+		bufout[i++] = (DEC(bufin[j+1]) << 4) | (DEC(bufin[j+2]) >> 2);
+		bufout[i++] = (DEC(bufin[j+2]) << 6) | DEC(bufin[j+3]);
+
+        if(0 == (i % 57))
+        {
+            assert('\n' == bufin[j+4] || '\r' == bufin[j+4]);
+            if('\n' == bufin[j+4] || '\r' == bufin[j+4])
+                ++j;
+            if('\n' == bufin[j+4] || '\r' == bufin[j+4])
+                ++j;
+        }
 	}
 
-	*bufout = '\0';
-	return bufplain;
-}
-
-void base64_free(void* p)
-{
-	free(p);
+	bufout[i++] = '\0';
+	return i;
 }

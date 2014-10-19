@@ -19,7 +19,7 @@
 
 int http_header_content_type(const char* field, struct http_header_content_type_t *v)
 {
-	int* len;
+	size_t* len;
 	const char* p1;
 	const char* p = field;
 
