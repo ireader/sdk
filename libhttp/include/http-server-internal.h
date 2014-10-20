@@ -34,7 +34,7 @@ struct http_server_t
 
 void* http_session_onconnected(void* ptr, void* session, const char* ip, int port);
 void http_session_ondisconnected(void* param);
-void http_session_onsend(void* param, int code, size_t bytes);
-void http_session_onrecv(void* param, const void* msg, size_t bytes);
+int http_session_onsend(void* param, int code, size_t bytes);
+int http_session_onrecv(void* param, const void* msg, size_t bytes);
 
 #endif /* !_http_server_internal_h_ */

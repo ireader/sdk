@@ -1,8 +1,7 @@
 #include <stdlib.h>
+#include "cstringext.h"
 #include "http-server.h"
 #include "http-bundle.h"
-#include "cstringext.h"
-#include "sys/atomic.h"
 #include <memory.h>
 #include <assert.h>
 

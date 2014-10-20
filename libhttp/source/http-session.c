@@ -1,11 +1,11 @@
 #include "cstringext.h"
+#include "http-server-internal.h"
 #include "http-reason.h"
 #include "http-parser.h"
 #include "http-bundle.h"
 #include <stdlib.h>
 #include <memory.h>
 #include <assert.h>
-#include "http-server-internal.h"
 
 #if defined(OS_WINDOWS)
 #define iov_base buf
@@ -94,20 +94,18 @@ static int http_session_send(struct http_session_t *session, int idx)
         session->vec = NULL;
         session->vec_count = 0;
 
-        locker_unlock(&session->locker);
         http_session_release(session);
     }
     return r;
 }
 
-void http_session_onrecv(void* param, const void* msg, size_t bytes)
+int http_session_onrecv(void* param, const void* msg, size_t bytes)
 {
 	size_t remain;
 	struct http_session_t *session;
 	session = (struct http_session_t *)param;
-	if(!session) return;
 
-	assert(bytes > 0);
+	assert(session && bytes > 0);
 	remain = bytes;
 	if(0 == http_parser_input(session->parser, msg, &remain))
 	{
@@ -121,10 +119,15 @@ void http_session_onrecv(void* param, const void* msg, size_t bytes)
 
 		// do restart in send done
 		// http_session_onsend
+		return 0;
+	}
+	else
+	{
+		return 1;
 	}
 }
 
-void http_session_onsend(void* param, int code, size_t bytes)
+int http_session_onsend(void* param, int code, size_t bytes)
 {
 	int i;
 	char* ptr;
@@ -181,6 +184,8 @@ void http_session_onsend(void* param, int code, size_t bytes)
             http_session_release(session);
 		}
 	}
+
+	return 1;
 }
 
 void* http_session_onconnected(void* ptr, void* sid, const char* ip, int port)

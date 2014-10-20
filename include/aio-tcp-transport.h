@@ -11,10 +11,12 @@ struct aio_tcp_transport_handler_t
 	void* (*onconnected)(void* ptr, void* session, const char* ip, int port);
 
 	/// param[in] data user-defined pointer return by onconnected
-	void (*onrecv)(void* user, const void* msg, size_t bytes);
+	/// @return 1-receive more data, 0-don't receive
+	int (*onrecv)(void* user, const void* msg, size_t bytes);
 
 	/// param[in] data user-defined pointer return by onconnected
-	void (*onsend)(void* user, int code, size_t bytes);
+	/// @return 1-receive more data, 0-don't receive
+	int (*onsend)(void* user, int code, size_t bytes);
 
 	/// param[in] data user-defined pointer return by onconnected
 	void (*ondisconnected)(void* user);

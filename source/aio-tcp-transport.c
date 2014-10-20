@@ -158,7 +158,7 @@ static void aio_tcp_session_recv(struct aio_tcp_session_t *session)
     closed = session->closed;
     if(0 == closed) ++session->used;
     spinlock_unlock(&session->locker);
-    
+
     if(0 == closed)
     {
         // receive more data
@@ -200,9 +200,8 @@ static void aio_tcp_session_onrecv(void* param, int code, size_t bytes)
 	else
 	{
 		assert(0 != bytes);
-		session->handler.onrecv(session->data, session->msg, bytes);
-
-		aio_tcp_session_recv(session);
+		if(1 == session->handler.onrecv(session->data, session->msg, bytes))
+			aio_tcp_session_recv(session);
 	}
 
     aio_tcp_session_release(session); // for aio_socket_recv addref
@@ -212,7 +211,8 @@ static void aio_tcp_session_onsend(void* param, int code, size_t bytes)
 {
 	struct aio_tcp_session_t *session;
 	session = (struct aio_tcp_session_t *)param;
-    session->handler.onsend(session->data, code, bytes);
+    if(1 == session->handler.onsend(session->data, code, bytes))
+		aio_tcp_session_recv(session);
 	aio_tcp_session_release(session);
 }
 

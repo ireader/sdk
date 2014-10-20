@@ -1,6 +1,8 @@
 #ifndef _http_bundle_h_
 #define _http_bundle_h_
 
+#include "sys/atomic.h"
+
 struct http_bundle_t
 {
 	int32_t ref;
