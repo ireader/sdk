@@ -213,6 +213,7 @@ static void aio_tcp_session_onsend(void* param, int code, size_t bytes)
 	struct aio_tcp_session_t *session;
 	session = (struct aio_tcp_session_t *)param;
     session->handler.onsend(session->data, code, bytes);
+	aio_tcp_session_release(session);
 }
 
 static void aio_tcp_transport_onaccept(void* param, int code, socket_t socket, const char* ip, int port)
