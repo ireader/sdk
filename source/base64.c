@@ -28,9 +28,7 @@ size_t base64_encode(char* target, const void *source, size_t bytes)
 
         // add '\n' per 76 bytes
         // 54 = 76 / 4 * 3
-        if(0 == (i % 57)) target[j++] = '\n'; // RFC-2045 p25
-
-		ptr += 3;
+        if(i > 0 && 0 == (i % 57)) target[j++] = '\n'; // RFC-2045 p25
 	}
 
 	if(bytes >= n3bytes+1) {
@@ -50,7 +48,6 @@ size_t base64_encode(char* target, const void *source, size_t bytes)
         target[j++] = '='; /*c4*/
 	} 
 
-	target[j++] = '\0';
 	return j;
 }
 
@@ -63,7 +60,6 @@ size_t base64_decode(void* target, const char *source, size_t bytes)
 	static int first = 1;
 
 	size_t i, j;
-	size_t n4bytes = bytes/4*4;
 	register const unsigned char *bufin = (const unsigned char*)source;
 	register unsigned char *bufout = (unsigned char*)target;
 
@@ -95,8 +91,10 @@ size_t base64_decode(void* target, const char *source, size_t bytes)
 #endif
 	}
 
+	assert(0 == bytes % 4);
+
     i = j = 0;
-	for(j=0; j<n4bytes; j += 4){
+	for(j=0; j+4 < bytes; j += 4){
 		bufout[i++] = (DEC(bufin[j+0]) << 2) | (DEC(bufin[j+1]) >> 4);
 		bufout[i++] = (DEC(bufin[j+1]) << 4) | (DEC(bufin[j+2]) >> 2);
 		bufout[i++] = (DEC(bufin[j+2]) << 6) | DEC(bufin[j+3]);
@@ -111,6 +109,33 @@ size_t base64_decode(void* target, const char *source, size_t bytes)
         }
 	}
 
-	bufout[i++] = '\0';
+	// save memory(decode target buffer size = encode source buffer size)
+	if(j < bytes)
+	{
+		assert(j+4 == bytes); bufout[i++] = (DEC(bufin[j+0]) << 2) | (DEC(bufin[j+1]) >> 4);
+		if('=' != bufin[j+2]) bufout[i++] = (DEC(bufin[j+1]) << 4) | (DEC(bufin[j+2]) >> 2);
+		if('=' != bufin[j+3]) bufout[i++] = (DEC(bufin[j+2]) << 6) | DEC(bufin[j+3]);
+	}
 	return i;
 }
+
+#if defined(DEBUG) || defined(_DEBUG)
+#include <memory.h>
+void base64_test(void)
+{
+	char source[512];
+	char target[512];
+
+	assert(8 == base64_encode(source, "4444", 4)); // NDQ0NA==
+	assert(4 == base64_decode(target, source, 8));
+	assert(0 == memcmp(target, "4444", 4));
+
+	assert(8 == base64_encode(source, "55555", 5)); // NTU1NTU=
+	assert(5 == base64_decode(target, source, 8));
+	assert(0 == memcmp(target, "55555", 5));
+
+	assert(8 == base64_encode(source, "666666", 6)); // NjY2NjY2
+	assert(6 == base64_decode(target, source, 8));
+	assert(0 == memcmp(target, "666666", 6));
+}
+#endif
