@@ -1,76 +1,35 @@
 #ifndef _platform_process_h_
 #define _platform_process_h_
 
+#include <memory.h>
+
 #if defined(OS_WINDOWS)
 #include <Windows.h>
 #include <Psapi.h>
-#include <process.h>
 
 #if defined(_MSC_VER)
 #pragma comment(lib, "Psapi.lib")
 #endif
 
-#ifndef STDCALL
-#define STDCALL __stdcall
-#endif
-
-typedef unsigned int (__stdcall *thread_routine)(void *);
-
-typedef struct
-{
-	DWORD id;
-	HANDLE handle;
-} pthread_t;
-
-typedef DWORD			process_t;
+typedef DWORD pid_t;
 
 #else
 #include <sys/types.h>
 #include <unistd.h>
-#include <pthread.h>
-#include <limits.h>
-#include <sched.h>
-#include <semaphore.h>
 #include <signal.h>
 #include <stdio.h>
-
-//#include <mach/mach_types.h> typedef mach_port_t thread_t
-//typedef pthread_t		thread_t;
-typedef pid_t			process_t;
-
-#ifndef STDCALL
-#define STDCALL
-#endif
+#include <errno.h>
 
 extern char** environ;
 #endif
 
-#include <memory.h>
-#include <errno.h>
-
-typedef int (STDCALL *thread_proc)(void* param);
-
-//////////////////////////////////////////////////////////////////////////
-///
-/// thread: Windows CreateThread/Linux pthread
-///
-//////////////////////////////////////////////////////////////////////////
-
 //-------------------------------------------------------------------------------------
-// int thread_create(pthread_t* thread, thread_proc func, void* param);
-// int thread_destroy(pthread_t thread);
-// int thread_getpriority(pthread_t thread, int* priority);
-// int thread_setpriority(pthread_t thread, int priority);
-// int thread_self(void);
-// int thread_getid(pthread_t thread, int* id);
-// int thread_isself(pthread_t thread);
-//-------------------------------------------------------------------------------------
-// int process_createve(const char* filename, process_create_param_t *param, process_t* pid);
-// int process_create(const char* filename, process_t* pid);
-// int process_kill(process_t pid);
-// process_t process_self(void);
+// int process_createve(const char* filename, process_create_param_t *param, pid_t* pid);
+// int process_create(const char* filename, pid_t* pid);
+// int process_kill(pid_t pid);
+// int process_name(pid_t pid, char* name, size_t size);
 // int process_selfname(char* name, size_t size);
-// int process_name(process_t pid, char* name, size_t size);
+// pid_t process_self(void);
 //-------------------------------------------------------------------------------------
 
 typedef struct
@@ -91,129 +50,13 @@ typedef struct
 #endif
 } process_create_param_t;
 
-//////////////////////////////////////////////////////////////////////////
-///
-/// thread: Windows CreateThread/Linux pthread
-///
-//////////////////////////////////////////////////////////////////////////
-inline int thread_create(pthread_t* thread, thread_proc func, void* param)
-{
-#if defined(OS_WINDOWS)
-	// http://msdn.microsoft.com/en-us/library/windows/desktop/ms682453%28v=vs.85%29.aspx
-	// A thread in an executable that calls the C run-time library (CRT) 
-	// should use the _beginthreadex and _endthreadex functions for thread management 
-	// rather than CreateThread and ExitThread;
-
-	//thread->handle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, param, 0, &thread->id);
-	thread->handle = (HANDLE)_beginthreadex(NULL, 0, (thread_routine)func, param, 0, (unsigned int*)&thread->id);
-	if(NULL == thread->handle)
-		return -1;
-	return 0;
-#else
-	typedef void* (*linux_thread_routine)(void*);
-	return pthread_create(thread, NULL, (linux_thread_routine)func, param);
-#endif
-}
-
-inline int thread_destroy(pthread_t thread)
-{
-#if defined(OS_WINDOWS)
-	if(thread.id != GetCurrentThreadId())
-		WaitForSingleObjectEx(thread.handle, INFINITE, TRUE);
-	CloseHandle(thread.handle);
-	return 0;
-#else
-	void* value = NULL;
-	if(pthread_equal(pthread_self(),thread))
-        return pthread_detach(thread);
-	else
-        return pthread_join(thread, &value);
-#endif
-}
-
-// priority: [-15, 15]
-// 0: normal / -15: idle / 15: critical
-inline int thread_getpriority(pthread_t thread, int* priority)
-{
-#if defined(OS_WINDOWS)
-	int r = GetThreadPriority(thread.handle);
-	if(THREAD_PRIORITY_ERROR_RETURN == r)
-		return (int)GetLastError();
-
-	*priority = r;
-	return 0;
-#else
-	struct sched_param sched;
-	int r = pthread_getschedparam(thread, priority, &sched);
-	if(0 == r)
-		*priority = sched.sched_priority;
-	return r;
-#endif
-}
-
-inline int thread_setpriority(pthread_t thread, int priority)
-{
-#if defined(OS_WINDOWS)
-	BOOL r = SetThreadPriority(thread.handle, priority);
-	return TRUE==r?1:0;
-#else
-	struct sched_param sched;
-	sched.sched_priority = 0;
-	int r = pthread_setschedparam(thread, priority, &sched);
-	return r;
-#endif
-}
-
-inline int thread_self(void)
-{
-#if defined(OS_WINDOWS)
-	DWORD id = GetCurrentThreadId();
-	return (int)id;
-#else
-	return (int)pthread_self();
-#endif
-}
-
-inline int thread_getid(pthread_t thread, int* id)
-{
-#if defined(OS_WINDOWS)
-	*id = thread.id;
-	//DWORD tid = GetThreadId(thread.handle); // >= vista
-	//if(0 == tid)
-	//	return GetLastError();
-	//*id = (int)tid;
-	return 0;
-#else
-	*id = (int)thread;
-	return 0;
-#endif
-}
-
-inline int thread_isself(pthread_t thread)
-{
-#if defined(OS_WINDOWS)
-	return thread.id==GetCurrentThreadId() ? 1 : 0;
-#else
-	return pthread_equal(pthread_self(), thread);
-#endif
-}
-
-inline int thread_valid(pthread_t thread)
-{
-#if defined(OS_WINDOWS)
-	return 0 != thread.id ? 1 : 0;
-#else
-	return 0 != thread ? 1 : 0;
-#endif
-}
-
 
 //////////////////////////////////////////////////////////////////////////
 ///
 /// process
 ///
 //////////////////////////////////////////////////////////////////////////
-inline int process_createve(const char* filename, process_create_param_t *param, process_t* pid)
+inline int process_createve(const char* filename, process_create_param_t *param, pid_t* pid)
 {
 #if defined(OS_WINDOWS)
 	PROCESS_INFORMATION pi;
@@ -266,7 +109,7 @@ inline int process_createve(const char* filename, process_create_param_t *param,
 #endif
 }
 
-inline int process_create(const char* filename, process_t* pid)
+inline int process_create(const char* filename, pid_t* pid)
 {
     process_create_param_t param;
 #if defined(OS_WINDOWS)
@@ -281,7 +124,7 @@ inline int process_create(const char* filename, process_t* pid)
     return process_createve(filename, &param, pid);
 }
 
-inline int process_kill(process_t pid)
+inline int process_kill(pid_t pid)
 {
 #if defined(OS_WINDOWS)
 	HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
@@ -303,7 +146,7 @@ inline int process_kill(process_t pid)
 #endif
 }
 
-inline process_t process_self(void)
+inline pid_t process_self(void)
 {
 #if defined(OS_WINDOWS)
 	return GetCurrentProcessId();
@@ -327,7 +170,7 @@ inline int process_selfname(char* name, size_t size)
 #endif
 }
 
-inline int process_name(process_t pid, char* name, size_t size)
+inline int process_name(pid_t pid, char* name, size_t size)
 {
 #if defined(OS_WINDOWS)
 	DWORD r = 0;
@@ -341,7 +184,7 @@ inline int process_name(process_t pid, char* name, size_t size)
 #else
 	ssize_t len;
 	char filename[64] = {0};
-	sprintf(filename, "/proc/%d/exe", (int)pid);
+	snprintf(filename, sizeof(filename), "/proc/%d/exe", (int)pid);
 	len = readlink(filename, name, size-1);
 	if(len <= 0)
 		return (int)errno;
