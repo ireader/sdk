@@ -7,8 +7,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <assert.h>
-#include "sys/atomic.h"
-#include "sys/spinlock.h"
+#include <pthread.h>
 
 //#define MAX_EVENT 64
 
@@ -101,7 +100,7 @@ struct epoll_context_recvfrom_v
 
 struct epoll_context
 {
-	spinlock_t locker; // memory alignment, see more about Apple Developer spinlock
+	pthread_spinlock_t locker; // memory alignment, see more about Apple Developer spinlock
 	struct epoll_event ev;
 	socket_t socket;
 	volatile int32_t ref;
@@ -129,29 +128,29 @@ struct epoll_context
 
 #define EPollIn(ctx, callback)   do {\
 	ctx->read = callback;   \
-	atomic_increment32(&ctx->ref);	\
-	spinlock_lock(&ctx->locker); ctx->ev.events |= EPOLLIN; spinlock_unlock(&ctx->locker); \
+	__sync_add_and_fetch_4(&ctx->ref, 1);	\
+	pthread_spin_lock(&ctx->locker); ctx->ev.events |= EPOLLIN; pthread_spin_unlock(&ctx->locker); \
 	if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))    \
 		return 0;   \
-	spinlock_lock(&ctx->locker); ctx->ev.events &= EPOLLIN; spinlock_unlock(&ctx->locker); \
-	atomic_decrement32(&ctx->ref);	\
+	pthread_spin_lock(&ctx->locker); ctx->ev.events &= EPOLLIN; pthread_spin_unlock(&ctx->locker); \
+	__sync_sub_and_fetch_4(&ctx->ref, 1);	\
 } while(0)
 
 #define EPollOut(ctx, callback)  do {\
 	ctx->write = callback;         \
-	atomic_increment32(&ctx->ref);	\
-	spinlock_lock(&ctx->locker); ctx->ev.events |= EPOLLOUT; spinlock_unlock(&ctx->locker); \
+	__sync_add_and_fetch_4(&ctx->ref, 1);	\
+	pthread_spin_lock(&ctx->locker); ctx->ev.events |= EPOLLOUT; pthread_spin_unlock(&ctx->locker); \
 	if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))  \
 		return 0;   \
-	spinlock_lock(&ctx->locker); ctx->ev.events &= EPOLLOUT; spinlock_unlock(&ctx->locker); \
-	atomic_decrement32(&ctx->ref);	\
+	pthread_spin_lock(&ctx->locker); ctx->ev.events &= EPOLLOUT; pthread_spin_unlock(&ctx->locker); \
+	__sync_sub_and_fetch_4(&ctx->ref, 1);	\
 } while(0)
 
 static int aio_socket_release(struct epoll_context* ctx)
 {
-	if( 0 == atomic_decrement32(&ctx->ref) )
+	if( 0 == __sync_sub_and_fetch_4(&ctx->ref, 1) )
 	{
-		spinlock_destroy(&ctx->locker);
+		pthread_spin_destroy(&ctx->locker);
 
 #if defined(DEBUG) || defined(_DEBUG)
 		memset(ctx, 0xCC, sizeof(*ctx));
@@ -195,9 +194,9 @@ int aio_socket_process(int timeout)
 			// 3. switch thread-1 call ctx->write and decrement ctx->ref
 			// 4. switch thread-2 aio_socket_send() epoll_ctl failed, then user set ctx->ev.events to EPOLLIN 
 			// 5. thread-2 redo decrement ctx->ref (decrement twice, crash)
-			spinlock_lock(&ctx->locker);
+			pthread_spin_lock(&ctx->locker);
 			userevent = ctx->ev.events;
-			spinlock_unlock(&ctx->locker);
+			pthread_spin_unlock(&ctx->locker);
 
 			// error
 			if(EPOLLIN & userevent)
@@ -217,10 +216,10 @@ int aio_socket_process(int timeout)
 		else
 		{
 			// clear IN/OUT event
-			spinlock_lock(&ctx->locker);
+			pthread_spin_lock(&ctx->locker);
 			assert(events[i].events == (events[i].events & ctx->ev.events));
 			ctx->ev.events &= ~(events[i].events & (EPOLLIN|EPOLLOUT));
-			spinlock_unlock(&ctx->locker);
+			pthread_spin_unlock(&ctx->locker);
 			epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev);
 
 			if(EPOLLRDHUP & events[i].events)
@@ -257,7 +256,7 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 		return NULL;
 
 	memset(ctx, 0, sizeof(struct epoll_context));
-	spinlock_create(&ctx->locker);
+	pthread_spin_init(&ctx->locker, PTHREAD_PROCESS_PRIVATE);
 	ctx->own = own;
 	ctx->ref = 1;
 	ctx->socket = socket;
