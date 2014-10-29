@@ -24,7 +24,7 @@ typedef struct _timer_context_t
 	UINT timerId;
 	unsigned int period;
 	unsigned int count;
-	int locked;
+	LONG locked;
 #elif defined(OS_WINDOWS_ASYNC)
 	HANDLE timerId;
 #elif defined(OS_LINUX)

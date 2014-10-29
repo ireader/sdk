@@ -1,6 +1,6 @@
 #include "cstringext.h"
 #include "sys/event.h"
-#include "sys/process.h"
+#include "sys/thread.h"
 #include "sys/system.h"
 #include <stdio.h>
 

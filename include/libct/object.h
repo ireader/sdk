@@ -1,7 +1,7 @@
 #ifndef _libct_object_h_
 #define _libct_object_h_
 
-#include "sys/sync.h"
+#include "sys/atomic.h"
 #include <assert.h>
 
 namespace libct{

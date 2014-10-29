@@ -1,6 +1,6 @@
 #include "cstringext.h"
 #include "sys/locker.h"
-#include "sys/process.h"
+#include "sys/thread.h"
 #include "sys/system.h"
 
 #define N_THREADS 100

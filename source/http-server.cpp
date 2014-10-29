@@ -12,7 +12,7 @@ typedef struct _http_server_context
 	std::string reply;
 	void* http;
 	char buffer[8*1024];
-	int remain;
+	size_t remain;
 } HttpServer;
 
 void* http_server_create(socket_t sock)
@@ -101,7 +101,7 @@ int http_server_recv(void *server)
 		if(r < 0)
 			return ERROR_RECV;
 
-		ctx->remain = r;
+		ctx->remain = (size_t)r;
 		status = http_parser_input(ctx->http, ctx->buffer, &ctx->remain);
 		if(status < 0)
 			return status; // parse error

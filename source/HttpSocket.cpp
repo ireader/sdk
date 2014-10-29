@@ -213,7 +213,7 @@ int HttpSocket::_GetReply()
 			return ERROR_RECV;
 		}
 
-		int bytes = r;
+		size_t bytes = (size_t)r;
 		status = http_parser_input(m_http, p, &bytes);
 		if(status < 0)
 		{

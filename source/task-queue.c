@@ -1,8 +1,9 @@
 #include "task-queue.h"
 #include "cstringext.h"
-#include "sys/process.h"
+#include "sys/thread.h"
 #include "sys/system.h"
-#include "sys/sync.h"
+#include "sys/locker.h"
+#include "sys/semaphore.h"
 #include "thread-pool.h"
 #include "list.h"
 #include <errno.h>
@@ -15,7 +16,7 @@ typedef struct _task_queue_context_t
 	int maxWorker;
 	thread_pool_t pool;
 
-	thread_t thread_scheduler;
+	pthread_t thread_scheduler;
 	semaphore_t sema_worker;
 	semaphore_t sema_request;
 

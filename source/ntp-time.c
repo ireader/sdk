@@ -1,6 +1,6 @@
 #include "ntp-time.h"
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(OS_WINDOWS)
 #include <Windows.h>
 #else
 #include <sys/time.h>

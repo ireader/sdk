@@ -3,7 +3,7 @@
 #include "sys/locker.h"
 #include "sys/event.h"
 #include "sys/system.h"
-#include "sys/process.h"
+#include "sys/thread.h"
 #include <assert.h>
 
 struct _thread_pool_context_t;

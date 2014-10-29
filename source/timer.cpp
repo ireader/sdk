@@ -2,7 +2,7 @@
 #include <map>
 #include <assert.h>
 #include <stdlib.h>
-#include "sys/process.h"
+#include "sys/thread.h"
 #include "sys/sync.hpp"
 #include "sys/system.h"
 
@@ -28,7 +28,7 @@ private:
 		int		_period;
 		void*	_param;
 		fcbTimer _callback;
-		thread_t _thread;
+		pthread_t _thread;
 		double	_time;	// last time
 	};
 	typedef std::map<timer_t, TimerItem*> TTimers;

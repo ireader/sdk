@@ -8,13 +8,14 @@
 #include <stdlib.h>
 #include <string.h>
 #if defined(_WIN32)
+#undef UNICODE
 #include <Tlhelp32.h>
 #else
 #include <dirent.h>
 #include <linux/param.h>
 #endif
 
-static int on_process(void* param, const char* name, process_t pid)
+static int on_process(void* param, const char* name, pid_t pid)
 {
 	const char* p;
 	const char* process = (const char*)param;
@@ -147,7 +148,7 @@ static int system_uptime(float* time)
 }
 #endif
 
-int process_time(process_t pid, time64_t* createTime, time64_t* kernelTime, time64_t* userTime)
+int process_time(pid_t pid, time64_t* createTime, time64_t* kernelTime, time64_t* userTime)
 {
 #if defined(_WIN32)
 	HANDLE handle;
@@ -223,7 +224,7 @@ int process_time(process_t pid, time64_t* createTime, time64_t* kernelTime, time
 #endif
 }
 
-int process_memory_usage(process_t pid, int *memKB, int *vmemKB)
+int process_memory_usage(pid_t pid, int *memKB, int *vmemKB)
 {
 #if defined(_WIN32)
 	HANDLE handle;
@@ -268,7 +269,7 @@ int process_memory_usage(process_t pid, int *memKB, int *vmemKB)
 }
 
 #if defined(_WIN32) || defined(_WIN64)
-int process_getmodules(process_t pid, fcb_process_getmodules callback, void* param)
+int process_getmodules(pid_t pid, fcb_process_getmodules callback, void* param)
 {
 	int major, minor;
 	DWORD i;
@@ -276,7 +277,7 @@ int process_getmodules(process_t pid, fcb_process_getmodules callback, void* par
 	DWORD bytes;
 	HANDLE handle;
 	HMODULE modules[1024] = {0};
-	TCHAR filename[MAX_PATH] = {0};
+	CHAR filename[MAX_PATH] = {0};
 
 	// open process
 	handle = OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_READ, FALSE, pid);
@@ -298,7 +299,7 @@ int process_getmodules(process_t pid, fcb_process_getmodules callback, void* par
 	// get module filename
 	for(i=0; i<bytes/sizeof(HMODULE); i++)
 	{
-		if(GetModuleFileNameEx(handle, modules[i], filename, sizeof(filename)-1))
+		if(GetModuleFileNameExA(handle, modules[i], filename, sizeof(filename)-1))
 			callback(param, filename);
 	}
 
@@ -307,14 +308,14 @@ int process_getmodules(process_t pid, fcb_process_getmodules callback, void* par
 	return 0;
 }
 #else
-int process_getmodules(process_t pid, fcb_process_getmodules callback, void* param)
+int process_getmodules(pid_t pid, fcb_process_getmodules callback, void* param)
 {
 	char p[512];
 	char module[MAX_PATH];
 	FILE* fp;
 
-	sprintf(p, "/proc/%d/maps", pid);
-	
+	snprintf(p, sizeof(p), "/proc/%d/maps", pid);
+
 	fp = fopen(p, "r");
 	if(!fp)
 		return errno;
@@ -385,7 +386,7 @@ typedef NTSTATUS (NTAPI *_NtQueryInformationProcess) (
 	OUT PULONG ReturnLength OPTIONAL
 );
 
-int process_getcommandline(process_t pid, char* cmdline, int bytes)
+int process_getcommandline(pid_t pid, char* cmdline, int bytes)
 {
 	HANDLE handle;
 	NTSTATUS status;
@@ -421,7 +422,7 @@ int process_getcommandline(process_t pid, char* cmdline, int bytes)
 	return GetLastError();
 }
 #else
-int process_getcommandline(process_t pid, char* cmdline, int bytes)
+int process_getcommandline(pid_t pid, char* cmdline, int bytes)
 {
 	char file[128];
 	char content[256];

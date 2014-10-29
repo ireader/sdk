@@ -30,16 +30,16 @@ inline void list_insert_before(struct list_head *item, struct list_head *head)
 	prev->next = item;
 }
 
-inline void list_remove(struct list_head *head)
+inline void list_remove(struct list_head *item)
 {
 	struct list_head *prev, *next;
-	prev = head->prev;
-	next = head->next;
+	prev = item->prev;
+	next = item->next;
 
 	prev->next = next;
 	next->prev = prev;
 
-	head->prev = head->next = 0;
+	item->prev = item->next = 0;
 }
 
 inline int list_empty(const struct list_head *head)

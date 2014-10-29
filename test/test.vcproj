@@ -241,7 +241,79 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\media-server\librtsp\source\sdp.c"
+				RelativePath="..\source\aio-tcp-transport.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\aio-udp-transport.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\base64.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\cookie.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\source\crc32.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\dlog.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\source\html-entities.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\http-parser.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\http-server.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\source\http-upload.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\HttpHelper.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\source\HttpSocket.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\source\log.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\source\md5.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\memory-dump.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\serial-port-win32.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\sysnetconfig.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\sysprocess.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\systimeconfig.c"
 				>
 			</File>
 			<File
@@ -249,7 +321,27 @@
 				>
 			</File>
 			<File
+				RelativePath="..\source\sysvolume.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\source\task-queue.c"
+				>
+			</File>
+			<File
 				RelativePath="..\source\thread-pool.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\time64.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\timer.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\source\tools.c"
 				>
 			</File>
 			<File
@@ -262,6 +354,42 @@
 			</File>
 			<File
 				RelativePath="..\source\urlcodec.c"
+				>
+			</File>
+			<File
+				RelativePath="..\source\win32-async-pipe.c"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="librtsp"
+			>
+			<File
+				RelativePath="..\..\media-server\librtsp\source\rtsp-header-range.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\media-server\librtsp\source\rtsp-header-rtp-info.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\media-server\librtsp\source\rtsp-header-session.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\media-server\librtsp\source\rtsp-header-transport.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\media-server\librtsp\source\sdp-a-fmtp.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\media-server\librtsp\source\sdp-a-rtpmap.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\media-server\librtsp\source\sdp.c"
 				>
 			</File>
 		</Filter>
