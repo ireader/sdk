@@ -1,9 +1,11 @@
 #ifndef _aio_socket_h_
 #define _aio_socket_h_
 
+#ifndef OS_SOCKET_TYPE
 #if defined(OS_WINDOWS)
 #include <WinSock2.h>
 
+typedef int	   socklen_t;
 typedef SOCKET socket_t;
 typedef WSABUF socket_bufvec_t;
 #else
@@ -18,6 +20,9 @@ typedef WSABUF socket_bufvec_t;
 typedef int socket_t;
 typedef struct iovec socket_bufvec_t;
 #endif
+
+#define OS_SOCKET_TYPE
+#endif /* OS_SOCKET_TYPE */
 
 #ifdef __cplusplus
 extern "C" {

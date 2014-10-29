@@ -7,9 +7,6 @@ typedef long int32_t;
 typedef __int64 int64_t;
 #elif defined(OS_MAC)
 #include <libkern/OSAtomic.h>
-#else
-typedef int int32_t;
-typedef long long int64_t;
 #endif
 
 #include <assert.h>
@@ -165,62 +162,58 @@ inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
 #if __GNUC__>=4 && __GNUC_MINOR__>=3
 inline int32_t atomic_increment32(volatile int32_t *value)
 {
-	assert((int32_t)value % 4 == 0);
+	assert((long)value % 4 == 0);
 	return __sync_add_and_fetch_4(value, 1);
 }
 
 inline int32_t atomic_decrement32(volatile int32_t *value)
 {
-	assert((int32_t)value % 4 == 0);
+	assert((long)value % 4 == 0);
 	return __sync_sub_and_fetch_4(value, 1);
 }
 
 inline int32_t atomic_add32(volatile int32_t *value, int32_t incr)
 {
-	assert((int32_t)value % 4 == 0);
+	assert((long)value % 4 == 0);
 	return __sync_add_and_fetch_4(value, incr);
 }
 
 #if __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4
 inline int atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t newvalue)
 {
-	assert((int32_t)value % 4 == 0);
+	assert((long)value % 4 == 0);
 	return __sync_bool_compare_and_swap_4(value, oldvalue, newvalue) ? 1 : 0;
 }
 #endif
 
 inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
 {
-#if defined(_WIN64) || defined(WIN64)
-	assert(0 == (int32_t)value % 8 && 0 == (int32_t)oldvalue % 8 && 0 == (int32_t)newvalue % 8);
-#else
-	assert(0 == (int32_t)value % 4 && 0 == (int32_t)oldvalue % 4 && 0 == (int32_t)newvalue % 4);
-#endif
+	assert(0 == (long)value % 4 && 0 == (long)oldvalue % 4 && 0 == (long)newvalue % 4);
 	return __sync_bool_compare_and_swap(value, oldvalue, newvalue);
 }
 
 inline int64_t atomic_increment64(volatile int64_t *value)
 {
-	assert((int32_t)value % 8 == 0);
+	assert((long)value % 8 == 0);
 	return __sync_add_and_fetch_8(value, 1);
 }
 
 inline int64_t atomic_decrement64(volatile int64_t *value)
 {
-	assert((int32_t)value % 8 == 0);
+	assert((long)value % 8 == 0);
 	return __sync_sub_and_fetch_8(value, 1);
 }
 
 inline int64_t atomic_add64(volatile int64_t *value, int64_t incr)
 {
-	assert((int32_t)value % 8 == 0);
+	assert((long)value % 8 == 0);
 	return __sync_add_and_fetch_8(value, incr);
 }
 
 #if __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8
 inline int atomic_cas64(volatile int64_t *value, int64_t oldvalue, int64_t newvalue)
 {
-	assert((int32_t)value % 8 == 0);
+	assert((long)value % 8 == 0);
 	return __sync_bool_compare_and_swap_8(value, oldvalue, newvalue) ? 1 : 0;
 }
 #endif

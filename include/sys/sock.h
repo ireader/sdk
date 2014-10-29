@@ -5,9 +5,12 @@
 #include <Winsock2.h>
 #include <ws2ipdef.h>
 
+#ifndef OS_SOCKET_TYPE
 typedef SOCKET	socket_t;
 typedef int		socklen_t;
 typedef WSABUF	socket_bufvec_t;
+#define OS_SOCKET_TYPE
+#endif /* OS_SOCKET_TYPE */
 
 #define socket_invalid	INVALID_SOCKET
 #define socket_error	SOCKET_ERROR
@@ -34,8 +37,11 @@ typedef WSABUF	socket_bufvec_t;
 #include <fcntl.h>
 #include <poll.h>
 
+#ifndef OS_SOCKET_TYPE
 typedef int socket_t;
 typedef struct iovec socket_bufvec_t;
+#define OS_SOCKET_TYPE
+#endif /* OS_SOCKET_TYPE */
 
 #define socket_invalid	-1
 #define socket_error	-1
