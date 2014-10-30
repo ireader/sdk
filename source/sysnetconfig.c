@@ -168,7 +168,7 @@ int system_setip(const char* name, int enableDHCP, const char* ipaddr, const cha
 	return 0;
 }
 
-int system_getdns(const char* name, char dns1[128], char dns2[128])
+int system_getdns(const char* name, char primary[40], char secondary[40])
 {
 	ULONG idx = 0;
 	DWORD dwRetVal = 0;
@@ -190,30 +190,31 @@ int system_getdns(const char* name, char dns1[128], char dns2[128])
 
 	if ((dwRetVal = GetPerAdapterInfo(idx, pPerAdapterInfo, &outBufLen)) == ERROR_SUCCESS)
 	{
-		strcpy(dns1, pPerAdapterInfo->DnsServerList.IpAddress.String);
+		secondary[0] = '\0';
+		strncpy(primary, pPerAdapterInfo->DnsServerList.IpAddress.String, 39);
 		if(pPerAdapterInfo->DnsServerList.Next)
-			strcpy(dns2, pPerAdapterInfo->DnsServerList.Next->IpAddress.String);
+			strncpy(secondary, pPerAdapterInfo->DnsServerList.Next->IpAddress.String, 39);
 	}
 
 	free(pPerAdapterInfo);
 	return dwRetVal==ERROR_SUCCESS?0:-(int)dwRetVal;
 }
 
-int system_setdns(const char* name, const char* dns1, const char* dns2)
+int system_setdns(const char* name, const char* primary, const char *secondary)
 {
 	HKEY hKey;
 	char key[MAX_PATH];
 	char dns[MAX_PATH] = {0};
 
-	if(VALIDATE_IPADDR(dns1))
+	if(VALIDATE_IPADDR(primary))
 	{
-		strcpy(dns, dns1);
+		strcpy(dns, primary);
 	}
 
-	if(VALIDATE_IPADDR(dns2))
+	if(VALIDATE_IPADDR(secondary))
 	{
 		if(*dns) strcat(dns, ",");
-		strcat(dns, dns2);
+		strcat(dns, secondary);
 	}
 
 	strcpy(key, "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\");
@@ -446,37 +447,32 @@ int system_setip(const char* name, int dhcp, const char* ip, const char* netmask
 
 static int system_getdns_handle(const char* str, int strLen, va_list val)
 {
-	int len, n;
 	char *dns;
-	const char *p;
+	int v[4];
 
-	if(0 == strncmp("nameserver ", str, 11))
+	// TODO: IPv6
+
+	if(strLen > 0 && 4 == sscanf(str, "nameserver %d:%d:%d:%d", &v[0], &v[1], &v[2], &v[3]))
 	{
-		dns = va_arg(val, char*);
-		len = va_arg(val, int);
-
-		n = strlen(dns);
-		if(n > 0)
+		if(0 <= v[0] && v[0] <= 255 && 0 <= v[1] && v[1] <= 255 && 0 <= v[2] && v[2] <= 255 && 0 <= v[3] && v[3] <= 255)
 		{
-			dns[n] = ';';
-			dns += n+1;
-			len -= 1;
-		}
-		len -= n;
+			dns = va_arg(val, char*);
+			if(NULL == dns)
+				return 1; // stop
 
-		p = skip(str+10, ' ');
-		token(p, "\r\n ", dns, len);
+			sprintf(dns, "%d:%d:%d:%d", v[0], v[1], v[2], v[3]);
+		}
 	}
 	return 0;
 }
 
-int system_getdns(const char* name, char* dns, int dnsLen)
+int system_getdns(const char* name, char primary[40], char secondary[40])
 {
 	int r;
 	char content[1024*2] = {0};
 
 	r = tools_cat("/etc/resolv.conf", content, sizeof(content)-1);
-	r = tools_tokenline(content, system_getdns_handle, dns, dnsLen);
+	r = tools_tokenline(content, system_getdns_handle, primary, secondary, NULL);
 	return r;
 }
 
@@ -496,13 +492,13 @@ static int system_setdns_handle(const char* str, int len, va_list val)
 	return 0;
 }
 
-int system_setdns(const char* name, const char* dns)
+int system_setdns(const char* name, const char* primary, const char *secondary)
 {
 	int r;
 	FILE* fp;
 	char content[1024*3] = {0};	
 	const char *line, *p;
-	
+
 	// read
 	tools_cat("/etc/resolv.conf", content, sizeof(content)-1);
 
@@ -513,25 +509,16 @@ int system_setdns(const char* name, const char* dns)
 	// update
 	r = tools_tokenline(content, system_setdns_handle, fp);
 
-	line = dns;
-	while(line && *line)
+	if(primary && *primary)
 	{
-		line = skips(line, " ;");
-		p = strchr(line, ';');
-		if(p)
-		{
-			assert(p > line);
-			fwrite("nameserver ", 1, 11, fp);
-			fwrite(line, 1, p-line, fp);
-			fwrite("\n", 1, 1, fp);
-		}
-		else
-		{
-			sprintf(content, "nameserver %s\n", line);
-			fwrite(content, 1, strlen(content), fp);
-			break;
-		}
-		line = p+1;
+		snprintf(content, sizeof(content), "nameserver %s\n", primary);
+		fwrite(content, 1, strlen(content), fp);
+	}
+
+	if(secondary && *secondary)
+	{
+		snprintf(content, sizeof(content), "nameserver %s\n", secondary);
+		fwrite(content, 1, strlen(content), fp);
 	}
 
 	fclose(fp);

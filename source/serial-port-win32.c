@@ -8,7 +8,7 @@
 void* serial_port_open(const char *name)
 {
 	HANDLE h;
-	h = CreateFile(name, 
+	h = CreateFileA(name, 
 		GENERIC_READ | GENERIC_WRITE,
 		0,				// must be opened with exclusive-access
 		NULL,			// default security attributes

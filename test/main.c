@@ -10,6 +10,9 @@ void atomic_test(void);
 void spinlock_test(void);
 void event_test(void);
 void semaphore_test(void);
+
+void stack_test(void);
+
 void url_test(void);
 void unicode_test(void);
 void utf8codec_test(void);
@@ -37,6 +40,8 @@ int main(int argc, char* argv[])
 #if !defined(OS_MAC)
 	semaphore_test();
 #endif
+
+	stack_test();
 
 #if defined(OS_WINDOWS)
 	rtsp_header_range_test();

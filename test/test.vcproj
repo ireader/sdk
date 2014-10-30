@@ -205,6 +205,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\stack-test.c"
+				>
+			</File>
+			<File
 				RelativePath=".\thread-pool-test.c"
 				>
 			</File>
