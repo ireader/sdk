@@ -43,7 +43,7 @@ typedef struct _thread_pool_context_t
 
 } thread_pool_context_t;
 
-static void thread_pool_destroy_thread(thread_pool_context_t *context, int tid);
+static void thread_pool_destroy_thread(thread_pool_context_t *context, tid_t tid);
 
 static int STDCALL thread_pool_worker(void *param)
 {
@@ -120,9 +120,9 @@ static thread_list_t* thread_pool_create_thread(thread_pool_context_t *context)
 }
 
 static void thread_pool_destroy_thread(thread_pool_context_t *context, 
-									   int tid)
+									   tid_t tid)
 {
-	int id;
+	tid_t id;
 	thread_list_t **head;
 	thread_list_t *next;
 
