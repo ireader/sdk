@@ -6,6 +6,7 @@
 
 typedef HMODULE module_t;
 typedef DWORD   useconds_t;
+typedef FARPROC funcptr_t;
 
 #else
 #include <sys/types.h>
@@ -18,6 +19,7 @@ typedef DWORD   useconds_t;
 #include <errno.h>
 
 typedef void* module_t;
+typedef void* funcptr_t;
 #endif
 
 #include <sys/timeb.h>
@@ -43,7 +45,7 @@ inline int system_version(int* major, int* minor);
 //////////////////////////////////////////////////////////////////////////
 inline module_t system_load(const char* module);
 inline int system_unload(module_t module);
-inline void* system_getproc(module_t module, const char* producer);
+inline funcptr_t system_getproc(module_t module, const char* producer);
 
 //////////////////////////////////////////////////////////////////////////
 ///
@@ -224,7 +226,7 @@ inline int system_unload(module_t module)
 #endif
 }
 
-inline void* system_getproc(module_t module, const char* producer)
+inline funcptr_t system_getproc(module_t module, const char* producer)
 {
 #if defined(OS_WINDOWS)
 	return GetProcAddress(module, producer);
