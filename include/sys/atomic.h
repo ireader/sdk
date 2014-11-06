@@ -3,7 +3,7 @@
 
 #if defined(OS_WINDOWS)
 #include <Windows.h>
-typedef long int32_t;
+typedef int		int32_t;
 typedef __int64 int64_t;
 #elif defined(OS_MAC)
 #include <libkern/OSAtomic.h>
@@ -30,28 +30,28 @@ inline int32_t atomic_increment32(volatile int32_t *value)
 {
 	assert((int32_t)value % 4 == 0);
 	assert(sizeof(LONG) == sizeof(int32_t));
-	return InterlockedIncrement(value);
+	return InterlockedIncrement((LONG volatile*)value);
 }
 
 inline int32_t atomic_decrement32(volatile int32_t *value)
 {
 	assert((int32_t)value % 4 == 0);
 	assert(sizeof(LONG) == sizeof(int32_t));
-	return InterlockedDecrement(value);
+	return InterlockedDecrement((LONG volatile*)value);
 }
 
 inline int32_t atomic_add32(volatile int32_t *value, int32_t incr)
 {
 	assert((int32_t)value % 4 == 0);
 	assert(sizeof(LONG) == sizeof(int32_t));
-	return InterlockedExchangeAdd(value, incr) + incr; // The function returns the initial value of the Addend parameter.
+	return InterlockedExchangeAdd((LONG volatile*)value, incr) + incr; // The function returns the initial value of the Addend parameter.
 }
 
 inline int atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t newvalue)
 {
 	assert((int32_t)value % 4 == 0);
 	assert(sizeof(LONG) == sizeof(int32_t));
-	return oldvalue == InterlockedCompareExchange(value, newvalue, oldvalue) ? 1 : 0;
+	return oldvalue == InterlockedCompareExchange((LONG volatile*)value, newvalue, oldvalue) ? 1 : 0;
 }
 
 inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
