@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <string.h>
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(OS_WINDOWS)
 #include <Windows.h>
 typedef SYSTEMTIME system_time_t;
 
@@ -238,7 +238,7 @@ int time64_format(time64_t time, const char* format, char* str)
 {
 	system_time_t st;
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(OS_WINDOWS)
 	FILETIME ft;
 
 	time += 11644473600000L; // January 1, 1601 (UTC) -> January 1, 1970 (UTC).
@@ -274,7 +274,7 @@ time64_t time64_from(const char* format, const char* src)
 	time64_t v;
 	system_time_t st;
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(OS_WINDOWS)
 	FILETIME ft;
 
 	memset(&st, 0, sizeof(st));

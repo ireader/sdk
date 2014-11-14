@@ -33,7 +33,7 @@ time64_t time64_from(const char* format, const char* src);
 
 int time64_format(time64_t time, const char* format, char* str);
 
-// millisecond since January 1, 1970(UTC)
+// millisecond since the Epoch, 1970-01-01 00:00:00 +0000 (UTC)
 time64_t time64_now(void);
 
 #ifdef __cplusplus

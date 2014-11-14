@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
@@ -26,9 +27,9 @@
 		#define strdup		_strdup
 	#endif
 
-	#if !defined(snprintf)
-		#define snprintf	_snprintf
-	#endif
+	//#if !defined(snprintf)
+	//	#define snprintf	_snprintf
+	//#endif
 
 	#if !defined(atoll)
 		#define atoll	_atoi64
@@ -45,9 +46,17 @@
 	#ifndef strnicmp
 		#define strnicmp strncasecmp
 	#endif
+#endif
 
-	#ifndef _snprintf
-		#define _snprintf snprintf
+#if defined(__cplusplus)
+	#define UNUSED(x)
+#else
+	#if defined(_MSC_VER)
+		#define UNUSED(x) x
+	#elif defined(__GNUC__)
+		#define UNUSED(x) x __attribute__((unused))
+	#else
+		#define UNUSED(x) x
 	#endif
 #endif
 
@@ -119,6 +128,24 @@ inline char* strndup(const char* p, size_t n)
 	strncpy(s, p, n);
 	s[n] = 0;
 	return s;
+}
+
+inline int snprintf(char *str, size_t size, const char *format, ...)
+{
+	int n = -1;
+	va_list args;
+
+	assert(size > 0);
+	va_start(args, format);
+	n = _vsnprintf(str, size-1, format, args);
+
+	if(n < 0 || n == (int)size-1)
+	{
+		// -1 indicating that output has been truncated
+		n = n < 0 ? size-1 : n;
+		str[n] = '\0';
+	}
+	return n;
 }
 
 #else
