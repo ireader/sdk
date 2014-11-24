@@ -12,10 +12,10 @@ inline socket_t udpsocket_create(const char* ip, int port)
 	// new a UDP socket
 	socket = socket_udp();
 	if(socket_error == socket)
-		return 0;
+		return socket_invalid;
 
 	// reuse addr
-	socket_setreuseaddr(socket, 1);
+//	socket_setreuseaddr(socket, 1);
 
 	// bind
 	if(ip && ip[0])
@@ -32,7 +32,7 @@ inline socket_t udpsocket_create(const char* ip, int port)
 	if(0 != ret)
 	{
 		socket_close(socket);
-		return 0;
+		return socket_invalid;
 	}
 
 	return socket;
