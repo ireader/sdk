@@ -7,7 +7,7 @@
 /// @param[in] ip socket bind local address, NULL-bind any address
 /// @param[in] port bind local port
 /// @param[in] backlog the maximum length to which the queue of pending connections for socket may grow
-/// @return 0-error, use socket_geterror() to get error code, other-ok 
+/// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
 inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 {
 	int ret;
@@ -17,7 +17,7 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 	// new a TCP socket
 	socket = socket_tcp();
 	if(socket_error == socket)
-		return 0;
+		return socket_invalid;
 
 	// reuse addr
 	socket_setreuseaddr(socket, 1);
@@ -41,7 +41,7 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 	if(0 != ret)
 	{
 		socket_close(socket);
-		return 0;
+		return socket_invalid;
 	}
 
 	return socket;
@@ -52,16 +52,17 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 /// @param[in/out] addr struct sockaddr_in for IPv4
 /// @param[in/out] addrlen addr length in bytes
 /// @param[in] mstimeout timeout in millisecond
-/// @return 0-timeout, -1-error, use socket_geterror() to get error code, other-ok  
+/// @return 0-timeout, socket_invalid-error, use socket_geterror() to get error code, other-ok  
 inline socket_t tcpserver_accept(socket_t socket, struct sockaddr* addr, socklen_t* addrlen, int mstimeout)
 {
 	int ret;
 	socket_t client;
 
+	assert(socket_invalid != 0);
 	ret = socket_select_read(socket, mstimeout);
 	if(socket_error == ret)
 	{
-		return (socket_t)(-1);
+		return socket_invalid;
 	}
 	else if(0 == ret)
 	{
@@ -70,7 +71,7 @@ inline socket_t tcpserver_accept(socket_t socket, struct sockaddr* addr, socklen
 
 	client = socket_accept(socket, addr, addrlen);
 	if(socket_invalid == client)
-		return (socket_t)(-1);
+		return socket_invalid;
 
 	return client;
 }
