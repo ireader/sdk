@@ -7,8 +7,8 @@ extern "C" {
 
 // Initialize/Finalize
 // call once only
-int http_server_init();
-int http_server_cleanup();
+int http_server_init(void);
+int http_server_cleanup(void);
 
 void* http_server_create(const char* ip, int port);
 int http_server_destroy(void* http);

@@ -4,12 +4,12 @@
 #include "tcpserver.h"
 #include "http-server-internal.h"
 
-int http_server_init()
+int http_server_init(void)
 {
 	return 0;
 }
 
-int http_server_cleanup()
+int http_server_cleanup(void)
 {
 	return 0;
 }
