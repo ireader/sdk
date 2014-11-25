@@ -19,6 +19,7 @@ void utf8codec_test(void);
 void thread_pool_test(void);
 void systimer_test(void);
 void aio_socket_test(void);
+void ip_route_test(void);
 
 // librtsp
 #if defined(OS_WINDOWS)
@@ -44,7 +45,7 @@ int main(int argc, char* argv[])
 	stack_test();
 
 #if defined(OS_WINDOWS)
-	rtsp_header_range_test();
+//	rtsp_header_range_test();
 	rtsp_header_session_test();
 	rtsp_header_rtp_info_test();
 	rtsp_header_transport_test();
@@ -57,6 +58,8 @@ int main(int argc, char* argv[])
 	unicode_test();
 	utf8codec_test();
 	thread_pool_test();
+
+	ip_route_test();
 
 	//aio_socket_test();
 	//systimer_test();

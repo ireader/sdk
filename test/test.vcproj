@@ -185,6 +185,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ip-route-test.c"
+				>
+			</File>
+			<File
 				RelativePath=".\locker-test.c"
 				>
 			</File>
@@ -290,6 +294,10 @@
 			</File>
 			<File
 				RelativePath="..\source\HttpSocket.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\source\ip-route.c"
 				>
 			</File>
 			<File
