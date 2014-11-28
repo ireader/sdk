@@ -208,6 +208,11 @@ static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio,
 static void iocp_connect(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
 	ctx, bytes;
+	// http://msdn.microsoft.com/en-us/library/windows/desktop/ms737606%28v=vs.85%29.aspx
+	// When the ConnectEx function returns TRUE, the socket s is in the default state for a connected socket. 
+	// The socket s does not enable previously set properties or options until SO_UPDATE_CONNECT_CONTEXT is 
+	// set on the socket. Use the setsockopt function to set the SO_UPDATE_CONNECT_CONTEXT option.
+	// r = setsockopt( s, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0 );
 	aio->connect.proc(aio->connect.param, error);
 }
 

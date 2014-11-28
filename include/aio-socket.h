@@ -99,7 +99,8 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param);
 /// @param[in] socket aio socket
 /// @param[in] ip server ip v4 address
 /// @param[in] port server listen port
-/// @return 0-ok, <0-error, don't call proc if return error
+/// @return 0-ok, 10022-don't bound(see remark), <0-error don't call proc if return error
+/// Remark: windows socket need bind() port before connect. e.g. socket_bind_any(socket, 0);
 int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconnect proc, void* param);
 
 /// aio send
