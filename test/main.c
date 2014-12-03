@@ -19,6 +19,8 @@ void utf8codec_test(void);
 void thread_pool_test(void);
 void systimer_test(void);
 void aio_socket_test(void);
+void aio_socket_test2(void);
+void aio_socket_test3(void);
 void ip_route_test(void);
 
 // librtsp
@@ -43,6 +45,9 @@ int main(int argc, char* argv[])
 #endif
 
 	stack_test();
+
+	aio_socket_test2();
+	aio_socket_test3();
 
 #if defined(OS_WINDOWS)
 //	rtsp_header_range_test();

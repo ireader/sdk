@@ -177,6 +177,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\aio-socket-test2.c"
+				>
+			</File>
+			<File
+				RelativePath=".\aio-socket-test3.c"
+				>
+			</File>
+			<File
 				RelativePath=".\atomic-test.c"
 				>
 			</File>
