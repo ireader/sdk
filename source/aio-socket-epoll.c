@@ -132,7 +132,7 @@ struct epoll_context
 	pthread_spin_lock(&ctx->locker); ctx->ev.events |= EPOLLIN; pthread_spin_unlock(&ctx->locker); \
 	if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))    \
 		return 0;   \
-	pthread_spin_lock(&ctx->locker); ctx->ev.events &= EPOLLIN; pthread_spin_unlock(&ctx->locker); \
+	pthread_spin_lock(&ctx->locker); ctx->ev.events &= ~EPOLLIN; pthread_spin_unlock(&ctx->locker); \
 	__sync_sub_and_fetch_4(&ctx->ref, 1);	\
 } while(0)
 
@@ -142,7 +142,7 @@ struct epoll_context
 	pthread_spin_lock(&ctx->locker); ctx->ev.events |= EPOLLOUT; pthread_spin_unlock(&ctx->locker); \
 	if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))  \
 		return 0;   \
-	pthread_spin_lock(&ctx->locker); ctx->ev.events &= EPOLLOUT; pthread_spin_unlock(&ctx->locker); \
+	pthread_spin_lock(&ctx->locker); ctx->ev.events &= ~EPOLLOUT; pthread_spin_unlock(&ctx->locker); \
 	__sync_sub_and_fetch_4(&ctx->ref, 1);	\
 } while(0)
 
@@ -186,7 +186,11 @@ int aio_socket_process(int timeout)
 	{
 		assert(events[i].data.ptr);
 		ctx = (struct epoll_context*)events[i].data.ptr;
-		if(events[i].events & (EPOLLERR|EPOLLHUP))
+		// EPOLLERR: Error condition happened on the associated file descriptor
+		// EPOLLHUP: Hang up happened on the associated file descriptor
+		// EPOLLRDHUP: Stream socket peer closed connection, or shut down writing half of connection. 
+		//			   (This flag is especially useful for writing simple code to detect peer shutdown when using Edge Triggered monitoring.) 
+		if(events[i].events & (EPOLLERR|EPOLLHUP|EPOLLRDHUP))
 		{
 			// save event
 			// 1. thread-1 current ctx->ev.events = EPOLLIN
@@ -333,6 +337,7 @@ static int epoll_accept(struct epoll_context* ctx, int flags, int error)
 
 int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 {
+	int r;
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLIN));
 	if(ctx->ev.events & EPOLLIN)
@@ -341,12 +346,11 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 	ctx->in.accept.proc = proc;
 	ctx->in.accept.param = param;
 
-//	if(EAGAIN == epoll_accept(ctx, 0, 0))
-	{
-		// man 2 accept to see more
-		EPollIn(ctx, epoll_accept);
-	}
-
+	r = epoll_accept(ctx, 0, 0);
+	if(EAGAIN != r) return r;
+	
+	// man 2 accept to see more
+	EPollIn(ctx, epoll_accept);
 	return errno;
 }
 
@@ -383,6 +387,7 @@ static int epoll_connect(struct epoll_context* ctx, int flags, int error)
 
 int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconnect proc, void* param)
 {
+	int r;
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLOUT));
 	if(ctx->ev.events & EPOLLOUT)
@@ -394,12 +399,11 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
 	ctx->out.connect.proc = proc;
 	ctx->out.connect.param = param;
 
-//	if(EINPROGRESS == epoll_connect(ctx, 0, 0))
-	{
-		// man 2 connect to see more(ERRORS: EINPROGRESS)
-		EPollOut(ctx, epoll_connect);
-	}
+	r = epoll_connect(ctx, 0, 0);
+	if(EINPROGRESS != r) return r;
 
+	// man 2 connect to see more(ERRORS: EINPROGRESS)
+	EPollOut(ctx, epoll_connect);
 	return errno;
 }
 
@@ -430,6 +434,7 @@ static int epoll_recv(struct epoll_context* ctx, int flags, int error)
 
 int aio_socket_recv(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv proc, void* param)
 {
+	int r;
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLIN));
 	if(ctx->ev.events & EPOLLIN)
@@ -440,11 +445,10 @@ int aio_socket_recv(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv 
 	ctx->in.recv.buffer = buffer;
 	ctx->in.recv.bytes = bytes;
 
-//	if(EAGAIN == epoll_recv(ctx, 0, 0))
-	{
-		EPollIn(ctx, epoll_recv);
-	}
+	r = epoll_recv(ctx, 0, 0);
+	if(EAGAIN != r) return r;
 
+	EPollIn(ctx, epoll_recv);
 	return errno;
 }
 
@@ -475,6 +479,7 @@ static int epoll_send(struct epoll_context* ctx, int flags, int error)
 
 int aio_socket_send(aio_socket_t socket, const void* buffer, size_t bytes, aio_onsend proc, void* param)
 {
+	int r;
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLOUT));
 	if(ctx->ev.events & EPOLLOUT)
@@ -485,11 +490,10 @@ int aio_socket_send(aio_socket_t socket, const void* buffer, size_t bytes, aio_o
 	ctx->out.send.buffer = buffer;
 	ctx->out.send.bytes = bytes;
 
-//	if(EAGAIN == epoll_send(ctx, 0, 0))
-	{
-		EPollOut(ctx, epoll_send);
-	}
+	r = epoll_send(ctx, 0, 0);
+	if(EAGAIN != r) return r;
 
+	EPollOut(ctx, epoll_send);
 	return errno;
 }
 
@@ -526,6 +530,7 @@ static int epoll_recv_v(struct epoll_context* ctx, int flags, int error)
 
 int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecv proc, void* param)
 {
+	int r;
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLIN));
 	if(ctx->ev.events & EPOLLIN)
@@ -536,11 +541,10 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 	ctx->in.recv_v.vec = vec;
 	ctx->in.recv_v.n = n;
 
-//	if(EAGAIN == epoll_recv_v(ctx, 0, 0))
-	{
-		EPollIn(ctx, epoll_recv_v);
-	}
+	r = epoll_recv_v(ctx, 0, 0);
+	if(EAGAIN != r) return r;
 
+	EPollIn(ctx, epoll_recv_v);
 	return errno;
 }
 
@@ -577,6 +581,7 @@ static int epoll_send_v(struct epoll_context* ctx, int flags, int error)
 
 int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
 {
+	int r;
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLOUT));	
 	if(ctx->ev.events & EPOLLOUT)
@@ -587,11 +592,10 @@ int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onse
 	ctx->out.send_v.vec = vec;
 	ctx->out.send_v.n = n;
 
-//	if(EAGAIN == epoll_send_v(ctx, 0, 0))
-	{
-		EPollOut(ctx, epoll_send_v);
-	}
+	r = epoll_send_v(ctx, 0, 0);
+	if(EAGAIN != r) return r;
 
+	EPollOut(ctx, epoll_send_v);
 	return errno;
 }
 
@@ -628,6 +632,7 @@ static int epoll_recvfrom(struct epoll_context* ctx, int flags, int error)
 
 int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecvfrom proc, void* param)
 {
+	int r;
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLIN));	
 	if(ctx->ev.events & EPOLLIN)
@@ -638,11 +643,10 @@ int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onr
 	ctx->in.recvfrom.buffer = buffer;
 	ctx->in.recvfrom.bytes = bytes;
 
-//	if(EAGAIN == epoll_recvfrom(ctx, 0, 0))
-	{
-		EPollIn(ctx, epoll_recvfrom);
-	}
+	r = epoll_recvfrom(ctx, 0, 0);
+	if(EAGAIN != r) return r;
 
+	EPollIn(ctx, epoll_recvfrom);
 	return errno;
 }
 
@@ -673,6 +677,7 @@ static int epoll_sendto(struct epoll_context* ctx, int flags, int error)
 
 int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void* buffer, size_t bytes, aio_onsend proc, void* param)
 {
+	int r;
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLOUT));
 	if(ctx->ev.events & EPOLLOUT)
@@ -686,11 +691,10 @@ int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void*
 	ctx->out.send.buffer = buffer;
 	ctx->out.send.bytes = bytes;
 
-//	if(EAGAIN == epoll_sendto(ctx, 0, 0))
-	{
-		EPollOut(ctx, epoll_sendto);
-	}
+	r = epoll_sendto(ctx, 0, 0);
+	if(EAGAIN != r) return r;
 
+	EPollOut(ctx, epoll_sendto);
 	return errno;
 }
 
@@ -733,6 +737,7 @@ static int epoll_recvfrom_v(struct epoll_context* ctx, int flags, int error)
 
 int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param)
 {
+	int r;
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLIN));
 	if(ctx->ev.events & EPOLLIN)
@@ -743,11 +748,10 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 	ctx->in.recvfrom_v.vec = vec;
 	ctx->in.recvfrom_v.n = n;
 
-//	if(EAGAIN == epoll_recvfrom_v(ctx, 0, 0))
-	{
-		EPollIn(ctx, epoll_recvfrom_v);
-	}
+	r = epoll_recvfrom_v(ctx, 0, 0);
+	if(EAGAIN != r) return r;
 
+	EPollIn(ctx, epoll_recvfrom_v);
 	return errno;
 }
 
@@ -786,6 +790,7 @@ static int epoll_sendto_v(struct epoll_context* ctx, int flags, int error)
 
 int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
 {
+	int r;
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLOUT));	
 	if(ctx->ev.events & EPOLLOUT)
@@ -799,10 +804,9 @@ int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bu
 	ctx->out.send_v.vec = vec;
 	ctx->out.send_v.n = n;
 
-//	if(EAGAIN == epoll_sendto_v(ctx, 0, 0))
-	{
-		EPollOut(ctx, epoll_sendto_v);
-	}
+	r = epoll_sendto_v(ctx, 0, 0);
+	if(EAGAIN != r) return r;
 
+	EPollOut(ctx, epoll_sendto_v);
 	return errno;
 }
