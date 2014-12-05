@@ -263,8 +263,9 @@ static int kqueue_accept(struct kqueue_context* ctx, int flags, int error)
 
 	if(0 != error)
 	{
+		assert(1 == flags); // only in kevent thread
 		ctx->in.accept.proc(ctx->in.accept.param, error, 0, "", 0);
-		return -1;
+		return error;
 	}
 
 	memset(&addr, 0, sizeof(addr));
@@ -282,7 +283,7 @@ static int kqueue_accept(struct kqueue_context* ctx, int flags, int error)
 			return errno;
 
 		ctx->in.accept.proc(ctx->in.accept.param, errno, 0, "", 0);
-		return -1;
+		return 0;
 	}
 }
 
@@ -313,8 +314,9 @@ static int kqueue_connect(struct kqueue_context* ctx, int flags, int error)
 
 	if(0 != error)
 	{
+		assert(1 == flags); // only in kevent thread
 		ctx->out.connect.proc(ctx->out.connect.param, error);
-		return -1;
+		return error;
 	}
 
 	r = connect(ctx->socket, (const struct sockaddr*)&ctx->out.connect.addr, addrlen);
@@ -333,7 +335,7 @@ static int kqueue_connect(struct kqueue_context* ctx, int flags, int error)
 			return errno;
 
 		ctx->out.connect.proc(ctx->out.connect.param, errno);
-		return -1;
+		return 0;
 	}
 }
 
@@ -365,8 +367,9 @@ static int kqueue_recv(struct kqueue_context* ctx, int flags, int error)
 	ssize_t r = 0;
 	if(0 != error)
 	{
+		assert(1 == flags); // only in kevent thread
 		ctx->in.recv.proc(ctx->in.recv.param, error, 0);
-		return -1;
+		return error;
 	}
 
 	r = recv(ctx->socket, ctx->in.recv.buffer, ctx->in.recv.bytes, 0);
@@ -381,7 +384,7 @@ static int kqueue_recv(struct kqueue_context* ctx, int flags, int error)
 			return errno;
 
 		ctx->in.recv.proc(ctx->in.recv.param, errno, 0);
-		return -1;
+		return 0;
 	}
 }
 
@@ -412,8 +415,9 @@ static int kqueue_send(struct kqueue_context* ctx, int flags, int error)
 	ssize_t r = 0;
 	if(0 != error)
 	{
+		assert(1 == flags); // only in kevent thread
 		ctx->out.send.proc(ctx->out.send.param, error, 0);
-		return -1;
+		return error;
 	}
 
 	r = send(ctx->socket, ctx->out.send.buffer, ctx->out.send.bytes, 0);
@@ -428,7 +432,7 @@ static int kqueue_send(struct kqueue_context* ctx, int flags, int error)
 			return errno;
 
 		ctx->out.send.proc(ctx->out.send.param, errno, 0);
-		return -1;
+		return 0;
 	}
 }
 
@@ -461,8 +465,9 @@ static int kqueue_recv_v(struct kqueue_context* ctx, int flags, int error)
 
 	if(0 != error)
 	{
+		assert(1 == flags); // only in kevent thread
 		ctx->in.recv_v.proc(ctx->in.recv_v.param, error, 0);
-		return -1;
+		return error;
 	}
 
 	memset(&msg, 0, sizeof(msg));
@@ -481,7 +486,7 @@ static int kqueue_recv_v(struct kqueue_context* ctx, int flags, int error)
 			return errno;
 
 		ctx->in.recv_v.proc(ctx->in.recv_v.param, errno, 0);
-		return -1;
+		return 0;
 	}
 }
 
@@ -514,8 +519,9 @@ static int kqueue_send_v(struct kqueue_context* ctx, int flags, int error)
 
     if(0 != error)
 	{
+		assert(1 == flags); // only in kevent thread
 		ctx->out.send_v.proc(ctx->out.send_v.param, error, 0);
-		return -1;
+		return error;
 	}
 
 	memset(&msg, 0, sizeof(msg));
@@ -534,7 +540,7 @@ static int kqueue_send_v(struct kqueue_context* ctx, int flags, int error)
 			return errno;
 
 		ctx->out.send_v.proc(ctx->out.send_v.param, errno, 0);
-		return -1;
+		return 0;
 	}
 }
 
@@ -569,8 +575,9 @@ static int kqueue_recvfrom(struct kqueue_context* ctx, int flags, int error)
 
 	if(0 != error)
 	{
+		assert(1 == flags); // only in kevent thread
 		ctx->in.recvfrom.proc(ctx->in.recvfrom.proc, error, 0, "", 0);
-		return -1;
+		return error;
 	}
 
 	memset(&addr.sin_addr, 0, sizeof(addr.sin_addr));
@@ -587,7 +594,7 @@ static int kqueue_recvfrom(struct kqueue_context* ctx, int flags, int error)
 			return errno;
 
 		ctx->in.recvfrom.proc(ctx->in.recvfrom.proc, errno, 0, "", 0);
-		return -1;
+		return 0;
 	}
 }
 
@@ -618,8 +625,9 @@ static int kqueue_sendto(struct kqueue_context* ctx, int flags, int error)
 	ssize_t r = 0;
 	if(0 != error)
 	{
+		assert(1 == flags); // only in kevent thread
 		ctx->out.send.proc(ctx->out.send.param, error, 0);
-		return -1;
+		return error;
 	}
 
 	r = sendto(ctx->socket, ctx->out.send.buffer, ctx->out.send.bytes, 0, (struct sockaddr*)&ctx->out.send.addr, sizeof(ctx->out.send.addr));
@@ -634,7 +642,7 @@ static int kqueue_sendto(struct kqueue_context* ctx, int flags, int error)
 			return errno;
 
 		ctx->out.send.proc(ctx->out.send.param, errno, 0);
-		return -1;
+		return 0;
 	}
 }
 
@@ -672,8 +680,9 @@ static int kqueue_recvfrom_v(struct kqueue_context* ctx, int flags, int error)
 
 	if(0 != error)
 	{
+		assert(1 == flags); // only in kevent thread
 		ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, error, 0, "", 0);
-		return -1;
+		return error;
 	}
 
 	memset(&addr.sin_addr, 0, sizeof(addr.sin_addr));
@@ -696,7 +705,7 @@ static int kqueue_recvfrom_v(struct kqueue_context* ctx, int flags, int error)
 			return errno;
 
 		ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, errno, 0, "", 0);
-		return -1;
+		return 0;
 	}
 }
 
@@ -729,8 +738,9 @@ static int kqueue_sendto_v(struct kqueue_context* ctx, int flags, int error)
 
 	if(0 != error)
 	{
+		assert(1 == flags); // only in kevent thread
 		ctx->out.send_v.proc(ctx->out.send_v.param, error, 0);
-		return -1;
+		return error;
 	}
 
 	memset(&msg, 0, sizeof(msg));
@@ -751,7 +761,7 @@ static int kqueue_sendto_v(struct kqueue_context* ctx, int flags, int error)
 			return errno;
 
 		ctx->out.send_v.proc(ctx->out.send_v.param, errno, 0);
-		return -1;
+		return 0;
 	}
 }
 
