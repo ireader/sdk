@@ -5,6 +5,7 @@
 #if defined(OS_WINDOWS)
 #include <Windows.h>
 #pragma comment(lib, "Winmm.lib")
+#define OS_WINDOWS_TIMER
 #else
 #include <signal.h>
 #include <time.h>
@@ -20,11 +21,12 @@ typedef struct _timer_context_t
 	systimer_proc callback;
 	void* cbparam;
 
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS_TIMER)
 	UINT timerId;
 	unsigned int period;
 	unsigned int count;
-	LONG locked;
+	LONG ref;
+	CRITICAL_SECTION locker;
 #elif defined(OS_WINDOWS_ASYNC)
 	HANDLE timerId;
 #elif defined(OS_LINUX)
@@ -33,7 +35,7 @@ typedef struct _timer_context_t
 #endif
 } timer_context_t;
 
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS_TIMER)
 struct 
 {
 	TIMECAPS tc;
@@ -43,32 +45,44 @@ struct
 #define TIMER_PERIOD 1000
 #endif
 
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS_TIMER) || defined(OS_WINDOWS_ASYNC)
+static void timer_destroy(timer_context_t* ctx)
+{
+	DeleteCriticalSection(&ctx->locker);
+	free(ctx);
+}
+
 static void timer_thread_worker(void *param)
 {
 	timer_context_t* ctx;
 	ctx = (timer_context_t*)param;
-	if(ctx->period > g_ctx.tc.wPeriodMax)
+	EnterCriticalSection(&ctx->locker);
+	if(0 != ctx->timerId)
 	{
-		if(ctx->count == ctx->period / TIMER_PERIOD)
+		if(ctx->period > g_ctx.tc.wPeriodMax)
+		{
+			if(ctx->count == ctx->period / TIMER_PERIOD)
+				ctx->callback((systimer_t)ctx, ctx->cbparam);
+			ctx->count = (ctx->count + 1) % (ctx->period / TIMER_PERIOD + 1);
+		}
+		else
+		{
 			ctx->callback((systimer_t)ctx, ctx->cbparam);
-		ctx->count = (ctx->count + 1) % (ctx->period / TIMER_PERIOD + 1);
+		}
 	}
-	else
-	{
-		ctx->callback((systimer_t)ctx, ctx->cbparam);
-	}
+	LeaveCriticalSection(&ctx->locker);
 
-	InterlockedDecrement(&ctx->locked);
+	if(0 == InterlockedDecrement(&ctx->ref))
+		timer_destroy(ctx);
 }
 
 static void CALLBACK timer_schd_worker(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
 {
 	timer_context_t* ctx;
 	ctx = (timer_context_t*)dwUser;
-	if(1 != InterlockedIncrement(&ctx->locked))
+	if(2 != InterlockedIncrement(&ctx->ref))
 	{
-		InterlockedDecrement(&ctx->locked);
+		InterlockedDecrement(&ctx->ref); // make sure only one callback
 	}
 	else
 	{
@@ -91,7 +105,7 @@ static int timer_schd_worker(void *param)
 
 int systimer_init(thread_pool_t pool)
 {
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS_TIMER)
 	timeGetDevCaps(&g_ctx.tc, sizeof(TIMECAPS));
 	g_ctx.pool = pool;
 #endif
@@ -103,7 +117,7 @@ int systimer_clean(void)
 	return 0;
 }
 
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS_TIMER)
 static int systimer_create(systimer_t* id, unsigned int period, int oneshot, systimer_proc callback, void* cbparam)
 {
 	UINT fuEvent;
@@ -117,10 +131,12 @@ static int systimer_create(systimer_t* id, unsigned int period, int oneshot, sys
 		return -ENOMEM;
 
 	memset(ctx, 0, sizeof(timer_context_t));
+	InitializeCriticalSection(&ctx->locker);
 	ctx->callback = callback;
 	ctx->cbparam = cbparam;
 	ctx->period = period;
 	ctx->count = 0;
+	ctx->ref = 1;
 
 	// check period value
 	period = (period > g_ctx.tc.wPeriodMax) ?  TIMER_PERIOD : period;
@@ -128,7 +144,7 @@ static int systimer_create(systimer_t* id, unsigned int period, int oneshot, sys
 	ctx->timerId = timeSetEvent(period, 10, timer_schd_worker, (DWORD_PTR)ctx, fuEvent);
 	if(0 == ctx->timerId)
 	{
-		free(ctx);
+		timer_destroy(ctx);
 		return -EINVAL;
 	}
 
@@ -229,8 +245,14 @@ int systimer_stop(systimer_t id)
 
 	ctx = (timer_context_t*)id;
 
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS_TIMER)
 	timeKillEvent(ctx->timerId);
+	EnterCriticalSection(&ctx->locker);
+	ctx->timerId = 0;
+	LeaveCriticalSection(&ctx->locker);
+	if(0 == InterlockedDecrement(&ctx->ref))
+		timer_destroy(ctx);
+	return 0;
 #elif defined(OS_LINUX)
 	timer_delete(ctx->timerId);
 #elif defined(OS_WINDOWS_ASYNC)
