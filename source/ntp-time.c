@@ -37,7 +37,7 @@ ntp64_t ntp64_now()
 #else
 	// seconds and microseconds since the Epoch(1970-01-01 00:00:00 +0000 (UTC))
 	struct timeval tv;	
-	gettimeofday(&tv, NULL);
+	gettimeofday(&tv, 0);
 	seconds = (unsigned int)(tv.tv_sec + 0x83AA7E80); // 1/1/1970 -> 1/1/1900
 	fraction = (unsigned int)(tv.tv_usec / 15625.0 * 0x4000000);
 #endif

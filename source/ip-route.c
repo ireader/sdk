@@ -7,6 +7,7 @@
 #pragma comment(lib, "WS2_32.lib")
 #pragma comment(lib, "iphlpapi.lib")
 #endif
+#include <errno.h>
 
 #if defined(OS_WINDOWS)
 int ip_route_get(const char* distination, char ip[40])
@@ -52,18 +53,24 @@ int ip_route_get(const char* distination, char ip[40])
 #else
 int ip_route_get(const char* distination, char ip[40])
 {
+	size_t n = 0;
 	FILE *fp = NULL;
 	char cmd[64] = {0};
 
 	// "ip route get 255.255.255.255 | grep -Po '(?<=src )(\d{1,3}.){4}'"
-	snprintf(cmd, sizeof(cmd), "ip route get %s | grep -Po '(?<=src )(\d{1,3}.){4}'", distination);
+	snprintf(cmd, sizeof(cmd), "ip route get %s | grep -Po '(?<=src )(\\d{1,3}.){4}'", distination);
 	fp = popen(cmd, "r");
 	if(!fp)
 		return errno;
 
 	fgets(ip, 40, fp);
-
 	pclose(fp);
-	return 0==ip[0] ? -1 : 0;
+
+	n = strlen(ip);
+	while(n > 0 && strchr("\r\n \t", ip[n-1]))
+		--n;
+
+	ip[n] = '\0';
+	return n > 0 ? 0 : -1;
 }
 #endif

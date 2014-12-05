@@ -1,12 +1,6 @@
 #ifndef _string_util_h_
 #define _string_util_h_
 
-#if defined(OS_WINDOWS)
-	typedef __int64				int64_t;
-#else
-	typedef long long			int64_t;
-#endif
-
 inline const char* string_token(const char* str, const char* escape)
 {
 	while(*str && !strchr(escape, *str))

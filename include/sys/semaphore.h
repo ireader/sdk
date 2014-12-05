@@ -11,6 +11,9 @@ typedef HANDLE semaphore_t;
 #include <time.h>
 #include <fcntl.h>
 #include <semaphore.h>
+#include <stdlib.h>
+#include <string.h>
+#include <memory.h>
 
 typedef struct
 {

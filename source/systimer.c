@@ -83,6 +83,7 @@ static void CALLBACK timer_schd_worker(UINT uTimerID, UINT uMsg, DWORD_PTR dwUse
 	if(2 != InterlockedIncrement(&ctx->ref))
 	{
 		InterlockedDecrement(&ctx->ref); // make sure only one callback
+		assert(ctx->ref > 0);
 	}
 	else
 	{
