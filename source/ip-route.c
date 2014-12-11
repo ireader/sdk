@@ -1,5 +1,6 @@
 #include "ip-route.h"
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 #if defined(OS_WINDOWS)
 #include <winsock2.h>

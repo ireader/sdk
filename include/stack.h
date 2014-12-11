@@ -10,12 +10,12 @@
 
 struct stack_node
 {
-	struct stack_node *next;
+	struct stack_node *volatile next;
 };
 
 struct stack
 {
-	struct stack_node* top;
+	struct stack_node *volatile top;
 };
 
 inline int stack_init(struct stack *stack)
@@ -26,19 +26,19 @@ inline int stack_init(struct stack *stack)
 
 inline void stack_push(struct stack *stack, struct stack_node* node)
 {
-	struct stack_node *top;
+	struct stack_node *volatile top;
 
 	do
 	{
 		top = stack->top;
 		node->next = top;
-	} while(!atomic_cas_ptr(&stack->top, top, node));
+	} while(!atomic_cas_ptr((void* volatile*)&stack->top, top, node));
 }
 
 // Warning: only one thread can do pop action
 inline void stack_pop(struct stack *stack)
 {
-	struct stack_node *top;
+	struct stack_node *volatile top;
 
 	do
 	{
@@ -49,7 +49,7 @@ inline void stack_pop(struct stack *stack)
 
 		// For simplicity, suppose that we can ensure that this dereference is safe
 		// (i.e., that no other thread has popped the stack in the meantime).
-	} while(!atomic_cas_ptr(&stack->top, top, top->next));
+	} while(!atomic_cas_ptr((void* volatile*)&stack->top, top, top->next));
 }
 
 inline struct stack_node* stack_top(struct stack *stack)
@@ -59,17 +59,17 @@ inline struct stack_node* stack_top(struct stack *stack)
 
 inline int stack_empty(struct stack *stack)
 {
-	return atomic_cas_ptr(&stack->top, NULL, NULL) ? 1 : 0;
+	return atomic_cas_ptr((void* volatile*)&stack->top, NULL, NULL) ? 1 : 0;
 }
 
 inline int stack_clear(struct stack *stack)
 {
-	struct stack_node *top;
+	struct stack_node *volatile top;
 
 	do 
 	{
 		top = stack->top;
-	} while (!atomic_cas_ptr(&stack->top, top, NULL));
+	} while (!atomic_cas_ptr((void* volatile*)&stack->top, top, NULL));
 
 	return 0;
 }

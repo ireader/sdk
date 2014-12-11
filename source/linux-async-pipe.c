@@ -1,6 +1,6 @@
 #include "async-pipe.h"
 #include "cstringext.h"
-#include "sys/sync.h"
+#include "sys/atomic.h"
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <memory.h>
@@ -20,7 +20,7 @@ typedef struct
 	int len;
 
 #if defined(_DEBUG)
-	long ref;
+	int32_t ref;
 #endif
 } LinuxPipe;
 
@@ -61,7 +61,7 @@ static void aio_onread(sigval_t sigval)
 {
 	int e, n;
 	LinuxPipe* o = (LinuxPipe*)sigval.sival_ptr;
-	assert(0==InterlockedDecrement(&(o->ref)));
+	assert(0==atomic_decrement32(&o->ref));
 
 	e = aio_error(&o->aio);
 	n = aio_return(&o->aio);
@@ -71,11 +71,11 @@ static void aio_onread(sigval_t sigval)
 		{
 			o->aio.aio_nbytes -= n;
 			o->aio.aio_buf = ((char*)(o->aio.aio_buf)) + n;
-			assert(1==InterlockedIncrement(&(o->ref)));
+			assert(1==atomic_increment32(&o->ref));
 			n = aio_read(&o->aio);
 			if(0 != n)
 			{
-				assert(0==InterlockedDecrement(&(o->ref)));
+				assert(0==atomic_decrement32(&o->ref));
 				o->read(o->param, n, 0);
 			}
 		}
@@ -95,7 +95,7 @@ static void aio_onwrite(sigval_t sigval)
 {
 	int e, n;
 	LinuxPipe* o = (LinuxPipe*)sigval.sival_ptr;
-	assert(0==InterlockedDecrement(&(o->ref)));
+	assert(0==atomic_decrement32(&o->ref));
 
 	e = aio_error(&o->aio);
 	n = aio_return(&o->aio);
@@ -105,11 +105,11 @@ static void aio_onwrite(sigval_t sigval)
 		{
 			o->aio.aio_nbytes -= n;
 			o->aio.aio_buf = ((char*)(o->aio.aio_buf)) + n;
-			assert(1==InterlockedIncrement(&(o->ref)));
+			assert(1==atomic_increment32(&o->ref));
 			n = aio_write(&o->aio);
 			if(0 != n)
 			{
-				assert(0==InterlockedDecrement(&(o->ref)));
+				assert(0==atomic_decrement32(&o->ref));
 				o->write(o->param, n, 0);
 			}
 		}
@@ -140,10 +140,10 @@ int async_pipe_read(async_pipe_t pipe, void* msg, int len, async_pipe_onread cal
 	o->aio.aio_sigevent.sigev_notify_attributes = NULL;
 	o->aio.aio_sigevent.sigev_value.sival_ptr = o;
 
-	assert(1==InterlockedIncrement(&(o->ref)));
+	assert(1==atomic_increment32(&o->ref));
 	if(0 != aio_read(&o->aio))
 	{
-		assert(0==InterlockedDecrement(&(o->ref)));
+		assert(0==atomic_decrement32(&o->ref));
 		return (int)errno;
 	}
 	return 0;
@@ -164,10 +164,10 @@ int async_pipe_write(async_pipe_t pipe, const void* msg, int len, async_pipe_onw
 	o->aio.aio_sigevent.sigev_notify_attributes = NULL;
 	o->aio.aio_sigevent.sigev_value.sival_ptr = o;
 
-	assert(1==InterlockedIncrement(&(o->ref)));
+	assert(1==atomic_increment32(&o->ref));
 	if(0 != aio_write(&o->aio))
 	{
-		assert(0==InterlockedDecrement(&(o->ref)));
+		assert(0==atomic_decrement32(&o->ref));
 		return (int)errno;
 	}
 	return 0;
