@@ -33,7 +33,6 @@ static int STDCALL worker(IN void* param)
 
 static void onrecv(void* param, int code, size_t bytes)
 {
-	param, code, bytes;
 	//printf("aio_socket_recv_test onrecv: code=%d, bytes=%d\n", code, bytes);
 }
 

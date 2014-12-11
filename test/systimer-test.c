@@ -1,6 +1,6 @@
 #include "systimer.h"
 #include "cstringext.h"
-#include "sys/process.h"
+#include "sys/thread.h"
 #include "sys/system.h"
 #include "systimeconfig.h"
 #include "time64.h"
@@ -9,7 +9,11 @@
 
 static void OnTimer(systimer_t id, void* param)
 {
+#if defined(OS_LINUX)
+	printf("[%p]timer: %d\n", thread_self(), (int)param);
+#else
 	printf("[%u]timer: %d\n", (unsigned int)thread_self(), (int)param);
+#endif
 }
 
 static void Test1(void)
@@ -82,18 +86,17 @@ static void systimer_settimeofday(void)
 	system_sleep(1000);
 	lt = time64_now();
 
-	system_settime("
-
 	t2 = system_clock();
 	system_sleep(15000);
 	systimer_stop(id);
 }
 
-static void OnClockTimer(systimer_t id, void* param)
+#if defined(OS_LINUX)
+static void OnClockTimer2(systimer_t id, void* param)
 {
 	struct timespec tp;
 	clock_gettime(CLOCK_REALTIME, &tp);
-	printf("OnClockTimer tp.tv_sec: %u, tp.tv_nsec: %ld\n", tp.tv_sec, tp.tv_nsec);
+	printf("OnClockTimer tp.tv_sec: %s, tp.tv_nsec: %ld\n", ctime(tp.tv_sec), tp.tv_nsec);
 }
 
 static void systimer_clocksettime(void)
@@ -102,9 +105,9 @@ static void systimer_clocksettime(void)
 	struct timespec tp;
 
 	clock_gettime(CLOCK_REALTIME, &tp);
-	printf("systimer_clocksettime tp.tv_sec: %u, tp.tv_nsec: %ld\n", tp.tv_sec, tp.tv_nsec);
+	printf("systimer_clocksettime tp.tv_sec: %s, tp.tv_nsec: %ld\n", ctime(tp.tv_sec), tp.tv_nsec);
 
-	systimer_start(&id, 10000, OnClockTimer, (void*)NULL);
+	systimer_start(&id, 10000, OnClockTimer2, (void*)NULL);
 
 	system_sleep(1000);
 	clock_gettime(CLOCK_REALTIME, &tp);
@@ -114,16 +117,19 @@ static void systimer_clocksettime(void)
 	system_sleep(15000);
 	systimer_stop(id);
 }
+#endif
 
 void systimer_test(void)
 {
 	thread_pool_t tpool = thread_pool_create(2, 2, 64);
 	systimer_init(tpool);
-	//Test1();
-	//Test2();
-	//Test3();
-	//Test4();
+	Test1();
+	Test2();
+	Test3();
+	Test4();
+#if defined(OS_LINUX)
 	systimer_clocksettime();
+#endif
 	systimer_clean();
 	thread_pool_destroy(tpool);
 }

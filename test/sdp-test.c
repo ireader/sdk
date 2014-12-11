@@ -1,6 +1,9 @@
 #include "sdp.h"
 #include <stdio.h>
 
+void sdp_a_fmtp_test(void);
+void sdp_a_rtpmap_test(void);
+
 static void sdp_test1(void)
 {
 	FILE* fp;
@@ -29,4 +32,7 @@ void sdp_test(void)
 {
 	sdp_test1();
 	sdp_test2();
+
+	sdp_a_fmtp_test();
+	sdp_a_rtpmap_test();
 }

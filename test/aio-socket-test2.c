@@ -75,8 +75,8 @@ static void aio_server_onrecv_v(void* param, int code, size_t bytes)
 	else
 	{
 		assert(0 == strcmp(s_cmsg2, server->msg));
-		socket_setbufvec(server->vec, 0, s_smsg2, strlen(s_smsg2)/2);
-		socket_setbufvec(server->vec, 1, s_smsg2+strlen(s_smsg2)/2, strlen(s_smsg2)/2);
+		socket_setbufvec(server->vec, 0, (void*)s_smsg2, strlen(s_smsg2)/2);
+		socket_setbufvec(server->vec, 1, (void*)(s_smsg2+strlen(s_smsg2)/2), strlen(s_smsg2)/2);
 		r = aio_socket_send_v(server->socket, server->vec, 2, aio_server_onsend_v, param);
 		assert(0 == r);
 	}
@@ -203,8 +203,8 @@ static void aio_client_onrecv(void* param, int code, size_t bytes)
 	{
 		assert(0 == strcmp(s_smsg1, client->msg));
 
-		socket_setbufvec(client->vec, 0, s_cmsg2, strlen(s_cmsg2)/2);
-		socket_setbufvec(client->vec, 1, s_cmsg2+strlen(s_cmsg2)/2, strlen(s_cmsg2)/2);
+		socket_setbufvec(client->vec, 0, (void*)s_cmsg2, strlen(s_cmsg2)/2);
+		socket_setbufvec(client->vec, 1, (void*)(s_cmsg2+strlen(s_cmsg2)/2), strlen(s_cmsg2)/2);
 		r = aio_socket_send_v(client->socket, client->vec, 2, aio_client_onsend_v, param);
 		assert(0 == r);
 	}

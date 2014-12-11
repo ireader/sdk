@@ -5,6 +5,12 @@
 // gcc -I../include -DOS_LINUX main.c atomic-test.c semaphore-test.c spinlock-test.c event-test.c locker-test.c -o test -lpthread -ldl -lrt
 // gcc -I../include -DOS_LINUX main.c atomic-test.c semaphore-test.c spinlock-test.c event-test.c locker-test.c aio-socket-test.c ../source/aio-socket-epoll.c -o test -lpthread -ldl -lrt
 
+#if defined(OS_WINDOWS)
+#define HTTP_TEST
+#define RTSP_TEST
+#define SDP_TEST
+#endif
+
 void locker_test(void);
 void atomic_test(void);
 void spinlock_test(void);
@@ -23,15 +29,16 @@ void aio_socket_test2(void);
 void aio_socket_test3(void);
 void ip_route_test(void);
 
-// librtsp
-#if defined(OS_WINDOWS)
-void rtsp_header_range_test(void);
-void rtsp_header_session_test(void);
-void rtsp_header_rtp_info_test(void);
-void rtsp_header_transport_test(void);
+#if defined(HTTP_TEST)
+void http_test(void);
+#endif
+
+#if defined(RTSP_TEST)
+void rtsp_test(void);
+#endif
+
+#if defined(SDP_TEST)
 void sdp_test(void);
-void sdp_a_fmtp_test(void);
-void sdp_a_rtpmap_test(void);
 #endif
 
 int main(int argc, char* argv[])
@@ -49,16 +56,19 @@ int main(int argc, char* argv[])
 	aio_socket_test2();
 	aio_socket_test3();
 
-#if defined(OS_WINDOWS)
-//	rtsp_header_range_test();
-	rtsp_header_session_test();
-	rtsp_header_rtp_info_test();
-	rtsp_header_transport_test();
+#if defined(HTTP_TEST)
+	http_test();
+#endif
 
+#if defined(RTSP_TEST)
+	rtsp_test();
+#endif
+
+#if defined(SDP_TEST)
 	sdp_test();
-	sdp_a_fmtp_test();
-	sdp_a_rtpmap_test();
+#endif
 
+#if defined(OS_WINDOWS)
 	url_test();
 	unicode_test();
 	utf8codec_test();
@@ -66,8 +76,9 @@ int main(int argc, char* argv[])
 
 	ip_route_test();
 
-	//aio_socket_test();
-	//systimer_test();
+	aio_socket_test();
+	systimer_test();
+
 	system("pause");
 #endif
 	return 0;
