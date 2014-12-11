@@ -98,7 +98,7 @@ int http_header_content_type(const char* field, struct http_header_content_type_
 }
 
 #if defined(_DEBUG) || defined(DEBUG)
-void http_header_content_type_test()
+void http_header_content_type_test(void)
 {
 	struct http_header_content_type_t content;
 	http_header_content_type("text/html; charset=ISO-8859-4", &content);

@@ -287,9 +287,14 @@ static void http_cookie_create_test(void)
 	assert(0==http_cookie_create(cookie, sizeof(cookie), "name", "value", "/", NULL, NULL, 0, 1) && 0==strcmp(cookie, "name=value; path=/; Secure"));
 }
 
+static void http_cookie_check_test(void)
+{
+}
+
 void http_cookie_test(void)
 {
 	http_cookie_parse_test();
 	http_cookie_create_test();
+	http_cookie_check_test();
 }
 #endif
