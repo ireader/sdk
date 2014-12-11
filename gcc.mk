@@ -22,7 +22,7 @@ DEFINES += OS_LINUX
 AR := $(CROSS)ar
 CC := $(CROSS)gcc
 CXX := $(CROSS)g++
-CFLAGS += -Wall
+CFLAGS += -Wall -fPIC
 CXXFLAGS += -Wall
 
 ifeq ($(RELEASE),1)
