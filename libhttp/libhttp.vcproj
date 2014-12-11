@@ -157,6 +157,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\source\http-cookie.c"
+				>
+			</File>
+			<File
 				RelativePath=".\source\http-header-content-type.c"
 				>
 			</File>
@@ -180,6 +184,10 @@
 			>
 			<File
 				RelativePath=".\include\http-bundle.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\http-cookie.h"
 				>
 			</File>
 			<File
