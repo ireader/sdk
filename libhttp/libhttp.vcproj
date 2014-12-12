@@ -157,6 +157,18 @@
 				>
 			</File>
 			<File
+				RelativePath=".\source\http-client-connection-aio.c"
+				>
+			</File>
+			<File
+				RelativePath=".\source\http-client-connection.c"
+				>
+			</File>
+			<File
+				RelativePath=".\source\http-client.c"
+				>
+			</File>
+			<File
 				RelativePath=".\source\http-cookie.c"
 				>
 			</File>
@@ -165,7 +177,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\source\http-header-host.c"
+				>
+			</File>
+			<File
 				RelativePath=".\source\http-reason.c"
+				>
+			</File>
+			<File
+				RelativePath=".\source\http-request.c"
 				>
 			</File>
 			<File
@@ -187,6 +207,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\include\http-client-connect.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\http-client.h"
+				>
+			</File>
+			<File
 				RelativePath=".\include\http-cookie.h"
 				>
 			</File>
@@ -195,7 +223,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\include\http-header-host.h"
+				>
+			</File>
+			<File
 				RelativePath=".\include\http-reason.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\http-request.h"
 				>
 			</File>
 			<File
