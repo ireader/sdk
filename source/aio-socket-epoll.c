@@ -361,40 +361,32 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 
 static int epoll_connect(struct epoll_context* ctx, int flags, int error)
 {
-	int r;
-	int addrlen = sizeof(ctx->out.connect.addr);
+	int r = 0;
+	socklen_t addrlen = sizeof(ctx->out.connect.addr);
 
-	if(0 != error)
+    // call in epoll_wait thread
+    assert(1 == flags);
+
+    if(0 != error)
 	{
 		assert(1 == flags); // only in epoll_wait thread
 		ctx->out.connect.proc(ctx->out.connect.param, error);
 		return error;
 	}
-
-	r = connect(ctx->socket, (const struct sockaddr*)&ctx->out.connect.addr, addrlen);
-	if(0 == r)
-	{
-		// man connect to see more (EINPROGRESS)
-		addrlen = sizeof(r);
-		getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&r, (socklen_t*)&addrlen);
-
-		ctx->out.connect.proc(ctx->out.connect.param, r);
-		return r;
-	}
-	else
-	{
-		if(0 == flags)
-			return errno;
-
-		// call in epoll_wait thread
-		ctx->out.connect.proc(ctx->out.connect.param, errno);
-		return 0;
-	}
+    else
+    {
+        // man connect to see more (EINPROGRESS)
+        addrlen = sizeof(r);
+        getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&r, &addrlen);
+        ctx->out.connect.proc(ctx->out.connect.param, r);
+        return r;
+    }
 }
 
 int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconnect proc, void* param)
 {
 	int r;
+    socklen_t addrlen;
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(0 == (ctx->ev.events & EPOLLOUT));
 	if(ctx->ev.events & EPOLLOUT)
@@ -406,11 +398,24 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
 	ctx->out.connect.proc = proc;
 	ctx->out.connect.param = param;
 
-	r = epoll_connect(ctx, 0, 0);
-	if(EINPROGRESS != r) return r;
+    //	r = epoll_connect(ctx, 0, 0);
+    //	if(EINPROGRESS != r) return r;
 
-	// man 2 connect to see more(ERRORS: EINPROGRESS)
-	EPollOut(ctx, epoll_connect);
+    addrlen = sizeof(ctx->out.connect.addr);
+    r = connect(ctx->socket, (const struct sockaddr*)&ctx->out.connect.addr, addrlen);
+    if(0 == r)
+    {
+        // man 2 connect to see more(ERRORS: EINPROGRESS)
+        addrlen = sizeof(r);
+        if(0 == getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&r, socklen_t&addrlen) && 0 == r)
+            ctx->out.connect.proc(ctx->out.connect.param, r);
+        return r;
+    }
+
+    if(EINPROGRESS == errno)
+    {
+        EPollOut(ctx, epoll_connect);
+    }
 	return errno; // epoll_ctl return -1
 }
 
