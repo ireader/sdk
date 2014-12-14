@@ -5,7 +5,7 @@
 // gcc -I../include -DOS_LINUX main.c atomic-test.c semaphore-test.c spinlock-test.c event-test.c locker-test.c -o test -lpthread -ldl -lrt
 // gcc -I../include -DOS_LINUX main.c atomic-test.c semaphore-test.c spinlock-test.c event-test.c locker-test.c aio-socket-test.c ../source/aio-socket-epoll.c -o test -lpthread -ldl -lrt
 
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS) || defined(OS_MAC)
 #define HTTP_TEST
 #define RTSP_TEST
 #define SDP_TEST
@@ -18,6 +18,7 @@ void event_test(void);
 void semaphore_test(void);
 
 void stack_test(void);
+void time64_test(void);
 
 void url_test(void);
 void unicode_test(void);
@@ -50,11 +51,10 @@ int main(int argc, char* argv[])
 #if !defined(OS_MAC)
 	semaphore_test();
 #endif
-
 	stack_test();
 
-	aio_socket_test2();
-	aio_socket_test3();
+    url_test();
+    time64_test();
 
 #if defined(HTTP_TEST)
 	http_test();
@@ -64,22 +64,24 @@ int main(int argc, char* argv[])
 	rtsp_test();
 #endif
 
-#if defined(SDP_TEST)
-	sdp_test();
-#endif
-
-#if defined(OS_WINDOWS)
-	url_test();
-	unicode_test();
-	utf8codec_test();
 	thread_pool_test();
 
 	ip_route_test();
-
+    
+    aio_socket_test2();
+    aio_socket_test3();
 	aio_socket_test();
+
+#if defined(OS_WINDOWS)
+    unicode_test();
+    utf8codec_test();
 	systimer_test();
 
 	system("pause");
 #endif
-	return 0;
+    
+#if defined(SDP_TEST)
+    sdp_test();
+#endif
+    return 0;
 }

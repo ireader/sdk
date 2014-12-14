@@ -51,6 +51,7 @@ inline int spinlock_destroy(spinlock_t *locker)
 #if defined(OS_WINDOWS)
 	DeleteCriticalSection(locker); return 0;
 #elif defined(OS_MAC)
+    (void)locker;
 	return 0; // do nothing
 #elif defined(OS_LINUX_KERNEL)
 	return 0; // do nothing

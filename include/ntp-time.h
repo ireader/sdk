@@ -14,7 +14,7 @@ extern "C"{
 /// NTP 64-bit timestamp
 /// high 32-bit unsigned seconds since January 1, 1900 (UTC)
 /// low 32-bit fraction field resolving 232(10^12 / 2^32) picoseconds
-ntp64_t ntp64_now();
+ntp64_t ntp64_now(void);
 
 
 #ifdef __cplusplus

@@ -15,12 +15,11 @@ size_t base64_encode(char* target, const void *source, size_t bytes)
 {
 #define ENC(c) encode_table[c]
 
-	size_t i, j;
+	size_t i, j=0;
 	size_t n3bytes = bytes/3*3;
     const unsigned char *ptr = (const unsigned char*)source;
 
-    i = j = 0;
-	for (i = 0; i < n3bytes; i += 3) {
+    for (i = 0; i < n3bytes; i += 3) {
         target[j++] = ENC((ptr[i] >> 2) & 077);            /* c1 */
         target[j++] = ENC(((ptr[i] << 4) & 060) | ((ptr[i+1] >> 4) & 017)); /*c2*/
         target[j++] = ENC(((ptr[i+1] << 2) & 074) | ((ptr[i+2] >> 6) & 03));/*c3*/

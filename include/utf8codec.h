@@ -88,7 +88,7 @@ public:
 	UTF8Decode(const char* utf8) : m_pc(NULL), m_pw(NULL)
 	{
 		assert(utf8);
-		int n = strlen(utf8) + 1;
+		size_t n = strlen(utf8) + 1;
 		m_pw = new wchar_t[n];
 		memset(m_pw, 0, sizeof(wchar_t) * n);
 		unicode_from_utf8(utf8, n, m_pw, sizeof(wchar_t) * n);
@@ -106,7 +106,7 @@ public:
 	{
 		if(!m_pc && m_pw)
 		{
-			int n = wcslen(m_pw) + 1;
+			size_t n = wcslen(m_pw) + 1;
 			m_pc = new char[n * 4];
 			memset(m_pc, 0, n * 4);
 			unicode_to_gb18030(m_pw, n, m_pc, n * 4);

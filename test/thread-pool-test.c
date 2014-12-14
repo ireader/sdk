@@ -8,14 +8,18 @@
 
 static int32_t total = 0;
 
-void worker(void* param)
+static void worker(void* param)
 {
 	int i = 0;
 	int n = *(int*)param + 1;
 
 	while(i++ < n)
 	{
+#if defined(OS_MAC)
+        system_sleep(arc4random() % 30);
+#else
 		system_sleep(rand() % 30);
+#endif
 		if(210 == atomic_increment32(&total))
 		{
 			printf("[%d] I'm the KING\n", n);

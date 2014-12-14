@@ -19,7 +19,7 @@ typedef struct
 	async_pipe_onwrite write;
 	int len;
 
-#if defined(_DEBUG)
+#if defined(_DEBUG) || defined(DEBUG)
 	int32_t ref;
 #endif
 } LinuxPipe;

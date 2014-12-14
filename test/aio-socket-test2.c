@@ -9,7 +9,7 @@ struct aio_client_t
 {
 	aio_socket_t socket;
 	int cc;
-	int len;
+	size_t len;
 	char msg[64];
 	socket_bufvec_t vec[2];
 };
@@ -18,7 +18,7 @@ struct aio_server_t
 {
 	aio_socket_t socket;
 	int cc;
-	int len;
+	size_t len;
 	char msg[64];
 	socket_bufvec_t vec[2];
 };
@@ -255,7 +255,7 @@ void aio_socket_test2(void)
 	// client connect
 	tcp = socket_tcp();
 #if defined(OS_WINDOWS)
-	socket_bind_any(tcp, 0);
+	r = socket_bind_any(tcp, 0);
 #endif
 	client.socket = aio_socket_create(tcp, 1);
 	aio_socket_connect(client.socket, "127.0.0.1", PORT, aio_client_onconnect, &client);

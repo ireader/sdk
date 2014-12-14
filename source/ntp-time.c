@@ -14,7 +14,7 @@
 #include <sys/time.h>
 #endif
 
-ntp64_t ntp64_now()
+ntp64_t ntp64_now(void)
 {
 	unsigned int seconds;
 	unsigned int fraction;
