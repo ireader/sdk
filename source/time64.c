@@ -22,6 +22,24 @@ typedef struct _system_time_t
 	WORD wSecond;		// [0-59]
 	WORD wMilliseconds; // [0-999]
 } system_time_t;
+
+static time64_t utc_mktime(const struct tm *t)
+{
+    int mon = t->tm_mon+1, year = t->tm_year+1900;
+    
+    /* 1..12 -> 11,12,1..10 */
+    if (0 >= (int) (mon -= 2)) {
+        mon += 12;  /* Puts Feb last since it has leap day */
+        year -= 1;
+    }
+    
+    return ((((time64_t)
+              (year/4 - year/100 + year/400 + 367*mon/12 + t->tm_mday) +
+              year*365 - 719499
+              )*24 + t->tm_hour /* now have hours */
+             )*60 + t->tm_min /* now have minutes */
+            )*60 + t->tm_sec; /* finally seconds */
+}
 #endif
 
 #define TIME64_VALID_YEAR(v)			((v)>=1970 && (v)<=9999)
@@ -44,14 +62,15 @@ static char* print_value(char padding, size_t width, WORD value, char* output)
 {
 	size_t n;
 	char v[16] = {0};
-	sprintf(v, "%u", (unsigned int)value);
+	snprintf(v, sizeof(v), "%hu", value);
 
 	// fill padding
 	n = strlen(v);
 	if(n < width)
 		memset(output, padding, width-n);
 
-	strcpy(output+(n<width?width-n:0), v);
+    //	strcpy(output+(n<width?width-n:0), v);
+    memcpy(output+(n<width?width-n:0), v, n+1);
 	assert(strlen(output)==(n<width?width:n));
 	return output+(n<width?width:n);
 }
@@ -59,7 +78,7 @@ static char* print_value(char padding, size_t width, WORD value, char* output)
 static int time64_printf(const system_time_t* tm, const char* format, char* output)
 {
 	char padding;
-	int width;
+	size_t width;
 //	int precision;
 	const char* p;
 
@@ -89,7 +108,7 @@ static int time64_printf(const system_time_t* tm, const char* format, char* outp
 		// width
 		for(width=0; '1'<=*p && '9'>=*p; ++p)
 		{
-			width = width*10 + (*p - '0');
+			width = width*10 + (size_t)(*p - '0');
 		}
 
 		// precision
@@ -145,14 +164,14 @@ static int time64_printf(const system_time_t* tm, const char* format, char* outp
 static const char* scan_value(int asterisk, int width, WORD* value, const char* src)
 {
 	int i;
-	unsigned int n;
+	WORD n;
 
 	for(i=0, n=0; src && *src && (0==width||i<width); ++i,++src)
 	{
 		if(*src < '0' || *src > '9')
 			break;
 
-		n = n*10 + *src - '0';
+		n = n*10 + (WORD)(*src - '0');
 	}
 
 	if(1 != asterisk)
@@ -252,7 +271,8 @@ int time64_format(time64_t time, const char* format, char* str)
 	struct tm* lt;
 
 	t = time / 1000;
-	lt = localtime(&t);
+    lt = gmtime(&t);
+//	lt = localtime(&t);
 
 	memset(&st, 0, sizeof(st));
 	st.wYear = (WORD)lt->tm_year + 1900;
@@ -306,9 +326,9 @@ time64_t time64_from(const char* format, const char* src)
 	t.tm_hour = st.wHour;
 	t.tm_min = st.wMinute;
 	t.tm_sec = st.wSecond;
-
-	v = mktime(&t);
-	v *= 1000;
+//	v = mktime(&t);
+    v = utc_mktime(&t);
+    v *= 1000;
 	v += st.wMilliseconds;
 #endif
 	return v;
@@ -318,7 +338,7 @@ time64_t time64_now(void)
 {
 	time64_t v;
 	
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(OS_WINDOWS)
 	FILETIME ft;
 	GetSystemTimeAsFileTime((FILETIME*)&ft);
 
@@ -332,3 +352,31 @@ time64_t time64_now(void)
 #endif
 	return v;
 }
+
+#if defined(_DEBUG) || defined(DEBUG)
+void time64_test(void)
+{
+    time_t t;
+    time64_t t64, _t64;
+    struct tm *tm;
+    char gmt[64], local[64];
+    char utc[64];
+
+    t = time(NULL);
+    t64 = time64_now();
+
+    tm = gmtime(&t);
+    snprintf(gmt, sizeof(gmt), "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+
+    tm = localtime(&t);
+    snprintf(local, sizeof(local), "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+
+    time64_format(t64, "%04Y-%02M-%02D %02h:%02m:%02s", utc);
+    assert(0 == strcmp(utc, gmt));
+
+    _t64 = time64_from("%04Y-%02M-%02D %02h:%02m:%02s", utc);
+    assert(t64/1000 == _t64/1000);
+
+    assert(_t64/1000 == (time64_t)t);
+}
+#endif
