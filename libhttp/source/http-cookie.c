@@ -242,18 +242,18 @@ static void http_cookie_parse_test(void)
 {
 	cookie_t cookie;
 
-	cookie = http_cookie_parse("LSID=DQAAAK¡­Eaem_vYg; Path=/accounts; Expires=Wed, 13 Jan 2021 22:23:01 GMT; Secure; HttpOnly");
-	assert(0==strcmp("LSID", http_cookie_get_name(cookie)) && 0==strcmp("DQAAAK¡­Eaem_vYg", http_cookie_get_value(cookie)));
+	cookie = http_cookie_parse("LSID=DQAAAaem_vYg; Path=/accounts; Expires=Wed, 13 Jan 2021 22:23:01 GMT; Secure; HttpOnly");
+	assert(0==strcmp("LSID", http_cookie_get_name(cookie)) && 0==strcmp("DQAAAaem_vYg", http_cookie_get_value(cookie)));
 	assert(0==strcmp("Wed, 13 Jan 2021 22:23:01 GMT", http_cookie_get_expires(cookie)) && 0==strcmp("/accounts", http_cookie_get_path(cookie)) && !http_cookie_get_domain(cookie) && 1==http_cookie_is_httponly(cookie) && 1==http_cookie_is_secure(cookie));
 	http_cookie_destroy(cookie);
 
-	cookie = http_cookie_parse("HSID=AYQEVn¡­.DKrdst; Domain=.foo.com; Path=/; Expires=Wed, 13 Jan 2021 22:23:01 GMT; HttpOnly");
-	assert(0==strcmp("HSID", http_cookie_get_name(cookie)) && 0==strcmp("AYQEVn¡­.DKrdst", http_cookie_get_value(cookie)));
+	cookie = http_cookie_parse("HSID=AYQEVKrdst; Domain=.foo.com; Path=/; Expires=Wed, 13 Jan 2021 22:23:01 GMT; HttpOnly");
+	assert(0==strcmp("HSID", http_cookie_get_name(cookie)) && 0==strcmp("AYQEVKrdst", http_cookie_get_value(cookie)));
 	assert(0==strcmp("Wed, 13 Jan 2021 22:23:01 GMT", http_cookie_get_expires(cookie)) && 0==strcmp("/", http_cookie_get_path(cookie)) && 0==strcmp(".foo.com", http_cookie_get_domain(cookie)) && 1==http_cookie_is_httponly(cookie) && 0==http_cookie_is_secure(cookie));
 	http_cookie_destroy(cookie);
 
-	cookie = http_cookie_parse("SSID=Ap4P¡­.GTEq; Domain=foo.com; Path=/; Expires=Wed, 13 Jan 2021 22:23:01 GMT; Secure; HttpOnly");
-	assert(0==strcmp("SSID", http_cookie_get_name(cookie)) && 0==strcmp("Ap4P¡­.GTEq", http_cookie_get_value(cookie)));
+	cookie = http_cookie_parse("SSID=Ap4GTEq; Domain=foo.com; Path=/; Expires=Wed, 13 Jan 2021 22:23:01 GMT; Secure; HttpOnly");
+	assert(0==strcmp("SSID", http_cookie_get_name(cookie)) && 0==strcmp("Ap4GTEq", http_cookie_get_value(cookie)));
 	assert(0==strcmp("Wed, 13 Jan 2021 22:23:01 GMT", http_cookie_get_expires(cookie)) && 0==strcmp("/", http_cookie_get_path(cookie)) && 0==strcmp("foo.com", http_cookie_get_domain(cookie)) && 1==http_cookie_is_httponly(cookie) && 1==http_cookie_is_secure(cookie));
 	http_cookie_destroy(cookie);
 

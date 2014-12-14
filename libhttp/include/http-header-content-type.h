@@ -17,7 +17,7 @@ struct http_header_content_type_t
 	char media_type[16];
 	char media_subtype[16];
 
-	int parameter_count;
+	size_t parameter_count;
 	struct http_header_media_parameter parameters[3];
 };
 

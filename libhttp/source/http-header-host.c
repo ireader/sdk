@@ -14,11 +14,12 @@ int http_header_host(const char* field, char host[], size_t bytes, unsigned shor
 	p = strchr(field, ':');
 	if(p)
 	{
-		if(bytes < (size_t)(p - field))
+        size_t n = (size_t)(p - field); // ptrdiff_t -> size_t
+		if(bytes <= n)
 			return -1;
 
-		memcpy(host, field, p-field-1);
-		host[p-field] = '\0';
+		memcpy(host, field, n);
+		host[n] = '\0';
 		*port = (unsigned short)atoi(p+1);
 	}
 	else
@@ -26,7 +27,7 @@ int http_header_host(const char* field, char host[], size_t bytes, unsigned shor
 		if(bytes < strlen(field) + 1)
 			return -1;
 
-		strcpy(host, field);
+		strlcpy(host, field, bytes);
 	}
 
 	return 0;

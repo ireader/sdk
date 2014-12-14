@@ -18,81 +18,89 @@
 
 #define SPECIAL_CHARS ";\r\n"
 
+static int http_header_content_type_parameter(const char* parameters, struct http_header_content_type_t *v)
+{
+    size_t *len;
+    const char *p1;
+    const char *p = parameters;
+
+    while(p && *p && v->parameter_count < sizeof(v->parameters)/sizeof(v->parameters[0]))
+    {
+        while(' ' == *p) ++p; // skip blank space
+        p1 = string_token(p, "="SPECIAL_CHARS);
+        assert(p1);
+        if('=' == *p1)
+        {
+            v->parameters[v->parameter_count].name = p;
+            v->parameters[v->parameter_count].name_len = (size_t)(p1 - p);
+
+            while(' ' == *++p1); // skip blank space
+            v->parameters[v->parameter_count].value = p1;
+
+            p = p1;
+            p1 = string_token(p, SPECIAL_CHARS);
+            v->parameters[v->parameter_count].value_len = (size_t)(p1 - p);
+        }
+        else
+        {
+            v->parameters[v->parameter_count].name = p;
+            v->parameters[v->parameter_count].name_len = (size_t)(p1 - p);
+            v->parameters[v->parameter_count].value = NULL;
+            v->parameters[v->parameter_count].value_len = 0;
+        }
+
+        // reverse filter blank space
+        p = v->parameters[v->parameter_count].name;
+        len = &v->parameters[v->parameter_count].name_len;
+        while(*len > 0 && ' ' == p[*len-1]) --*len;
+        
+        p = v->parameters[v->parameter_count].value;
+        len = &v->parameters[v->parameter_count].value_len;
+        while(*len > 0 && ' ' == p[*len-1]) --*len;
+        
+        ++v->parameter_count;
+        
+        if('\r' == *p1 || '\n' == *p1 || '\0' == *p1)
+            break;
+        p = p1 + 1;
+    }
+
+    return 0;
+}
+
 int http_header_content_type(const char* field, struct http_header_content_type_t *v)
 {
-	size_t* len;
-	const char* p1;
-	const char* p = field;
+	size_t n;
+	const char *p1;
+	const char *p = field;
 
 	v->parameter_count = 0;
 
-	// parse media type
+    // media type
 	p1 = string_token(p, "/"SPECIAL_CHARS);
-	if('/' == *p1)
-	{
-		assert(p1 - p < sizeof(v->media_type)-1);
-		strncpy(v->media_type, p, p1-p);
-		v->media_type[p1-p] = '\0';
+    if('/' != *p1)
+        return -1; // invalid content-type
 
-		p = p1 + 1;
-		p1 = string_token(p, SPECIAL_CHARS);
-		assert(p1 - p < sizeof(v->media_subtype)-1);
-		strncpy(v->media_subtype, p, p1-p);
-		v->media_subtype[p1-p] = '\0';
-	}
-	else
-	{
-		assert(p1 - p < sizeof(v->media_type)-1);
-		strncpy(v->media_type, p, p1-p);
-		v->media_type[p1-p] = '\0';
-		v->media_subtype[0] = '\0';
-	}
+    n = (size_t)(p1 - p); // ptrdiff_t -> size_t
+    if(n + 1 > sizeof(v->media_type))
+        return -1;
+    memcpy(v->media_type, p, n);
+    v->media_type[n] = '\0';
 
-	if('\r' == *p1 || '\n' == *p1 || '\0' == *p1)
-		return 0;
+    // media subtype
+    p = p1 + 1;
+    p1 = string_token(p, SPECIAL_CHARS);
+    n = (size_t)(p1 - p); // ptrdiff_t -> size_t
+    if(n + 1 > sizeof(v->media_subtype))
+        return -1;
+    memcpy(v->media_subtype, p, n);
+    v->media_subtype[n] = '\0';
 
-	// parse parameters
-	assert(';' == *p1);
-	p = p1 + 1;
-	while(p && *p && v->parameter_count < sizeof(v->parameters)/sizeof(v->parameters[0]))
-	{
-		while(' ' == *p) ++p; // skip blank space
-		p1 = string_token(p, "="SPECIAL_CHARS);
-		if('=' == *p1)
-		{
-			v->parameters[v->parameter_count].name = p;
-			v->parameters[v->parameter_count].name_len = p1 - p;
-
-			while(' ' == *++p1); // skip blank space
-			v->parameters[v->parameter_count].value = p1;
-
-			p = p1;
-			p1 = string_token(p, SPECIAL_CHARS);
-			v->parameters[v->parameter_count].value_len = p1 ? p1 - p : strlen(p);
-		}
-		else
-		{
-			v->parameters[v->parameter_count].name = p;
-			v->parameters[v->parameter_count].name_len = p1 ? p1 - p : strlen(p);
-			v->parameters[v->parameter_count].value = NULL;
-			v->parameters[v->parameter_count].value_len = 0;
-		}
-
-		// reverse filter blank space
-		p = v->parameters[v->parameter_count].name;
-		len = &v->parameters[v->parameter_count].name_len;
-		while(*len > 0 && ' ' == p[*len-1]) --*len; 
-
-		p = v->parameters[v->parameter_count].value;
-		len = &v->parameters[v->parameter_count].value_len;
-		while(*len > 0 && ' ' == p[*len-1]) --*len;
-
-		++v->parameter_count;
-
-		if('\r' == *p1 || '\n' == *p1 || '\0' == *p1)
-			break;
-		p = p1 + 1;
-	}
+    // parameters
+    if(';' == *p1)
+    {
+        return http_header_content_type_parameter(p1+1, v);
+    }
 
 	return 0;
 }
