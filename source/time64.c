@@ -1,14 +1,16 @@
 #include "time64.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <time.h>
 
 #if defined(OS_WINDOWS)
 #include <Windows.h>
+#define snprintf _snprintf
 typedef SYSTEMTIME system_time_t;
 
 #else
-#include <time.h>
 #include <sys/time.h>
 typedef unsigned short WORD;
 typedef struct _system_time_t
