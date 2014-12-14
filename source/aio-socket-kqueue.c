@@ -128,6 +128,7 @@ struct kqueue_context
 
 int aio_socket_init(int threads)
 {
+    (void)threads;
 	s_kqueue = kqueue();
 	return -1 == s_kqueue ? errno : 0;
 }
@@ -272,7 +273,7 @@ static int kqueue_accept(struct kqueue_context* ctx, int flags, int error)
 	client = accept(ctx->socket, (struct sockaddr*)&addr, &addrlen);
 	if(client > 0)
 	{
-		strcpy(ip, inet_ntoa(addr.sin_addr));
+		strlcpy(ip, inet_ntoa(addr.sin_addr), sizeof(ip));
 		ctx->in.accept.proc(ctx->in.accept.param, 0, client, ip, ntohs(addr.sin_port));
 		return 0;
 	}
@@ -309,39 +310,32 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 
 static int kqueue_connect(struct kqueue_context* ctx, int flags, int error)
 {
-	int r = 0;
-	int addrlen = sizeof(ctx->out.connect.addr);
-
-	if(0 != error)
-	{
-		assert(1 == flags); // only in kevent thread
-		ctx->out.connect.proc(ctx->out.connect.param, error);
-		return error;
-	}
-
-	r = connect(ctx->socket, (const struct sockaddr*)&ctx->out.connect.addr, addrlen);
-	if(0 == r)
-	{
-		// man connect to see more (EINPROGRESS)
-		addrlen = sizeof(r);
-		getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&r, (socklen_t*)&addrlen);
-
-		ctx->out.connect.proc(ctx->out.connect.param, r);
-		return r;
-	}
-	else
-	{
-		if(0 == flags)
-			return errno;
-
-		ctx->out.connect.proc(ctx->out.connect.param, errno);
-		return 0;
-	}
+    int r = 0;
+    socklen_t addrlen = sizeof(ctx->out.connect.addr);
+    
+    // call in kevent thread
+    assert(1 == flags);
+    
+    if(0 != error)
+    {
+        assert(1 == flags); // only in kevent thread
+        ctx->out.connect.proc(ctx->out.connect.param, error);
+        return error;
+    }
+    else
+    {
+        // man connect to see more (EINPROGRESS)
+        addrlen = sizeof(r);
+        getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&r, &addrlen);
+        ctx->out.connect.proc(ctx->out.connect.param, r);
+        return r;
+    }
 }
 
 int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconnect proc, void* param)
 {
     int r = -1;
+    socklen_t addrlen;
     struct kqueue_context* ctx = (struct kqueue_context*)socket;
     assert(0 == ctx->ev[1].filter);
     if(ctx->ev[1].filter)
@@ -353,10 +347,21 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
 	ctx->out.connect.proc = proc;
 	ctx->out.connect.param = param;
 
-//    r = kqueue_connect(ctx, 0, 0);
-//	if(EINPROGRESS == r)
-	{
-		KQueueWrite(ctx, kqueue_connect);
+    //r = kqueue_connect(ctx, 0, 0);
+    addrlen = sizeof(ctx->out.connect.addr);
+    r = connect(ctx->socket, (const struct sockaddr*)&ctx->out.connect.addr, addrlen);
+    if(0 == r)
+    {
+        // man 2 connect to see more(ERRORS: EINPROGRESS)
+        addrlen = sizeof(r);
+        if(0 == getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&r, &addrlen) && 0 == r)
+            ctx->out.connect.proc(ctx->out.connect.param, r);
+        return r;
+    }
+
+    if(EINPROGRESS == errno)
+    {
+    	KQueueWrite(ctx, kqueue_connect);
 	}
 
 	return 0 == r ? 0 : errno;
@@ -584,7 +589,7 @@ static int kqueue_recvfrom(struct kqueue_context* ctx, int flags, int error)
 	r = recvfrom(ctx->socket, ctx->in.recvfrom.buffer, ctx->in.recvfrom.bytes, 0, (struct sockaddr*)&addr, &addrlen);
 	if(r >= 0)
 	{
-		strcpy(ip, inet_ntoa(addr.sin_addr));
+		strlcpy(ip, inet_ntoa(addr.sin_addr), sizeof(ip));
 		ctx->in.recvfrom.proc(ctx->in.recvfrom.param, 0, (size_t)r, ip, (int)ntohs(addr.sin_port));
 		return 0;
 	}
@@ -695,7 +700,7 @@ static int kqueue_recvfrom_v(struct kqueue_context* ctx, int flags, int error)
 	r = recvmsg(ctx->socket, &msg, 0);
 	if(r >= 0)
 	{
-		strcpy(ip, inet_ntoa(addr.sin_addr));
+		strlcpy(ip, inet_ntoa(addr.sin_addr), sizeof(ip));
 		ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, 0, (size_t)r, ip, (int)ntohs(addr.sin_port));
 		return 0;
 	}
