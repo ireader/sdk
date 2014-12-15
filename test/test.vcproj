@@ -445,6 +445,26 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="string"
+			>
+			<File
+				RelativePath="..\string\snprintf.c"
+				>
+			</File>
+			<File
+				RelativePath="..\string\strlcat.c"
+				>
+			</File>
+			<File
+				RelativePath="..\string\strlcpy.c"
+				>
+			</File>
+			<File
+				RelativePath="..\string\strndup.c"
+				>
+			</File>
+		</Filter>
 	</Files>
 	<Globals>
 	</Globals>

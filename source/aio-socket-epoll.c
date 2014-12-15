@@ -407,7 +407,7 @@ int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconn
     {
         // man 2 connect to see more(ERRORS: EINPROGRESS)
         addrlen = sizeof(r);
-        if(0 == getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&r, socklen_t&addrlen) && 0 == r)
+        if(0 == getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&r, &addrlen) && 0 == r)
             ctx->out.connect.proc(ctx->out.connect.param, r);
         return r;
     }

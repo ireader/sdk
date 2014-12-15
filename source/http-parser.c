@@ -197,6 +197,9 @@ static int http_rawdata(struct http_context *ctx, const void* data, size_t bytes
 // extension-header = message-header
 static int http_header_handler(struct http_context *ctx, size_t npos, size_t vpos)
 {
+	// TODO: 
+	// RFC-2616 4.2 Message Headers p22
+	// Multiple message-header fields with the same field-name MAY be present in a message
 	const char* name = ctx->raw + npos;
 	const char* value = ctx->raw + vpos;
 
@@ -231,6 +234,7 @@ static int http_header_handler(struct http_context *ctx, size_t npos, size_t vpo
 	}
 	else if(0 == stricmp("Set-Cookie", name))
 	{
+		// TODO: Multiple Set-Cookie headers
 		ctx->cookie = (int)vpos;
 	}
 	else if(0 == stricmp("Location", name))
@@ -1072,6 +1076,9 @@ const char* http_get_header_by_name(void* parser, const char* name)
 
 	for(i = 0; i < ctx->header_size; i++)
 	{
+		// TODO: 
+		// RFC-2616 4.2 Message Headers p22
+		// Multiple message-header fields with the same field-name MAY be present in a message
 		if(0 == stricmp(ctx->raw + ctx->headers[i].npos, name))
 			return ctx->raw + ctx->headers[i].vpos;
 	}

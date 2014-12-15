@@ -72,6 +72,10 @@ int main(int argc, char* argv[])
     aio_socket_test3();
 	aio_socket_test();
 
+#if defined(SDP_TEST)
+	sdp_test();
+#endif
+
 #if defined(OS_WINDOWS)
     unicode_test();
     utf8codec_test();
@@ -80,8 +84,5 @@ int main(int argc, char* argv[])
 	system("pause");
 #endif
     
-#if defined(SDP_TEST)
-    sdp_test();
-#endif
     return 0;
 }

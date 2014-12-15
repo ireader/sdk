@@ -16,7 +16,7 @@ INCLUDES = . $(ROOT)/include
 #-------------------------------Source-------------------------------
 #
 #--------------------------------------------------------------------
-SOURCE_PATHS = . $(ROOT)/source
+SOURCE_PATHS = . $(ROOT)/source $(ROOT)/string
 SOURCE_FILES = $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.cpp))
 SOURCE_FILES += $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.c))
 
@@ -26,6 +26,8 @@ _SOURCE_FILES += $(ROOT)/source/aio-socket-kqueue.c
 _SOURCE_FILES += $(ROOT)/source/serial-port-win32.c
 _SOURCE_FILES += $(ROOT)/source/win32-async-pipe.c
 _SOURCE_FILES += $(ROOT)/source/sysvolume.cpp
+_SOURCE_FILES += $(ROOT)/string/snprintf.c
+_SOURCE_FILES += $(ROOT)/string/strndup.c
 _SOURCE_FILES += http-test.c rtsp-test.c sdp-test.c
 SOURCE_FILES := $(filter-out $(_SOURCE_FILES),$(SOURCE_FILES))
 
@@ -41,7 +43,7 @@ else
 LIBPATHS +=
 endif
 
-LIBS = rt pthread dl
+LIBS = rt pthread dl bsd
 
 STATIC_LIBS =
 

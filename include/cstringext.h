@@ -116,43 +116,20 @@ inline int token(const char* p, const char* chars, char* buf, int len)
 }
 
 #if defined(OS_WINDOWS)
-inline char* strndup(const char* p, size_t n)
-{
-	char* s;
-	n = n?n:strlen(p);
+char* strndup(const char* p, size_t n);
 
-	s = (char*)malloc(n+1);
-	if(!s)
-		return NULL;
-
-	strncpy(s, p, n);
-	s[n] = 0;
-	return s;
-}
-
-inline int snprintf(char *str, size_t size, const char *format, ...)
-{
-	int n = -1;
-	va_list args;
-
-	assert(size > 0);
-	va_start(args, format);
-	n = _vsnprintf(str, size-1, format, args);
-
-	if(n < 0 || n == (int)size-1)
-	{
-		// -1 indicating that output has been truncated
-		n = n < 0 ? size-1 : n;
-		str[n] = '\0';
-	}
-	return n;
-}
-
+int snprintf(char *str, size_t size, const char *format, ...);
 #else
 
 #ifndef GetLastError
 	#define GetLastError() errno
 #endif
+
+#endif
+
+#if !defined(OS_MAC)
+
+size_t strlcpy(char *dst, const char *src, size_t siz);
 
 #endif
 
