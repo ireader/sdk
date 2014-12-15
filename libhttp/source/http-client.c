@@ -4,34 +4,30 @@
 #include <memory.h>
 #include <assert.h>
 #include "cstringext.h"
-#include "http-client.h"
-#include "sys/sock.h"
 #include "sys/atomic.h"
 #include "sys/locker.h"
-#include "aio-socket.h"
 #include "http-parser.h"
+#include "http-cookie.h"
+#include "http-client.h"
+#include "http-request.h"
 #include "http-client-connect.h"
-
-#define MAX_HTTP_CONNECTION 5
-
-#if defined(OS_WINDOWS)
-#define strcasecmp _stricmp
-#endif
 
 //////////////////////////////////////////////////////////////////////////
 /// HTTP Pool API
-static void http_pool_release(struct http_pool_t *pool)
+void http_pool_release(struct http_pool_t *pool)
 {
+	size_t i;
 	assert(pool->ref > 0);
 	if(0 == atomic_decrement32(&pool->ref))
 	{
-#if defined(_DEBUG) || defined(DEBUG)
-		size_t i;
 		for(i = 0; i < MAX_HTTP_CONNECTION; i++)
 		{
-			assert(0 == pool->https[i].running);
+			assert(0 == pool->https[i].clock);
+			if(pool->https[i].request)
+				http_request_destroy(pool->https[i].request);
+			if(pool->https[i].http)
+				pool->api->destroy(pool->https[i].http);
 		}
-#endif
 
 		locker_destroy(&pool->locker);
 
@@ -42,63 +38,178 @@ static void http_pool_release(struct http_pool_t *pool)
 	}
 }
 
-static struct http_connection_t* http_pool_fetch(struct http_pool_t *pool)
+static struct http_conn_t* http_pool_fetch(struct http_pool_t *pool)
 {
 	size_t i;
-	struct http_connection_t* http = NULL;
+	struct http_conn_t* http = NULL;
 
+	locker_lock(&pool->locker);
 	for(i = 0; i < MAX_HTTP_CONNECTION; i++)
 	{
-		if(atomic_cas32(&pool->https[i].running, 0, 1))
+		if(0 == pool->https[i].clock)
 		{
 			http = &pool->https[i];
+			http->pool = pool;
+			http->clock = time64_now();
+			assert(++http->count > 0);
 			break;
 		}
 	}
 
 	if(http)
 	{
-		if(0 != http_connection_init(http))
-		{
-			assert(1 == http->running);
-			atomic_cas32(&http->running, 1, 0);
-			return NULL;
-		}
+		if(!http->request)
+			http->request = http_request_create(HTTP_1_1);
+		
+		if(!http->http)
+			http->http = pool->api->create(pool);
 
-		assert(1 == http->ref);
-		atomic_increment32(&http->ref);
+		if(!http->http || !http->request)
+			http->clock = 0;
 	}
-	return http;
+	locker_unlock(&pool->locker);
+
+	return (http && http->http && http->request) ? http : NULL;
 }
 
-static int http_client_request(struct http_pool_t *pool, const char* method, const char* uri, const struct http_header_t *headers, size_t n, const void* msg, size_t bytes, http_client_response callback, void *param)
+static int http_pool_setcookie(struct http_pool_t* pool, const char* cookie, size_t bytes)
+{
+	if(pool->ncookie < bytes+1)
+	{
+		char* p;
+		p = (char*)malloc(bytes+1);
+		if(!p)
+			return ENOMEM;
+		pool->cookie = p;
+		pool->ncookie = bytes+1;
+	}
+
+	memcpy(pool->cookie, cookie, bytes);
+	pool->cookie[bytes] = '\0';
+	return 0;
+}
+
+// POST http://ip:port/xxx HTTP/1.1\r\n
+// HOST: ip:port\r\n
+// Content-Length: bytes\r\n
+// Content-Type: application/x-www-form-urlencoded\r\n
+static int http_make_request(struct http_pool_t *pool, void *req, int method, const char* uri, const struct http_header_t *headers, size_t n, size_t bytes)
+{
+	size_t i;
+	const char* content_type = "text/html";
+
+	// Request Line
+	http_request_set_uri(req, method, uri);
+	http_request_set_host(req, pool->ip, pool->port);
+
+	// User-defined headers
+	for(i = 0; i < n; i++)
+	{
+		size_t nc, vc;
+
+		nc = strlen(headers[i].name);
+		vc = strlen(headers[i].value);
+
+		assert(headers[i].name && headers[i].value);
+		if(0 == stricmp("Content-Length", headers[i].name)
+			|| 0 == stricmp("HOST", headers[i].name))
+		{
+			continue; // ignore
+		}
+		else if(0 == stricmp("Cookie", headers[i].name))
+		{
+			// update cookie
+			http_pool_setcookie(pool, headers[i].value, vc);
+			continue;
+		}
+		else if(0 == stricmp("Content-Type", headers[i].name))
+		{
+			content_type = headers[i].value;
+			continue;
+		}
+
+		if(nc < 1 || strchr(" :\t\r\n", headers[i].name[nc-1])
+			|| vc < 1 || strchr(" \t\r\n", headers[i].value[vc-1]))
+			return -1; // invalid value
+
+		if(0 != http_request_set_header(req, headers[i].name, headers[i].value))
+			return -1;
+	}
+
+	// Add Other Header
+	if( (!pool->cookie || 0 == http_request_set_header(req, "Cookie", pool->cookie))
+		&& 0 == http_request_set_header(req, "Content-Type", content_type)
+		&& 0 == http_request_set_header_int(req, "Content-Length", bytes))
+		return 0;
+	return -1;
+}
+
+static void http_client_onaction(void *param, void *parser, int code)
+{
+	char buffer[512];
+	const char* cookie;
+	struct http_conn_t *http;
+	http = (struct http_conn_t *)param;
+
+	if(0 == code)
+	{
+		// handle cookie
+		cookie = http_get_cookie(parser);
+		if(cookie)
+		{
+			cookie_t ck;
+			ck = http_cookie_parse(cookie);
+			if(ck)
+			{
+				const char *cookiename, *cookievalue;
+				cookiename = http_cookie_get_name(ck);
+				cookievalue = http_cookie_get_value(ck);
+				snprintf(buffer, sizeof(buffer), "%s=%s", cookiename, cookievalue);
+				http_pool_setcookie(http->pool, buffer, strlen(buffer));
+			}
+		}
+	}
+
+	assert(0 != http->clock);
+	http->clock = 0;
+	http->callback(http->cbparam, parser, code);
+}
+
+static int http_client_request(struct http_pool_t *pool, int method, const char* uri, const struct http_header_t *headers, size_t n, const void* msg, size_t bytes, http_client_response callback, void *param)
 {
 	int r;
-	struct http_connection_t *http;
+	size_t nreq;
+	const char* req;
+	struct http_conn_t *http;
 
 	http = http_pool_fetch(pool);
 	if(!http)
 		return -1;
 
-	return pool->api->request(http, method, uri, headers, n, msg, bytes, callback, param);
-	//r = http_make_request(http, method, uri, headers, n, bytes);
-	//if(0 == r)
-	//{
-	//	http->callback = callback;
-	//	http->cbparam = param;
-	//	r = http_connection_send(http, msg, bytes);
-	//}
+	http->callback = callback;
+	http->cbparam = param;
+	if(0 != http_make_request(pool, http->request, method, uri, headers, n, bytes))
+	{
+		return -1;
+	}
 
-	//http_connection_release(http);
-	//return r;
+	req = http_request_get(http->request);
+	nreq = strlen(req);
+	r = pool->api->request(http->http, req, nreq, msg, bytes, http_client_onaction, http);
+	if(0 != r)
+	{
+		// push back
+		http->clock = 0;
+	}
+
+	return r;
 }
 
 void* http_client_create(const char* ip, unsigned short port, int flags)
 {
-	size_t i;
 	struct http_pool_t* pool;
 
-	if(!ip || strlen(ip)+1 > sizeof(pool->ip))
+	if(!ip || strlen(ip) >= sizeof(pool->ip))
 		return NULL;
 
 	pool = (struct http_pool_t *)malloc(sizeof(*pool));
@@ -109,17 +220,10 @@ void* http_client_create(const char* ip, unsigned short port, int flags)
 	pool->ref = 1 + MAX_HTTP_CONNECTION;
 	strcpy(pool->ip, ip);
 	pool->port = port;
+	pool->wtimeout = 10000;
+	pool->rtimeout = 10000;
 
 	pool->api = 0 == flags ? http_client_connection_aio() : http_client_connection_poll();
-
-	// init 1-http connection
-	pool->https[0] = pool->api->create(pool);
-	if(!pool->https[0])
-	{
-		http_client_destroy(pool);
-		return NULL;
-	}
-
 	return pool;
 }
 
@@ -133,39 +237,71 @@ void http_client_destroy(void *client)
 	locker_lock(&pool->locker);
 	for(i = 0; i < MAX_HTTP_CONNECTION; i++)
 	{
-		if(!pool->https[i])
+		if(!pool->https[i].http)
 			break;
 
-		pool->api->destroy(&pool->https[i]);
+		pool->api->destroy(pool->https[i].http);
+		pool->https[i].http = NULL;
 	}
 	locker_unlock(&pool->locker);
 
 	http_pool_release(pool);
 }
 
+void http_client_recycle(void* client)
+{
+	int32_t i;
+	void *http;
+	time64_t clock;
+	struct http_pool_t *pool;
+	pool = (struct http_pool_t *)client;
+	clock = time64_now();
+
+RECYCLE_AGAIN:
+	http = NULL;
+	locker_lock(&pool->locker);
+	for(i = 0; i < MAX_HTTP_CONNECTION; i++)
+	{
+		if(0 == pool->https[i].clock)
+			continue;
+
+		assert(pool->https[i].http);
+		if(abs((int)(clock - pool->https[i].clock)) > 2*60*1000)
+		{
+			http = pool->https[i].http;
+			pool->https[i].http = NULL;
+			pool->https[i].clock = 0;
+			break;
+		}
+	}
+	locker_unlock(&pool->locker);
+
+	if(http)
+	{
+		pool->api->destroy(http);
+		goto RECYCLE_AGAIN;
+	}
+}
+
 int http_client_get(void* client, const char* uri, const struct http_header_t *headers, size_t n, http_client_response callback, void *param)
 {
-	return http_client_request(client, "GET", uri, headers, n, NULL, 0, callback, param);
+	return http_client_request(client, HTTP_GET, uri, headers, n, NULL, 0, callback, param);
 }
 
 int http_client_post(void* client, const char* uri, const struct http_header_t *headers, size_t n, const void* msg, size_t bytes, http_client_response callback, void *param)
 {
-	return http_client_request(client, "POST", uri, headers, n, msg, bytes, callback, param);
+	return http_client_request(client, HTTP_POST, uri, headers, n, msg, bytes, callback, param);
 }
 
-const char* http_client_get_header(void* conn, const char *name)
+const char* http_client_get_header(void* parser, const char *name)
 {
-	struct http_connection_t *http;
-	http = (struct http_connection_t *)conn;
-	return http_get_header_by_name(http->parser, name);
+	return http_get_header_by_name(parser, name);
 }
 
-int http_client_get_content(void* conn, const void **content, size_t *bytes)
+int http_client_get_content(void* parser, const void **content, size_t *bytes)
 {
-	struct http_connection_t *http;
-	http = (struct http_connection_t *)conn;
-	*bytes = http_get_content_length(http->parser);
-	*content = http_get_content(http->parser);
+	*bytes = http_get_content_length(parser);
+	*content = http_get_content(parser);
 	return 0;
 }
 

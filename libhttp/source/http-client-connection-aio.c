@@ -1,48 +1,38 @@
-#include "http-client-connect.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <memory.h>
-#include <assert.h>
 #include "cstringext.h"
-#include "http-client.h"
 #include "sys/sock.h"
 #include "sys/atomic.h"
 #include "sys/locker.h"
 #include "aio-socket.h"
 #include "http-parser.h"
+#include "http-client-connect.h"
 
-struct http_pool_t;
-
-struct http_connection_t
+struct http_client_aio_transport_t
 {
-	volatile int32_t ref;
-	volatile int32_t running;
+	int32_t ref;
 	locker_t locker;
-
-	void* parser; // http parser
+	int running;
 	aio_socket_t socket;
-
-	// http request header
-	char *req;
-	size_t nreq, maxreq;
-
-	// user post data
+	void *parser;
 	http_client_response callback;
 	void* cbparam;
+
+	char buffer[1024];
+
+	const char* req;
+	size_t nreq;
 	const void* msg;
 	size_t nmsg;
 	socket_bufvec_t vec[2];
 	size_t nsend;
 
-	int initialize; // 0-uninitialize, 1-initialized
-
 	struct http_pool_t *pool;
 };
 
+static int http_connect(struct http_client_aio_transport_t *http, const char* ip, int port);
+
 //////////////////////////////////////////////////////////////////////////
 /// HTTP Connection API
-static void http_connection_release(struct http_connection_t* http)
+static void http_release(struct http_client_aio_transport_t* http)
 {
 	assert(http->ref > 0);
 	if(0 == atomic_decrement32(&http->ref))
@@ -71,212 +61,204 @@ static void http_connection_release(struct http_connection_t* http)
 	}
 }
 
-static void http_connection_destroy(struct http_connection_t *http)
+static void* http_create(struct http_pool_t *pool)
 {
-	atomic_cas32(&http->running, 1, 0); // clear running flag
+	struct http_client_aio_transport_t *http;
+	http = (struct http_client_aio_transport_t *)malloc(sizeof(*http));
+	if(!http)
+		return NULL;
+
+	http->ref = 1;
+	atomic_increment32(&pool->ref);
+	http->pool = pool;
+	locker_create(&http->locker);
+	http->socket = invalid_aio_socket;
+	http->parser = http_parser_create(HTTP_PARSER_CLIENT);
+	if(!http->parser)
+	{
+		http_release(http);
+		return NULL;
+	}
+	return http;
+}
+
+static void http_destroy(void *p)
+{
+	struct http_client_aio_transport_t *http;
+	http = (struct http_client_aio_transport_t *)p;
 
 	locker_lock(&http->locker);
+	http->running = 0;
 	if(invalid_aio_socket != http->socket)
 	{
 		aio_socket_destroy(http->socket);
 		http->socket = invalid_aio_socket ;
 	}
-
-	http->initialize = 0;
 	locker_unlock(&http->locker);
 
-	http_connection_release(http);
+	http_release(http);
 }
 
-static int http_connection_init(struct http_connection_t *http)
+static void http_onrecv(void* param, int code, size_t bytes)
 {
-	if(http->initialize)
-		return 0;
+	int r;
+	struct http_client_aio_transport_t *http;
+	http = (struct http_client_aio_transport_t *)param;
 
-	locker_create(&http->locker);
-
-	http->socket = invalid_aio_socket;
-
-	http->parser = http_parser_create(HTTP_PARSER_CLIENT);
-	if(!http->parser)
-	{
-		http_connection_release(http);
-		return ENOMEM;
-	}
-
-	assert(!http->req && 0 == http->maxreq);
-	http->maxreq = 1024;
-	http->req = (char*)malloc(http->maxreq);
-	if(!http->req)
-	{
-		http_connection_release(http);
-		return ENOMEM;
-	}
-
-	http->initialize = 1; // set initialize flag
-	return 0;
-}
-
-static void http_connection_action(struct http_connection_t *http, int code)
-{
 	locker_lock(&http->locker);
-	if(http->initialize)
-		http->callback(http->cbparam, http, code);
-	locker_unlock(&http->locker);
-
-	assert(1 == http->running);
-	atomic_cas32(&http->running, 1, 0); // clear running flag
-}
-
-static int http_connection_connect(struct http_connection_t *http, const char* ip, int port);
-
-static void http_connection_onrecv(void* param, int code, size_t bytes)
-{
-	int r;
-	struct http_connection_t *http;
-	http = (struct http_connection_t *)param;
-
-	if(0 == code)
+	if(http->running)
 	{
-		r = http_parser_input(http->parser, http->req, &bytes);
-		if(1 == r)
+		if(0 == code)
 		{
-			// receive more data
-			atomic_increment32(&http->ref);
-			locker_lock(&http->locker);
-			r = aio_socket_recv(http->socket, http->req, http->maxreq, http_connection_onrecv, http);
-			locker_unlock(&http->locker);
-			if(0 != r)
+			r = http_parser_input(http->parser, http->buffer, &bytes);
+			if(1 == r)
 			{
-				atomic_decrement32(&http->ref);
-				http_connection_action(http, r); // aio socket error
-			}
-		}
-		else
-		{
-			// ok or error
-			http_connection_action(http, r);
-		}
-	}
-	else
-	{
-		http_connection_action(http, code); // receive error
-	}
-
-	http_connection_release(http);
-}
-
-static void http_connection_onsend(void* param, int code, size_t bytes)
-{
-	int r;
-	struct http_connection_t *http;
-	http = (struct http_connection_t *)param;
-
-	if(0 == code)
-	{
-		http->nsend += bytes;
-		if(bytes == http->nreq + http->nmsg)
-		{
-			//http_parser_clear(http->parser);
-
-			// receive reply
-			atomic_increment32(&http->ref);
-			locker_lock(&http->locker);
-			r = aio_socket_recv(http->socket, http->req, http->maxreq, http_connection_onrecv, http);
-			locker_unlock(&http->locker);
-			if(0 != r)
-			{
-				atomic_decrement32(&http->ref);
-				http_connection_action(http, r);  // aio socket error
-			}
-		}
-		else
-		{
-			// send remain data
-			assert(http->ref > 0);
-			atomic_increment32(&http->ref);
-			if(http->nsend < http->nreq)
-			{
-				socket_setbufvec(http->vec, 0, http->req+http->nsend, http->nreq-http->nsend);
-				socket_setbufvec(http->vec, 1, (void*)http->msg, http->nmsg);
-				locker_lock(&http->locker);
-				r = aio_socket_send_v(http->socket, http->vec, 0==http->nmsg?1:2, http_connection_onsend, http);
-				locker_unlock(&http->locker);
+				// receive more data
+				atomic_increment32(&http->ref);
+				r = aio_socket_recv(http->socket, http->buffer, sizeof(http->buffer), http_onrecv, http);
+				if(0 != r)
+				{
+					atomic_decrement32(&http->ref);
+					http->callback(http->cbparam, http->parser, r);
+				}
 			}
 			else
 			{
-				assert(http->nmsg > 0);
-				locker_lock(&http->locker);
-				r = aio_socket_send(http->socket, (char*)http->msg+(http->nsend-http->nreq), http->nmsg-(http->nsend-http->nreq), http_connection_onsend, http);
-				locker_unlock(&http->locker);
+				// ok or error
+				http->callback(http->cbparam, http->parser, r);
+			}
+		}
+		else
+		{
+			http->callback(http->cbparam, http->parser, code); // receive error
+		}
+	}
+	locker_unlock(&http->locker);
+
+	http_release(http);
+}
+
+static void http_onsend(void* param, int code, size_t bytes)
+{
+	int r;
+	struct http_client_aio_transport_t *http;
+	http = (struct http_client_aio_transport_t *)param;
+
+	locker_lock(&http->locker);
+	if(http->running)
+	{
+		if(0 == code)
+		{
+			http->nsend += bytes;
+			if(bytes == http->nreq + http->nmsg)
+			{
+				//http_parser_clear(http->parser);
+
+				// receive reply
+				atomic_increment32(&http->ref);
+				r = aio_socket_recv(http->socket, http->buffer, sizeof(http->buffer), http_onrecv, http);
+				if(0 != r)
+				{
+					atomic_decrement32(&http->ref);
+					http->callback(http->cbparam, http->parser, r);  // aio socket error
+				}
+			}
+			else
+			{
+				// send remain data
+				assert(http->ref > 0);
+				atomic_increment32(&http->ref);
+				if(http->nsend < http->nreq)
+				{
+					socket_setbufvec(http->vec, 0, (char*)http->req+http->nsend, http->nreq-http->nsend);
+					socket_setbufvec(http->vec, 1, (void*)http->msg, http->nmsg);
+					r = aio_socket_send_v(http->socket, http->vec, 0==http->nmsg?1:2, http_onsend, http);
+				}
+				else
+				{
+					assert(http->nmsg > 0);
+					r = aio_socket_send(http->socket, (char*)http->msg+(http->nsend-http->nreq), http->nmsg-(http->nsend-http->nreq), http_onsend, http);
+				}
+
+				if(0 != r)
+				{
+					atomic_decrement32(&http->ref);
+					http->callback(http->cbparam, http->parser, r); // aio socket error
+				}
+			}
+		}
+		else
+		{
+			if(1 == http->running && 0==http->nsend)
+			{
+				// first write failed(maybe reset by peer).
+				// try again...
+
+				// destroy
+				aio_socket_destroy(http->socket);
+				http->socket = invalid_aio_socket;
+
+				// try to connect
+				code = http_connect(http, http->pool->ip, http->pool->port);
 			}
 
-			if(0 != r)
+			if(0 != code)
+			{
+				http->callback(http->cbparam, http->parser, code);
+			}
+		}
+	}
+	locker_unlock(&http->locker);
+
+	http_release(http);
+}
+
+static void http_onconnect(void* param, int code)
+{
+	struct http_client_aio_transport_t *http;
+	http = (struct http_client_aio_transport_t *)param;
+
+	locker_lock(&http->locker);
+	if(http->running)
+	{
+		if(0 != code)
+		{
+			if(http->socket)
+			{
+				aio_socket_destroy(http->socket);
+				http->socket = invalid_aio_socket;
+			}
+			http->callback(http->cbparam, http->parser, code);
+		}
+		else
+		{
+			http->running += 1; // send from onconnect
+			atomic_increment32(&http->ref);
+			code = aio_socket_send_v(http->socket, http->vec, 0==http->nmsg?1:2, http_onsend, http);
+			if(0 != code)
 			{
 				atomic_decrement32(&http->ref);
-				http_connection_action(http, r); // aio socket error
+				http->callback(http->cbparam, http->parser, code);
 			}
 		}
 	}
-	else
-	{
-		if(1 == http->running && 0==http->nsend)
-		{
-			// first write failed(maybe reset by peer).
-			// try again...
+	locker_unlock(&http->locker);
 
-			// destroy
-			aio_socket_destroy(http->socket);
-			http->socket = invalid_aio_socket;
-
-			// try to connect
-			code = http_connection_connect(http, http->pool->ip, http->pool->port);
-		}
-
-		if(0 != code)
-		{
-			http_connection_action(http, code);
-		}
-	}
-
-	http_connection_release(http);
+	http_release(http);
 }
 
-static void http_connection_onconnect(void* param, int code)
-{
-	struct http_connection_t *http;
-	http = (struct http_connection_t *)param;
-	if(0 != code)
-	{
-		aio_socket_destroy(http->socket);
-		http->socket = invalid_aio_socket;
-		//http->pool->status = -1; // can't connect
-
-		http_connection_action(http, code);
-	}
-	else
-	{
-		http->running += 1; // send from onconnection
-		atomic_increment32(&http->ref);
-		locker_lock(&http->locker);
-		code = aio_socket_send_v(http->socket, http->vec, 0==http->nmsg?1:2, http_connection_onsend, http);
-		locker_unlock(&http->locker);
-		if(0 != code)
-		{
-			atomic_decrement32(&http->ref);
-			http_connection_action(http, code);
-		}
-	}
-
-	http_connection_release(http);
-}
-
-static int http_connection_connect(struct http_connection_t *http, const char* ip, int port)
+static int http_connect(struct http_client_aio_transport_t *http, const char* ip, int port)
 {
 	int r = 0;
+	char ipaddr[16];
 	socket_t socket;
 
+	assert(http->running);
 	assert(invalid_aio_socket == http->socket);
+	r = socket_ip(ip, ipaddr);
+	if(0 != r)
+		return r;
+
 	socket = socket_tcp();
 #if defined(OS_WINDOWS)
 	r = socket_bind_any(socket, 0);
@@ -295,39 +277,48 @@ static int http_connection_connect(struct http_connection_t *http, const char* i
 	}
 
 	atomic_increment32(&http->ref);
-	locker_lock(&http->locker);
-	r = aio_socket_connect(http->socket, ip, port, http_connection_onconnect, http);
-	locker_unlock(&http->locker);
+	r = aio_socket_connect(http->socket, ipaddr, port, http_onconnect, http);
 	if(0 != r)
 	{
 		atomic_decrement32(&http->ref);
+		aio_socket_destroy(http->socket);
+		http->socket = invalid_aio_socket;	
 		return r;
 	}
 
 	return 0;
 }
 
-static int http_connection_send(struct http_connection_t *http, const void* msg, size_t bytes)
+static int http_request(void *conn, const char* req, size_t nreq, const void* msg, size_t bytes, http_client_response callback, void *param)
 {
 	int r;
-
+	struct http_client_aio_transport_t *http;
+	http = (struct http_client_aio_transport_t *)conn;
+	http_parser_clear(http->parser); // clear http parser status
+	http->callback = callback;
+	http->cbparam = param;
 	http->nsend = 0; // clear sent bytes
+	http->req = req;
+	http->nreq = nreq;
 	http->msg = msg;
 	http->nmsg = bytes;
-	socket_setbufvec(http->vec, 0, http->req+http->nsend, http->nreq-http->nsend);
+
+	socket_setbufvec(http->vec, 0, (char*)http->req+http->nsend, http->nreq-http->nsend);
 	socket_setbufvec(http->vec, 1, (void*)http->msg, http->nmsg);
 
+	locker_lock(&http->locker);
 	if(invalid_aio_socket == http->socket)
 	{
-		r = http_connection_connect(http, http->pool->ip, http->pool->port);
+		r = http_connect(http, http->pool->ip, http->pool->port);
 	}
 	else
 	{
 		atomic_increment32(&http->ref);
-		r = aio_socket_send_v(http->socket, http->vec, 0==http->nmsg?1:2, http_connection_onsend, http);
+		r = aio_socket_send_v(http->socket, http->vec, 0==http->nmsg?1:2, http_onsend, http);
 		if(0 != r)
 			atomic_decrement32(&http->ref);
 	}
+	locker_unlock(&http->locker);
 	return r;
 }
 
@@ -337,7 +328,6 @@ struct http_client_connection_t* http_client_connection_aio()
 		http_create,
 		http_destroy,
 		http_request,
-	}
-
+	};
 	return &conn;
 }

@@ -256,6 +256,10 @@
 				RelativePath=".\test\benchmark.c"
 				>
 			</File>
+			<File
+				RelativePath=".\test\http-client-test.cpp"
+				>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>
