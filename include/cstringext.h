@@ -115,6 +115,10 @@ inline int token(const char* p, const char* chars, char* buf, int len)
 	return i;
 }
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #if defined(OS_WINDOWS)
 char* strndup(const char* p, size_t n);
 
@@ -133,4 +137,8 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 
 #endif
 
+
+#if defined(__cplusplus)
+}
+#endif
 #endif /* !_cstringext_h_ */

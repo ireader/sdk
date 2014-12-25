@@ -15,24 +15,24 @@ public:
 	virtual ~object(){ assert(0==m_ref); }
 
 public:
-	long addref()
+	int32_t addref()
 	{
-		return InterlockedIncrement(&m_ref);
+		return atomic_increment32(&m_ref);
 	}
 
-	long release()
+	int32_t release()
 	{
-		long ref = InterlockedDecrement(&m_ref);
+		int32_t ref = atomic_decrement32(&m_ref);
 		if(0 == ref)
 			delete this;
 		return ref;
 	}
 
 protected:
-	long get_ref_value() const{ return m_ref; }
+	int32_t get_ref_value() const{ return m_ref; }
 
 private:
-	long m_ref;
+	int32_t m_ref;
 };
 
 } // namespace
