@@ -26,13 +26,19 @@ void http_server_get_timeout(void *server, int *recv, int *send);
 /// @return NULL-don't found field, other-header value
 const char* http_server_get_header(void* session, const char *name);
 
-/// Get Client post data(raw data)
+/// Get client post data(raw data)
 /// @param[in] session handle callback session parameter
 /// @param[out] content data pointer(don't need free)
 /// @param[out] length data size
 /// @return 0-ok, other-error
 int http_server_get_content(void* session, void **content, size_t *length);
 
+/// Get client ip/port
+/// @param[in] session handle callback session parameter
+/// @param[out] ip client bind ip(don't need free)
+/// @param[out] port client bind port
+/// @return 0-ok, other-error
+int http_server_get_client(void* session, const char** ip, int *port);
 
 // Response
 

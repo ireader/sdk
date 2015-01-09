@@ -1,6 +1,10 @@
 #ifndef _http_cookie_h_
 #define _http_cookie_h_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void* cookie_t;
 
 /// parse HTTP cookie and create cookie object
@@ -50,6 +54,11 @@ int http_cookie_check_path(cookie_t cookie, const char* path);
 int http_cookie_check_domain(cookie_t cookie, const char* domain);
 
 /// create cookie object
-int http_cookie_create(char cookie[], size_t bytes, const char* name, const char* value, const char* path, const char* domain, const char* expires, int httponly, int secure);
+int http_cookie_make(char cookie[], size_t bytes, const char* name, const char* value, const char* path, const char* domain, const char* expires, int httponly, int secure);
 
+int http_cookie_expires(char expires[30], int hours);
+
+#ifdef __cplusplus
+}
+#endif
 #endif /* !_http_cookie_h_ */

@@ -197,6 +197,9 @@ void* http_session_onconnected(void* ptr, void* sid, const char* ip, int port)
 
 	session->server = (struct http_server_t *)ptr;
 	session->session = sid;
+	memcpy(session->ip, ip, sizeof(session->ip)-1);
+	session->ip[sizeof(session->ip)-1] = '\0';
+	session->port = port;
 
 	return session;
 }
@@ -212,11 +215,12 @@ void http_session_ondisconnected(void* param)
 }
 
 // Request
-int http_server_get_host(void* param, void** ip, int *port)
+int http_server_get_client(void* param, const char** ip, int *port)
 {
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
-
+	if(ip) *ip = session->ip;
+	if(port) *port = session->port;
 	return 0;
 }
 

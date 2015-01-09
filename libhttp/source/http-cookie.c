@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 #include "http-cookie.h"
 
 #if defined(OS_WINDOWS)
@@ -195,7 +196,7 @@ int http_cookie_check_domain(cookie_t cookie, const char* domain)
 	return (n1 >= n2 && 0==strncmp(domain+(n1-n2), ck->domain, n2) && (n1==n2 || '.'==ck->domain[0] || '.'==domain[n1-n2-1])) ? 1 : 0;
 }
 
-int http_cookie_create(char cookie[], size_t bytes, const char* name, const char* value, const char* path, const char* domain, const char* expires, int httponly, int secure)
+int http_cookie_make(char cookie[], size_t bytes, const char* name, const char* value, const char* path, const char* domain, const char* expires, int httponly, int secure)
 {
 	size_t i, n1, n2;
 	const char *names[] = { "path=", "domain=", "expires=", "HttpOnly", "Secure" };
@@ -233,6 +234,29 @@ int http_cookie_create(char cookie[], size_t bytes, const char* name, const char
 		cookie += n1;
 		bytes -= n1;
 	}
+
+	return 0;
+}
+
+int http_cookie_expires(char expires[30], int hours)
+{
+	time_t t;
+	struct tm* gmt;
+	static const char week[][4] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+	static const char month[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+	t = time(NULL);
+	t += hours * 3600; // current + expireDay
+	gmt = gmtime(&t);
+
+	sprintf(expires, "%s, %02d-%s-%04d %02d:%02d:%02d GMT",
+		week[gmt->tm_wday],	// weekday
+		gmt->tm_mday,		// day
+		month[gmt->tm_mon],	// month
+		gmt->tm_year+1900,	// year
+		gmt->tm_hour,		// hour
+		gmt->tm_min,		// minute
+		gmt->tm_sec);		// second
 
 	return 0;
 }
@@ -276,15 +300,15 @@ static void http_cookie_parse_test(void)
 static void http_cookie_create_test(void)
 {
 	char cookie[128] = {0};
-	assert(0==http_cookie_create(cookie, sizeof(cookie), "name", "value", NULL, NULL, NULL, 0, 0) && 0==strcmp(cookie, "name=value"));
-	assert(0==http_cookie_create(cookie, sizeof(cookie), "name", "value", "/", NULL, NULL, 0, 0) && 0==strcmp(cookie, "name=value; path=/"));
-	assert(0==http_cookie_create(cookie, sizeof(cookie), "name", "value", "/", "abc.com", NULL, 0, 0) && 0==strcmp(cookie, "name=value; path=/; domain=abc.com"));
-	assert(0==http_cookie_create(cookie, sizeof(cookie), "name", "value", "/", "abc.com", "Wed, 09 Jun 2021 10:18:14 GMT", 0, 0) && 0==strcmp(cookie, "name=value; path=/; domain=abc.com; expires=Wed, 09 Jun 2021 10:18:14 GMT"));
-	assert(0==http_cookie_create(cookie, sizeof(cookie), "name", "value", "/", "abc.com", "Wed, 09 Jun 2021 10:18:14 GMT", 1, 0) && 0==strcmp(cookie, "name=value; path=/; domain=abc.com; expires=Wed, 09 Jun 2021 10:18:14 GMT; HttpOnly"));
-	assert(0==http_cookie_create(cookie, sizeof(cookie), "name", "value", "/", "abc.com", "Wed, 09 Jun 2021 10:18:14 GMT", 1, 1) && 0==strcmp(cookie, "name=value; path=/; domain=abc.com; expires=Wed, 09 Jun 2021 10:18:14 GMT; HttpOnly; Secure"));
-	assert(0==http_cookie_create(cookie, sizeof(cookie), "name", "value", "/", NULL, NULL, 1, 1) && 0==strcmp(cookie, "name=value; path=/; HttpOnly; Secure"));
-	assert(0==http_cookie_create(cookie, sizeof(cookie), "name", "value", NULL, NULL, NULL, 1, 0) && 0==strcmp(cookie, "name=value; HttpOnly"));
-	assert(0==http_cookie_create(cookie, sizeof(cookie), "name", "value", "/", NULL, NULL, 0, 1) && 0==strcmp(cookie, "name=value; path=/; Secure"));
+	assert(0==http_cookie_make(cookie, sizeof(cookie), "name", "value", NULL, NULL, NULL, 0, 0) && 0==strcmp(cookie, "name=value"));
+	assert(0==http_cookie_make(cookie, sizeof(cookie), "name", "value", "/", NULL, NULL, 0, 0) && 0==strcmp(cookie, "name=value; path=/"));
+	assert(0==http_cookie_make(cookie, sizeof(cookie), "name", "value", "/", "abc.com", NULL, 0, 0) && 0==strcmp(cookie, "name=value; path=/; domain=abc.com"));
+	assert(0==http_cookie_make(cookie, sizeof(cookie), "name", "value", "/", "abc.com", "Wed, 09 Jun 2021 10:18:14 GMT", 0, 0) && 0==strcmp(cookie, "name=value; path=/; domain=abc.com; expires=Wed, 09 Jun 2021 10:18:14 GMT"));
+	assert(0==http_cookie_make(cookie, sizeof(cookie), "name", "value", "/", "abc.com", "Wed, 09 Jun 2021 10:18:14 GMT", 1, 0) && 0==strcmp(cookie, "name=value; path=/; domain=abc.com; expires=Wed, 09 Jun 2021 10:18:14 GMT; HttpOnly"));
+	assert(0==http_cookie_make(cookie, sizeof(cookie), "name", "value", "/", "abc.com", "Wed, 09 Jun 2021 10:18:14 GMT", 1, 1) && 0==strcmp(cookie, "name=value; path=/; domain=abc.com; expires=Wed, 09 Jun 2021 10:18:14 GMT; HttpOnly; Secure"));
+	assert(0==http_cookie_make(cookie, sizeof(cookie), "name", "value", "/", NULL, NULL, 1, 1) && 0==strcmp(cookie, "name=value; path=/; HttpOnly; Secure"));
+	assert(0==http_cookie_make(cookie, sizeof(cookie), "name", "value", NULL, NULL, NULL, 1, 0) && 0==strcmp(cookie, "name=value; HttpOnly"));
+	assert(0==http_cookie_make(cookie, sizeof(cookie), "name", "value", "/", NULL, NULL, 0, 1) && 0==strcmp(cookie, "name=value; path=/; Secure"));
 }
 
 static void http_cookie_check_test(void)

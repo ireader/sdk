@@ -14,6 +14,8 @@ struct http_session_t
 
 	void* session;
 	void* parser;
+	char ip[40];
+	int port;
 
     char status_line[64];
 	char data[2 * 1024];
