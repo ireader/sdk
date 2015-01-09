@@ -121,6 +121,6 @@ int http_request_set_header(void* request, const char* name, const char* value)
 	}
 
 	assert(req->len > 0);
-	req->len += snprintf(req->ptr + (req->len-2), req->capacity - (req->len-2), "%s: %s\r\n\r\n", name, value);
+	req->len += snprintf(req->ptr + (req->len-2), req->capacity - (req->len-2), "%s: %s\r\n\r\n", name, value) - 2;
 	return 0;
 }
