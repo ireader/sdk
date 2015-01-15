@@ -139,7 +139,7 @@ static int dummy = dlog_init();
 
 
 #if defined(_WIN32) || defined(_WIN64)
-static int dlog_logv(const char* format, va_list va)
+int dlog_log_va(const char* format, va_list va)
 {
 	SYSTEMTIME st;
 	char msg[1024*4] = {0};
@@ -174,7 +174,7 @@ static int dlog_open(const char* name)
 //	return 0;
 //}
 
-static int dlog_logv(const char* format, va_list va)
+int dlog_log_va(const char* format, va_list va)
 {
 	int r;
 	time_t t;
@@ -216,7 +216,7 @@ int dlog_log(const char* format, ...)
 	va_list va;
 
 	va_start(va, format);
-	r = dlog_logv(format, va);
+	r = dlog_log_va(format, va);
 	va_end(va);
 	return r;
 }
