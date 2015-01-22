@@ -286,8 +286,8 @@ time64_t time64_from(const char* format, const char* src)
 
 	memset(&tm64, 0, sizeof(tm64));
 	tm64.day = 1;
-	time64_scanf(&utc, format, src);
-	if(!TIME64_VALID_SYSTEM_TIME(st))
+	time64_scanf(&tm64, format, src);
+	if(!TIME64_VALID_SYSTEM_TIME(tm64))
 		return -1;
 
 	t.tm_year = tm64.year;
@@ -394,6 +394,9 @@ void time64_test(void)
 	time64_utc(t64, &tm64);
 
     t = time64_to_gmtime(t64);
+	_t64 = time64_from_gmtime(t);
+	assert(_t64/1000 == t64 / 1000);
+
 	tm = gmtime(&t);
 	assert(tm64.year==tm->tm_year && tm64.month==tm->tm_mon && tm64.day==tm->tm_mday && tm64.wday==tm->tm_wday && tm64.hour==tm->tm_hour && tm64.minute==tm->tm_min && tm64.second==tm->tm_sec);
 
