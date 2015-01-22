@@ -8,22 +8,9 @@
 #if defined(OS_WINDOWS)
 #include <Windows.h>
 #define snprintf _snprintf
-typedef SYSTEMTIME system_time_t;
 
 #else
 #include <sys/time.h>
-typedef unsigned short WORD;
-typedef struct _system_time_t
-{
-	WORD wYear;			// [1601-30827]
-	WORD wMonth;		// [1-12]
-	WORD wDayOfWeek;	// [0-6] 0-Sunday
-	WORD wDay;			// [1-31]
-	WORD wHour;			// [0-23]
-	WORD wMinute;		// [0-59]
-	WORD wSecond;		// [0-59]
-	WORD wMilliseconds; // [0-999]
-} system_time_t;
 
 static time64_t utc_mktime(const struct tm *t)
 {
@@ -44,27 +31,27 @@ static time64_t utc_mktime(const struct tm *t)
 }
 #endif
 
-#define TIME64_VALID_YEAR(v)			((v)>=1970 && (v)<=9999)
-#define TIME64_VALID_MONTH(v)			((v)>=1 && (v)<=12)
+#define TIME64_VALID_YEAR(v)			((v)>=0 && (v)<=9999)
+#define TIME64_VALID_MONTH(v)			((v)>=0 && (v)<=11)
 #define TIME64_VALID_DAY(v)				((v)>=1 && (v)<=31)
 #define TIME64_VALID_HOUR(v)			((v)>=0 && (v)<=23)
 #define TIME64_VALID_MINUTE_SECOND(v)	((v)>=0 && (v)<=59)
 #define TIME64_VALID_MILLISECOND(v)		((v)>=0 && (v)<=999)
 #define TIME64_VALID_WEEKDAY(v)			((v)>=0 && (v)<=6)
 
-#define TIME64_VALID_SYSTEM_TIME(st)	(TIME64_VALID_YEAR(st.wYear) \
-											&& TIME64_VALID_MONTH(st.wMonth) \
-											&& TIME64_VALID_DAY(st.wDay) \
-											&& TIME64_VALID_HOUR(st.wHour) \
-											&& TIME64_VALID_MINUTE_SECOND(st.wMinute) \
-											&& TIME64_VALID_MINUTE_SECOND(st.wSecond) \
-											&& TIME64_VALID_MILLISECOND(st.wMilliseconds))
+#define TIME64_VALID_SYSTEM_TIME(tm64)	(TIME64_VALID_YEAR(tm64.year) \
+											&& TIME64_VALID_MONTH(tm64.month) \
+											&& TIME64_VALID_DAY(tm64.day) \
+											&& TIME64_VALID_HOUR(tm64.hour) \
+											&& TIME64_VALID_MINUTE_SECOND(tm64.minute) \
+											&& TIME64_VALID_MINUTE_SECOND(tm64.second) \
+											&& TIME64_VALID_MILLISECOND(tm64.millisecond))
 
-static char* print_value(char padding, size_t width, WORD value, char* output)
+static char* print_value(char padding, size_t width, int value, char* output)
 {
 	size_t n;
 	char v[16] = {0};
-	snprintf(v, sizeof(v), "%hu", value);
+	snprintf(v, sizeof(v), "%d", value);
 
 	// fill padding
 	n = strlen(v);
@@ -77,7 +64,7 @@ static char* print_value(char padding, size_t width, WORD value, char* output)
 	return output+(n<width?width:n);
 }
 
-static int time64_printf(const system_time_t* tm, const char* format, char* output)
+static int time64_printf(const struct tm64* tm64, const char* format, char* output)
 {
 	char padding;
 	size_t width;
@@ -125,35 +112,35 @@ static int time64_printf(const system_time_t* tm, const char* format, char* outp
 		switch(*p)
 		{
 		case 'Y': // year
-			output = print_value(padding, width, tm->wYear, output);
+			output = print_value(padding, width, tm64->year+1900, output);
 			break;
 
 		case 'M': // month
-			output = print_value(padding, width, tm->wMonth, output);
+			output = print_value(padding, width, tm64->month+1, output);
 			break;
 
 		case 'D': // day
-			output = print_value(padding, width, tm->wDay, output);
+			output = print_value(padding, width, tm64->day, output);
 			break;
 
 		case 'h': // houre
-			output = print_value(padding, width, tm->wHour, output);
+			output = print_value(padding, width, tm64->hour, output);
 			break;
 
 		case 'm': // minute
-			output = print_value(padding, width, tm->wMinute, output);
+			output = print_value(padding, width, tm64->minute, output);
 			break;
 
 		case 's': // second
-			output = print_value(padding, width, tm->wSecond, output);
+			output = print_value(padding, width, tm64->second, output);
 			break;
 
 		case 'S': // millisecond
-			output = print_value(padding, width, tm->wMilliseconds, output);
+			output = print_value(padding, width, tm64->millisecond, output);
 			break;
 
 		case 'y': // 2012 -> 12
-			output = print_value(padding, width, tm->wYear%100, output);
+			output = print_value(padding, width, (tm64->year+1900)%100, output);
 			break;
 
 		default:
@@ -163,27 +150,27 @@ static int time64_printf(const system_time_t* tm, const char* format, char* outp
 	return 0;
 }
 
-static const char* scan_value(int asterisk, int width, WORD* value, const char* src)
+static const char* scan_value(int asterisk, int width, int* value, const char* src)
 {
 	int i;
-	WORD n;
+	int n;
 
 	for(i=0, n=0; src && *src && (0==width||i<width); ++i,++src)
 	{
 		if(*src < '0' || *src > '9')
 			break;
 
-		n = n*10 + (WORD)(*src - '0');
+		n = n*10 + (*src - '0');
 	}
 
 	if(1 != asterisk)
-		*value = (WORD)n;
+		*value = n;
 
 	return src;
 }
 
 // time64_scanf("%Y-%M-%D %h:%m:%s.%S", "2013-01-31 13:52:01.123")
-static int time64_scanf(system_time_t* tm, const char* format, const char* src)
+static int time64_scanf(struct tm64* tm64, const char* format, const char* src)
 {
 	const char* p;
 	int asterisk;
@@ -217,35 +204,38 @@ static int time64_scanf(system_time_t* tm, const char* format, const char* src)
 		switch(*p)
 		{
 		case 'Y': // year
-			src = scan_value(asterisk, width, &tm->wYear, src);
+			src = scan_value(asterisk, width, &tm64->year, src);
+			tm64->year -= 1900;
 			break;
 
 		case 'M': // month
-			src = scan_value(asterisk, width, &tm->wMonth, src);
+			src = scan_value(asterisk, width, &tm64->month, src);
+			tm64->month -= 1;
 			break;
 
 		case 'D': // day
-			src = scan_value(asterisk, width, &tm->wDay, src);
+			src = scan_value(asterisk, width, &tm64->day, src);
 			break;
 
 		case 'h': // hour
-			src = scan_value(asterisk, width, &tm->wHour, src);
+			src = scan_value(asterisk, width, &tm64->hour, src);
 			break;
 
 		case 'm': // minute
-			src = scan_value(asterisk, width, &tm->wMinute, src);
+			src = scan_value(asterisk, width, &tm64->minute, src);
 			break;
 
 		case 's': // second
-			src = scan_value(asterisk, width, &tm->wSecond, src);
+			src = scan_value(asterisk, width, &tm64->second, src);
 			break;
 
 		case 'S': // millisecond
-			src = scan_value(asterisk, width, &tm->wMilliseconds, src);
+			src = scan_value(asterisk, width, &tm64->millisecond, src);
 			break;
 
 		case 'y': // 2012 -> 12
-			src = scan_value(asterisk, width, &tm->wYear, src); // TODO: get year
+			src = scan_value(asterisk, width, &tm64->year, src);
+			tm64->year = (2000 + tm64->year) - 1900;
 			break;
 
 		default:
@@ -257,83 +247,106 @@ static int time64_scanf(system_time_t* tm, const char* format, const char* src)
 
 int time64_format(time64_t time, const char* format, char* str)
 {
-	system_time_t st;
+	struct tm64 tm64;
+	time64_utc(time, &tm64);
 
-#if defined(OS_WINDOWS)
-	FILETIME ft;
-
-	time += 11644473600000L; // January 1, 1601 (UTC) -> January 1, 1970 (UTC).
-	time *= 10000; // millisecond -> nanosecond
-
-	ft.dwHighDateTime = (time>>32) & 0xFFFFFFFF;
-	ft.dwLowDateTime = time & 0xFFFFFFFF;
-	FileTimeToSystemTime(&ft, &st);
-#else
-	time_t t;
-	struct tm* lt;
-
-	t = time / 1000;
-    lt = gmtime(&t);
-//	lt = localtime(&t);
-
-	memset(&st, 0, sizeof(st));
-	st.wYear = (WORD)lt->tm_year + 1900;
-	st.wMonth = (WORD)lt->tm_mon + 1;
-	st.wDay = (WORD)lt->tm_mday;
-	st.wHour = (WORD)lt->tm_hour;
-	st.wMinute = (WORD)lt->tm_min;
-	st.wSecond = (WORD)lt->tm_sec;
-	st.wMilliseconds = time % 1000;
-#endif
-
-	if(!TIME64_VALID_SYSTEM_TIME(st))
+	if(!TIME64_VALID_SYSTEM_TIME(tm64))
 		return -1;
-	return time64_printf(&st, format, str);
+	return time64_printf(&tm64, format, str);
 }
 
 time64_t time64_from(const char* format, const char* src)
 {
 	time64_t v;
-	system_time_t st;
+	struct tm64 tm64;
 
 #if defined(OS_WINDOWS)
 	FILETIME ft;
+	SYSTEMTIME st;
 
-	memset(&st, 0, sizeof(st));
-	st.wYear = 1970;
-	st.wMonth = 1;
-	st.wDay = 1;
-	time64_scanf(&st, format, src);
-	if(!TIME64_VALID_SYSTEM_TIME(st))
+	memset(&tm64, 0, sizeof(tm64));
+	time64_scanf(&tm64, format, src);
+	if(!TIME64_VALID_SYSTEM_TIME(tm64))
 		return -1;
 
+	st.wYear = (WORD)(tm64.year + 1900);
+	st.wMonth = (WORD)(tm64.month + 1);
+	st.wDay = (WORD)tm64.day;
+	st.wDayOfWeek = (WORD)tm64.wday;
+	st.wHour = (WORD)tm64.hour;
+	st.wMinute = (WORD)tm64.minute;
+	st.wSecond = (WORD)tm64.second;
+	st.wMilliseconds = (WORD)tm64.millisecond;
 	SystemTimeToFileTime(&st, &ft);
 
 	v = (((__int64)ft.dwHighDateTime << 32) | (__int64)ft.dwLowDateTime) / 10000; // to ms
 	v -= 11644473600000L; // January 1, 1601 (UTC) -> January 1, 1970 (UTC).
-
 #else
 	struct tm t;
 
-	memset(&st, 0, sizeof(st));
-	st.wYear = 1900;
-	st.wMonth = 1;
-	time64_scanf(&st, format, src);
+	memset(&tm64, 0, sizeof(tm64));
+	tm64.day = 1;
+	time64_scanf(&utc, format, src);
 	if(!TIME64_VALID_SYSTEM_TIME(st))
 		return -1;
 
-	t.tm_year = st.wYear-1900;
-	t.tm_mon = st.wMonth-1;
-	t.tm_mday = st.wDay;
-	t.tm_hour = st.wHour;
-	t.tm_min = st.wMinute;
-	t.tm_sec = st.wSecond;
+	t.tm_year = tm64.year;
+	t.tm_mon = tm64.month;
+	t.tm_mday = tm64.day;
+	t.tm_wday = tm64.wday;
+	t.tm_hour = tm64.hour;
+	t.tm_min = tm64.minute;
+	t.tm_sec = tm64.second;
 //	v = mktime(&t);
     v = utc_mktime(&t);
     v *= 1000;
-	v += st.wMilliseconds;
+	v += tm64.millisecond;
 #endif
 	return v;
+}
+
+int time64_utc(time64_t time, struct tm64* tm64)
+{
+#if defined(OS_WINDOWS)
+	FILETIME ft;
+	SYSTEMTIME st;
+
+	time += 11644473600000L; // January 1, 1970 (UTC) -> January 1, 1601 (UTC).
+	time *= 10000; // millisecond -> nanosecond
+
+	ft.dwHighDateTime = (time>>32) & 0xFFFFFFFF;
+	ft.dwLowDateTime = time & 0xFFFFFFFF;
+	FileTimeToSystemTime(&ft, &st);
+
+	assert(st.wYear >= 1900);
+	assert(st.wMonth);
+	tm64->year = st.wYear - 1900;
+	tm64->month = st.wMonth - 1;
+	tm64->day = st.wDay;
+	tm64->wday = st.wDayOfWeek;
+	tm64->hour = st.wHour;
+	tm64->minute = st.wMinute;
+	tm64->second = st.wSecond;
+	tm64->millisecond = st.wMilliseconds;
+#else
+	struct tm* t;
+	time_t seconds;
+
+	seconds = time / 1000;
+	t = gmtime(&seconds);
+	//t = localtime(&seconds);
+
+	tm64->year = t->tm_year;
+	tm64->month = t->tm_mon;
+	tm64->day = t->tm_mday;
+	tm64->wday = t->tm_wday;
+	tm64->hour = t->tm_hour;
+	tm64->minute = t->tm_min;
+	tm64->second = t->tm_sec;
+	tm64->millisecond = time % 1000;
+#endif
+
+	return 0;
 }
 
 time64_t time64_now(void)
@@ -355,30 +368,40 @@ time64_t time64_now(void)
 	return v;
 }
 
+static time_t time64_to_gmtime(time64_t time64)
+{
+	return time64 / 1000;
+}
+
+static time64_t time64_from_gmtime(time_t gmt)
+{
+	time64_t time64 = (time64_t)gmt;
+	time64 *= 1000;
+	return time64;
+}
+
 #if defined(_DEBUG) || defined(DEBUG)
 void time64_test(void)
 {
     time_t t;
     time64_t t64, _t64;
     struct tm *tm;
-    char gmt[64], local[64];
+	struct tm64 tm64;
+    char gmt[64];
     char utc[64];
 
-    t = time(NULL);
     t64 = time64_now();
+	time64_utc(t64, &tm64);
 
-    tm = gmtime(&t);
-    snprintf(gmt, sizeof(gmt), "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+    t = time64_to_gmtime(t64);
+	tm = gmtime(&t);
+	assert(tm64.year==tm->tm_year && tm64.month==tm->tm_mon && tm64.day==tm->tm_mday && tm64.wday==tm->tm_wday && tm64.hour==tm->tm_hour && tm64.minute==tm->tm_min && tm64.second==tm->tm_sec);
 
-    tm = localtime(&t);
-    snprintf(local, sizeof(local), "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
-
+	snprintf(gmt, sizeof(gmt), "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
     time64_format(t64, "%04Y-%02M-%02D %02h:%02m:%02s", utc);
     assert(0 == strcmp(utc, gmt));
 
     _t64 = time64_from("%04Y-%02M-%02D %02h:%02m:%02s", utc);
     assert(t64/1000 == _t64/1000);
-
-    assert(_t64/1000 == (time64_t)t);
 }
 #endif
