@@ -159,7 +159,7 @@ inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
 #else
 
 //-------------------------------------GCC----------------------------------------
-#if __GNUC__>=4 && __GNUC_MINOR__>=3
+#if __GNUC__>=4 && __GNUC_MINOR__>=1
 inline int32_t atomic_increment32(volatile int32_t *value)
 {
 	assert((long)value % 4 == 0);
