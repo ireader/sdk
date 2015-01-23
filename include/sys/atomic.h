@@ -21,7 +21,7 @@ typedef __int64 int64_t;
 // required: Windows >= Vista
 // int64_t atomic_increment64(volatile int64_t *value)
 // int64_t atomic_decrement64(volatile int64_t *value)
-// int64_t atomic_add64(volatile int64_t *value, int32_t incr)
+// int64_t atomic_add64(volatile int64_t *value, int64_t incr)
 // int atomic_cas64(volatile int64_t *value, int64_t oldvalue, int64_t newvalue)
 //-------------------------------------------------------------------------------------
 
@@ -252,29 +252,29 @@ inline int32_t atomic_decrement32(volatile int32_t *value)
 
 //-------------------------------------INTEL----------------------------------------
 #else
-#error "INTEL"
 inline int32_t atomic_add32(volatile int32_t *value, int32_t incr)
 {
-	asm volatile ("lock; xaddl %k0,%1"
-		: "=r" (incr), "=m" (*value)
+	int32_t r = 0;
+	asm volatile ("lock; xaddl %0,%1"
+		: "=r" (r), "=m" (*value)
 		: "0" (incr), "m" (*value)
 		: "memory", "cc");
-	return incr;
+	return r + incr;
 }
 
 inline int32_t atomic_increment32(volatile int32_t *value)
 {
-	assert((int32_t)value % 4 == 0);
+	assert((long)value % 4 == 0);
 	return atomic_add32(value, 1);
 }
 
 inline int32_t atomic_decrement32(volatile int32_t *value)
 {
-	assert((int32_t)value % 4 == 0);
+	assert((long)value % 4 == 0);
 	return atomic_add32(value, -1);
 }
 
-inline int32_t atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t newvalue)
+inline int atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t newvalue)
 {
 	int32_t prev;
 
@@ -282,16 +282,48 @@ inline int32_t atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t n
 		: "=a" (prev)
 		: "r" (newvalue), "m" (*(value)), "0"(oldvalue)
 		: "memory", "cc");
-	return prev;
+	return prev == oldvalue ? 1 : 0;
+}
+
+inline int64_t atomic_add64(volatile int64_t *value, int64_t incr)
+{
+	int64_t r = 0;
+	asm volatile ("lock; xaddq %0,%1"
+		: "=r" (r), "=m" (*value)
+		: "0" (incr), "m" (*value)
+		: "memory", "cc");
+	return r + incr;
+}
+
+inline int64_t atomic_increment64(volatile int64_t *value)
+{
+	assert((long)value % 8 == 0);
+	return atomic_add64(value, 1);
+}
+
+inline int64_t atomic_decrement64(volatile int64_t *value)
+{
+	assert((long)value % 8 == 0);
+	return atomic_add64(value, -1);
+}
+
+inline int atomic_cas64(volatile int64_t *value, int64_t oldvalue, int64_t newvalue)
+{
+	int64_t prev;
+
+	asm volatile ("lock; cmpxchgq %1, %2"
+		: "=a" (prev)
+		: "r" (newvalue), "m" (*value), "0" (oldvalue));
+	return prev == oldvalue ? 1 : 0;
 }
 
 inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
 {
 	void *prev;
 #if defined(X86_64)
-	asm volatile ("lock; cmpxchgq %q2, %1"
+	asm volatile ("lock; cmpxchgq %2, %1"
 		: "=a" (prev), "=m" (*value)
-		: "r" ((unsigned long)newvalue), "m" (*mem), "0" ((unsigned long)oldvalue));
+		: "r" (newvalue), "m" (*value), "0" (oldvalue));
 #else
 	asm volatile ("lock; cmpxchgl %2, %1"
 		: "=a" (prev), "=m" (*value)
