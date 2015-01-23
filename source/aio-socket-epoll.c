@@ -184,13 +184,17 @@ int aio_socket_process(int timeout)
 	r = epoll_wait(s_epoll, events, 1, timeout);
 	for(i = 0; i < r; i++)
 	{
-		assert(events[i].data.ptr);
-		ctx = (struct epoll_context*)events[i].data.ptr;
 		// EPOLLERR: Error condition happened on the associated file descriptor
 		// EPOLLHUP: Hang up happened on the associated file descriptor
 		// EPOLLRDHUP: Stream socket peer closed connection, or shut down writing half of connection. 
 		//			   (This flag is especially useful for writing simple code to detect peer shutdown when using Edge Triggered monitoring.) 
-		if(events[i].events & (EPOLLERR|EPOLLHUP|EPOLLRDHUP))
+		int flags = EPOLLERR|EPOLLHUP;
+#if defined(EPOLLRDHUP)
+		flags |= EPOLLRDHUP;
+#endif
+		assert(events[i].data.ptr);
+		ctx = (struct epoll_context*)events[i].data.ptr;
+		if(events[i].events & flags)
 		{
 			// save event
 			// 1. thread-1 current ctx->ev.events = EPOLLIN
@@ -268,7 +272,10 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	ctx->ref = 1;
 	ctx->socket = socket;
 //	ctx->ev.events = EPOLLET|EPOLLRDHUP|EPOLLONESHOT; // Edge Triggered, for multi-thread epoll_wait(see more at epoll-wait-multithread.c)
-	ctx->ev.events = EPOLLRDHUP|EPOLLONESHOT;
+	ctx->ev.events = EPOLLONESHOT; // since Linux 2.6.2
+#if defined(EPOLLRDHUP)
+	ctx->ev.events |= EPOLLRDHUP; // since Linux 2.6.17
+#endif
 	ctx->ev.data.ptr = ctx;
 
 	if(0 != epoll_ctl(s_epoll, EPOLL_CTL_ADD, socket, &ctx->ev))
