@@ -189,6 +189,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\atomic-test2.c"
+				>
+			</File>
+			<File
 				RelativePath=".\event-test.c"
 				>
 			</File>

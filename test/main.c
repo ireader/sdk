@@ -13,6 +13,7 @@
 
 void locker_test(void);
 void atomic_test(void);
+void atomic_test2(void);
 void spinlock_test(void);
 void event_test(void);
 void semaphore_test(void);
@@ -46,6 +47,7 @@ int main(int argc, char* argv[])
 {
 	locker_test();
 	atomic_test();
+	atomic_test2();
 	spinlock_test();
 	event_test();
 #if !defined(OS_MAC)

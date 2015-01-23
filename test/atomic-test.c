@@ -22,7 +22,7 @@ void atomic_test(void)
 	assert(0 != atomic_cas32(&val32, 100, 101) && 101 == val32);
 	assert(0 == atomic_cas32(&val32, 100, 101) && 101 == val32);
 
-#if defined(OS_WINDOWS ) && _WIN32_WINNT >= 0x0502
+#if !defined(_WIN32_WINNT ) || _WIN32_WINNT >= 0x0502
 	assert(0x0011001100110012L == atomic_increment64(pval64) && 0x0011001100110012L==*pval64);
 	assert(0x0011001100110011L == atomic_decrement64(pval64) && 0x0011001100110011L==*pval64);
 	assert(0x0022002200220022L == atomic_add64(pval64, 0x0011001100110011L) && 0x0022002200220022L == *pval64);
