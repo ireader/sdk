@@ -120,14 +120,18 @@ extern "C" {
 #endif
 
 #if defined(OS_WINDOWS)
-char* strndup(const char* p, size_t n);
-
 int snprintf(char *str, size_t size, const char *format, ...);
 #else
 
 #ifndef GetLastError
 	#define GetLastError() errno
 #endif
+
+#endif
+
+#if defined(OS_WINDOWS) || !defined(_GNU_SOURCE)
+
+char* strndup(const char* p, size_t n);
 
 #endif
 
