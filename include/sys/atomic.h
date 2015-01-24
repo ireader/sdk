@@ -159,6 +159,8 @@ inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
 #else
 
 //-------------------------------------GCC----------------------------------------
+// compile with CFLAGS += -march=i486
+
 #if __GNUC__>=4 && __GNUC_MINOR__>=1
 inline int32_t atomic_increment32(volatile int32_t *value)
 {
@@ -254,11 +256,10 @@ inline int32_t atomic_decrement32(volatile int32_t *value)
 #else
 inline int32_t atomic_add32(volatile int32_t *value, int32_t incr)
 {
-	int32_t r = 0;
+	int32_t r = incr;
+	assert((long)value % 4 == 0);
 	asm volatile ("lock; xaddl %0,%1"
-		: "=r" (r), "=m" (*value)
-		: "0" (incr), "m" (*value)
-		: "memory", "cc");
+		: "+r" (r), "+m" (*value));
 	return r + incr;
 }
 
@@ -276,23 +277,55 @@ inline int32_t atomic_decrement32(volatile int32_t *value)
 
 inline int atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t newvalue)
 {
-	int32_t prev;
+	int32_t prev = oldvalue;
+	assert((long)value % 4 == 0);
+	asm volatile ("lock; cmpxchgl %2, %1"
+		: "+a" (prev), "+m" (*value)
+		: "r" (newvalue));
+	return prev == oldvalue ? 1 : 0;
+}
 
-	asm volatile ("lock; cmpxchgl %1, %2"
-		: "=a" (prev)
-		: "r" (newvalue), "m" (*(value)), "0"(oldvalue)
-		: "memory", "cc");
+inline int atomic_cas64(volatile int64_t *value, int64_t oldvalue, int64_t newvalue)
+{
+	int64_t prev = oldvalue;
+#if defined(__LP64__)
+	assert((long)value % 8 == 0);
+	asm volatile ("lock ; cmpxchgq %2, %1"
+		: "+a" (prev), "+m" (*value)
+		: "q" (newvalue));
+	return prev == oldvalue ? 1 : 0;
+#else
+	// http://src.chromium.org/svn/trunk/src/third_party/tcmalloc/chromium/src/base/atomicops-internals-x86.h
+	asm volatile ("push %%ebx\n\t"
+		"movl (%3), %%ebx\n\t"    // Move 64-bit new_value into
+		"movl 4(%3), %%ecx\n\t"   // ecx:ebx
+		"lock; cmpxchg8b (%1)\n\t"// If edx:eax (old_value) same
+		"pop %%ebx\n\t"
+		: "=A" (prev)             // as contents of ptr:
+		: "D" (value),              //   ecx:ebx => ptr
+		"0" (oldvalue),        // else:
+		"S" (&newvalue)        //   old *ptr => edx:eax
+		: "memory", "%ecx");
+#endif
 	return prev == oldvalue ? 1 : 0;
 }
 
 inline int64_t atomic_add64(volatile int64_t *value, int64_t incr)
 {
-	int64_t r = 0;
+#if defined(__LP64__)
+	int64_t r = incr;
+	assert((long)value % 8 == 0);
 	asm volatile ("lock; xaddq %0,%1"
-		: "=r" (r), "=m" (*value)
-		: "0" (incr), "m" (*value)
-		: "memory", "cc");
+		: "+r" (r), "+m" (*value));
 	return r + incr;
+#else
+	int64_t old_val, new_val;
+	do {
+		old_val = *value;
+		new_val = old_val + incr;
+	} while (atomic_cas64(value, old_val, new_val) != old_val);
+#endif
+	return new_val;
 }
 
 inline int64_t atomic_increment64(volatile int64_t *value)
@@ -307,27 +340,18 @@ inline int64_t atomic_decrement64(volatile int64_t *value)
 	return atomic_add64(value, -1);
 }
 
-inline int atomic_cas64(volatile int64_t *value, int64_t oldvalue, int64_t newvalue)
-{
-	int64_t prev;
-
-	asm volatile ("lock; cmpxchgq %1, %2"
-		: "=a" (prev)
-		: "r" (newvalue), "m" (*value), "0" (oldvalue));
-	return prev == oldvalue ? 1 : 0;
-}
-
 inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
 {
-	void *prev;
-#if defined(X86_64)
-	asm volatile ("lock; cmpxchgq %2, %1"
-		: "=a" (prev), "=m" (*value)
-		: "r" (newvalue), "m" (*value), "0" (oldvalue));
+	void *prev = oldvalue;
+#if defined(__LP64__)
+	asm volatile ("lock ; cmpxchgq %2, %1"
+		: "+a" (prev), "+m" (*value)
+		: "q" (newvalue));
+	return prev == oldvalue ? 1 : 0;
 #else
 	asm volatile ("lock; cmpxchgl %2, %1"
-		: "=a" (prev), "=m" (*value)
-		: "r" (newvalue), "m" (*value), "0" (oldvalue));
+		: "+a" (prev), "+m" (*value)
+		: "r" (newvalue));
 #endif
 	return prev == oldvalue ? 1 : 0;
 }
