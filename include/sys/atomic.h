@@ -159,7 +159,9 @@ inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
 #else
 
 //-------------------------------------GCC----------------------------------------
-// compile with CFLAGS += -march=i486
+// -march=i486 32-bits
+// -march=i586 64-bits
+// compile with CFLAGS += -march=i586
 
 #if __GNUC__>=4 && __GNUC_MINOR__>=1
 inline int32_t atomic_increment32(volatile int32_t *value)
@@ -180,13 +182,11 @@ inline int32_t atomic_add32(volatile int32_t *value, int32_t incr)
 	return __sync_add_and_fetch_4(value, incr);
 }
 
-#if __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4
 inline int atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t newvalue)
 {
 	assert((long)value % 4 == 0);
 	return __sync_bool_compare_and_swap_4(value, oldvalue, newvalue) ? 1 : 0;
 }
-#endif
 
 inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
 {
@@ -212,13 +212,11 @@ inline int64_t atomic_add64(volatile int64_t *value, int64_t incr)
 	return __sync_add_and_fetch_8(value, incr);
 }
 
-#if __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8
 inline int atomic_cas64(volatile int64_t *value, int64_t oldvalue, int64_t newvalue)
 {
 	assert((long)value % 8 == 0);
 	return __sync_bool_compare_and_swap_8(value, oldvalue, newvalue) ? 1 : 0;
 }
-#endif
 
 //-------------------------------------ARM----------------------------------------
 #elif defined(__ARM__) || defined(__arm__)
@@ -323,7 +321,7 @@ inline int64_t atomic_add64(volatile int64_t *value, int64_t incr)
 	do {
 		old_val = *value;
 		new_val = old_val + incr;
-	} while (atomic_cas64(value, old_val, new_val) != old_val);
+	} while (atomic_cas64(value, old_val, new_val) != 1);
 #endif
 	return new_val;
 }
