@@ -35,10 +35,10 @@ typedef struct _task_context_t
 	int timeout;
 	task_proc proc;
 	void* param;
-	
+
 	size_t stime;
 	size_t etime;
-	int thread;
+	tid_t thread;
 	int priority;
 } task_context_t;
 

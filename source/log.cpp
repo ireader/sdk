@@ -70,7 +70,7 @@ static void log_write(int level, const char* format, va_list vl)
 		gmt->tm_hour,		// hour
 		gmt->tm_min,		// minute
 		gmt->tm_sec,		// second
-		g_logLevelDesc[((LOG_DEBUG<=level && level<LOG_ERROR) ? level : LOG_DEBUG) - 1]);
+		g_logLevelDesc[((LOG_DEBUG<=level && level<=LOG_ERROR) ? level : LOG_DEBUG) - 1]);
 
 	r = vfprintf(g_fp, format, vl);
 	if(r < 0)
