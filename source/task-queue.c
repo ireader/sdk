@@ -117,6 +117,26 @@ static task_context_t* task_pop(task_queue_context_t* taskQ)
 	return task;
 }
 
+static task_context_t* task_pop_timeout(task_queue_context_t* taskQ)
+{
+	size_t clock;
+	task_context_t *task;
+	struct list_head *p, *next;
+
+	clock = system_clock();
+	list_for_each_safe(p, next, &taskQ->tasks)
+	{
+		task = list_entry(p, task_context_t, head);
+		if(clock - task->stime > (size_t)task->timeout)
+		{
+			list_remove(p);
+			return task;
+		}
+	}
+
+	return NULL;
+}
+
 static void task_action(void* param)
 {
 	task_context_t* task;
@@ -139,10 +159,8 @@ static void task_action(void* param)
 static int STDCALL task_queue_scheduler(void* param)
 {
 	int r;
-	size_t tnow;
 	task_context_t *task;
 	task_queue_context_t *taskQ;
-	struct list_head *p, *next;
 
 	taskQ = (task_queue_context_t*)param;
 	while(taskQ->running)
@@ -164,24 +182,24 @@ static int STDCALL task_queue_scheduler(void* param)
 
 			semaphore_post(&taskQ->sema_worker);
 		}
-		else
-		{
-			// timeout
-			tnow = system_clock();
+		//else
+		//{
+		//	locker_lock(&taskQ->locker);
+		//	task = task_pop_timeout(taskQ);
+		//	locker_unlock(&taskQ->locker);
 
-			locker_lock(&taskQ->locker);
-			list_for_each_safe(p, next, &taskQ->tasks)
-			{
-				task = list_entry(p, task_context_t, head);
-				if(tnow - task->stime > (size_t)task->timeout)
-				{
-					if(task->proc)
-						task->proc(task->param);
-					list_remove(p);
-				}
-			}
-			locker_unlock(&taskQ->locker);
-		}
+		//	if(task)
+		//	{
+		//		if(task->proc)
+		//			task->proc(task->param);
+
+		//		task->etime = system_clock();
+		//		task->thread = thread_self();
+		//		locker_lock(&taskQ->locker);
+		//		task_recycle(taskQ, task); // recycle task
+		//		locker_unlock(&taskQ->locker);
+		//	}
+		//}
 	}
 
 	return 0;
