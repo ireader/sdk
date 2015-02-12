@@ -1,5 +1,6 @@
 #include "task-queue.h"
 #include "cstringext.h"
+#include "sys/atomic.h"
 #include "sys/thread.h"
 #include "sys/system.h"
 #include "sys/locker.h"
@@ -12,6 +13,7 @@ enum { PRIORITY_IDLE=0, PRIORITY_LOWEST, PRIORITY_NORMAL, PRIORITY_CRITICAL };
 
 typedef struct _task_queue_context_t
 {
+	int32_t ref;
 	int running;
 	int maxWorker;
 	thread_pool_t pool;
@@ -137,6 +139,19 @@ static task_context_t* task_pop_timeout(task_queue_context_t* taskQ)
 	return NULL;
 }
 
+static void task_queue_relase(task_queue_context_t* taskQ)
+{
+	if(0 == atomic_decrement32(&taskQ->ref))
+	{
+		semaphore_destroy(&taskQ->sema_request);
+		semaphore_destroy(&taskQ->sema_worker);
+		locker_destroy(&taskQ->locker);
+
+		task_clean(taskQ);
+		free(taskQ);
+	}
+}
+
 static void task_action(void* param)
 {
 	task_context_t* task;
@@ -154,6 +169,7 @@ static void task_action(void* param)
 	locker_unlock(&taskQ->locker);
 
 	semaphore_post(&taskQ->sema_worker); // add worker
+	task_queue_relase(taskQ);
 }
 
 static int STDCALL task_queue_scheduler(void* param)
@@ -166,40 +182,21 @@ static int STDCALL task_queue_scheduler(void* param)
 	while(taskQ->running)
 	{
 		r = semaphore_wait(&taskQ->sema_request);
-		r = semaphore_timewait(&taskQ->sema_worker, 1000);
-		if(0 == r)
+		r = semaphore_wait(&taskQ->sema_worker);
+		if(0 == r && taskQ->running)
 		{
 			locker_lock(&taskQ->locker);
 			task = task_pop(taskQ);
 			locker_unlock(&taskQ->locker);
 
+			assert(task);
 			if(task)
 			{
+				atomic_increment32(&taskQ->ref);
 				r = thread_pool_push(taskQ->pool, task_action, task);
 				assert(0 == r);
-				if(0 == r) continue;
 			}
-
-			semaphore_post(&taskQ->sema_worker);
 		}
-		//else
-		//{
-		//	locker_lock(&taskQ->locker);
-		//	task = task_pop_timeout(taskQ);
-		//	locker_unlock(&taskQ->locker);
-
-		//	if(task)
-		//	{
-		//		if(task->proc)
-		//			task->proc(task->param);
-
-		//		task->etime = system_clock();
-		//		task->thread = thread_self();
-		//		locker_lock(&taskQ->locker);
-		//		task_recycle(taskQ, task); // recycle task
-		//		locker_unlock(&taskQ->locker);
-		//	}
-		//}
 	}
 
 	return 0;
@@ -237,6 +234,7 @@ task_queue_t task_queue_create(thread_pool_t pool, int maxWorker)
 	taskQ = (task_queue_context_t*)malloc(sizeof(task_queue_context_t));
 	if(taskQ)
 	{
+		taskQ->ref = 1;
 		taskQ->running = 1;
 		taskQ->pool = pool;
 		taskQ->maxWorker = maxWorker;
@@ -271,13 +269,8 @@ int task_queue_destroy(task_queue_t q)
 	taskQ->running = 0;
 	semaphore_post(&taskQ->sema_request);
 	semaphore_post(&taskQ->sema_worker);
-
 	thread_destroy(taskQ->thread_scheduler);
-	semaphore_destroy(&taskQ->sema_request);
-	semaphore_destroy(&taskQ->sema_worker);
-	locker_destroy(&taskQ->locker);
 
-	task_clean(taskQ);
-	free(taskQ);
+	task_queue_relase(taskQ);
 	return 0;
 }
