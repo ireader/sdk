@@ -7,6 +7,8 @@ extern "C" {
 
 int ip_route_get(const char* distination, char ip[40]);
 
+int ip_local(char ip[40]);
+
 #ifdef __cplusplus
 }
 #endif

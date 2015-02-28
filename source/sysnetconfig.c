@@ -26,7 +26,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netpacket/packet.h>
 #include <net/if.h>
+#include <ifaddrs.h>
+#include <netdb.h>
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -289,13 +292,14 @@ int system_setgateway(const char* gateway)
 
 static void ipaddr2str(char s[16], struct sockaddr_in* addr)
 {
-	sprintf(s, "%d.%d.%d.%d", 
+	sprintf(s, "%u.%u.%u.%u", 
 		addr->sin_addr.s_addr & 0xFF,
 		(addr->sin_addr.s_addr>>8) & 0xFF,
 		(addr->sin_addr.s_addr>>16) & 0xFF,
 		(addr->sin_addr.s_addr>>24) & 0xFF);
 }
 
+#if 0
 int system_getip(system_getip_fcb fcb, void* param)
 {
 	int i, fd;
@@ -351,6 +355,68 @@ int system_getip(system_getip_fcb fcb, void* param)
 	return 0;
 }
 
+#else
+static int system_getmac(const struct ifaddrs *ifaddr, const char* ifname, char hwaddr[20])
+{
+	const struct ifaddrs *ifa = NULL;
+	struct sockaddr_ll *macaddr = NULL;
+
+	for(ifa = ifaddr; ifa; ifa = ifa->ifa_next)
+	{
+		if(0 == strcmp(ifa->ifa_name, ifname) 
+			&& AF_PACKET == ifa->ifa_addr->sa_family
+			&& ifa->ifa_addr )
+		{
+			macaddr = (struct sockaddr_ll*)ifa->ifa_addr;
+			sprintf(hwaddr, "%02X-%02X-%02X-%02X-%02X-%02X",
+				(unsigned int)(macaddr->sll_addr[0]),
+				(unsigned int)(macaddr->sll_addr[1]),
+				(unsigned int)(macaddr->sll_addr[2]),
+				(unsigned int)(macaddr->sll_addr[3]),
+				(unsigned int)(macaddr->sll_addr[4]),
+				(unsigned int)(macaddr->sll_addr[5]));
+			return 0;
+		}
+	}
+	return -1;
+}
+
+int system_getip(system_getip_fcb fcb, void* param)
+{
+	char hwaddr[20];	
+	char ipaddr[32] ,netmask[32], gateway[32];
+	struct ifaddrs *ifaddr, *ifa, *ifmac;
+
+	memset(gateway, 0, sizeof(gateway));
+	system_getgateway(gateway, sizeof(gateway));
+
+	if(0 != getifaddrs(&ifaddr))
+		return errno;
+
+	for(ifa = ifaddr; ifa; ifa = ifa->ifa_next)
+	{
+		if(!ifa->ifa_addr || AF_INET != ifa->ifa_addr->sa_family || 0 == strcmp("lo", ifa->ifa_name))
+			continue;
+
+		//case AF_INET6:
+		//	struct sockaddr_in6* ipv6 = (struct sockaddr_in6*)ifa->ifa_addr;
+		//	struct sockaddr_in6* mask = (struct sockaddr_in6*)ifa->ifa_netmask;
+		//	break;
+
+		ipaddr2str(ipaddr, (struct sockaddr_in*)ifa->ifa_addr);
+		ipaddr2str(netmask, (struct sockaddr_in*)ifa->ifa_netmask);
+
+		memset(hwaddr, 0, sizeof(hwaddr));
+		system_getmac(ifaddr, ifa->ifa_name, hwaddr);
+
+		fcb(param, hwaddr, ifa->ifa_name, 0, ipaddr, netmask, gateway);
+	}
+
+	freeifaddrs(ifaddr);
+	return 0;
+}
+#endif
+
 #if 0
 int system_setip(const char* name, int enableDHCP, const char* ip, const char* netmask, const char* gateway)
 {
@@ -394,7 +460,6 @@ int system_setip(const char* name, int enableDHCP, const char* ip, const char* n
 }
 
 #else
-
 static int system_setip_handle(const char* str, int len, va_list val)
 {
 	FILE* fp;
@@ -497,7 +562,6 @@ int system_setdns(const char* name, const char* primary, const char *secondary)
 	int r;
 	FILE* fp;
 	char content[1024*3] = {0};	
-	const char *line, *p;
 
 	// read
 	tools_cat("/etc/resolv.conf", content, sizeof(content)-1);

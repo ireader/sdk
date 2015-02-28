@@ -25,6 +25,7 @@ void url_test(void);
 void unicode_test(void);
 void utf8codec_test(void);
 void thread_pool_test(void);
+void task_queue_test(void);
 void systimer_test(void);
 void aio_socket_test(void);
 void aio_socket_test2(void);
@@ -67,6 +68,7 @@ int main(int argc, char* argv[])
 #endif
 
 	thread_pool_test();
+	task_queue_test();
 
 	ip_route_test();
     

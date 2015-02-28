@@ -237,6 +237,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\task-queue-test.c"
+				>
+			</File>
+			<File
 				RelativePath=".\thread-pool-test.c"
 				>
 			</File>
