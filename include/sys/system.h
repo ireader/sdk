@@ -19,7 +19,7 @@ typedef FARPROC funcptr_t;
 #include <errno.h>
 
 typedef void* module_t;
-typedef void* funcptr_t;
+typedef void (*funcptr_t)(void);
 #endif
 
 #include <sys/timeb.h>
@@ -231,7 +231,7 @@ inline funcptr_t system_getproc(module_t module, const char* producer)
 #if defined(OS_WINDOWS)
 	return GetProcAddress(module, producer);
 #else
-	return dlsym(module, producer);
+	return (funcptr_t)dlsym(module, producer);
 #endif
 }
 
