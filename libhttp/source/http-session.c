@@ -104,6 +104,8 @@ int http_session_onrecv(void* param, const void* msg, size_t bytes)
 	size_t remain;
 	struct http_session_t *session;
 	session = (struct http_session_t *)param;
+	if(!session || 0 == bytes)
+		return -1;
 
 	assert(session && bytes > 0);
 	remain = bytes;

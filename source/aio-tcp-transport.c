@@ -171,8 +171,9 @@ static void aio_tcp_session_recv(struct aio_tcp_session_t *session)
 
         if(0 != r)
         {
+			aio_tcp_session_release(session); // for addref
             session->handler.ondisconnected(session->data);
-            aio_tcp_session_release(session);
+            aio_tcp_session_release(session); // for session create
         }
     }
     
@@ -226,7 +227,6 @@ static void aio_tcp_transport_onaccept(void* param, int code, socket_t socket, c
 
 	if(0 != code)
 	{
-		assert(0);
 		printf("aio_tcp_transport_onaccept => %d\n", code);
 		aio_tcp_transport_release(transport);
 		return;

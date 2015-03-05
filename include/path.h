@@ -68,10 +68,10 @@ inline std::string join(const char* path1, const char* path2)
 	assert(path1 && path2);
 	std::string path(path1);
 
-	if(isdrive(path2)) 
+	if(path2 && isdrive(path2)) 
 		return path2;
 
-	if(0 != *path2)
+	if(path2 && 0 != *path2)
 	{
 		if(path.length() > 0 
 			&& NULL==strchr("/\\", *path.rbegin()))
@@ -115,7 +115,7 @@ inline int split(const char* path, StdStrContainer& container)
 	// \\host\abc\def
 	// file:///C:/abc/def
 
-	if(isdrive(path))
+	if(path && isdrive(path))
 	{
 		if(0!=path[2] && '\\'!=path[2] && '/'!=path[2])
 			return -1;
@@ -123,7 +123,7 @@ inline int split(const char* path, StdStrContainer& container)
 		container.push_back(std::string(path, 2));
 		path += 2;
 	}
-	else if(0 == strncmp("\\\\", path, 2))
+	else if(path && 0 == strncmp("\\\\", path, 2))
 	{
 		if('\\'==path[2] || '/'==path[2])
 			return -1;
@@ -131,8 +131,9 @@ inline int split(const char* path, StdStrContainer& container)
 		container.push_back(std::string(path, 2));
 		path += 2;
 	}
-	else if(0==strncmp("file:///", path, 8) 
-		|| 0==strncmp("file:\\\\\\", path, 8))
+	else if(path && 
+		(0==strncmp("file:///", path, 8) 
+		|| 0==strncmp("file:\\\\\\", path, 8)))
 	{
 		if('\\'==path[8] || '/'==path[8])
 			return -1;
@@ -142,10 +143,10 @@ inline int split(const char* path, StdStrContainer& container)
 	}
 	
 	// ignore the first '\\', '/' characters
-	while('\\'==*path || '/'==*path) ++path;
+	while(path && ('\\'==*path || '/'==*path)) ++path;
 
 	const char* p = path;
-	while(*p)
+	while(p && *p)
 	{
 		if('\\'==*p || '/'==*p)
 		{
@@ -179,7 +180,7 @@ inline int split(const char* path, StdStrContainer& container)
 
 #endif	
 
-	if(*path)
+	if(path && *path)
 		container.push_back(std::string(path));
 	return 0;
 }
