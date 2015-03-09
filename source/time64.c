@@ -332,7 +332,7 @@ int time64_utc(time64_t time, struct tm64* tm64)
 	struct tm* t;
 	time_t seconds;
 
-	seconds = time / 1000;
+	seconds = (time_t)(time / 1000);
 	t = gmtime(&seconds);
 	//t = localtime(&seconds);
 
@@ -343,31 +343,51 @@ int time64_utc(time64_t time, struct tm64* tm64)
 	tm64->hour = t->tm_hour;
 	tm64->minute = t->tm_min;
 	tm64->second = t->tm_sec;
-	tm64->millisecond = time % 1000;
+	tm64->millisecond = (int)(time % 1000);
 #endif
 
+	return 0;
+}
+
+int time64_local(time64_t time, struct tm64* tm64)
+{
+	struct tm* t;
+	time_t seconds;
+
+	seconds = (time_t)(time / 1000);
+	t = localtime(&seconds);
+
+	tm64->year = t->tm_year;
+	tm64->month = t->tm_mon;
+	tm64->day = t->tm_mday;
+	tm64->wday = t->tm_wday;
+	tm64->hour = t->tm_hour;
+	tm64->minute = t->tm_min;
+	tm64->second = t->tm_sec;
+	tm64->millisecond = (int)(time % 1000);
 	return 0;
 }
 
 time64_t time64_now(void)
 {
 	time64_t v;
-	
+
 #if defined(OS_WINDOWS)
 	FILETIME ft;
 	GetSystemTimeAsFileTime((FILETIME*)&ft);
-
 	v = (((__int64)ft.dwHighDateTime << 32) | (__int64)ft.dwLowDateTime) / 10000; // to ms
 	v -= 11644473600000L; // January 1, 1601 (UTC) -> January 1, 1970 (UTC).
 #else
 	struct timeval tv;	
 	gettimeofday(&tv, NULL);
-	v = tv.tv_sec*1000;
+	v = tv.tv_sec;
+	v *= 1000;
 	v += tv.tv_usec / 1000;
 #endif
 	return v;
 }
 
+#if defined(_DEBUG) || defined(DEBUG)
 static time_t time64_to_gmtime(time64_t time64)
 {
 	return time64 / 1000;
@@ -380,7 +400,6 @@ static time64_t time64_from_gmtime(time_t gmt)
 	return time64;
 }
 
-#if defined(_DEBUG) || defined(DEBUG)
 void time64_test(void)
 {
     time_t t;
