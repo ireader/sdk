@@ -46,10 +46,15 @@ int time64_format(time64_t time, const char* format, char* str);
 
 /// UTC time(like gmtime)
 /// param[in] time UTC time in ms
-/// param[in] utc datetime
+/// param[out] tm64 GMT datetime
 /// @return 0-ok, other-error
 int time64_utc(time64_t time, struct tm64* tm64);
 
+/// local time(like localtime)
+/// param[in] time UTC time in ms
+/// param[out] tm64 GMT datetime
+/// @return 0-ok, other-error
+int time64_local(time64_t time, struct tm64* tm64);
 
 // millisecond since the Epoch, 1970-01-01 00:00:00 +0000 (UTC)
 time64_t time64_now(void);
