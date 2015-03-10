@@ -25,6 +25,7 @@ struct http_client_aio_transport_t
 	socket_bufvec_t vec[2];
 	size_t nsend;
 
+	int retry;
 	struct http_pool_t *pool;
 };
 
@@ -45,19 +46,21 @@ static void http_release(struct http_client_aio_transport_t* http)
 			http->parser = NULL;
 		}
 
-		if(invalid_aio_socket != http->socket)
-		{
-			aio_socket_destroy(http->socket);
-			http->socket = invalid_aio_socket;
-		}
+		assert(invalid_aio_socket == http->socket);
+		//if(invalid_aio_socket != http->socket)
+		//{
+		//	aio_socket_destroy(http->socket);
+		//	http->socket = invalid_aio_socket;
+		//}
 
 		locker_destroy(&http->locker);
+
+		http_pool_release(http->pool);
 
 #if defined(DEBUG) || defined(_DEBUG)
 		memset(http, 0xCC, sizeof(*http));
 #endif
-
-		http_pool_release(http->pool);
+		free(http);
 	}
 }
 
@@ -68,9 +71,11 @@ static void* http_create(struct http_pool_t *pool)
 	if(!http)
 		return NULL;
 
-	http->ref = 1;
 	atomic_increment32(&pool->ref);
+	memset(http, 0, sizeof(*http));
+	http->ref = 1;
 	http->pool = pool;
+	http->running = 1;
 	locker_create(&http->locker);
 	http->socket = invalid_aio_socket;
 	http->parser = http_parser_create(HTTP_PARSER_CLIENT);
@@ -159,8 +164,24 @@ static void http_onsend(void* param, int code, size_t bytes)
 				r = aio_socket_recv(http->socket, http->buffer, sizeof(http->buffer), http_onrecv, http);
 				if(0 != r)
 				{
-					atomic_decrement32(&http->ref);
-					http->callback(http->cbparam, http->parser, r);  // aio socket error
+					if(0 == http->retry++)
+					{
+						// read failed(maybe reset by peer).
+						// try again...
+
+						// destroy
+						aio_socket_destroy(http->socket);
+						http->socket = invalid_aio_socket;
+
+						// try to connect
+						r = http_connect(http, http->pool->ip, http->pool->port);
+					}
+
+					if(0 != r)
+					{
+						atomic_decrement32(&http->ref);
+						http->callback(http->cbparam, http->parser, r);  // aio socket error
+					}
 				}
 			}
 			else
@@ -189,7 +210,7 @@ static void http_onsend(void* param, int code, size_t bytes)
 		}
 		else
 		{
-			if(1 == http->running && 0==http->nsend)
+			if(0 == http->retry++)
 			{
 				// first write failed(maybe reset by peer).
 				// try again...
@@ -232,7 +253,6 @@ static void http_onconnect(void* param, int code)
 		}
 		else
 		{
-			http->running += 1; // send from onconnect
 			atomic_increment32(&http->ref);
 			code = aio_socket_send_v(http->socket, http->vec, 0==http->nmsg?1:2, http_onsend, http);
 			if(0 != code)
@@ -302,6 +322,7 @@ static int http_request(void *conn, const char* req, size_t nreq, const void* ms
 	http->nreq = nreq;
 	http->msg = msg;
 	http->nmsg = bytes;
+	http->retry = 0; // clear retry flag
 
 	socket_setbufvec(http->vec, 0, (char*)http->req+http->nsend, http->nreq-http->nsend);
 	socket_setbufvec(http->vec, 1, (void*)http->msg, http->nmsg);

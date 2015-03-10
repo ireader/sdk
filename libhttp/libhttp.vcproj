@@ -260,6 +260,10 @@
 				RelativePath=".\test\http-client-test.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\test\http-client-test2.cpp"
+				>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>

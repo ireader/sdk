@@ -77,7 +77,7 @@ static int http_pool_setcookie(struct http_pool_t* pool, const char* cookie, siz
 	if(pool->ncookie < bytes+1)
 	{
 		char* p;
-		p = (char*)malloc(bytes+1);
+		p = (char*)realloc(pool->cookie, bytes+1);
 		if(!p)
 			return ENOMEM;
 		pool->cookie = p;
@@ -158,21 +158,24 @@ static void http_client_onaction(void *param, void *parser, int code)
 		if(cookie)
 		{
 			cookie_t ck;
-			ck = http_cookie_parse(cookie);
+			ck = http_cookie_parse(cookie, strlen(cookie));
 			if(ck)
 			{
 				const char *cookiename, *cookievalue;
 				cookiename = http_cookie_get_name(ck);
 				cookievalue = http_cookie_get_value(ck);
+				// TODO: check cookie buffer length
+				assert(cookiename && cookievalue);
+				assert(STRLEN(cookiename) + STRLEN(cookievalue) + 1 < sizeof(buffer));
 				snprintf(buffer, sizeof(buffer), "%s=%s", cookiename, cookievalue);
 				http_pool_setcookie(http->pool, buffer, strlen(buffer));
 			}
 		}
 	}
 
+	http->callback(http->cbparam, parser, code);
 	assert(0 != http->clock);
 	http->clock = 0;
-	http->callback(http->cbparam, parser, code);
 }
 
 static int http_client_request(struct http_pool_t *pool, int method, const char* uri, const struct http_header_t *headers, size_t n, const void* msg, size_t bytes, http_client_response callback, void *param)
@@ -217,7 +220,7 @@ void* http_client_create(const char* ip, unsigned short port, int flags)
 
 	memset(pool, 0, sizeof(*pool));
 	locker_create(&pool->locker);
-	pool->ref = 1 + MAX_HTTP_CONNECTION;
+	pool->ref = 1;
 	strcpy(pool->ip, ip);
 	pool->port = port;
 	pool->wtimeout = 10000;

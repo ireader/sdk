@@ -34,7 +34,7 @@ static int init()
 	{
 		thread_pool_push(s_pool, worker, &s_running); // start worker
 	}
-	
+
 	return 0;
 }
 

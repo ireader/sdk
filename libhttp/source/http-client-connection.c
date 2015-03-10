@@ -47,17 +47,9 @@ static void http_destroy(void *p)
 	free(http);
 }
 
-static int http_request(void *conn, const char* req, size_t nreq, const void* msg, size_t bytes, http_client_response callback, void *param)
+static int http_connect(struct http_client_transport_t *http)
 {
-	int r;
-	char buffer[1024] = {0};
-	struct http_client_transport_t *http;
-	http = (struct http_client_transport_t *)conn;
-
-	// clear status
-	http_parser_clear(http->parser);
-
-	// check writeable
+	// check write-able
 	if(socket_invalid != http->socket && 0==socket_writeable(http->socket))
 	{
 		socket_close(http->socket);
@@ -66,6 +58,7 @@ static int http_request(void *conn, const char* req, size_t nreq, const void* ms
 
 	if(socket_invalid == http->socket)
 	{
+		int r;
 		socket_t socket;
 		socket = socket_tcp();
 		r = socket_connect_ipv4_by_time(socket, http->pool->ip, http->pool->port, http->pool->wtimeout);
@@ -78,43 +71,74 @@ static int http_request(void *conn, const char* req, size_t nreq, const void* ms
 		http->socket = socket;
 	}
 
+	return 0;
+}
+
+static int http_send_request(socket_t socket, int timeout, const char* req, size_t nreq, const void* msg, size_t bytes)
+{
 	// TODO: use socket_send_v
 
-	if((int)nreq != socket_send_all_by_time(http->socket, req, nreq, 0, http->pool->wtimeout))
+	if((int)nreq != socket_send_all_by_time(socket, req, nreq, 0, timeout))
+		return -1; // send failed(timeout)
+
+	if(bytes > 0 && (int)bytes != socket_send_all_by_time(socket, msg, bytes, 0, timeout))
+		return -1; // send failed(timeout)
+
+	return 0;
+}
+
+static int http_request(void *conn, const char* req, size_t nreq, const void* msg, size_t bytes, http_client_response callback, void *param)
+{
+	int r = -1;
+	int tryagain = 0; // retry connection
+	char buffer[1024] = {0};
+	struct http_client_transport_t *http;
+	http = (struct http_client_transport_t *)conn;
+
+RETRY_REQUEST:
+	// clear status
+	http_parser_clear(http->parser);
+
+	// connection
+	r = http_connect(http);
+	if(0 != r) return r;
+
+	// send request
+	r = http_send_request(http->socket, http->pool->wtimeout, req, nreq, msg, bytes);
+	if(0 != r)
 	{
 		socket_close(http->socket);
 		http->socket = socket_invalid;
-		return -1; // send failed(timeout)
+		return r; // send failed(timeout)
 	}
 
-	if(bytes > 0 && (int)bytes != socket_send_all_by_time(http->socket, msg, bytes, 0, http->pool->wtimeout))
-	{
-		socket_close(http->socket);
-		http->socket = socket_invalid;
-		return -1; // send failed(timeout)
-	}
-
-	while(socket_invalid != http->socket)
+	// recv reply
+	r = 1;
+	while(1 == r)
 	{
 		size_t n;
+		++tryagain;
 		r = socket_recv_by_time(http->socket, buffer, sizeof(buffer), 0, http->pool->rtimeout);
 		if(r <= 0)
 		{
+			r = (0 == r) ? -1 : r; // EPIPE
 			socket_close(http->socket);
 			http->socket = socket_invalid;
-			return 0==r ? -1 : r;
+			if(1 == tryagain)
+				goto RETRY_REQUEST;
+			return r;
 		}
 
 		n = (size_t)r;
-		if(0 == http_parser_input(http->parser, buffer, &n))
+		r = http_parser_input(http->parser, buffer, &n);
+		if(r <= 0)
 		{
 			assert(0 == n);
-			callback(param, http->parser, 0);
-			break;
+			callback(param, http->parser, r);
 		}
 	}
 
-	return 0;
+	return r;
 }
 
 struct http_client_connection_t* http_client_connection_poll()
