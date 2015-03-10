@@ -7,7 +7,10 @@
 
 #if defined(OS_WINDOWS)
 	#define strcasecmp _stricmp
+	#define snprintf _snprintf
 #endif
+
+#define isblank(c) (' '==(c) || '\t'==(c))
 
 struct http_cookie_t
 {
@@ -21,30 +24,29 @@ struct http_cookie_t
 	int secure;
 };
 
-cookie_t http_cookie_parse(const char* cookie)
+cookie_t http_cookie_parse(const char* cookie, size_t bytes)
 {
 	char *p;
-	size_t n;
 	struct http_cookie_t *ck;
 
-	if(!cookie || 0==cookie[0])
+	if(!cookie || 0 == cookie[0] || 0 == bytes)
 		return NULL;
 
-	n = strlen(cookie);
-	ck = (struct http_cookie_t *)malloc(sizeof(*ck) + n + 1);
+	ck = (struct http_cookie_t *)malloc(sizeof(*ck) + bytes + 1);
 	if(!ck)
 		return NULL;
 
 	memset(ck, 0, sizeof(*ck));
 	ck->cookie = (char*)(ck + 1);
-	memcpy(ck->cookie, cookie, n+1);
+	memcpy(ck->cookie, cookie, bytes);
+	ck->cookie[bytes] = '\0';
 
 	p = ck->cookie;
 	while(p)
 	{
 		char *pn, *pv;
 
-		while(' ' == *p || '\t' == *p) ++p;
+		while(isblank(*p)) ++p;
 
 		pn = strchr(p, ';');
 		pv = strchr(p, '=');
@@ -52,19 +54,17 @@ cookie_t http_cookie_parse(const char* cookie)
 		if(pn)
 		{
 			*pn = ' '; // replace ';' -> ' '
-			while(' '==*pn || '\t'==*pn) --pn;
-			++pn;
-			*pn++ = '\0';
-			while(' '==*pn || '\t'==*pn) ++pn;
+			while(isblank(*pn)) --pn;
+			++pn; *pn++ = '\0';
+			while(isblank(*pn)) ++pn;
 		}
 
 		if(pv && (!pn || pv < pn) )
 		{
 			*pv = ' '; // replace '=' -> ' '
-			while(' ' == *pv || '\t' == *pv) --pv;
-			++pv;
-			*pv++ = '\0';
-			while(' ' == *pv || '\t' == *pv) ++pv;
+			while(isblank(*pv)) --pv;
+			++pv; *pv++ = '\0';
+			while(isblank(*pv)) ++pv;
 
 			if(!ck->name)
 			{
@@ -175,7 +175,7 @@ int http_cookie_check_path(cookie_t cookie, const char* path)
 	struct http_cookie_t *ck;
 	ck = (struct http_cookie_t *)cookie;
 
-	if(!ck->path) return 1;
+	if(!ck->path || 0 == ck->path[0]) return 1; // empty path
 
 	n = strlen(ck->path);
 	assert(n > 0 && '/' == ck->path[n-1]);
@@ -188,7 +188,8 @@ int http_cookie_check_domain(cookie_t cookie, const char* domain)
 	struct http_cookie_t *ck;
 	ck = (struct http_cookie_t *)cookie;
 
-	if(!ck->domain) return 1;
+	if(!domain || 0 == domain[0]) return 0;
+	if(!ck->domain || 0 == ck->domain[0]) return 1;
 
 	n1 = strlen(domain);
 	n2 = strlen(ck->domain);
@@ -202,8 +203,8 @@ int http_cookie_make(char cookie[], size_t bytes, const char* name, const char* 
 	const char *names[] = { "path=", "domain=", "expires=", "HttpOnly", "Secure" };
 	const char *attrs[5];
 
-	n1 = strlen(name);
-	n2 = strlen(value);
+	n1 = name ? strlen(name) : 0;
+	n2 = value ? strlen(value) : 0;
 	if(n1 < 1 || n2 < 1)
 		return -1;
 
@@ -215,7 +216,6 @@ int http_cookie_make(char cookie[], size_t bytes, const char* name, const char* 
 	memcpy(cookie+n1+1, value, n2);
 	cookie += n1 + n2 + 1;
 	bytes -= n1 + n2 + 1;
-	cookie[0] = '\0';
 
 	attrs[0] = path;
 	attrs[1] = domain;
@@ -226,15 +226,19 @@ int http_cookie_make(char cookie[], size_t bytes, const char* name, const char* 
 	{
 		if(!attrs[i]) continue;
 
-		n1 = 2 + strlen(names[i]) + strlen(attrs[i]);
-		if(n1 > bytes)
+		n1 = strlen(names[i]);
+		n2 = strlen(attrs[i]);
+		if(n1 + n2 + 3 > bytes)
 			return -1;
 
-		sprintf(cookie, "; %s%s", names[i], attrs[i]);
-		cookie += n1;
-		bytes -= n1;
+		memcpy(cookie, "; ", 2);
+		memcpy(cookie+2, names[i], n1);
+		memcpy(cookie+n1+2, attrs[i], n2);
+		cookie += n1 + n2 + 2;
+		bytes -= n1 + n2 + 2;
 	}
 
+	cookie[0] = '\0';
 	return 0;
 }
 
@@ -249,10 +253,10 @@ int http_cookie_expires(char expires[30], int hours)
 	t += hours * 3600; // current + expireDay
 	gmt = gmtime(&t);
 
-	sprintf(expires, "%s, %02d-%s-%04d %02d:%02d:%02d GMT",
-		week[gmt->tm_wday],	// weekday
+	snprintf(expires, 30, "%s, %02d-%s-%04d %02d:%02d:%02d GMT",
+		week[((unsigned int)gmt->tm_wday) % 7],	// weekday
 		gmt->tm_mday,		// day
-		month[gmt->tm_mon],	// month
+		month[((unsigned int)gmt->tm_mon) % 12],// month
 		gmt->tm_year+1900,	// year
 		gmt->tm_hour,		// hour
 		gmt->tm_min,		// minute
@@ -264,34 +268,41 @@ int http_cookie_expires(char expires[30], int hours)
 #if defined(DEBUG) || defined(_DEBUG)
 static void http_cookie_parse_test(void)
 {
+	const char* p;
 	cookie_t cookie;
 
-	cookie = http_cookie_parse("LSID=DQAAAaem_vYg; Path=/accounts; Expires=Wed, 13 Jan 2021 22:23:01 GMT; Secure; HttpOnly");
+	p = "LSID=DQAAAaem_vYg; Path=/accounts; Expires=Wed, 13 Jan 2021 22:23:01 GMT; Secure; HttpOnly";
+	cookie = http_cookie_parse(p, strlen(p));
 	assert(0==strcmp("LSID", http_cookie_get_name(cookie)) && 0==strcmp("DQAAAaem_vYg", http_cookie_get_value(cookie)));
 	assert(0==strcmp("Wed, 13 Jan 2021 22:23:01 GMT", http_cookie_get_expires(cookie)) && 0==strcmp("/accounts", http_cookie_get_path(cookie)) && !http_cookie_get_domain(cookie) && 1==http_cookie_is_httponly(cookie) && 1==http_cookie_is_secure(cookie));
 	http_cookie_destroy(cookie);
 
-	cookie = http_cookie_parse("HSID=AYQEVKrdst; Domain=.foo.com; Path=/; Expires=Wed, 13 Jan 2021 22:23:01 GMT; HttpOnly");
+	p = "HSID=AYQEVKrdst; Domain=.foo.com; Path=/; Expires=Wed, 13 Jan 2021 22:23:01 GMT; HttpOnly";
+	cookie = http_cookie_parse(p, strlen(p));
 	assert(0==strcmp("HSID", http_cookie_get_name(cookie)) && 0==strcmp("AYQEVKrdst", http_cookie_get_value(cookie)));
 	assert(0==strcmp("Wed, 13 Jan 2021 22:23:01 GMT", http_cookie_get_expires(cookie)) && 0==strcmp("/", http_cookie_get_path(cookie)) && 0==strcmp(".foo.com", http_cookie_get_domain(cookie)) && 1==http_cookie_is_httponly(cookie) && 0==http_cookie_is_secure(cookie));
 	http_cookie_destroy(cookie);
 
-	cookie = http_cookie_parse("SSID=Ap4GTEq; Domain=foo.com; Path=/; Expires=Wed, 13 Jan 2021 22:23:01 GMT; Secure; HttpOnly");
+	p = "SSID=Ap4GTEq; Domain=foo.com; Path=/; Expires=Wed, 13 Jan 2021 22:23:01 GMT; Secure; HttpOnly";
+	cookie = http_cookie_parse(p, strlen(p));
 	assert(0==strcmp("SSID", http_cookie_get_name(cookie)) && 0==strcmp("Ap4GTEq", http_cookie_get_value(cookie)));
 	assert(0==strcmp("Wed, 13 Jan 2021 22:23:01 GMT", http_cookie_get_expires(cookie)) && 0==strcmp("/", http_cookie_get_path(cookie)) && 0==strcmp("foo.com", http_cookie_get_domain(cookie)) && 1==http_cookie_is_httponly(cookie) && 1==http_cookie_is_secure(cookie));
 	http_cookie_destroy(cookie);
 
-	cookie = http_cookie_parse("made_write_conn=1295214458; Path=/; Domain=.example.com");
+	p = "made_write_conn=1295214458; Path=/; Domain=.example.com";
+	cookie = http_cookie_parse(p, strlen(p));
 	assert(0==strcmp("made_write_conn", http_cookie_get_name(cookie)) && 0==strcmp("1295214458", http_cookie_get_value(cookie)));
 	assert(!http_cookie_get_expires(cookie) && 0==strcmp("/", http_cookie_get_path(cookie)) && 0==strcmp(".example.com", http_cookie_get_domain(cookie)) && 0==http_cookie_is_httponly(cookie) && 0==http_cookie_is_secure(cookie));
 	http_cookie_destroy(cookie);
 
-	cookie = http_cookie_parse("name=value");
+	p = "name=value";
+	cookie = http_cookie_parse(p, strlen(p));
 	assert(0==strcmp("name", http_cookie_get_name(cookie)) && 0==strcmp("value", http_cookie_get_value(cookie)));
 	assert(!http_cookie_get_expires(cookie) && !http_cookie_get_path(cookie) && !http_cookie_get_domain(cookie) && 0==http_cookie_is_httponly(cookie) && 0==http_cookie_is_secure(cookie));
 	http_cookie_destroy(cookie);
 
-	cookie = http_cookie_parse("name2=value2; Expires=Wed, 09 Jun 2021 10:18:14 GMT");
+	p = "name2=value2; Expires=Wed, 09 Jun 2021 10:18:14 GMT";
+	cookie = http_cookie_parse(p, strlen(p));
 	assert(0==strcmp("name2", http_cookie_get_name(cookie)) && 0==strcmp("value2", http_cookie_get_value(cookie)));
 	assert(0==strcmp("Wed, 09 Jun 2021 10:18:14 GMT", http_cookie_get_expires(cookie)) && !http_cookie_get_path(cookie) && !http_cookie_get_domain(cookie) && 0==http_cookie_is_httponly(cookie) && 0==http_cookie_is_secure(cookie));
 	http_cookie_destroy(cookie);

@@ -9,8 +9,9 @@ typedef void* cookie_t;
 
 /// parse HTTP cookie and create cookie object
 /// @param[in] cookie HTTP Set-Cookie value
+/// @param[in] bytes cookie length in byte
 /// @return cookie object, NULL if failed
-cookie_t http_cookie_parse(const char* cookie);
+cookie_t http_cookie_parse(const char* cookie, size_t bytes);
 
 void http_cookie_destroy(cookie_t cookie);
 

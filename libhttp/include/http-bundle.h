@@ -6,14 +6,9 @@
 struct http_bundle_t
 {
 	int32_t ref;
-
 	size_t len;  // used size
+	size_t capacity;
 	void* ptr;
-    size_t capacity;
-
-#if defined(_DEBUG)
-	int magic;
-#endif
 };
 
 int http_bundle_addref(struct http_bundle_t *bundle);

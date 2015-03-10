@@ -4,9 +4,9 @@
 struct http_request_t
 {
 	int version;
-	char *ptr;
 	size_t len;
 	size_t capacity;
+	char *ptr;
 };
 
 void* http_request_create(int version)
@@ -16,7 +16,8 @@ void* http_request_create(int version)
 	if(version != HTTP_1_0 && version != HTTP_1_1)
 		return NULL;
 
-	req = (struct http_request_t *)malloc(sizeof(*req) + 1000);
+	// 4-bytes mm barrier
+	req = (struct http_request_t *)malloc(sizeof(*req) + 1000 + sizeof(unsigned int));
 	if(!req)
 		return NULL;
 
@@ -25,6 +26,9 @@ void* http_request_create(int version)
 	req->capacity = 1000;
 	req->version = version;
 
+#if defined(DEBUG) || defined(_DEBUG)
+	*(unsigned int*)((char*)req->ptr + req->capacity) = 0x9FEDCBA8;
+#endif
 	return req;
 }
 
@@ -32,6 +36,9 @@ void http_request_destroy(void* p)
 {
 	struct http_request_t *req;
 	req = (struct http_request_t *)p;
+#if defined(DEBUG) || defined(_DEBUG)
+	assert(0x9FEDCBA8 == *(unsigned int*)((char*)req->ptr + req->capacity));
+#endif
 
 	if(req->ptr != (char*)(req + 1))
 	{
@@ -39,6 +46,9 @@ void http_request_destroy(void* p)
 		free(req->ptr);
 	}
 
+#if defined(DEBUG) || defined(_DEBUG)
+	memset(req, 0xCC, sizeof(*req));
+#endif
 	free(req);
 }
 
@@ -60,7 +70,12 @@ int http_request_set_uri(void* p, int method, const char* uri)
 		return -1;
 
 	req = (struct http_request_t *)p;
-	req->len = snprintf(req->ptr, req->capacity, "%s %s HTTP/%s\r\n\r\n", s_method[method], uri, s_version[req->version]);
+	assert(HTTP_1_0==req->version || HTTP_1_1==req->version);
+	req->len = snprintf(req->ptr, req->capacity, 
+		"%s %s HTTP/%s\r\n\r\n", 
+		s_method[((unsigned int)method) % 2], 
+		uri, 
+		s_version[((unsigned int)req->version) % 2]);
 	if(req->len+1 >= req->capacity)
 		return -1; // buffer full
 	return 0;
@@ -68,7 +83,7 @@ int http_request_set_uri(void* p, int method, const char* uri)
 
 int http_request_set_host(void* req, const char* ip, int port)
 {
-	char host[64] = {0};
+	char host[128] = {0};
 	if(snprintf(host, sizeof(host), "%s:%d", ip, port)+1 >= sizeof(host))
 		return -1;
 	return http_request_set_header(req, "Host", host);
@@ -106,21 +121,62 @@ int http_request_set_header(void* request, const char* name, const char* value)
 
 	nc = strlen(name);
 	vc = strlen(value);
-	if(nc + vc + 4 >= req->capacity)
+	if(req->len + nc + vc + 4 >= req->capacity)
 	{
 		char *p;
 		if(req->ptr == (char*)(req + 1))
-			p = (char *)malloc(req->capacity + nc + vc + 1024);
+			p = (char *)malloc(req->capacity + nc + vc + 1024 + sizeof(unsigned int));
 		else
-			p = (char *)realloc(req->ptr, req->capacity + nc + vc + 1024);
+			p = (char *)realloc(req->ptr, req->capacity + nc + vc + 1024 + sizeof(unsigned int));
 		if(!p)
 			return ENOMEM;
 
+		// copy content
+		if(req->ptr == (char*)(req + 1))
+			memcpy(p, req->ptr, req->capacity);
+
 		req->ptr = p;
 		req->capacity += nc + vc + 1024;
+#if defined(DEBUG) || defined(_DEBUG)
+		*(unsigned int*)((char*)req->ptr + req->capacity) = 0x9FEDCBA8;
+#endif
 	}
 
 	assert(req->len > 0);
 	req->len += snprintf(req->ptr + (req->len-2), req->capacity - (req->len-2), "%s: %s\r\n\r\n", name, value) - 2;
+
+#if defined(DEBUG) || defined(_DEBUG)
+	assert(0x9FEDCBA8 == *(unsigned int*)((char*)req->ptr + req->capacity));
+#endif
 	return 0;
 }
+
+#if defined(DEBUG) || defined(_DEBUG)
+void http_request_test(void)
+{
+	void* req = NULL;
+	char msg[2048] = {0};
+
+	req = http_request_create(HTTP_1_1);
+
+	http_request_set_uri(req, HTTP_GET, "/hello");
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\n\r\n", http_request_get(req)));
+	http_request_set_host(req, "127.0.0.1", 80);
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\n\r\n", http_request_get(req)));
+	http_request_set_cookie(req, "name=value");
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\n\r\n", http_request_get(req)));
+	http_request_set_header(req, "Accept", "en-us");
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\nAccept: en-us\r\n\r\n", http_request_get(req)));
+	http_request_set_header_int(req, "Keep-Alive", 100);
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\nAccept: en-us\r\nKeep-Alive: 100\r\n\r\n", http_request_get(req)));
+	http_request_set_content_type(req, "application/json");
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\nAccept: en-us\r\nKeep-Alive: 100\r\nContent-Type: application/json\r\n\r\n", http_request_get(req)));
+	http_request_set_content_lenth(req, 100);
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\nAccept: en-us\r\nKeep-Alive: 100\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n", http_request_get(req)));
+
+	// test max-length header
+	memset(msg, '-', sizeof(msg)-1);
+	http_request_set_header(req, "max-length", msg);
+	http_request_destroy(req);
+}
+#endif

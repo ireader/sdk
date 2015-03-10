@@ -9,20 +9,18 @@ void* http_bundle_alloc(size_t sz)
 {
 	struct http_bundle_t *bundle;
 
-	bundle = malloc(sizeof(struct http_bundle_t) + sz + 1);
+	bundle = malloc(sizeof(struct http_bundle_t) + sz + sizeof(unsigned int));
 	if(!bundle)
 		return NULL;
 
 	bundle->ref = 1;
 	bundle->len = 0;
-	bundle->ptr = bundle + 1;
+	bundle->ptr = (char*)(bundle + 1);
 	bundle->capacity = sz;
 
-#if defined(_DEBUG)
-	bundle->magic = 0xABCDEF10;
-	((unsigned char*)bundle->ptr)[bundle->capacity] = 0xAB;
+#if defined(_DEBUG) || defined(DEBUG)
+	*(unsigned int*)((char*)bundle->ptr + bundle->capacity) = 0x9FEDCBA8;
 #endif
-
 	return bundle;
 }
 
@@ -45,6 +43,9 @@ int http_bundle_unlock(void* ptr, size_t sz)
 {
 	struct http_bundle_t *bundle;
 	bundle = (struct http_bundle_t *)ptr;
+#if defined(_DEBUG) || defined(DEBUG)
+	assert(0x9FEDCBA8 == *(unsigned int*)((char*)bundle->ptr + bundle->capacity));
+#endif
 	assert(sz <= bundle->capacity);
 	bundle->len = sz;
 	return 0;
@@ -58,13 +59,11 @@ int http_bundle_addref(struct http_bundle_t *bundle)
 
 int http_bundle_release(struct http_bundle_t *bundle)
 {
-	assert(bundle->len > 0);
-
-#if defined(_DEBUG)
-	assert(bundle->magic == 0xABCDEF10);
-	assert(((unsigned char*)bundle->ptr)[bundle->capacity] == (unsigned char)0xAB);
+#if defined(_DEBUG) || defined(DEBUG)
+	assert(0x9FEDCBA8 == *(unsigned int*)((char*)bundle->ptr + bundle->capacity));
 #endif
 
+	assert(bundle->len > 0);
 	if(0 == atomic_decrement32(&bundle->ref))
 	{
 		free(bundle);
