@@ -230,8 +230,7 @@ int aio_socket_process(int timeout)
 			assert(events[i].events == (events[i].events & ctx->ev.events));
 			ctx->ev.events &= ~(events[i].events & (EPOLLIN|EPOLLOUT));
 			pthread_spin_unlock(&ctx->locker);
-			if(ctx->ev.events & (EPOLLIN|EPOLLOUT))
-				epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev);
+			epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev);
 
 			//if(EPOLLRDHUP & events[i].events)
 			//{
