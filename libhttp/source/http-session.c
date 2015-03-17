@@ -140,6 +140,7 @@ int http_session_onsend(void* param, int code, size_t bytes)
 	if(code < 0 || 0 == bytes)
 	{
         http_session_release(session);
+        return 0; // send error, don't need recv
 	}
 	else
 	{
@@ -163,6 +164,7 @@ int http_session_onsend(void* param, int code, size_t bytes)
 		if(i < session->vec_count)
 		{
 			http_session_send(session, i);
+            return 0; // have more data to send, don't need recv
 		}
 		else
 		{
@@ -184,10 +186,10 @@ int http_session_onsend(void* param, int code, size_t bytes)
 
             // session done
             http_session_release(session);
+
+            return 1; // send done, continue recv data
 		}
 	}
-
-	return 1;
 }
 
 void* http_session_onconnected(void* ptr, void* sid, const char* ip, int port)

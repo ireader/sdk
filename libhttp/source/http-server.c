@@ -22,7 +22,7 @@ void* http_server_create(const char* ip, int port)
 
 	// create server socket
 	socket = tcpserver_create(ip, port, 64);
-	if(0 == socket)
+	if(socket_invalid == socket)
 	{
 		printf("http_server_create(%s, %d): create socket error.\n", ip, port);
 		return NULL;
