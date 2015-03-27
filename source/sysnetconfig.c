@@ -385,7 +385,7 @@ int system_getip(system_getip_fcb fcb, void* param)
 {
 	char hwaddr[20];	
 	char ipaddr[32] ,netmask[32], gateway[32];
-	struct ifaddrs *ifaddr, *ifa, *ifmac;
+	struct ifaddrs *ifaddr, *ifa;
 
 	memset(gateway, 0, sizeof(gateway));
 	system_getgateway(gateway, sizeof(gateway));

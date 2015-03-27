@@ -184,10 +184,9 @@ int ip_route_get(const char* distination, char ip[40])
 	size_t n = 0;
 	FILE *fp = NULL;
 	char cmd[128] = {0};
-	unsigned char buf[sizeof(struct in6_addr)];
 
 	// "ip route get 255.255.255.255 | grep -Po '(?<=src )(\d{1,3}.){4}'"
-	snprintf(cmd, sizeof(cmd)-1, "ip route get %s | grep -Po '(?<=src )(\\d{1,3}.){4}'", distination);
+	snprintf(cmd, sizeof(cmd), "ip route get %s | grep -Po '(?<=src )(\\d{1,3}.){4}'", distination);
 	fp = popen(cmd, "r");
 	if(!fp)
 		return errno;

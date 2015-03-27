@@ -60,6 +60,7 @@ SOURCE_FILES += $(ROOT)/libhttp/source/http-reason.c
 SOURCE_FILES += $(ROOT)/libhttp/source/http-header-content-type.c
 SOURCE_FILES += $(ROOT)/libhttp/source/http-header-host.c
 SOURCE_FILES += $(ROOT)/libhttp/source/http-cookie.c
+SOURCE_FILES += $(ROOT)/libhttp/source/http-request.c
 DEFINES += HTTP_TEST
 INCLUDES += $(ROOT)/libhttp/include
 endif

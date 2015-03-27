@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 
 // base library
@@ -48,7 +49,9 @@ int main(int argc, char* argv[])
 {
 	locker_test();
 	atomic_test();
+#if defined(ATOMIC_TEST)
 	atomic_test2();
+#endif
 	spinlock_test();
 	event_test();
 #if !defined(OS_MAC)
@@ -87,6 +90,6 @@ int main(int argc, char* argv[])
 
 	system("pause");
 #endif
-    
+
     return 0;
 }

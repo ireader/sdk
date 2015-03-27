@@ -433,6 +433,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\libhttp\source\http-request.c"
+				>
+			</File>
+			<File
 				RelativePath="..\source\http-upload.c"
 				>
 			</File>

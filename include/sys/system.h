@@ -202,7 +202,7 @@ inline int system_version(int* major, int* minor)
 	struct utsname ver;
 	if(0 != uname(&ver))
 		return errno;
-	if(2!=sscanf(ver.release, "%d.%d", major, minor))
+	if(2!=sscanf(ver.release, "%8d.%8d", major, minor))
 		return -1;
 	return 0;
 #endif
