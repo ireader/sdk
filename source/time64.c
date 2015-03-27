@@ -329,20 +329,19 @@ int time64_utc(time64_t time, struct tm64* tm64)
 	tm64->second = st.wSecond;
 	tm64->millisecond = st.wMilliseconds;
 #else
-	struct tm* t;
+	struct tm t;
 	time_t seconds;
 
 	seconds = (time_t)(time / 1000);
-	t = gmtime(&seconds);
-	//t = localtime(&seconds);
+	gmtime_r(&seconds, &t);
 
-	tm64->year = t->tm_year;
-	tm64->month = t->tm_mon;
-	tm64->day = t->tm_mday;
-	tm64->wday = t->tm_wday;
-	tm64->hour = t->tm_hour;
-	tm64->minute = t->tm_min;
-	tm64->second = t->tm_sec;
+	tm64->year = t.tm_year;
+	tm64->month = t.tm_mon;
+	tm64->day = t.tm_mday;
+	tm64->wday = t.tm_wday;
+	tm64->hour = t.tm_hour;
+	tm64->minute = t.tm_min;
+	tm64->second = t.tm_sec;
 	tm64->millisecond = (int)(time % 1000);
 #endif
 
@@ -351,19 +350,24 @@ int time64_utc(time64_t time, struct tm64* tm64)
 
 int time64_local(time64_t time, struct tm64* tm64)
 {
-	struct tm* t;
+	struct tm t;
 	time_t seconds;
 
 	seconds = (time_t)(time / 1000);
-	t = localtime(&seconds);
 
-	tm64->year = t->tm_year;
-	tm64->month = t->tm_mon;
-	tm64->day = t->tm_mday;
-	tm64->wday = t->tm_wday;
-	tm64->hour = t->tm_hour;
-	tm64->minute = t->tm_min;
-	tm64->second = t->tm_sec;
+#if defined(OS_WINDOWS)
+	localtime_s(&t, &seconds);
+#else
+	localtime_r(&seconds, &t);
+#endif
+
+	tm64->year = t.tm_year;
+	tm64->month = t.tm_mon;
+	tm64->day = t.tm_mday;
+	tm64->wday = t.tm_wday;
+	tm64->hour = t.tm_hour;
+	tm64->minute = t.tm_min;
+	tm64->second = t.tm_sec;
 	tm64->millisecond = (int)(time % 1000);
 	return 0;
 }
