@@ -197,16 +197,14 @@ int aio_socket_process(int timeout)
 		if(events[i].events & flags)
 		{
 			// save event
-			// 1. thread-1 current ctx->ev.events = EPOLLIN
-			// 2. thread-2 user call aio_socket_send() set ctx->ev.events to EPOLLIN|EPOLLOUT
-			// 3. switch thread-1 call ctx->write and decrement ctx->ref
-			// 4. switch thread-2 aio_socket_send() epoll_ctl failed, then user set ctx->ev.events to EPOLLIN 
-			// 5. thread-2 redo decrement ctx->ref (decrement twice, crash)
 			pthread_spin_lock(&ctx->locker);
 			userevent = ctx->ev.events;
 			ctx->ev.events &= ~(EPOLLIN|EPOLLOUT);
 			pthread_spin_unlock(&ctx->locker);
-			epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev); // clear user event
+
+			// epoll oneshot don't need change event
+			//if(userevent & (EPOLLIN|EPOLLOUT))
+			//	epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev); // clear user event
 
 			// error
 			if(EPOLLIN & userevent)
@@ -225,12 +223,20 @@ int aio_socket_process(int timeout)
 		}
 		else
 		{
+			// save event
+			// 1. thread-1 current ctx->ev.events = EPOLLIN
+			// 2. thread-2 user call aio_socket_send() set ctx->ev.events to EPOLLIN|EPOLLOUT
+			// 3. switch thread-1 call ctx->write and decrement ctx->ref
+			// 4. switch thread-2 aio_socket_send() epoll_ctl failed, then user set ctx->ev.events to EPOLLIN 
+			// 5. thread-2 redo decrement ctx->ref (decrement twice, crash)
+
 			// clear IN/OUT event
 			pthread_spin_lock(&ctx->locker);
 			assert(events[i].events == (events[i].events & ctx->ev.events));
 			ctx->ev.events &= ~(events[i].events & (EPOLLIN|EPOLLOUT));
 			pthread_spin_unlock(&ctx->locker);
-			epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev);
+			if(ctx->ev.events & (EPOLLIN|EPOLLOUT))
+				epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev);
 
 			//if(EPOLLRDHUP & events[i].events)
 			//{
