@@ -2,6 +2,7 @@
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <signal.h>
 #include <unistd.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -178,10 +179,14 @@ int aio_socket_process(int timeout)
 {
 	int i, r;
 	uint32_t userevent;
+	sigset_t sigmask;
 	struct epoll_context* ctx;
 	struct epoll_event events[1];
 
-	r = epoll_wait(s_epoll, events, 1, timeout);
+	sigemptyset(&sigmask);
+	sigaddset(&sigmask, SIGINT);
+	r = epoll_pwait(s_epoll, events, 1, timeout, &sigmask);
+//	r = epoll_wait(s_epoll, events, 1, timeout);
 	for(i = 0; i < r; i++)
 	{
 		// EPOLLERR: Error condition happened on the associated file descriptor
