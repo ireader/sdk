@@ -27,14 +27,18 @@ typedef WSABUF	socket_bufvec_t;
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <netdb.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <errno.h>
+#include <signal.h>
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
+#define _GNU_SOURCE	1	// for ppoll
+#define __USE_GNU	1	// for ppoll
 #include <poll.h>
 
 #ifndef OS_SOCKET_TYPE
@@ -268,6 +272,7 @@ inline int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dn
 #endif
 	r = socket_setnonblock(sock, 1);
 	r = socket_connect_ipv4(sock, ip_or_dns, (unsigned short)port);
+	socket_setnonblock(sock, 0); // restore block status
 	assert(r <= 0);
 #if defined(OS_WINDOWS)
 	if(0!=r && WSAEWOULDBLOCK==WSAGetLastError())
@@ -277,20 +282,20 @@ inline int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dn
 	{
 		// check timeout
 		r = socket_select_write(sock, timeout);
+#if defined(OS_WINDOWS)
+		return 1 == r ? 0 : -1;
+#else
 		if(1 == r)
 		{
-#if !defined(OS_WINDOWS)
 			r = getsockopt(sock, SOL_SOCKET, SO_ERROR, (void*)&errcode, (socklen_t*)&errlen);
 			if(0 == r)
 				r = -errcode;
-#else
-			r = 0;
-#endif
 		}
 		else
 		{
 			r = -1;
 		}
+#endif
 	}
 	return r;
 }
@@ -438,7 +443,18 @@ inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_
 
 inline int socket_select(IN int n, IN fd_set* rfds, IN fd_set* wfds, IN fd_set* efds, IN struct timeval* timeout)
 {
+#if defined(OS_WINDOWS)
 	return select(n, rfds, wfds, efds, timeout);
+#else
+	// Linux select maybe interrupt by signal(EINTR)
+	sigset_t sigmask;
+	struct timespec tv;
+	tv.tv_sec = timeout->tv_sec;
+	tv.tv_nsec = timeout->tv_usec * 1000;
+	sigemptyset(&sigmask);
+	sigaddset(&sigmask, SIGINT);
+	return pselect(n, rfds, wfds, efds, &tv, &sigmask);
+#endif
 }
 
 inline int socket_select_readfds(IN int n, IN fd_set* fds, IN struct timeval* timeout)
@@ -464,11 +480,20 @@ inline int socket_select_read(IN socket_t sock, IN int timeout)
 	tv.tv_usec = (timeout%1000) * 1000;
 	return socket_select_readfds(sock+1, &fds, timeout<0?NULL:&tv);
 #else
+	sigset_t sigmask;
+	struct timespec tv;
 	struct pollfd fds;
+
 	fds.fd = sock;
 	fds.events = POLLIN;
 	fds.revents = 0;
-	return poll(&fds, 1, timeout);
+
+	tv.tv_sec = timeout/1000;
+	tv.tv_nsec = (timeout%1000) * 1000000;
+
+	sigemptyset(&sigmask);
+	sigaddset(&sigmask, SIGINT);
+	return ppoll(&fds, 1, &tv, &sigmask);
 #endif
 }
 
@@ -487,11 +512,20 @@ inline int socket_select_write(IN socket_t sock, IN int timeout)
 	tv.tv_usec = (timeout%1000) * 1000;
 	return socket_select_writefds(sock+1, &fds, timeout<0?NULL:&tv);
 #else
+	sigset_t sigmask;
+	struct timespec tv;
 	struct pollfd fds;
+
 	fds.fd = sock;
 	fds.events = POLLOUT;
 	fds.revents = 0;
-	return poll(&fds, 1, timeout);
+
+	tv.tv_sec = timeout/1000;
+	tv.tv_nsec = (timeout%1000) * 1000000;
+
+	sigemptyset(&sigmask);
+	sigaddset(&sigmask, SIGINT);
+	return ppoll(&fds, 1, &tv, &sigmask);
 #endif
 }
 
@@ -765,7 +799,14 @@ inline int socket_getname(IN socket_t sock, OUT char* ip, OUT unsigned short* po
 	if(socket_error == getsockname(sock, (struct sockaddr*)&addr, &addrlen))
 		return socket_error;
 
+#if defined(OS_WINDOWS)
+	// MSDN: The string returned is guaranteed to be valid only until 
+	// the next Windows Sockets function call is made within the same thread
 	strcpy(ip, inet_ntoa(addr.sin_addr));
+//	InetNtop(AF_INET, &addr.sin_addr, ip, 16); // Windows Vista and later
+#else
+	inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
+#endif
 	*port = addr.sin_port;
 	return 0;
 }
@@ -777,7 +818,14 @@ inline int socket_getpeername(IN socket_t sock, OUT char* ip, OUT unsigned short
 	if(socket_error == getpeername(sock, (struct sockaddr*)&addr, &addrlen))
 		return socket_error;
 
+#if defined(OS_WINDOWS)
+	// MSDN: The string returned is guaranteed to be valid only until 
+	// the next Windows Sockets function call is made within the same thread
 	strcpy(ip, inet_ntoa(addr.sin_addr));
+//	InetNtop(AF_INET, &addr.sin_addr, ip, 16); // Windows Vista and later
+#else
+	inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
+#endif
 	*port = addr.sin_port;
 	return 0;
 }
@@ -785,7 +833,12 @@ inline int socket_getpeername(IN socket_t sock, OUT char* ip, OUT unsigned short
 inline int socket_isip(IN const char* ip)
 {
 	unsigned long addr;
+#if defined(OS_WINDOWS)
+//	InetPton(AF_INET, ip, &addr); // Windows Vista and later
 	addr = inet_addr(ip);
+#else
+	inet_pton(AF_INET, ip, &addr);
+#endif
 	if(INADDR_NONE == addr 
 		&& 0!=strcmp(ip, "255.255.255.255"))
 		return -1;
