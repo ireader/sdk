@@ -49,8 +49,8 @@ static void http_destroy(void *p)
 
 static int http_connect(struct http_client_transport_t *http)
 {
-	// check write-able
-	if(socket_invalid != http->socket && 0==socket_writeable(http->socket))
+	// check connection
+	if(http->socket && 1==socket_readable(http->socket))
 	{
 		socket_close(http->socket);
 		http->socket = socket_invalid;
