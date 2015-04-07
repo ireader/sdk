@@ -50,7 +50,7 @@ static void http_destroy(void *p)
 static int http_connect(struct http_client_transport_t *http)
 {
 	// check connection
-	if(http->socket && 1==socket_readable(http->socket))
+	if(socket_invalid != http->socket && 1==socket_readable(http->socket))
 	{
 		socket_close(http->socket);
 		http->socket = socket_invalid;
@@ -62,6 +62,7 @@ static int http_connect(struct http_client_transport_t *http)
 		socket_t socket;
 		socket = socket_tcp();
 		r = socket_connect_ipv4_by_time(socket, http->pool->ip, http->pool->port, http->pool->wtimeout);
+		socket_setnonblock(socket, 0); // restore block status
 		if(0 != r)
 		{
 			socket_close(socket);
