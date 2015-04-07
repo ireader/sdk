@@ -51,7 +51,7 @@ static char* print_value(char padding, size_t width, int value, char* output)
 {
 	size_t n;
 	char v[16] = {0};
-	snprintf(v, sizeof(v), "%d", value);
+	sprintf(v, "%d", value);
 
 	// fill padding
 	n = strlen(v);
@@ -423,7 +423,7 @@ void time64_test(void)
 	tm = gmtime(&t);
 	assert(tm64.year==tm->tm_year && tm64.month==tm->tm_mon && tm64.day==tm->tm_mday && tm64.wday==tm->tm_wday && tm64.hour==tm->tm_hour && tm64.minute==tm->tm_min && tm64.second==tm->tm_sec);
 
-	snprintf(gmt, sizeof(gmt), "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+	sprintf(gmt, "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
     time64_format(t64, "%04Y-%02M-%02D %02h:%02m:%02s", utc);
     assert(0 == strcmp(utc, gmt));
 

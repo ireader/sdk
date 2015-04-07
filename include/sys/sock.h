@@ -27,18 +27,14 @@ typedef WSABUF	socket_bufvec_t;
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <sys/select.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <errno.h>
-#include <signal.h>
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
-#define _GNU_SOURCE	1	// for ppoll
-#define __USE_GNU	1	// for ppoll
 #include <poll.h>
 
 #ifndef OS_SOCKET_TYPE
@@ -80,7 +76,7 @@ inline int socket_close(socket_t sock);
 
 inline int socket_connect(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
 inline int socket_connect_ipv4(IN socket_t sock, IN const char* ip_or_dns, IN unsigned short port);
-inline int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dns, IN unsigned short port, IN int timeout);
+inline int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dns, IN unsigned short port, IN int timeout); // need restore block status
 
 // MSDN: When using bind with the SO_EXCLUSIVEADDR or SO_REUSEADDR socket option, 
 //       the socket option must be set prior to executing bind to have any affect
@@ -263,6 +259,7 @@ inline int socket_connect_ipv4(IN socket_t sock, IN const char* ip_or_dns, IN un
 	return socket_connect(sock, (struct sockaddr*)&addr, sizeof(addr));
 }
 
+// need restore block status
 inline int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dns, IN unsigned short port, IN int timeout)
 {
 	int r;
@@ -272,7 +269,6 @@ inline int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dn
 #endif
 	r = socket_setnonblock(sock, 1);
 	r = socket_connect_ipv4(sock, ip_or_dns, (unsigned short)port);
-	socket_setnonblock(sock, 0); // restore block status
 	assert(r <= 0);
 #if defined(OS_WINDOWS)
 	if(0!=r && WSAEWOULDBLOCK==WSAGetLastError())
@@ -283,6 +279,7 @@ inline int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dn
 		// check timeout
 		r = socket_select_write(sock, timeout);
 #if defined(OS_WINDOWS)
+		// r = socket_setnonblock(sock, 0);
 		return 1 == r ? 0 : -1;
 #else
 		if(1 == r)
@@ -297,6 +294,8 @@ inline int socket_connect_ipv4_by_time(IN socket_t sock, IN const char* ip_or_dn
 		}
 #endif
 	}
+
+	// r = socket_setnonblock(sock, 0);
 	return r;
 }
 
@@ -446,14 +445,10 @@ inline int socket_select(IN int n, IN fd_set* rfds, IN fd_set* wfds, IN fd_set* 
 #if defined(OS_WINDOWS)
 	return select(n, rfds, wfds, efds, timeout);
 #else
-	// Linux select maybe interrupt by signal(EINTR)
-	sigset_t sigmask;
-	struct timespec tv;
-	tv.tv_sec = timeout->tv_sec;
-	tv.tv_nsec = timeout->tv_usec * 1000;
-	sigemptyset(&sigmask);
-	sigaddset(&sigmask, SIGINT);
-	return pselect(n, rfds, wfds, efds, &tv, &sigmask);
+	int r = select(n, rfds, wfds, efds, timeout);
+	while(-1 == r && EINTR == r)
+		r = select(n, rfds, wfds, efds, timeout);
+	return r;
 #endif
 }
 
@@ -480,20 +475,17 @@ inline int socket_select_read(IN socket_t sock, IN int timeout)
 	tv.tv_usec = (timeout%1000) * 1000;
 	return socket_select_readfds(sock+1, &fds, timeout<0?NULL:&tv);
 #else
-	sigset_t sigmask;
-	struct timespec tv;
+	int r;
 	struct pollfd fds;
 
 	fds.fd = sock;
 	fds.events = POLLIN;
 	fds.revents = 0;
 
-	tv.tv_sec = timeout/1000;
-	tv.tv_nsec = (timeout%1000) * 1000000;
-
-	sigemptyset(&sigmask);
-	sigaddset(&sigmask, SIGINT);
-	return ppoll(&fds, 1, &tv, &sigmask);
+	r = poll(&fds, 1, timeout);
+	while(-1 == r && EINTR == errno)
+		r = poll(&fds, 1, timeout);
+	return r;
 #endif
 }
 
@@ -512,20 +504,17 @@ inline int socket_select_write(IN socket_t sock, IN int timeout)
 	tv.tv_usec = (timeout%1000) * 1000;
 	return socket_select_writefds(sock+1, &fds, timeout<0?NULL:&tv);
 #else
-	sigset_t sigmask;
-	struct timespec tv;
+	int r;
 	struct pollfd fds;
 
 	fds.fd = sock;
 	fds.events = POLLOUT;
 	fds.revents = 0;
 
-	tv.tv_sec = timeout/1000;
-	tv.tv_nsec = (timeout%1000) * 1000000;
-
-	sigemptyset(&sigmask);
-	sigaddset(&sigmask, SIGINT);
-	return ppoll(&fds, 1, &tv, &sigmask);
+	r = poll(&fds, 1, timeout);
+	while(-1 == r && EINTR == errno)
+		r = poll(&fds, 1, timeout);
+	return r;
 #endif
 }
 
