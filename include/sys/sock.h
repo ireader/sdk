@@ -446,7 +446,7 @@ inline int socket_select(IN int n, IN fd_set* rfds, IN fd_set* wfds, IN fd_set* 
 	return select(n, rfds, wfds, efds, timeout);
 #else
 	int r = select(n, rfds, wfds, efds, timeout);
-	while(-1 == r && EINTR == r)
+	while(-1 == r && EINTR == errno)
 		r = select(n, rfds, wfds, efds, timeout);
 	return r;
 #endif
