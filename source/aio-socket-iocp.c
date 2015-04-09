@@ -407,7 +407,10 @@ int aio_socket_destroy(aio_socket_t socket)
 	InterlockedExchange(&ctx->closed, 1);
 
 	if(ctx->own)
+	{
 		closesocket(ctx->socket);
+		ctx->socket = INVALID_SOCKET;
+	}
 
 	if(0 == InterlockedDecrement(&ctx->ref))
 	{

@@ -150,6 +150,15 @@ static int aio_socket_release(struct epoll_context* ctx)
 {
 	if( 0 == __sync_sub_and_fetch_4(&ctx->ref, 1) )
 	{
+		if(0 != epoll_ctl(s_epoll, EPOLL_CTL_DEL, ctx->socket, &ctx->ev))
+		{
+			assert(EBADF == errno); // EBADF: socket close by user
+			//		return errno;
+		}
+
+		if(ctx->own)
+			close(ctx->socket);
+
 		pthread_spin_destroy(&ctx->locker);
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -301,19 +310,8 @@ int aio_socket_destroy(aio_socket_t socket)
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(ctx->ev.data.ptr == ctx);
 
-	if(0 != epoll_ctl(s_epoll, EPOLL_CTL_DEL, ctx->socket, &ctx->ev))
-	{
-		assert(EBADF == errno); // EBADF: socket close by user
-//		return errno;
-	}
-
-	if(ctx->own && EBADF != errno)
-	{
-		shutdown(ctx->socket, SHUT_RDWR);
-		close(ctx->socket);
-	}
-
-	ctx->socket = -1;
+	shutdown(ctx->socket, SHUT_RDWR);
+	//	close(sock); // can't close socket now, avoid socket reuse
 
 	aio_socket_release(ctx);
 	return 0;
