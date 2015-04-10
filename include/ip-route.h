@@ -5,6 +5,10 @@
 extern "C" {
 #endif
 
+/// get local network interface(IPv4 address) to target network
+/// @param[in] distination target network address, ipv4 address only(don't be DNS)
+/// @param[out] ip local ip address
+/// @return 0-ok, -1-error(get errno)
 int ip_route_get(const char* distination, char ip[40]);
 
 int ip_local(char ip[40]);

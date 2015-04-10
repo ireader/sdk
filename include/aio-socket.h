@@ -97,11 +97,11 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param);
 
 /// connect to remote server
 /// @param[in] socket aio socket
-/// @param[in] ip server ip v4 address
+/// @param[in] ip server IPv4 address
 /// @param[in] port server listen port
 /// @return 0-ok, 10022-don't bound(see remark), <0-error don't call proc if return error
 /// Remark: windows socket need bind() port before connect. e.g. socket_bind_any(socket, 0);
-int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconnect proc, void* param);
+int aio_socket_connect(aio_socket_t socket, const char* ipv4, int port, aio_onconnect proc, void* param);
 
 /// aio send
 /// @param[in] socket aio socket
@@ -125,28 +125,43 @@ int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onse
 /// @param[in] n vec item number
 int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecv proc, void* param);
 
-/// aio send
+/// aio udp send
 /// @param[in] socket aio socket
-/// @param[in] ip remote host ip address
+/// @param[in] ip remote host IPv4 address
 /// @param[in] port remote host port
 /// @param[in] buffer outbound buffer
 /// @param[in] bytes buffer size
 /// @param[in] proc user-defined callback
 /// @param[in] param user-defined parameter
 /// @return 0-ok, <0-error, don't call proc if return error
-int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void* buffer, size_t bytes, aio_onsend proc, void* param);
+int aio_socket_sendto(aio_socket_t socket, const char* ipv4, int port, const void* buffer, size_t bytes, aio_onsend proc, void* param);
 
+/// aio udp recv
+/// @param[out] buffer data buffer(must valid before aio_onrecvfrom callback)
+/// @param[out] bytes buffer size
+/// @param[in] proc user-defined callback
+/// @param[in] param user-defined parameter
 /// @return 0-ok, <0-error, don't call proc if return error
 int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecvfrom proc, void* param);
 
-/// @return 0-ok, <0-error, don't call proc if return error
+/// aio udp send
+/// @param[in] socket aio socket
+/// @param[in] ip remote host IPv4 address
+/// @param[in] port remote host port
 /// @param[in] vec buffer array(must valid before aio_onsend callback)
 /// @param[in] n vec item number
+/// @param[in] proc user-defined callback
+/// @param[in] param user-defined parameter
+/// @return 0-ok, <0-error, don't call proc if return error
 int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, int n, aio_onsend proc, void* param);
 
-/// @return 0-ok, <0-error, don't call proc if return error
-/// @param[in] vec buffer array(must valid before aio_onsend callback)
+/// aio udp recv
+/// @param[in] socket aio socket
+/// @param[in] vec buffer array(must valid before aio_onrecvfrom callback)
 /// @param[in] n vec item number
+/// @param[in] proc user-defined callback
+/// @param[in] param user-defined parameter
+/// @return 0-ok, <0-error, don't call proc if return error
 int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param);
 
 #ifdef __cplusplus

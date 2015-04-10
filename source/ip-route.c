@@ -159,7 +159,10 @@ int ip_route_get(const char* distination, char ip[40])
 	table = (MIB_IPADDRTABLE*)malloc(dwSize);
 	errcode = GetIpAddrTable( table, &dwSize, 0 );
 	if(NO_ERROR != errcode)
+	{
+		free(table);
 		return -1;
+	}
 
 	ip[0] = '\0';
 	for(i = 0; i < table->dwNumEntries; i++)
@@ -189,7 +192,7 @@ int ip_route_get(const char* distination, char ip[40])
 	snprintf(cmd, sizeof(cmd), "ip route get %s | grep -Po '(?<=src )(\\d{1,3}.){4}'", distination);
 	fp = popen(cmd, "r");
 	if(!fp)
-		return errno;
+		return -1;
 
 	fgets(cmd, sizeof(cmd)-1, fp);
 	pclose(fp);
@@ -224,7 +227,10 @@ int ip_local(char ip[40])
 	table = (MIB_IPADDRTABLE*)malloc(dwSize);
 	errcode = GetIpAddrTable( table, &dwSize, 0 );
 	if(NO_ERROR != errcode)
+	{
+		free(table);
 		return -1;
+	}
 
 	ip[0] = '\0';
 	for(i = 0; i < table->dwNumEntries; i++)

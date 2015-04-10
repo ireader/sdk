@@ -15,7 +15,7 @@ enum ESERIAL_PARITY
 	SERIAL_PARITY_NONE = 0,	// no parity
 	SERIAL_PARITY_ODD,		// odd parity
 	SERIAL_PARITY_EVEN,		// even parity
-	SERIAL_PARITY_MARK,		// make parity(windows only)
+	SERIAL_PARITY_MARK,		// mark parity(windows only)
 	SERIAL_PARITY_SPACE		// space parity(windows only)
 };
 

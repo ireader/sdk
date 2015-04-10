@@ -41,6 +41,10 @@ void ip_route_test(void)
 	ip_local(ip);
 	printf("ip: %s\n", ip);
 
-	ip_route_get("123.126.104.102", ip);
-	printf("ip route(123.126.104.102) => %s\n", ip);
+	ip_route_get("192.168.12.114", ip);
+	printf("ip route(192.168.12.114) => %s\n", ip);
+
+	// don't support DNS
+	//ip_route_get("www.baidu.com", ip);
+	//printf("ip route(www.baidu.com) => %s\n", ip);
 }

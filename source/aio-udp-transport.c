@@ -254,6 +254,7 @@ int aio_udp_transport_destroy(void* t)
 
 int aio_udp_transport_send(void* s, const void* msg, size_t bytes)
 {
+	char ipv4[40] = {0};
 	struct aio_udp_session_t *session;
 	struct aio_udp_transport_t *transport;
 	session = (struct aio_udp_session_t *)s;
@@ -261,11 +262,16 @@ int aio_udp_transport_send(void* s, const void* msg, size_t bytes)
 
 	assert(session->ref > 0 && 0 == transport->closed && transport->socket);
     atomic_increment32(&session->ref);
+
+	if(0 != socket_ip(session->ip, ipv4))
+		return -1; // invalid address
+
     return aio_socket_sendto(transport->socket, session->ip, session->port, msg, bytes, aio_udp_transport_onsend, session);
 }
 
 int aio_udp_transport_sendv(void* s, socket_bufvec_t *vec, int n)
 {
+	char ipv4[40] = {0};
 	struct aio_udp_session_t *session;
 	struct aio_udp_transport_t *transport;
 	session = (struct aio_udp_session_t *)s;
@@ -273,7 +279,11 @@ int aio_udp_transport_sendv(void* s, socket_bufvec_t *vec, int n)
 
 	assert(session->ref > 0 && 0 == transport->closed && transport->socket);
     atomic_increment32(&session->ref);
-	return aio_socket_sendto_v(transport->socket, session->ip, session->port, vec, n, aio_udp_transport_onsend, session);
+
+	if(0 != socket_ip(session->ip, ipv4))
+		return -1; // invalid address
+
+	return aio_socket_sendto_v(transport->socket, ipv4, session->port, vec, n, aio_udp_transport_onsend, session);
 }
 
 int aio_udp_transport_addref(void* s)
