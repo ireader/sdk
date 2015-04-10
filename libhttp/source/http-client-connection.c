@@ -115,27 +115,30 @@ RETRY_REQUEST:
 
 	// recv reply
 	r = 1;
-	while(1 == r)
+	while(r > 0)
 	{
-		size_t n;
 		++tryagain;
 		r = socket_recv_by_time(http->socket, buffer, sizeof(buffer), 0, http->pool->rtimeout);
-		if(r <= 0)
+		if(r >= 0)
 		{
-			r = (0 == r) ? -1 : r; // EPIPE
+			// need input length 0 for http client detect server close connection
+			int state;
+			size_t n = (size_t)r;
+			state = http_parser_input(http->parser, buffer, &n);
+			if(state <= 0)
+			{
+				assert(0 == n);
+				callback(param, http->parser, state);
+				return state;
+			}
+		}
+		else
+		{
+			// EPIPE/ENOTCONN
 			socket_close(http->socket);
 			http->socket = socket_invalid;
 			if(1 == tryagain)
 				goto RETRY_REQUEST;
-			return r;
-		}
-
-		n = (size_t)r;
-		r = http_parser_input(http->parser, buffer, &n);
-		if(r <= 0)
-		{
-			assert(0 == n);
-			callback(param, http->parser, r);
 		}
 	}
 

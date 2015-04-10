@@ -957,7 +957,7 @@ int http_parser_input(void* parser, const void* data, size_t *bytes)
 					// H4.4 Message Length, section 5, server closing the connection
 					// receive all until socket closed
 					assert(!is_server_mode(ctx));
-					if(0 == *bytes)
+					if(0 == *bytes /*|| ctx->raw_size == ctx->offset*/)
 					{
 						ctx->content_length = ctx->raw_size - ctx->offset;
 						ctx->stateM = SM_DONE;
