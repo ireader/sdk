@@ -7,7 +7,7 @@
 #define N_THREAD 32
 
 static int32_t s_v32 = 100;
-static int64_t s_v64 = 0x0011001100110011L;
+static int64_t s_v64 = 0x0011001100110011;
 
 static int STDCALL atomic_thread(void* param)
 {
@@ -40,5 +40,5 @@ void atomic_test2(void)
 	}
 
 	assert(s_v32 == 100);
-	assert(s_v64 == 0x0011001100110011L);
+	assert(s_v64 == 0x0011001100110011);
 }

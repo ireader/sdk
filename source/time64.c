@@ -280,7 +280,7 @@ time64_t time64_from(const char* format, const char* src)
 	SystemTimeToFileTime(&st, &ft);
 
 	v = (((__int64)ft.dwHighDateTime << 32) | (__int64)ft.dwLowDateTime) / 10000; // to ms
-	v -= 11644473600000L; // January 1, 1601 (UTC) -> January 1, 1970 (UTC).
+	v -= 0xA9730B66800; /* 11644473600000LL */ // January 1, 1601 (UTC) -> January 1, 1970 (UTC).
 #else
 	struct tm t;
 
@@ -311,7 +311,7 @@ int time64_utc(time64_t time, struct tm64* tm64)
 	FILETIME ft;
 	SYSTEMTIME st;
 
-	time += 11644473600000L; // January 1, 1970 (UTC) -> January 1, 1601 (UTC).
+	time += 0xA9730B66800; /* 11644473600000LL */ // January 1, 1970 (UTC) -> January 1, 1601 (UTC).
 	time *= 10000; // millisecond -> nanosecond
 
 	ft.dwHighDateTime = (time>>32) & 0xFFFFFFFF;
@@ -380,7 +380,7 @@ time64_t time64_now(void)
 	FILETIME ft;
 	GetSystemTimeAsFileTime((FILETIME*)&ft);
 	v = (((__int64)ft.dwHighDateTime << 32) | (__int64)ft.dwLowDateTime) / 10000; // to ms
-	v -= 11644473600000L; // January 1, 1601 (UTC) -> January 1, 1970 (UTC).
+	v -= 0xA9730B66800; /* 11644473600000LL */ // January 1, 1601 (UTC) -> January 1, 1970 (UTC).
 #else
 	struct timeval tv;	
 	gettimeofday(&tv, NULL);

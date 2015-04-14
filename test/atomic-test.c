@@ -1,4 +1,5 @@
 #include "cstringext.h"
+#include "ctypedef.h"
 #include "sys/atomic.h"
 #include <assert.h>
 
@@ -13,7 +14,7 @@ void atomic_test(void)
 #else
 	posix_memalign((void**)&pval64, 8, sizeof(int64_t));
 #endif
-	*pval64 = 0x0011001100110011L;
+	*pval64 = 0x0011001100110011LL;
 
 	assert(101 == atomic_increment32(&val32) && 101==val32);
 	assert(100 == atomic_decrement32(&val32) && 100==val32);
@@ -23,12 +24,12 @@ void atomic_test(void)
 	assert(0 == atomic_cas32(&val32, 100, 101) && 101 == val32);
 
 #if !defined(_WIN32_WINNT ) || _WIN32_WINNT >= 0x0502
-	assert(0x0011001100110012L == atomic_increment64(pval64) && 0x0011001100110012L==*pval64);
-	assert(0x0011001100110011L == atomic_decrement64(pval64) && 0x0011001100110011L==*pval64);
-	assert(0x0022002200220022L == atomic_add64(pval64, 0x0011001100110011L) && 0x0022002200220022L == *pval64);
-	assert(0x0011001100110011L == atomic_add64(pval64, -0x0011001100110011L) && 0x0011001100110011L == *pval64);
-	assert(1 == atomic_cas64(pval64, 0x0011001100110011L, 0x0022002200220022L) && 0x0022002200220022L == *pval64);
-	assert(0 == atomic_cas64(pval64, 0x0011001100110011L, 0x0022002200220022L) && 0x0022002200220022L == *pval64);
+	assert(0x0011001100110012 == atomic_increment64(pval64) && 0x0011001100110012==*pval64);
+	assert(0x0011001100110011 == atomic_decrement64(pval64) && 0x0011001100110011==*pval64);
+	assert(0x0022002200220022 == atomic_add64(pval64, 0x0011001100110011) && 0x0022002200220022 == *pval64);
+	assert(0x0011001100110011 == atomic_add64(pval64, -0x0011001100110011) && 0x0011001100110011 == *pval64);
+	assert(1 == atomic_cas64(pval64, 0x0011001100110011, 0x0022002200220022) && 0x0022002200220022 == *pval64);
+	assert(0 == atomic_cas64(pval64, 0x0011001100110011, 0x0022002200220022) && 0x0022002200220022 == *pval64);
 #endif
 
 	assert(1 == atomic_cas_ptr((void**)&pval32, &val32, pval64) && pval64 == (int64_t*)pval32);
