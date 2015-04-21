@@ -232,6 +232,9 @@ inline int socket_shutdown(socket_t sock, int flag)
 inline int socket_close(socket_t sock)
 {
 #if defined(OS_WINDOWS)
+	// MSDN:
+	// If closesocket fails with WSAEWOULDBLOCK the socket handle is still valid, 
+	// and a disconnect is not initiated. The application must call closesocket again to close the socket. 
 	return closesocket(sock);
 #else
 	return close(sock);
