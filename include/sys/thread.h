@@ -31,6 +31,7 @@ typedef pthread_t tid_t;
 //-------------------------------------------------------------------------------------
 // int thread_create(pthread_t* thread, thread_proc func, void* param);
 // int thread_destroy(pthread_t thread);
+// int thread_detach(pthread_t thread);
 // int thread_getpriority(pthread_t thread, int* priority);
 // int thread_setpriority(pthread_t thread, int priority);
 // int thread_getid(pthread_t thread, tid_t* id);
@@ -73,6 +74,16 @@ inline int thread_destroy(pthread_t thread)
         return pthread_detach(thread);
 	else
         return pthread_join(thread, &value);
+#endif
+}
+
+inline int thread_detach(pthread_t thread)
+{
+#if defined(OS_WINDOWS)
+	CloseHandle(thread.handle);
+	return 0;
+#else
+	return pthread_detach(thread);
 #endif
 }
 
