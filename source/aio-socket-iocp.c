@@ -7,6 +7,12 @@
 // 3. socket_shutdown(SD_RECEIVE) failed, don't callback
 // 4. socket_close ok, callback read and write
 
+// https://msdn.microsoft.com/en-us/library/windows/desktop/ms737582%28v=vs.85%29.aspx
+// MSDN > closesocket function > Remarks
+// Any pending overlapped send and receive operations ( WSASend/ WSASendTo/ WSARecv/ WSARecvFrom with an overlapped socket) 
+// issued by any thread in this process are also canceled. Any event, completion routine, or completion port action 
+// specified for these overlapped operations is performed. The pending overlapped operations fail with the error status WSA_OPERATION_ABORTED.
+
 typedef BOOL (PASCAL FAR * FAcceptEx)(SOCKET, SOCKET, PVOID, DWORD, DWORD, DWORD, LPDWORD, LPOVERLAPPED);
 typedef VOID (PASCAL FAR * FGetAcceptExSockaddrs)(PVOID, DWORD, DWORD, DWORD, struct sockaddr **, LPINT, struct sockaddr **, LPINT);
 typedef BOOL (PASCAL FAR * FConnectEx)(SOCKET, const struct sockaddr *, int, PVOID, DWORD, LPDWORD, LPOVERLAPPED);

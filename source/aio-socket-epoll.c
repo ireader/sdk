@@ -635,7 +635,7 @@ static int epoll_recvfrom(struct epoll_context* ctx, int flags, int error)
 	if(0 != error)
 	{
 		assert(1 == flags); // only in epoll_wait thread
-		ctx->in.recvfrom.proc(ctx->in.recvfrom.proc, error, 0, "", 0);
+		ctx->in.recvfrom.proc(ctx->in.recvfrom.param, error, 0, "", 0);
 		return error;
 	}
 
@@ -653,7 +653,7 @@ static int epoll_recvfrom(struct epoll_context* ctx, int flags, int error)
 			return errno;
 
 		// call in epoll_wait thread
-		ctx->in.recvfrom.proc(ctx->in.recvfrom.proc, errno, 0, "", 0);
+		ctx->in.recvfrom.proc(ctx->in.recvfrom.param, errno, 0, "", 0);
 		return 0;
 	}
 }
