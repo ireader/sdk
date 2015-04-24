@@ -829,8 +829,11 @@ inline int socket_isip(IN const char* ip)
 //	InetPton(AF_INET, ip, &addr); // Windows Vista and later
 	addr = inet_addr(ip);
 #else
-	inet_pton(AF_INET, ip, &addr);
+	char str[INET6_ADDRSTRLEN];
+	if(1 != inet_pton(AF_INET, ip, &addr) && 1 != inet_pton(AF_INET6, ip, str))
+		return -1;
 #endif
+
 	if(INADDR_NONE == addr 
 		&& 0!=strcmp(ip, "255.255.255.255"))
 		return -1;
