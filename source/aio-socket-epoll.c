@@ -203,6 +203,7 @@ int aio_socket_process(int timeout)
 #endif
 		assert(events[i].data.ptr);
 		ctx = (struct epoll_context*)events[i].data.ptr;
+		assert(ctx->ref > 0);
 		if(events[i].events & flags)
 		{
 			// save event
@@ -229,6 +230,8 @@ int aio_socket_process(int timeout)
 				ctx->write(ctx, 1, EPIPE); // EPOLLRDHUP ?
 				aio_socket_release(ctx);
 			}
+
+			aio_socket_release(ctx);
 		}
 		else
 		{
@@ -313,7 +316,7 @@ int aio_socket_destroy(aio_socket_t socket)
 	shutdown(ctx->socket, SHUT_RDWR);
 	//	close(sock); // can't close socket now, avoid socket reuse
 
-	aio_socket_release(ctx);
+//	aio_socket_release(ctx); // shutdown will generate EPOLLHUP event
 	return 0;
 }
 
