@@ -158,7 +158,7 @@ int ip_route_get(const char* distination, char ip[40])
 
 	table = (MIB_IPADDRTABLE*)malloc(dwSize);
 	errcode = GetIpAddrTable( table, &dwSize, 0 );
-	if(NO_ERROR != errcode)
+	if(!table || NO_ERROR != errcode)
 	{
 		free(table);
 		return -1;
@@ -226,7 +226,7 @@ int ip_local(char ip[40])
 
 	table = (MIB_IPADDRTABLE*)malloc(dwSize);
 	errcode = GetIpAddrTable( table, &dwSize, 0 );
-	if(NO_ERROR != errcode)
+	if(!table || NO_ERROR != errcode)
 	{
 		free(table);
 		return -1;

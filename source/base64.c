@@ -27,7 +27,7 @@ size_t base64_encode(char* target, const void *source, size_t bytes)
 
         // add '\n' per 76 bytes
         // 54 = 76 / 4 * 3
-        if(i > 0 && 0 == (i % 57)) target[j++] = '\n'; // RFC-2045 p25
+        //if(i > 0 && 0 == (i % 57)) target[j++] = '\n'; // RFC-2045 p25
 	}
 
 	if(bytes >= n3bytes+1) {
@@ -98,14 +98,14 @@ size_t base64_decode(void* target, const char *source, size_t bytes)
 		bufout[i++] = (DEC(bufin[j+1]) << 4) | (DEC(bufin[j+2]) >> 2);
 		bufout[i++] = (DEC(bufin[j+2]) << 6) | DEC(bufin[j+3]);
 
-        if(0 == (i % 57))
-        {
-            assert('\n' == bufin[j+4] || '\r' == bufin[j+4]);
-            if('\n' == bufin[j+4] || '\r' == bufin[j+4])
-                ++j;
-            if('\n' == bufin[j+4] || '\r' == bufin[j+4])
-                ++j;
-        }
+        //if(0 == (i % 57))
+        //{
+        //    assert('\n' == bufin[j+4] || '\r' == bufin[j+4]);
+        //    if('\n' == bufin[j+4] || '\r' == bufin[j+4])
+        //        ++j;
+        //    if('\n' == bufin[j+4] || '\r' == bufin[j+4])
+        //        ++j;
+        //}
 	}
 
 	// save memory(decode target buffer size = encode source buffer size)

@@ -214,7 +214,7 @@ int aio_socket_process(int timeout)
 
 			// epoll oneshot don't need change event
 			//if(userevent & (EPOLLIN|EPOLLOUT))
-			//	epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev); // clear user event
+			//	epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev); // endless loop
 
 			// error
 			if(EPOLLIN & userevent)
@@ -247,8 +247,8 @@ int aio_socket_process(int timeout)
 			assert(events[i].events == (events[i].events & ctx->ev.events));
 			ctx->ev.events &= ~(events[i].events & (EPOLLIN|EPOLLOUT));
 			pthread_spin_unlock(&ctx->locker);
-			if(ctx->ev.events & (EPOLLIN|EPOLLOUT))
-				epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev);
+			//if(ctx->ev.events & (EPOLLIN|EPOLLOUT))
+				epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev); // update epoll event(clear in/out cause EPOLLHUP)
 
 			//if(EPOLLRDHUP & events[i].events)
 			//{
@@ -286,7 +286,7 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	memset(ctx, 0, sizeof(struct epoll_context));
 	pthread_spin_init(&ctx->locker, PTHREAD_PROCESS_PRIVATE);
 	ctx->own = own;
-	ctx->ref = 1;
+	ctx->ref = 2; // 1-for EPOLLHUP(no in/out, shutdown), 2-destroy release
 	ctx->socket = socket;
 //	ctx->ev.events = EPOLLET|EPOLLRDHUP|EPOLLONESHOT; // Edge Triggered, for multi-thread epoll_wait(see more at epoll-wait-multithread.c)
 	ctx->ev.events = EPOLLONESHOT; // since Linux 2.6.2
@@ -316,7 +316,7 @@ int aio_socket_destroy(aio_socket_t socket)
 	shutdown(ctx->socket, SHUT_RDWR);
 	//	close(sock); // can't close socket now, avoid socket reuse
 
-//	aio_socket_release(ctx); // shutdown will generate EPOLLHUP event
+	aio_socket_release(ctx); // shutdown will generate EPOLLHUP event
 	return 0;
 }
 
