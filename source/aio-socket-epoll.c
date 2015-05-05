@@ -147,6 +147,7 @@ struct epoll_context
 		__sync_sub_and_fetch_4(&ctx->ref, 1);	\
 	}											\
 	pthread_spin_unlock(&ctx->locker);			\
+	if(0 == r) return 0;						\
 } while(0)
 
 #define EPollIn(ctx, callback)	ctx->read = callback; EPollCtrl(ctx, EPOLLIN)
