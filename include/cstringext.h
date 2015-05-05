@@ -27,12 +27,12 @@
 		#define strdup		_strdup
 	#endif
 
-	//#if !defined(snprintf)
-	//	#define snprintf	_snprintf
-	//#endif
-
 	#if !defined(atoll)
 		#define atoll	_atoi64
+	#endif
+
+	#if defined(snprintf)
+		#undef snprintf
 	#endif
 #else
 	#if !defined(__cplusplus)
@@ -120,18 +120,14 @@ extern "C" {
 #endif
 
 #if defined(OS_WINDOWS)
+char* strndup(const char* p, size_t n);
+
 int snprintf(char *str, size_t size, const char *format, ...);
 #else
 
 #ifndef GetLastError
 	#define GetLastError() errno
 #endif
-
-#endif
-
-#if defined(OS_WINDOWS) || !defined(_GNU_SOURCE)
-
-char* strndup(const char* p, size_t n);
 
 #endif
 

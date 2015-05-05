@@ -1,7 +1,8 @@
 #ifndef _error_h_
 #define _error_h_
 
-#define ERROR_OK                     0       // 正确执行
+#define ERROR_OK                    0       // 正确执行
+#define ERROR_PENDING				1		// 后台执行中
 //add by tz 2012-11-23 for send signal to user to clear screen
 #define ERROR_OK_LIVE_END           10       // 实时码流线程关闭
 #define ERROR_OK_DOWNLOAD_RECORD    11       // 录像文件下载完毕

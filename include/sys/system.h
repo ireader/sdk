@@ -22,6 +22,11 @@ typedef void* module_t;
 typedef void (*funcptr_t)(void);
 #endif
 
+#if defined(OS_MAC)
+#include <stdint.h>
+#include <mach/mach_time.h>  
+#endif
+
 #include <sys/timeb.h>
 #include <stdio.h>
 
@@ -108,19 +113,10 @@ inline size_t system_getcpucount(void)
 inline long long system_getcyclecount(void)
 {
 #if defined(OS_WINDOWS)
+	LARGE_INTEGER freq;
 	LARGE_INTEGER count;
-	LARGE_INTEGER frequency;
-	if(QueryPerformanceCounter(&count))
-	{
-		if(QueryPerformanceFrequency(&frequency))
-		{
-			return count.QuadPart/frequency.QuadPart;
-		}
-		else
-		{
-			return count.QuadPart;
-		}
-	}
+	QueryPerformanceCounter(&count);
+	QueryPerformanceFrequency(&freq);
 #else
 	return 0;
 #endif
@@ -143,10 +139,16 @@ inline size_t system_clock(void)
 	QueryPerformanceFrequency(&freq);
 	QueryPerformanceCounter(&count);
 	return (size_t)(count.QuadPart * 1000 / freq.QuadPart);
+#elif defined(OS_MAC)
+	uint64_t tick;
+	mach_timebase_info_data_t timebase;
+	tick = mach_absolute_time();
+	mach_timebase_info(timebase);
+	return (size_t)(tick * timebase.numer / timebase.denom / 1000000);
 #elif defined(OS_LINUX)
 	struct timespec tp;
 	clock_gettime(CLOCK_MONOTONIC, &tp);
-	return (size_t)((size_t)tp.tv_sec*1000 + tp.tv_nsec/1000000);
+	return (size_t)(tp.tv_sec*1000 + tp.tv_nsec/1000000);
 #else
 	struct timeval tv;
 	gettimeofday(&tv, NULL);

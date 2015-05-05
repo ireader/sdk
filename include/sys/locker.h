@@ -29,7 +29,6 @@ inline int locker_create(locker_t* locker)
 	int r;
 	pthread_mutexattr_t attr;
 	pthread_mutexattr_init(&attr);
-#if defined(__USE_UNIX98)
 	// http://linux.die.net/man/3/pthread_mutexattr_settype
 	// Application Usage:
 	// It is advised that an application should not use a PTHREAD_MUTEX_RECURSIVE mutex 
@@ -38,7 +37,6 @@ inline int locker_create(locker_t* locker)
 	// If this happens, no other thread can satisfy the condition of the predicate. 
 	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 	//pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
-#endif
 	r = pthread_mutex_init(locker, &attr);
 	pthread_mutexattr_destroy(&attr);
 	return r;
