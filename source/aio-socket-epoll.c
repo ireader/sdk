@@ -105,6 +105,7 @@ struct epoll_context
 	socket_t socket;
 	volatile int32_t ref;
 	int own;
+	int init; // epoll_ctl add
 
 	int (*read)(struct epoll_context *ctx, int flags, int code);
 	int (*write)(struct epoll_context *ctx, int flags, int code);
@@ -126,31 +127,36 @@ struct epoll_context
 	} out;
 };
 
-#define EPollIn(ctx, callback)   do {\
-	ctx->read = callback;   \
-	__sync_add_and_fetch_4(&ctx->ref, 1);	\
-	pthread_spin_lock(&ctx->locker); ctx->ev.events |= EPOLLIN; pthread_spin_unlock(&ctx->locker); \
-	if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))    \
-		return 0;   \
-	pthread_spin_lock(&ctx->locker); ctx->ev.events &= ~EPOLLIN; pthread_spin_unlock(&ctx->locker); \
-	__sync_sub_and_fetch_4(&ctx->ref, 1);	\
+#define EPollCtrl(ctx, flag) do {				\
+	int r;										\
+	__sync_add_and_fetch_4(&ctx->ref, 1);		\
+	pthread_spin_lock(&ctx->locker);			\
+	ctx->ev.events |= flag;						\
+	if(0 == ctx->init)							\
+	{											\
+		r = epoll_ctl(s_epoll, EPOLL_CTL_ADD, ctx->socket, &ctx->ev);	\
+		ctx->init = (0 == r ? 1 : 0);			\
+	}											\
+	else										\
+	{											\
+		r = epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev);	\
+	}											\
+	if(0 != r)									\
+	{											\
+		ctx->ev.events &= ~flag;				\
+		__sync_sub_and_fetch_4(&ctx->ref, 1);	\
+	}											\
+	pthread_spin_unlock(&ctx->locker);			\
 } while(0)
 
-#define EPollOut(ctx, callback)  do {\
-	ctx->write = callback;         \
-	__sync_add_and_fetch_4(&ctx->ref, 1);	\
-	pthread_spin_lock(&ctx->locker); ctx->ev.events |= EPOLLOUT; pthread_spin_unlock(&ctx->locker); \
-	if(0 == epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev))  \
-		return 0;   \
-	pthread_spin_lock(&ctx->locker); ctx->ev.events &= ~EPOLLOUT; pthread_spin_unlock(&ctx->locker); \
-	__sync_sub_and_fetch_4(&ctx->ref, 1);	\
-} while(0)
+#define EPollIn(ctx, callback)	ctx->read = callback; EPollCtrl(ctx, EPOLLIN)
+#define EPollOut(ctx, callback)	ctx->write = callback; EPollCtrl(ctx, EPOLLOUT)
 
 static int aio_socket_release(struct epoll_context* ctx)
 {
 	if( 0 == __sync_sub_and_fetch_4(&ctx->ref, 1) )
 	{
-		if(0 != epoll_ctl(s_epoll, EPOLL_CTL_DEL, ctx->socket, &ctx->ev))
+		if(0 != ctx->init && 0 != epoll_ctl(s_epoll, EPOLL_CTL_DEL, ctx->socket, &ctx->ev))
 		{
 			assert(EBADF == errno); // EBADF: socket close by user
 			//		return errno;
@@ -230,8 +236,6 @@ int aio_socket_process(int timeout)
 				ctx->write(ctx, 1, EPIPE); // EPOLLRDHUP ?
 				aio_socket_release(ctx);
 			}
-
-			aio_socket_release(ctx);
 		}
 		else
 		{
@@ -246,9 +250,9 @@ int aio_socket_process(int timeout)
 			pthread_spin_lock(&ctx->locker);
 			assert(events[i].events == (events[i].events & ctx->ev.events));
 			ctx->ev.events &= ~(events[i].events & (EPOLLIN|EPOLLOUT));
-			pthread_spin_unlock(&ctx->locker);
 			//if(ctx->ev.events & (EPOLLIN|EPOLLOUT))
-				epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev); // update epoll event(clear in/out cause EPOLLHUP)
+			//	epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev); // update epoll event(clear in/out cause EPOLLHUP)
+			pthread_spin_unlock(&ctx->locker);
 
 			//if(EPOLLRDHUP & events[i].events)
 			//{
@@ -286,7 +290,7 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	memset(ctx, 0, sizeof(struct epoll_context));
 	pthread_spin_init(&ctx->locker, PTHREAD_PROCESS_PRIVATE);
 	ctx->own = own;
-	ctx->ref = 2; // 1-for EPOLLHUP(no in/out, shutdown), 2-destroy release
+	ctx->ref = 1; // 1-for EPOLLHUP(no in/out, shutdown), 2-destroy release
 	ctx->socket = socket;
 //	ctx->ev.events = EPOLLET|EPOLLRDHUP|EPOLLONESHOT; // Edge Triggered, for multi-thread epoll_wait(see more at epoll-wait-multithread.c)
 	ctx->ev.events = EPOLLONESHOT; // since Linux 2.6.2
@@ -295,15 +299,16 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 #endif
 	ctx->ev.data.ptr = ctx;
 
-	if(0 != epoll_ctl(s_epoll, EPOLL_CTL_ADD, socket, &ctx->ev))
-	{
-		free(ctx);
-		return NULL;
-	}
+	// don't add to epoll until read/write
+	//if(0 != epoll_ctl(s_epoll, EPOLL_CTL_ADD, socket, &ctx->ev))
+	//{
+	//	free(ctx);
+	//	return NULL;
+	//}
 
 	// set non-blocking socket, for Edge Triggered
-	flags = fcntl(socket, F_GETFL, 0);
-	fcntl(socket, F_SETFL, flags | O_NONBLOCK);
+	//flags = fcntl(socket, F_GETFL, 0);
+	//fcntl(socket, F_SETFL, flags | O_NONBLOCK);
 
 	return ctx;
 }
