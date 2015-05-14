@@ -267,7 +267,7 @@ time64_t time64_from(const char* format, const char* src)
 	memset(&tm64, 0, sizeof(tm64));
 	time64_scanf(&tm64, format, src);
 	if(!TIME64_VALID_SYSTEM_TIME(tm64))
-		return -1;
+		return 0;
 
 	st.wYear = (WORD)(tm64.year + 1900);
 	st.wMonth = (WORD)(tm64.month + 1);
@@ -279,7 +279,7 @@ time64_t time64_from(const char* format, const char* src)
 	st.wMilliseconds = (WORD)tm64.millisecond;
 	SystemTimeToFileTime(&st, &ft);
 
-	v = (((__int64)ft.dwHighDateTime << 32) | (__int64)ft.dwLowDateTime) / 10000; // to ms
+	v = (((unsigned __int64)ft.dwHighDateTime << 32) | (unsigned __int64)ft.dwLowDateTime) / 10000; // to ms
 	v -= 0xA9730B66800; /* 11644473600000LL */ // January 1, 1601 (UTC) -> January 1, 1970 (UTC).
 #else
 	struct tm t;

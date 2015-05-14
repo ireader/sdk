@@ -6,9 +6,9 @@ extern "C"{
 #endif
 
 #if defined(OS_WINDOWS)
-	typedef __int64 time64_t;
+	typedef unsigned __int64 time64_t;
 #else
-	typedef long long time64_t;
+	typedef unsigned long long time64_t;
 #endif
 
 #define MIN_UTC_TIME			(0L)
@@ -40,7 +40,9 @@ struct tm64
 //	time64_t t = time64_from("%Y-%M-%D %h:%m:%s", "2013-02-01 14:58:11");
 //	time64_format(t, "%Y-%M-%D %h:%m:%s", st);
 //	time64_format(t, "%04Y-%02M-%02D %02h:%02m:%02s", st);
+/// @return 0-error
 time64_t time64_from(const char* format, const char* src);
+/// @return -1-error
 int time64_format(time64_t time, const char* format, char* str);
 
 
