@@ -1,6 +1,12 @@
 #ifndef _ctypedef_h_
 #define _ctypedef_h_
 
+#if !defined(OS_WINDOWS)
+/* The ISO C99 standard specifies that these macros must only be
+   defined if explicitly requested.  */
+#define __STDC_FORMAT_MACROS
+#endif
+
 #define bool_true	1
 #define bool_false	0
 

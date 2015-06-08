@@ -282,7 +282,7 @@ int aio_socket_process(int timeout)
 
 aio_socket_t aio_socket_create(socket_t socket, int own)
 {
-	int flags;
+//	int flags;
 	struct epoll_context* ctx;
 	ctx = (struct epoll_context*)malloc(sizeof(struct epoll_context));
 	if(!ctx)
