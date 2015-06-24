@@ -68,10 +68,29 @@ static void http_session_handle(struct http_session_t *session)
 	}
 }
 
+static void http_session_clear(struct http_session_t *session)
+{
+	int i;
+
+	// release bundle data
+	for(i = 2; i < session->vec_count; i++)
+	{
+		//http_bundle_free(session->vec[i].buf);
+		http_bundle_free((struct http_bundle_t *)session->vec[i].iov_base - 1);
+	}
+
+	if(session->vec3 != session->vec)
+		free(session->vec);
+	session->vec = NULL;
+	session->vec_count = 0;
+
+	// session done
+	http_session_release(session);
+}
+
 static int http_session_send(struct http_session_t *session, int idx)
 {
 	int r = -1;
-	int i;
 
     locker_lock(&session->locker);
     if(session->session)
@@ -79,23 +98,6 @@ static int http_session_send(struct http_session_t *session, int idx)
         r = aio_tcp_transport_sendv(session->session, session->vec + idx, session->vec_count-idx);
     }
     locker_unlock(&session->locker);
-    
-    if(0 != r)
-    {
-        // release bundle data
-        for(i = 2; i < session->vec_count; i++)
-        {
-            http_bundle_free((struct http_bundle_t *)session->vec[i].iov_base - 1);
-        }
-
-        // free socket vector
-        if(session->vec3 != session->vec)
-            free(session->vec);
-        session->vec = NULL;
-        session->vec_count = 0;
-
-        http_session_release(session);
-    }
     return r;
 }
 
@@ -136,10 +138,9 @@ int http_session_onsend(void* param, int code, size_t bytes)
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
 
-//	printf("http_session_onsend code: %d, bytes: %u\n", code, (unsigned int)bytes);
 	if(code < 0 || 0 == bytes)
 	{
-        http_session_release(session);
+		http_session_clear(session);
         return 0; // send error, don't need recv
 	}
 	else
@@ -163,29 +164,20 @@ int http_session_onsend(void* param, int code, size_t bytes)
 
 		if(i < session->vec_count)
 		{
-			http_session_send(session, i);
+			if(0 != http_session_send(session, i))
+			{
+				http_session_clear(session);
+				// return -1;
+			}
             return 0; // have more data to send, don't need recv
 		}
 		else
 		{
-			// release bundle data
-			for(i = 2; i < session->vec_count; i++)
-			{
-				//http_bundle_free(session->vec[i].buf);
-				http_bundle_free((struct http_bundle_t *)session->vec[i].iov_base - 1);
-			}
-
-			if(session->vec3 != session->vec)
-				free(session->vec);
-			session->vec = NULL;
-			session->vec_count = 0;
-
 			// restart
 			// clear parser status
 			http_parser_clear(session->parser);
 
-            // session done
-            http_session_release(session);
+			http_session_clear(session);
 
             return 1; // send done, continue recv data
 		}
@@ -289,7 +281,10 @@ int http_server_send_vec(void* param, int code, void** bundles, int num)
 	socket_setbufvec(session->vec, 0, session->status_line, strlen(session->status_line));
 	socket_setbufvec(session->vec, 1, session->data, strlen(session->data));
 
-	return http_session_send(session, 0);
+	i = http_session_send(session, 0);
+	if(0 != i)
+		http_session_clear(session);
+	return i;
 }
 
 int http_server_set_header(void* param, const char* name, const char* value)
