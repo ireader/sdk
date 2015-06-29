@@ -10,6 +10,11 @@
 
 #define ISSPACE(c)		((c)==' ')
 
+#define GEN_DELIMS ":/?#[]@"						// RFC3986 2.2 Reserved Characters
+#define SUB_DELIMS "!$&'()*+,;="					// RFC3986 2.2 Reserved Characters
+#define RESERVED_CHARACTERS	GEN_DELIMS SUB_DELIMS	// RFC3986 2.2 Reserved Characters
+#define UNRESERVED_CH "-._~
+
 enum { SM_FIRSTLINE = 0, SM_HEADER = 100, SM_BODY = 200, SM_DONE = 300 };
 
 struct http_status_line
@@ -135,7 +140,7 @@ static int http_rawdata(struct http_context *ctx, const void* data, size_t bytes
 		ctx->raw = p;
 	}
 
-	assert(ctx->raw_capacity - ctx->raw_size > bytes+1);
+	assert(ctx->raw_capacity - ctx->raw_size > bytes);
 	memmove((char*)ctx->raw + ctx->raw_size, data, bytes);
 	ctx->raw_size += bytes;
 	ctx->raw[ctx->raw_size] = '\0'; // auto add ending '\0'
@@ -331,11 +336,14 @@ static int http_parse_request_line(struct http_context *ctx)
 			}
 			else
 			{
-				// validate URI
-				// RFC 1738: 
-				// only alphanumerics, the special characters "$-_.+!*'(),", and reserved characters 
-				// used for their reserved purposes may be used unencoded within a URL.
-				assert(isalnum(ctx->raw[ctx->offset]) || strchr("$-_.+!*'(),;/?:@=&", ctx->raw[ctx->offset]));
+				// RFC3986 
+				// 2.2 Reserved Characters
+				// reserved    = gen-delims / sub-delims
+				// gen-delims  = ":" / "/" / "?" / "#" / "[" / "]" / "@"
+				// sub-delims  = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
+				// 2.3.  Unreserved Characters
+				// unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
+				assert(isalnum(ctx->raw[ctx->offset]) || strchr("-._~:/?#[]@!$&'()*+,;=", ctx->raw[ctx->offset]));
 			}
 			break;
 
