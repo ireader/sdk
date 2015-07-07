@@ -102,7 +102,11 @@ inline int event_timewait(event_t* event, int timeout)
 #if defined(OS_LINUX)
 	int r = 0;
 	struct timespec ts;
+#ifdef __USE_XOPEN2K
 	clock_gettime(CLOCK_MONOTONIC, &ts);
+#else
+	clock_gettime(CLOCK_REALTIME, &ts);
+#endif
 	ts.tv_sec += timeout/1000;
 	ts.tv_nsec += (timeout%1000)*1000000;
 #else
@@ -113,6 +117,10 @@ inline int event_timewait(event_t* event, int timeout)
 	ts.tv_sec = tv.tv_sec + timeout/1000;
 	ts.tv_nsec = tv.tv_usec * 1000 + (timeout%1000)*1000000;
 #endif
+
+	// tv_nsec >= 1000000000 ==> EINVAL
+	ts.tv_sec += ts.tv_nsec / 1000000000;
+	ts.tv_nsec %= 1000000000;
 
 	pthread_mutex_lock(&event->mutex);
 	if(0 == event->count)
