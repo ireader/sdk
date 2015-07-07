@@ -45,7 +45,7 @@ inline int event_create(event_t* event)
 	int r;
 	pthread_condattr_t attr;
 	pthread_condattr_init(&attr);
-#ifdef __USE_XOPEN2K
+#if defined(OS_LINUX) && defined(__USE_XOPEN2K)
 	pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
 #endif
 

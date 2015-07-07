@@ -122,6 +122,10 @@ inline int semaphore_timewait(semaphore_t* semaphore, int timeout)
 	clock_gettime(CLOCK_REALTIME, &ts);
 	ts.tv_sec += timeout/1000;
 	ts.tv_nsec += (timeout%1000)*1000000;
+
+	// tv_nsec >= 1000000000 ==> EINVAL
+	ts.tv_sec += ts.tv_nsec / 1000000000;
+	ts.tv_nsec %= 1000000000;
 	return -1==sem_timedwait(semaphore->semaphore, &ts) ? errno : 0;
 }
 #endif
