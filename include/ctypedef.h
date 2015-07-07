@@ -1,12 +1,6 @@
 #ifndef _ctypedef_h_
 #define _ctypedef_h_
 
-#if !defined(OS_WINDOWS)
-/* The ISO C99 standard specifies that these macros must only be
-   defined if explicitly requested.  */
-#define __STDC_FORMAT_MACROS
-#endif
-
 #define bool_true	1
 #define bool_false	0
 
@@ -30,13 +24,16 @@
 	#define OS_INT64_TYPE
 	#endif /* OS_INT64_TYPE */
 #else
-	#include <stdint.h>
+	/* The ISO C99 standard specifies that these macros must only be defined if explicitly requested.  */
+	#define __STDC_FORMAT_MACROS
 	#include <inttypes.h>
-	#define PRIsize_t			"zu"	// C99
-	#define PRIptrdiff_t		"tx"	// C99
+	#include <stdint.h>
+
+	#define PRIsize_t				"zu"	// C99
+	#define PRIptrdiff_t			"tx"	// C99
 	#ifndef OS_INT64_TYPE
-	typedef long long int		int64_t;
-	typedef unsigned long long int uint64_t;
+	typedef long long int			int64_t;
+	typedef unsigned long long int	uint64_t;
 	#define OS_INT64_TYPE
 	#endif /* OS_INT64_TYPE */
 #endif

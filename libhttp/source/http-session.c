@@ -253,7 +253,7 @@ int http_server_send_vec(void* param, int code, void** bundles, int num)
 	session = (struct http_session_t*)param;
 
 	assert(0 == session->vec_count);
-	session->vec = (1 == num) ? session->vec3 : malloc((sizeof(session->vec[0]) + sizeof(void*)) * (num+2));
+	session->vec = (1 == num) ? session->vec3 : malloc(sizeof(socket_bufvec_t) * (num+2));
 	if(!session->vec)
 		return -1;
 
