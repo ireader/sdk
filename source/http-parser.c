@@ -10,11 +10,6 @@
 
 #define ISSPACE(c)		((c)==' ')
 
-#define GEN_DELIMS ":/?#[]@"						// RFC3986 2.2 Reserved Characters
-#define SUB_DELIMS "!$&'()*+,;="					// RFC3986 2.2 Reserved Characters
-#define RESERVED_CHARACTERS	GEN_DELIMS SUB_DELIMS	// RFC3986 2.2 Reserved Characters
-#define UNRESERVED_CH "-._~
-
 enum { SM_FIRSTLINE = 0, SM_HEADER = 100, SM_BODY = 200, SM_DONE = 300 };
 
 struct http_status_line
