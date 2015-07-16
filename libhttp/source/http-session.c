@@ -271,10 +271,7 @@ int http_server_send_vec(void* param, int code, void** bundles, int num)
 	}
 
 	// HTTP Response Header
-	sprintf(msg, "Server: WebServer 0.2\r\n"
-		"Connection: keep-alive\r\n"
-		"Keep-Alive: timeout=5,max=100\r\n"
-		"Content-Length: %u\r\n\r\n", (unsigned int)len);
+	sprintf(msg, "Content-Length: %u\r\n\r\n", (unsigned int)len);
 	strcat(session->data, msg);
 	sprintf(session->status_line, "HTTP/1.1 %d %s\r\n", code, http_reason_phrase(code));
 
@@ -293,6 +290,7 @@ int http_server_set_header(void* param, const char* name, const char* value)
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
 
+	assert(!strieq("Content-Length", name));
 	snprintf(msg, sizeof(msg), "%s: %s\r\n", name, value);
 	strcat(session->data, msg);
 	return 0;
@@ -304,6 +302,7 @@ int http_server_set_header_int(void* param, const char* name, int value)
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
 
+	assert(!strieq("Content-Length", name));
 	snprintf(msg, sizeof(msg), "%s: %d\r\n", name, value);
 	strcat(session->data, msg);
 	return 0;
