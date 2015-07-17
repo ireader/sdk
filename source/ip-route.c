@@ -182,8 +182,78 @@ int ip_route_get(const char* distination, char ip[40])
 	return 0==ip[0] ? -1 : 0;
 }
 #else
+static uint32_t ipv4_iface_addr(const char* iface)
+{
+	uint32_t addr;
+	struct ifaddrs *ifaddr, *ifa;
+
+	if(0 != getifaddrs(&ifaddr))
+		return INADDR_ANY;
+
+	addr = INADDR_ANY;
+	for(ifa = ifaddr; ifa; ifa = ifa->ifa_next)
+	{
+		if(!ifa->ifa_addr || AF_INET != ifa->ifa_addr->sa_family || 0 != strcmp(iface, ifa->ifa_name))
+			continue;
+
+		addr = ((struct sockaddr_in*)ifa->ifa_addr)->sin_addr.s_addr;
+		break;
+	}
+
+	freeifaddrs(ifaddr);
+	return addr;
+}
+
+/*
+[root@localhost net]# cat route
+Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT                                                       
+eth0	000CA8C0	00000000	0001	0		0	0		00FFFFFF	0	0	0                                                                               
+eth0	0000FEA9	00000000	0001	0		0	0		0000FFFF	0	0	0                                                                               
+eth0	00000000	010CA8C0	0003	0		0	0		00000000	0	0	0      
+*/
+static uint32_t ipv4_route(uint32_t peer)
+{
+	FILE* fp;
+	char iface[18], iface0[18], line[1024];
+	uint32_t destination, gateway, netmask;
+
+	fp = fopen("/proc/net/route", "r");
+	if(!fp)
+		return INADDR_ANY;
+
+	iface0[0] = '\0';
+	fgets(line, sizeof(line), fp); // filter first line
+
+	while(NULL != fgets(line, sizeof(line), fp))
+	{
+		if(4 == sscanf(line, "%16s %X %X %*X %*d %*d %*d %X", iface, &destination, &gateway, &netmask))
+		{
+			assert((destination & netmask) == destination);
+			if(0 == destination)
+			{
+				strcpy(iface0, iface); // save default gateway
+			}
+			else if((peer & netmask) == destination)
+			{
+				strcpy(iface0, iface); // found
+				break;
+			}
+		}
+	}
+
+	fclose(fp);
+
+	return ipv4_iface_addr(iface0);
+}
+
 int ip_route_get(const char* distination, char ip[40])
 {
+#if 1
+	struct in_addr addr;
+	inet_pton(AF_INET, distination, &addr);
+	addr.s_addr = ipv4_route(addr.s_addr);
+	return NULL==inet_ntop(AF_INET, &addr, ip, INET6_ADDRSTRLEN) ? errno : 0;
+#else
 	size_t n = 0;
 	FILE *fp = NULL;
 	char cmd[128] = {0};
@@ -210,6 +280,7 @@ int ip_route_get(const char* distination, char ip[40])
 		return 0;
 	}
 	return -1;
+#endif
 }
 #endif
 
