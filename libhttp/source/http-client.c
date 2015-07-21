@@ -97,10 +97,12 @@ static int http_make_request(struct http_pool_t *pool, void *req, int method, co
 {
 	size_t i;
 	const char* content_type = "text/html";
+	static int32_t s_seq = 0;
 
 	// Request Line
 	http_request_set_uri(req, method, uri);
 	http_request_set_host(req, pool->ip, pool->port);
+	http_request_set_header_int(req, "X-Seq", atomic_increment32(&s_seq));
 
 	// User-defined headers
 	for(i = 0; i < n; i++)
@@ -169,6 +171,7 @@ static void http_client_onaction(void *param, void *parser, int code)
 				assert(STRLEN(cookiename) + STRLEN(cookievalue) + 1 < sizeof(buffer));
 				snprintf(buffer, sizeof(buffer), "%s=%s", cookiename, cookievalue);
 				http_pool_setcookie(http->pool, buffer, strlen(buffer));
+				http_cookie_destroy(ck);
 			}
 		}
 	}
