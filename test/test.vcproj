@@ -185,6 +185,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\aio-socket-test4.c"
+				>
+			</File>
+			<File
 				RelativePath=".\atomic-test.c"
 				>
 			</File>
@@ -222,6 +226,10 @@
 			</File>
 			<File
 				RelativePath=".\semaphore-test.c"
+				>
+			</File>
+			<File
+				RelativePath=".\socket-test.c"
 				>
 			</File>
 			<File

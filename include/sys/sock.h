@@ -3,6 +3,7 @@
 
 #if defined(OS_WINDOWS)
 #include <Winsock2.h>
+#include <WS2tcpip.h>
 #include <ws2ipdef.h>
 
 #ifndef OS_SOCKET_TYPE
@@ -141,7 +142,7 @@ inline int socket_getpeername(IN socket_t sock, OUT char* ip, OUT unsigned short
 
 // socket utility
 inline int socket_isip(IN const char* ip); // socket_isip("192.168.1.2") -> 0, socket_isip("www.google.com") -> -1
-inline int socket_ip(IN const char* ip_or_dns, OUT char* ip);
+inline int socket_ip(IN const char* ip_or_dns, OUT char ip[40]);
 inline int socket_addr_ipv4(OUT struct sockaddr_in* addrin, IN const char* ip_or_dns, IN unsigned short port);
 
 inline void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len);
@@ -794,8 +795,9 @@ inline int socket_getname(IN socket_t sock, OUT char* ip, OUT unsigned short* po
 #if defined(OS_WINDOWS)
 	// MSDN: The string returned is guaranteed to be valid only until 
 	// the next Windows Sockets function call is made within the same thread
-	strcpy(ip, inet_ntoa(addr.sin_addr));
 //	InetNtop(AF_INET, &addr.sin_addr, ip, 16); // Windows Vista and later
+//	WSAAddressToStringA((struct sockaddr*)&addr, (DWORD)addrlen, NULL, ip, &iplen );
+	strcpy(ip, inet_ntoa(addr.sin_addr));
 #else
 	inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
 #endif
@@ -813,8 +815,9 @@ inline int socket_getpeername(IN socket_t sock, OUT char* ip, OUT unsigned short
 #if defined(OS_WINDOWS)
 	// MSDN: The string returned is guaranteed to be valid only until 
 	// the next Windows Sockets function call is made within the same thread
-	strcpy(ip, inet_ntoa(addr.sin_addr));
 //	InetNtop(AF_INET, &addr.sin_addr, ip, 16); // Windows Vista and later
+//	WSAAddressToStringA((struct sockaddr*)&addr, (DWORD)addrlen, NULL, ip, &iplen );
+	strcpy(ip, inet_ntoa(addr.sin_addr));
 #else
 	inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
 #endif
@@ -840,8 +843,36 @@ inline int socket_isip(IN const char* ip)
 	return 0;
 }
 
-inline int socket_ip(IN const char* ip_or_dns, OUT char* ip)
+inline int socket_ip(IN const char* ip_or_dns, OUT char ip[40])
 {
+#if defined(OS_WINDOWS)
+	DWORD iplen = 40;
+#endif
+	int r;
+	struct addrinfo *addr, *ptr;
+	r = getaddrinfo(ip_or_dns, NULL, NULL, &addr);
+	for(ptr = addr; 0 == r && ptr != NULL; ptr = ptr->ai_next)
+	{
+		if(AF_INET == ptr->ai_family /*|| AF_INET6 == ptr->ai_family*/) // filter IPv6 address
+		{
+#if defined(OS_WINDOWS)
+			r = WSAAddressToStringA(ptr->ai_addr, (DWORD)ptr->ai_addrlen, NULL, ip, &iplen );
+#else
+			if(AF_INET == ptr->ai_family)
+				r = (NULL == inet_ntop(ptr->ai_family, &(((struct sockaddr_in*)ptr->ai_addr)->sin_addr), ip, 40)) ? errno : 0;
+			else
+				r = (NULL == inet_ntop(ptr->ai_family, &(((struct sockaddr_in6*)ptr->ai_addr)->sin6_addr), ip, 40)) ? errno : 0;
+#endif
+			if(0 == r)
+			{
+				break; // only use the first address
+			}
+		}
+	}
+	freeaddrinfo(addr);
+	return r;
+
+#if 0
 	struct hostent* host;
 	if(0 == socket_isip(ip_or_dns))
 	{
@@ -861,6 +892,7 @@ inline int socket_ip(IN const char* ip_or_dns, OUT char* ip)
 		(int)(unsigned char)(host->h_addr[2]), (int)(unsigned char)(host->h_addr[3]));
 	//memcpy(ip, host->h_addr, host->h_length);
 	return 0;
+#endif
 }
 
 inline int socket_addr_ipv4(OUT struct sockaddr_in* addrin, IN const char* ip_or_dns, IN unsigned short port)

@@ -12,6 +12,7 @@
 #define SDP_TEST
 #endif
 
+void socket_test(void);
 void locker_test(void);
 void atomic_test(void);
 void atomic_test2(void);
@@ -31,6 +32,7 @@ void systimer_test(void);
 void aio_socket_test(void);
 void aio_socket_test2(void);
 void aio_socket_test3(void);
+void aio_socket_test4(void);
 void ip_route_test(void);
 
 #if defined(HTTP_TEST)
@@ -58,6 +60,7 @@ int main(int argc, char* argv[])
 	semaphore_test();
 #endif
 	stack_test();
+	socket_test();
 
     url_test();
     time64_test();
@@ -77,6 +80,7 @@ int main(int argc, char* argv[])
     
     aio_socket_test2();
     aio_socket_test3();
+	aio_socket_test4();
 	aio_socket_test();
 
 #if defined(SDP_TEST)
