@@ -846,7 +846,7 @@ inline int socket_isip(IN const char* ip)
 inline int socket_ip(IN const char* ip_or_dns, OUT char ip[40])
 {
 #if defined(OS_WINDOWS)
-	DWORD iplen = 40;
+	DWORD iplen;
 #endif
 	int r;
 	struct addrinfo *addr, *ptr;
@@ -856,6 +856,7 @@ inline int socket_ip(IN const char* ip_or_dns, OUT char ip[40])
 		if(AF_INET == ptr->ai_family /*|| AF_INET6 == ptr->ai_family*/) // filter IPv6 address
 		{
 #if defined(OS_WINDOWS)
+			iplen = 40;
 			r = WSAAddressToStringA(ptr->ai_addr, (DWORD)ptr->ai_addrlen, NULL, ip, &iplen );
 #else
 			if(AF_INET == ptr->ai_family)

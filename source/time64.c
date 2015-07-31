@@ -288,7 +288,7 @@ time64_t time64_from(const char* format, const char* src)
 	tm64.day = 1;
 	time64_scanf(&tm64, format, src);
 	if(!TIME64_VALID_SYSTEM_TIME(tm64))
-		return -1;
+		return 0;
 
 	t.tm_year = tm64.year;
 	t.tm_mon = tm64.month;
