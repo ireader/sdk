@@ -44,6 +44,102 @@ static unsigned int crc32table[256] = {
 	0x6D66B4BC, 0xDA7B75B8, 0x035D36B5, 0xB440F7B1
 };
 
+static unsigned int crc32msbtable[256];
+static unsigned int crc32lsbtable[256];
+
+typedef struct _crc_polynomial_t
+{
+	unsigned int normal;
+	unsigned int reversed;
+	unsigned int reciprocal;
+} crc_polynomial_t;
+
+// http://en.wikipedia.org/wiki/Cyclic_redundancy_check
+static crc_polynomial_t polynomial[] = {
+	{ 0x1, 0x1, 0x1 }, // CRC-1
+
+	// X^16+X^12+X^5+1
+	// (1) 0001 0000 0010 0001
+	// 1000 0100 0000 1000 (1)
+	{ 0x1021, 0x8408, 0x8810 }, // CRC-16-CCITT
+
+	// X^16+X^15+X^2+1
+	// (1) 1000 0000 0000 0101
+	// 1010 0000 0000 0001 (1)
+	{ 0x8005, 0xA001, 0xC002 }, // CRC-16-IBM
+
+	// X^32+X^26+X^23+X^22+X^16+X^12+X^11+X^10+X^8+X^7+X^5+X^4+X^2+X+1
+	// (1) 0000 0100 1100 0001 0001 1101 1011 0111
+	// 1110 1101 1011 1000 1000 0011 0010 0000 (1)
+	// 1000 0010 0101 0000 1000 1110 1101 1011
+	{ 0x04C11DB7, 0xEDB88320, 0x82608EDB }, // CRC-32
+};
+
+
+// Most significant bit first(Big-endian)
+void crc32_msb_init()
+{
+	int val, i;
+	unsigned int rem;
+
+	for(val = 0; val < 256; val++)
+	{
+		rem = val << 24; // (32-8)
+		for(i = 0; i < 8; i++)
+		{
+			if(rem & 0x80000000)
+				rem = (rem << 1) ^ 0x04C11DB7;
+			else
+				rem <<= 1;
+		}
+
+		crc32msbtable[val] = rem/*& 0xFFFFFFFF*/;
+	}
+}
+
+unsigned int crc32_msb(unsigned int crc, const unsigned char *buffer, unsigned int size)  
+{
+	unsigned int i;
+
+	for (i = 0; i < size; i++) {
+		crc = crc32msbtable[((crc>>24) ^ buffer[i]) & 0xff] ^ (crc << 8);  
+	}  
+	return crc ;  
+}
+
+
+// Least significant bit first(Little-endian)
+// http://www.w3.org/TR/PNG/#D-CRCAppendix
+void crc32_lsb_init()
+{
+	int val, i;
+	unsigned int rem;
+
+	for(val = 0; val < 256; val++)
+	{
+		rem = val;
+		for(i = 0; i < 8; i++)
+		{
+			if(rem & 0x00000001)
+				rem = (rem >> 1) ^ 0xEDB88320L;
+			else
+				rem >>= 1;
+		}
+
+		crc32lsbtable[val] = rem;
+	}
+}
+
+unsigned int crc32_lsb(unsigned int crc, const unsigned char *buffer, unsigned int size)  
+{
+	unsigned int i;
+
+	for (i = 0; i < size; i++) {
+		crc = crc32lsbtable[(crc ^ buffer[i]) & 0xff] ^ (crc >> 8);  
+	} 
+	return crc ;  
+}
+
 unsigned int crc32(unsigned int crc, const unsigned char *buffer, unsigned int size)  
 {  
 	unsigned int i;
@@ -52,4 +148,4 @@ unsigned int crc32(unsigned int crc, const unsigned char *buffer, unsigned int s
 		crc = crc32table[(crc ^ buffer[i]) & 0xff] ^ (crc >> 8);  
 	}  
 	return crc ;  
-}  
+}

@@ -344,7 +344,7 @@ int aio_tcp_transport_disconnect(void* s)
 
 int aio_tcp_transport_send(void* s, const void* msg, size_t bytes)
 {
-    int r;
+    int r = -1;
 	struct aio_tcp_session_t *session;
 	session = (struct aio_tcp_session_t *)s;
 	locker_lock(&session->locker);
@@ -363,7 +363,7 @@ int aio_tcp_transport_send(void* s, const void* msg, size_t bytes)
 
 int aio_tcp_transport_sendv(void* s, socket_bufvec_t *vec, int n)
 {
-    int r;
+    int r = -1;
 	struct aio_tcp_session_t *session;
 	session = (struct aio_tcp_session_t *)s;
 	locker_lock(&session->locker);
