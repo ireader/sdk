@@ -20,8 +20,8 @@ struct aio_tcp_session_t
 
 	volatile int32_t ref;
 	volatile aio_socket_t socket;
-	char ip[32]; // IPv4/IPv6
-	int port;
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
 
 	char msg[MAX_TCP_PACKET];
 
@@ -78,7 +78,7 @@ static void aio_tcp_transport_release(struct aio_tcp_transport_t *transport)
 	}
 }
 
-static struct aio_tcp_session_t* aio_tcp_session_create(struct aio_tcp_transport_t *transport, socket_t socket, const char* ip, int port)
+static struct aio_tcp_session_t* aio_tcp_session_create(struct aio_tcp_transport_t *transport, socket_t socket, const struct sockaddr* sa, socklen_t salen)
 {
 	struct aio_tcp_session_t *session;
 
@@ -89,9 +89,9 @@ static struct aio_tcp_session_t* aio_tcp_session_create(struct aio_tcp_transport
 		locker_create(&session->locker);
 		session->ref = 1;
 		session->socket = aio_socket_create(socket, 1);
-		strncpy(session->ip, ip, sizeof(session->ip));
-		session->port = port;
-
+		assert(salen <= sizeof(session->addr));
+		session->addrlen = salen < sizeof(session->addr) ? salen : sizeof(session->addr);
+		memcpy(&session->addr, sa, session->addrlen);
         memcpy(&session->handler, &transport->handler, sizeof(session->handler));
         session->ptr = transport->ptr;
 
@@ -216,7 +216,7 @@ static void aio_tcp_session_onsend(void* param, int code, size_t bytes)
 	aio_tcp_session_release(session);
 }
 
-static void aio_tcp_transport_onaccept(void* param, int code, socket_t socket, const char* ip, int port)
+static void aio_tcp_transport_onaccept(void* param, int code, socket_t socket, const struct sockaddr* addr, socklen_t addrlen)
 {
 	int r = 0;
 	int closed = 0;
@@ -232,14 +232,14 @@ static void aio_tcp_transport_onaccept(void* param, int code, socket_t socket, c
 	}
     else
 	{
-		session = aio_tcp_session_create(transport, socket, ip, port);
+		session = aio_tcp_session_create(transport, socket, addr, addrlen);
 		if(!session)
 		{
 			assert(0);
 		}
 		else
 		{
-			session->data = session->handler.onconnected(session->ptr, session, session->ip, session->port);
+			session->data = session->handler.onconnected(session->ptr, session, addr, addrlen);
 
             // start receive data
             aio_tcp_session_recv(session);

@@ -2,6 +2,7 @@
 #if defined(OS_WINDOWS)
 #include <winsock2.h>
 #include <iphlpapi.h>
+#include <WS2tcpip.h>
 #pragma comment(lib, "WS2_32.lib")
 #pragma comment(lib, "iphlpapi.lib")
 
@@ -149,7 +150,7 @@ int ip_route_get(const char* distination, char ip[40])
 
 	addrin.sin_family = AF_INET;
 	addrin.sin_port = htons(0);
-	addrin.sin_addr.s_addr = inet_addr(distination);
+	inet_pton(AF_INET, distination, &addrin.sin_addr);
 	if(NO_ERROR != GetBestInterfaceEx((struct sockaddr*)&addrin, &index))
 		return -1;
 

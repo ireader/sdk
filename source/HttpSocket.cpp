@@ -71,12 +71,8 @@ int HttpSocket::Connect()
 	Disconnect();
 
 	assert(socket_invalid==m_socket);
-	m_socket = socket_tcp();
+	m_socket = socket_connect_host(m_ip.c_str(), (unsigned short)m_port, m_connTimeout);
 	if(socket_invalid == m_socket)
-		return ERROR_CONNECT;
-
-	int r = socket_connect_ipv4_by_time(m_socket, m_ip.c_str(), (unsigned short)m_port, m_connTimeout);
-	if(r < 0)
 	{
 		Disconnect();
 		++m_connFailed;

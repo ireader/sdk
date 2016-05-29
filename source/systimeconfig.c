@@ -20,7 +20,7 @@ int system_gettime(char time[24])
 {
 	SYSTEMTIME st;
 	GetLocalTime(&st);
-	sprintf(time, "%04d-%02d-%02d %02d:%02d:%02d.%03d", 
+	sprintf(time, "%04hd-%02hd-%02hd %02hd:%02hd:%02hd.%03hd", 
 		st.wYear, 
 		st.wMonth, 
 		st.wDay, 
@@ -39,13 +39,13 @@ int system_settime(const char* time)
 	n = strlen(time);
 	if(23 == n)
 	{
-		if(7 != sscanf(time, "%d-%d-%d %d:%d:%d.%d", &st.wYear, &st.wMonth, &st.wDay, &st.wHour, &st.wMinute, &st.wSecond, &st.wMilliseconds))
+		if(7 != sscanf(time, "%hd-%hd-%hd %hd:%hd:%hd.%hd", &st.wYear, &st.wMonth, &st.wDay, &st.wHour, &st.wMinute, &st.wSecond, &st.wMilliseconds))
 			return -1;
 	}
 	else if(19 == n)
 	{
 		st.wMilliseconds = 0;
-		if(6 != sscanf(time, "%d-%d-%d %d:%d:%d", &st.wYear, &st.wMonth, &st.wDay, &st.wHour, &st.wMinute, &st.wSecond))
+		if(6 != sscanf(time, "%hd-%hd-%hd %hd:%hd:%hd", &st.wYear, &st.wMonth, &st.wDay, &st.wHour, &st.wMinute, &st.wSecond))
 			return -1;
 	}
 	else

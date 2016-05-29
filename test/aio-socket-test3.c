@@ -34,7 +34,7 @@ static const char *s_smsg2 = "aio-server-reply-v";
 ///                     ^                                                                            |
 ///                     |----------------------<--------------------<--------------------<-----------+
 ///
-static void aio_server_onrecvfrom(void* param, int code, size_t bytes, const char* ip, int port);
+static void aio_server_onrecvfrom(void* param, int code, size_t bytes, const struct sockaddr* addr, socklen_t addrlen);
 static void aio_server_onsendto_v(void* param, int code, size_t bytes)
 {
 	int r;
@@ -49,12 +49,11 @@ static void aio_server_onsendto_v(void* param, int code, size_t bytes)
 	assert(0 == r);
 }
 
-static void aio_server_onrecvfrom_v(void* param, int code, size_t bytes, const char* ip, int port)
+static void aio_server_onrecvfrom_v(void* param, int code, size_t bytes, const struct sockaddr* addr, socklen_t addrlen)
 {
 	int r;
 	struct aio_server_t *server = (struct aio_server_t*)param;
 	assert(0 == code && bytes <= strlen(s_cmsg2));
-	assert(port == PORT+1);
 
 	server->len += bytes;
 	if(bytes < strlen(s_cmsg2))
@@ -75,10 +74,13 @@ static void aio_server_onrecvfrom_v(void* param, int code, size_t bytes, const c
 	}
 	else
 	{
+		struct sockaddr_in addr2;
+		socket_addr_from_ipv4(&addr2, "127.0.0.1", PORT + 1);
+
 		assert(0 == strcmp(s_cmsg2, server->msg));
 		socket_setbufvec(server->vec, 0, (void*)s_smsg2, strlen(s_smsg2)/2);
 		socket_setbufvec(server->vec, 1, (void*)(s_smsg2+strlen(s_smsg2)/2), strlen(s_smsg2)/2);
-		r = aio_socket_sendto_v(server->socket, "127.0.0.1", PORT+1, server->vec, 2, aio_server_onsendto_v, param);
+		r = aio_socket_sendto_v(server->socket, (struct sockaddr*)&addr2, sizeof(addr2), server->vec, 2, aio_server_onsendto_v, param);
 		assert(0 == r);
 	}
 }
@@ -97,12 +99,11 @@ static void aio_server_onsendto(void* param, int code, size_t bytes)
 	assert(0 == r);
 }
 
-static void aio_server_onrecvfrom(void* param, int code, size_t bytes, const char* ip, int port)
+static void aio_server_onrecvfrom(void* param, int code, size_t bytes, const struct sockaddr* addr, socklen_t addrlen)
 {
 	int r;
 	struct aio_server_t *server = (struct aio_server_t*)param;
 	assert(0 == code && bytes <= strlen(s_cmsg1));
-	assert(port == PORT+1);
 
 	server->len += bytes;
 	if(bytes < strlen(s_cmsg1))
@@ -112,9 +113,12 @@ static void aio_server_onrecvfrom(void* param, int code, size_t bytes, const cha
 	}
 	else
 	{
+		struct sockaddr_in addr2;
+		socket_addr_from_ipv4(&addr2, "127.0.0.1", PORT + 1);
+
 		assert(0 == strcmp(s_cmsg1, server->msg));
 
-		r = aio_socket_sendto(server->socket, "127.0.0.1", PORT+1, s_smsg1, strlen(s_smsg1), aio_server_onsendto, param);
+		r = aio_socket_sendto(server->socket, (struct sockaddr*)&addr2, sizeof(addr2), s_smsg1, strlen(s_smsg1), aio_server_onsendto, param);
 		assert(0 == r);
 	}
 }
@@ -127,12 +131,11 @@ static void aio_server_onrecvfrom(void* param, int code, size_t bytes, const cha
 ///  |----------------------<--------------------<--------------------<-----------------------------------+
 ///
 static void aio_client_onsendto(void* param, int code, size_t bytes);
-static void aio_client_onrecvfrom_v(void* param, int code, size_t bytes, const char* ip, int port)
+static void aio_client_onrecvfrom_v(void* param, int code, size_t bytes, const struct sockaddr* addr, socklen_t addrlen)
 {
 	int r;
 	struct aio_client_t *client = (struct aio_client_t*)param;
 	assert(0 == code && bytes <= strlen(s_smsg2));
-	assert(port == PORT);
 
 	client->len += bytes;
 	if(bytes < strlen(s_smsg2))
@@ -153,10 +156,13 @@ static void aio_client_onrecvfrom_v(void* param, int code, size_t bytes, const c
 	}
 	else
 	{
+		struct sockaddr_in addr2;
+		socket_addr_from_ipv4(&addr2, "127.0.0.1", PORT);
+
 		assert(0 == strcmp(s_smsg2, client->msg));
 
 		printf("aio-client round: %d\n", ++client->cc);
-		r = aio_socket_sendto(client->socket, "127.0.0.1", PORT, s_cmsg1, strlen(s_cmsg1), aio_client_onsendto, param);
+		r = aio_socket_sendto(client->socket, (struct sockaddr*)&addr2, sizeof(addr2), s_cmsg1, strlen(s_cmsg1), aio_client_onsendto, param);
 		assert(0 == r);
 	}
 }
@@ -176,12 +182,11 @@ static void aio_client_onsendto_v(void* param, int code, size_t bytes)
 	assert(0 == r);
 }
 
-static void aio_client_onrecvfrom(void* param, int code, size_t bytes, const char* ip, int port)
+static void aio_client_onrecvfrom(void* param, int code, size_t bytes, const struct sockaddr* addr, socklen_t addrlen)
 {
 	int r;
 	struct aio_client_t *client = (struct aio_client_t*)param;
 	assert(0 == code && bytes <= strlen(s_smsg1));
-	assert(port == PORT);
 
 	client->len += bytes;
 	if(bytes < strlen(s_smsg1))
@@ -191,11 +196,14 @@ static void aio_client_onrecvfrom(void* param, int code, size_t bytes, const cha
 	}
 	else
 	{
+		struct sockaddr_in addr2;
+		socket_addr_from_ipv4(&addr2, "127.0.0.1", PORT);
+
 		assert(0 == strcmp(s_smsg1, client->msg));
 
 		socket_setbufvec(client->vec, 0, (void*)s_cmsg2, strlen(s_cmsg2)/2);
 		socket_setbufvec(client->vec, 1, (void*)(s_cmsg2+strlen(s_cmsg2)/2), strlen(s_cmsg2)/2);
-		r = aio_socket_sendto_v(client->socket, "127.0.0.1", PORT, client->vec, 2, aio_client_onsendto_v, param);
+		r = aio_socket_sendto_v(client->socket, (struct sockaddr*)&addr2, sizeof(addr2), client->vec, 2, aio_client_onsendto_v, param);
 		assert(0 == r);
 	}
 }
@@ -218,20 +226,23 @@ void aio_socket_test3(void)
 	struct aio_client_t client;
 	struct aio_server_t server;
 
+	struct sockaddr_in addr;
+	socket_addr_from_ipv4(&addr, "127.0.0.1", PORT);
+
 	aio_socket_init(1);
 
 	memset(&client, 0, sizeof(client));
 	memset(&server, 0, sizeof(server));
 
-	server.socket = aio_socket_create(udpsocket_create(NULL, PORT), 1);
-	client.socket = aio_socket_create(udpsocket_create(NULL, PORT+1), 1);
+	server.socket = aio_socket_create(udpsocket_create(NULL, PORT, 0), 1);
+	client.socket = aio_socket_create(udpsocket_create(NULL, PORT+1, 0), 1);
 
 	printf("aio-server round: %d\n", ++server.cc);
 	r = aio_socket_recvfrom(server.socket, server.msg, strlen(s_cmsg1), aio_server_onrecvfrom, &server);
 	assert(0 == r);
 
 	printf("aio-client round: %d\n", ++client.cc);
-	r = aio_socket_sendto(client.socket, "127.0.0.1", PORT, s_cmsg1, strlen(s_cmsg1), aio_client_onsendto, &client);
+	r = aio_socket_sendto(client.socket, (struct sockaddr*)&addr, sizeof(addr), s_cmsg1, strlen(s_cmsg1), aio_client_onsendto, &client);
 	assert(0 == r);
 
 	r = 1000;

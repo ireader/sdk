@@ -5,6 +5,10 @@
 #define bool_false	0
 
 #if defined(OS_WINDOWS)
+#if _MSC_VER >= 1900
+	#include <inttypes.h>
+	#include <stdint.h>
+#else
 	typedef unsigned char		bool_t;
 	typedef char				int8_t;
 	typedef short				int16_t;
@@ -19,10 +23,11 @@
 	typedef unsigned __int64	uint64_t;
 	#define PRId64				"I64d"
 	#define PRIu64				"I64u"
-	#define PRIsize_t			"Iu"	// MSDN: Size Specification
-	#define PRIptrdiff_t		"Ix"	// MSDN: Size Specification
 	#define OS_INT64_TYPE
 	#endif /* OS_INT64_TYPE */
+#endif
+	#define PRIsize_t			"Iu"	// MSDN: Size Specification
+	#define PRIptrdiff_t		"Ix"	// MSDN: Size Specification
 #else
 	/* The ISO C99 standard specifies that these macros must only be defined if explicitly requested.  */
 	#define __STDC_FORMAT_MACROS

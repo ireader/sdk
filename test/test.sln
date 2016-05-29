@@ -1,13 +1,15 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test.vcproj", "{8DDF8E0A-A452-41A9-81AB-81EF44E52A2E}"
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test.vcxproj", "{8DDF8E0A-A452-41A9-81AB-81EF44E52A2E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tcp-server-aio", "tcp\tcp-server-aio\tcp-server-aio.vcproj", "{B8AD285F-2727-45D8-A6AA-2BE7D0DAE03B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tcp-server-aio", "tcp\tcp-server-aio\tcp-server-aio.vcxproj", "{B8AD285F-2727-45D8-A6AA-2BE7D0DAE03B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tcp-client", "tcp\tcp-client\tcp-client.vcproj", "{5479B20B-DCDB-42C2-AC96-62E2E943F041}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tcp-client", "tcp\tcp-client\tcp-client.vcxproj", "{5479B20B-DCDB-42C2-AC96-62E2E943F041}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tcp-server", "tcp\tcp-server\tcp-server.vcproj", "{1F1D488C-3778-44D5-B1F3-EAF5204E0CA8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tcp-server", "tcp\tcp-server\tcp-server.vcxproj", "{1F1D488C-3778-44D5-B1F3-EAF5204E0CA8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -136,6 +136,7 @@ inline int socket_setrecvtimeout(IN socket_t sock, IN size_t seconds); // recv t
 inline int socket_getrecvtimeout(IN socket_t sock, OUT size_t* seconds);
 inline int socket_setreuseaddr(IN socket_t sock, IN int enable); // reuse addr. 
 inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable);
+inline int socket_setipv6only(IN socket_t sock, IN int ipv6_only); // 1-ipv6 only, 0-both ipv4 and ipv6
 inline int socket_getdomain(IN socket_t sock, OUT int* domain); // get socket protocol address family(sock don't need bind)
 
 // socket status
@@ -150,10 +151,11 @@ inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT
 inline int socket_isip(IN const char* ip); // socket_isip("192.168.1.2") -> 0, socket_isip("www.google.com") -> -1
 inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN]);
 inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN]);
-inline int socket_name(IN struct sockaddr* sa, socklen_t salen, char* host, size_t hostlen);
 
-inline int socket_addr_ipv4(OUT struct sockaddr_in* addrin, IN const char* ip_or_dns, IN unsigned short port);
-inline int socket_addr_ipv6(OUT struct sockaddr_in6* addrin, IN const char* ip_or_dns, IN unsigned short port);
+inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ip_or_dns, IN unsigned short port);
+inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* ip_or_dns, IN unsigned short port);
+inline int socket_addr_to(IN const struct sockaddr* sa, socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT unsigned short* port);
+inline int socket_addr_name(IN const struct sockaddr* sa, socklen_t salen, char* host, size_t hostlen);
 
 inline void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len);
 
@@ -360,13 +362,11 @@ inline int socket_bind_any(IN socket_t sock, IN unsigned short port)
 	}
 	else if (AF_INET6 == domain)
 	{
-		int ipv6 = 1;
 		struct sockaddr_in6 addr6;
 		memset(&addr6, 0, sizeof(addr6));
 		addr6.sin6_family = AF_INET6;
 		addr6.sin6_port = htons(port);
 		addr6.sin6_addr = in6addr_any;
-//		setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (const char*)&ipv6, sizeof(ipv6));
 		return socket_bind(sock, (struct sockaddr*)&addr6, sizeof(addr6));
 	}
 	else
@@ -831,6 +831,7 @@ inline int socket_setnondelay(IN socket_t sock, IN int nodelay)
 {
 	// 0-delay(enable the Nagle algorithm)
 	// 1-no-delay(disable the Nagle algorithm)
+	// http://linux.die.net/man/7/tcp
 	return setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&nodelay, sizeof(nodelay));
 }
 
@@ -843,6 +844,15 @@ inline int socket_getunread(IN socket_t sock, OUT size_t* size)
 #endif
 }
 
+inline int socket_setipv6only(IN socket_t sock, IN int ipv6_only)
+{
+	// Windows Vista or later: default 1
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms738574%28v=vs.85%29.aspx
+	// Linux 2.4.21 and 2.6: /proc/sys/net/ipv6/bindv6only defalut 0
+	// http://www.man7.org/linux/man-pages/man7/ipv6.7.html
+	return setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (const char*)&ipv6_only, sizeof(ipv6_only));
+}
+
 inline int socket_getdomain(IN socket_t sock, OUT int* domain)
 {
 	int r;
@@ -853,7 +863,7 @@ inline int socket_getdomain(IN socket_t sock, OUT int* domain)
 	if (0 == r)
 		*domain = protocolInfo.iAddressFamily;
 #else
-	int len = sizeof(domain);
+	socklen_t len = sizeof(domain);
 	r = getsockopt(sock, SOL_SOCKET, SO_DOMAIN, (char*)domain, &len);
 #endif
 	return r;
@@ -861,57 +871,22 @@ inline int socket_getdomain(IN socket_t sock, OUT int* domain)
 
 inline int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT unsigned short* port)
 {
-	char buf[sizeof(struct sockaddr) + SOCKET_ADDRLEN];
-
-	socklen_t addrlen = sizeof(buf);
-	if(socket_error == getsockname(sock, (struct sockaddr*)buf, &addrlen))
+	struct sockaddr_storage addr;
+	socklen_t addrlen = sizeof(addr);
+	if(socket_error == getsockname(sock, (struct sockaddr*)&addr, &addrlen))
 		return socket_error;
 
-	if (AF_INET == ((struct sockaddr*)buf)->sa_family)
-	{
-		inet_ntop(AF_INET, &((struct sockaddr_in*)buf)->sin_addr, ip, SOCKET_ADDRLEN);
-		*port = ntohs(((struct sockaddr_in*)buf)->sin_port);
-	}
-	else if (AF_INET6 == ((struct sockaddr*)buf)->sa_family)
-	{
-		inet_ntop(AF_INET6, &((struct sockaddr_in6*)buf)->sin6_addr, ip, SOCKET_ADDRLEN);
-		*port = ntohs(((struct sockaddr_in6*)buf)->sin6_port);
-	}
-	else
-	{
-		return -1; // unknown address family
-	}
-	return 0;
+	return socket_addr_to((struct sockaddr*)&addr, addrlen, ip, port);
 }
 
 inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT unsigned short* port)
 {
-	char buf[sizeof(struct sockaddr) + SOCKET_ADDRLEN];
-
-	socklen_t addrlen = sizeof(buf);
-	if(socket_error == getpeername(sock, (struct sockaddr*)&buf, &addrlen))
+	struct sockaddr_storage addr;
+	socklen_t addrlen = sizeof(addr);
+	if(socket_error == getpeername(sock, (struct sockaddr*)&addr, &addrlen))
 		return socket_error;
-
-	if (AF_INET == ((struct sockaddr*)buf)->sa_family)
-	{
-		inet_ntop(AF_INET, &((struct sockaddr_in*)buf)->sin_addr, ip, SOCKET_ADDRLEN);
-		*port = ntohs(((struct sockaddr_in*)buf)->sin_port);
-	}
-	else if (AF_INET6 == ((struct sockaddr*)buf)->sa_family)
-	{
-		inet_ntop(AF_INET6, &((struct sockaddr_in6*)buf)->sin6_addr, ip, SOCKET_ADDRLEN);
-		*port = ntohs(((struct sockaddr_in6*)buf)->sin6_port);
-	}
-	else
-	{
-		return -1; // unknown address family
-	}
-	return 0;
-}
-
-inline int socket_name(IN struct sockaddr* sa, socklen_t salen, char* host, size_t hostlen)
-{
-	return getnameinfo(sa, salen, host, hostlen, NULL, 0, 0);
+	
+	return socket_addr_to((struct sockaddr*)&addr, addrlen, ip, port);
 }
 
 inline int socket_isip(IN const char* ip)
@@ -941,28 +916,6 @@ inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN])
 
 	freeaddrinfo(addr);
 	return ptr ? 0 : -1;
-
-#if 0
-	struct hostent* host;
-	if(0 == socket_isip(ip_or_dns))
-	{
-		strcpy(ip, ip_or_dns);
-		return 0;
-	}
-
-	// MSDN: The gethostbyname function cannot resolve IP address strings passed to it. 
-	//		 Such a request is treated exactly as if an unknown host name were passed.	
-	host = gethostbyname(ip_or_dns);
-	if(NULL == host || host->h_addrtype!=AF_INET)
-		return -1;
-
-	assert(4 == host->h_length);
-	sprintf(ip, "%d.%d.%d.%d", 
-		(int)(unsigned char)(host->h_addr[0]), (int)(unsigned char)(host->h_addr[1]), 
-		(int)(unsigned char)(host->h_addr[2]), (int)(unsigned char)(host->h_addr[3]));
-	//memcpy(ip, host->h_addr, host->h_length);
-	return 0;
-#endif
 }
 
 inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN])
@@ -986,7 +939,7 @@ inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN])
 	return ptr ? 0 : -1;
 }
 
-inline int socket_addr_ipv4(OUT struct sockaddr_in* addrin, IN const char* ip_or_dns, IN unsigned short port)
+inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ip_or_dns, IN unsigned short port)
 {
 	int r;
 	char ip[SOCKET_ADDRLEN];
@@ -994,13 +947,13 @@ inline int socket_addr_ipv4(OUT struct sockaddr_in* addrin, IN const char* ip_or
 	if(r < 0)
 		return r;
 
-	addrin->sin_family = AF_INET;
-	addrin->sin_port = htons(port);
-	inet_pton(AF_INET, ip, &addrin->sin_addr);
+	addr4->sin_family = AF_INET;
+	addr4->sin_port = htons(port);
+	inet_pton(AF_INET, ip, &addr4->sin_addr);
 	return 0;
 }
 
-inline int socket_addr_ipv6(OUT struct sockaddr_in6* addrin, IN const char* ip_or_dns, IN unsigned short port)
+inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* ip_or_dns, IN unsigned short port)
 {
 	int r;
 	char ip[SOCKET_ADDRLEN];
@@ -1008,11 +961,38 @@ inline int socket_addr_ipv6(OUT struct sockaddr_in6* addrin, IN const char* ip_o
 	if (r < 0)
 		return r;
 
-	memset(addrin, 0, sizeof(struct sockaddr_in6));
-	addrin->sin6_family = AF_INET6;
-	addrin->sin6_port = htons(port);
-	inet_pton(AF_INET6, ip, &addrin->sin6_addr);
+	memset(addr6, 0, sizeof(struct sockaddr_in6));
+	addr6->sin6_family = AF_INET6;
+	addr6->sin6_port = htons(port);
+	inet_pton(AF_INET6, ip, &addr6->sin6_addr);
 	return 0;
+}
+
+inline int socket_addr_to(IN const struct sockaddr* sa, socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT unsigned short* port)
+{
+	if (AF_INET == sa->sa_family)
+	{
+		if (salen < sizeof(struct sockaddr_in)) return -1;
+		inet_ntop(AF_INET, &((struct sockaddr_in*)sa)->sin_addr, ip, SOCKET_ADDRLEN);
+		*port = ntohs(((struct sockaddr_in*)sa)->sin_port);
+	}
+	else if (AF_INET6 == sa->sa_family)
+	{
+		if (salen < sizeof(struct sockaddr_in6)) return -1;
+		inet_ntop(AF_INET6, &((struct sockaddr_in6*)sa)->sin6_addr, ip, SOCKET_ADDRLEN);
+		*port = ntohs(((struct sockaddr_in6*)sa)->sin6_port);
+	}
+	else
+	{
+		return -1; // unknown address family
+	}
+
+	return 0;
+}
+
+inline int socket_addr_name(IN const struct sockaddr* sa, socklen_t salen, char* host, size_t hostlen)
+{
+	return getnameinfo(sa, salen, host, hostlen, NULL, 0, 0);
 }
 
 inline void socket_setbufvec(socket_bufvec_t* vec, int idx, void* ptr, size_t len)

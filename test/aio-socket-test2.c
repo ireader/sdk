@@ -117,13 +117,16 @@ static void aio_server_onrecv(void* param, int code, size_t bytes)
 	}
 }
 
-static void aio_server_onaccept(void* param, int code, socket_t socket, const char* ip, int port)
+static void aio_server_onaccept(void* param, int code, socket_t socket, const struct sockaddr* addr, socklen_t addrlen)
 {
 	int r;
+	unsigned short port;
+	char ip[SOCKET_ADDRLEN];
 	struct aio_server_t *server = (struct aio_server_t*)param;
 
 	assert(0 == code);
-	printf("aio_server_onaccept: %s:%d\n", ip, port);
+	socket_addr_to(addr, addrlen, ip, &port);
+	printf("aio_server_onaccept: %s:%hu\n", ip, port);
 
 	server->len = 0;
 	memset(server->msg, 0, sizeof(server->msg));
@@ -241,14 +244,18 @@ void aio_socket_test2(void)
 	aio_socket_t socket;
 	struct aio_client_t client;
 	struct aio_server_t server;
+	struct sockaddr_in addr;
+	socklen_t addrlen = sizeof(addr);
 
 	aio_socket_init(1);
 
 	memset(&client, 0, sizeof(client));
 	memset(&server, 0, sizeof(server));
 
+	socket_addr_from_ipv4(&addr, "127.0.0.1", PORT);
+
 	// bind and listen
-	socket = aio_socket_create(tcpserver_create(NULL, PORT, 32), 1);
+	socket = aio_socket_create(tcpserver_create(NULL, PORT, 32, 0), 1);
 	r = aio_socket_accept(socket, aio_server_onaccept, &server);
 	assert(0 == r);
 
@@ -258,7 +265,7 @@ void aio_socket_test2(void)
 	r = socket_bind_any(tcp, 0);
 #endif
 	client.socket = aio_socket_create(tcp, 1);
-	aio_socket_connect(client.socket, "127.0.0.1", PORT, aio_client_onconnect, &client);
+	aio_socket_connect(client.socket, (struct sockaddr*)&addr, addrlen, aio_client_onconnect, &client);
 
 	r = 1000;
 	while(--r > 0)

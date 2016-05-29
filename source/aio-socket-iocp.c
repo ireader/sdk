@@ -1,4 +1,5 @@
 #include "aio-socket.h"
+#include <WS2tcpip.h>
 #include <assert.h>
 
 // aio_socket_process(socket)
@@ -69,8 +70,8 @@ struct aio_context_recvfrom
 {
 	aio_onrecvfrom proc;
 	void* param;
-	struct sockaddr_in addr;
-	int addrlen;
+	socklen_t addrlen;
+	struct sockaddr_storage addr;
 };
 
 struct aio_context_action
@@ -182,11 +183,10 @@ static int iocp_bind(SOCKET socket, ULONG_PTR key)
 //////////////////////////////////////////////////////////////////////////
 static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
-	char ip[16];
 	int locallen, remotelen;
-	struct sockaddr_in *local;
-	struct sockaddr_in *remote;
-	bytes = sizeof(struct sockaddr_in)+16;
+	struct sockaddr *local;
+	struct sockaddr *remote;
+//	bytes = sizeof(struct sockaddr_in)+16;
 
 	if(0 == error)
 	{
@@ -199,10 +199,9 @@ static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio,
 
 		local = remote = NULL;
 		locallen = remotelen = 0;
-		GetAcceptExSockaddrs(aio->accept.buffer, 0, bytes, bytes, (struct sockaddr **)&local, &locallen, (struct sockaddr **)&remote, &remotelen);
-
-		strcpy(ip, inet_ntoa(remote->sin_addr));
-		aio->accept.proc(aio->accept.param, 0, aio->accept.socket, ip, (int)ntohs(remote->sin_port));
+		GetAcceptExSockaddrs(aio->accept.buffer, 0, bytes, bytes, &local, &locallen, &remote, &remotelen);
+		aio->accept.proc(aio->accept.param, 0, aio->accept.socket, remote, remotelen);
+		//aio->accept.proc(aio->accept.param, 0, aio->accept.socket, ip, (int)ntohs(remote->sin_port));
 	}
 	else
 	{
@@ -230,20 +229,14 @@ static void iocp_recv(struct aio_context* ctx, struct aio_context_action* aio, D
 
 static void iocp_send(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
-	ctx;
+	(void)ctx;
 	aio->send.proc(aio->send.param, error, bytes);
 }
 
 static void iocp_recvfrom(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
-	char ip[16] = {0};
-	struct sockaddr_in *remote = &aio->recvfrom.addr;
-
-	ctx;
-	if(0 == error)
-		strcpy(ip, inet_ntoa(remote->sin_addr));
-
-	aio->recvfrom.proc(aio->recvfrom.param, error, bytes, ip, ntohs(remote->sin_port));
+	(void)ctx;
+	aio->recvfrom.proc(aio->recvfrom.param, error, bytes, (struct sockaddr*)&aio->recvfrom.addr, aio->recvfrom.addrlen);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -459,22 +452,17 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 	return 0;
 }
 
-int aio_socket_connect(aio_socket_t socket, const char* ip, int port, aio_onconnect proc, void* param)
+int aio_socket_connect(aio_socket_t socket, const struct sockaddr *addr, socklen_t addrlen, aio_onconnect proc, void* param)
 {
 	struct aio_context *ctx = (struct aio_context*)socket;
 	struct aio_context_action *aio;
-	struct sockaddr_in addr;
-
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons((u_short)port);
-	addr.sin_addr.s_addr = inet_addr(ip);
 
 	aio = util_alloc(ctx);
 	aio->action = iocp_connect;
 	aio->connect.proc = proc;
 	aio->connect.param = param;
 
-	if(!ConnectEx(ctx->socket, (const struct sockaddr *)&addr, sizeof(addr), NULL, 0, NULL, &aio->overlapped))
+	if(!ConnectEx(ctx->socket, addr, addrlen, NULL, 0, NULL, &aio->overlapped))
 	{
 		DWORD ret = WSAGetLastError();
 		if(ERROR_IO_PENDING != ret)
@@ -557,12 +545,12 @@ int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onr
 	return aio_socket_recvfrom_v(socket, vec, 1, proc, param);
 }
 
-int aio_socket_sendto(aio_socket_t socket, const char* ip, int port, const void* buffer, size_t bytes, aio_onsend proc, void* param)
+int aio_socket_sendto(aio_socket_t socket, const struct sockaddr *addr, socklen_t addrlen, const void* buffer, size_t bytes, aio_onsend proc, void* param)
 {
 	socket_bufvec_t vec[1];
 	vec[0].buf = (CHAR FAR*)buffer;
 	vec[0].len = bytes;
-	return aio_socket_sendto_v(socket, ip, port, vec, 1, proc, param);
+	return aio_socket_sendto_v(socket, addr, addrlen, vec, 1, proc, param);
 }
 
 int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param)
@@ -590,23 +578,17 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 	return 0;
 }
 
-int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
+int aio_socket_sendto_v(aio_socket_t socket, const struct sockaddr *addr, socklen_t addrlen, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
 {
-	DWORD dwBytes = sizeof(struct sockaddr_in);
 	struct aio_context *ctx = (struct aio_context*)socket;
 	struct aio_context_action *aio;
-	struct sockaddr_in addr;
-
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons((u_short)port);
-	addr.sin_addr.s_addr = inet_addr(ip);
-
+	
 	aio = util_alloc(ctx);
 	aio->action = iocp_send;
 	aio->send.proc = proc;
 	aio->send.param = param;
 
-	if(SOCKET_ERROR == WSASendTo(ctx->socket, vec, (DWORD)n, &dwBytes, 0, (const struct sockaddr *)&addr, (int)dwBytes, &aio->overlapped, NULL))
+	if(SOCKET_ERROR == WSASendTo(ctx->socket, vec, (DWORD)n, NULL, 0, addr, addrlen, &aio->overlapped, NULL))
 	{
 		DWORD ret = WSAGetLastError();
 		if(WSA_IO_PENDING != ret)

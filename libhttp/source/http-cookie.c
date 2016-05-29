@@ -36,7 +36,7 @@ cookie_t http_cookie_parse(const char* cookie, size_t bytes)
 	if(!ck)
 		return NULL;
 
-	memset(ck, 0, sizeof(*ck));
+	memset(ck, 0, sizeof(*ck) + bytes + 1);
 	ck->cookie = (char*)(ck + 1);
 	memcpy(ck->cookie, cookie, bytes);
 	ck->cookie[bytes] = '\0';

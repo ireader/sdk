@@ -173,6 +173,10 @@ inline int mac_gettime(struct timespec *t){
 }
 #endif
 
+#if defined(_MSC_VER)
+#pragma warning(disable: 4996) // GetVersionEx
+#pragma warning(disable: 28159)
+#endif
 inline int system_version(int* major, int* minor)
 {
 #if defined(OS_WINDOWS)
@@ -209,6 +213,10 @@ inline int system_version(int* major, int* minor)
 	return 0;
 #endif
 }
+#if defined(_MSC_VER)
+#pragma warning(default: 4996)
+#pragma warning(default: 28159)
+#endif
 
 inline module_t system_load(const char* module)
 {

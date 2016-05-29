@@ -5,7 +5,7 @@
 #include "sys/thread.h"
 #include <errno.h>
 
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS) && !defined(EINPROGRESS)
 #define EINPROGRESS             WSAEINPROGRESS
 #endif
 
@@ -19,7 +19,7 @@ static int STDCALL worker(IN void* param)
 	socklen_t len = sizeof(addr);
 
 	param = param;
-	socket = tcpserver_create(NULL, 8008, 64);
+	socket = tcpserver_create(NULL, 8008, 64, 0);
 
 	//while(1)
 	{
@@ -44,9 +44,8 @@ static int aio_socket_recv_test(void)
 	char msg[1024];
 	size_t timeout;
 
-	socket = socket_tcp();
-	r = socket_connect_ipv4_by_time(socket, "127.0.0.1", 8008, 5000);
-	if(0 != r) printf("socket_connect_ipv4_by_time: %d\n", r);
+	socket = socket_connect_host("127.0.0.1", 8008, 5000);
+	if(socket_invalid == socket) printf("socket_connect_ipv4_by_time: %d\n", errno);
 
 	r = socket_getrecvtimeout(socket, &timeout);
 	//printf("socket_getrecvtimeout: %d, timeout=%u\n", r, timeout);
@@ -108,9 +107,8 @@ static int aio_socket_send_test(void)
 	aio_socket_t aiosocket;
 	size_t timeout;
 
-	socket = socket_tcp();
-	r = socket_connect_ipv4_by_time(socket, "127.0.0.1", 8008, 5000);
-	if(0 != r) printf("socket_connect_ipv4_by_time: %d\n", r);
+	socket = socket_connect_host("127.0.0.1", 8008, 5000);
+	if(socket_invalid == socket) printf("socket_connect_ipv4_by_time: %d\n", errno);
 
 	r = socket_getsendtimeout(socket, &timeout);
 	//printf("socket_getsendtimeout: %d, timeout=%u\n", r, timeout);

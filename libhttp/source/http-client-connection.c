@@ -58,17 +58,12 @@ static int http_connect(struct http_client_transport_t *http)
 
 	if(socket_invalid == http->socket)
 	{
-		int r;
 		socket_t socket;
-		socket = socket_tcp();
-		r = socket_connect_ipv4_by_time(socket, http->pool->ip, http->pool->port, http->pool->wtimeout);
-		socket_setnonblock(socket, 0); // restore block status
-		if(0 != r)
-		{
-			socket_close(socket);
-			return r;
-		}
+		socket = socket_connect_host(http->pool->ip, http->pool->port, http->pool->wtimeout);
+		if(socket_invalid == socket)
+			return socket_geterror();
 
+		socket_setnonblock(socket, 0); // restore block status
 		http->socket = socket;
 	}
 

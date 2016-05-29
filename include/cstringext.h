@@ -122,7 +122,10 @@ extern "C" {
 #if defined(OS_WINDOWS)
 char* strndup(const char* p, size_t n);
 
+#if _MSC_VER < 1900
 int snprintf(char *str, size_t size, const char *format, ...);
+#endif
+
 #else
 
 #ifndef GetLastError

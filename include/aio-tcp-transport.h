@@ -8,7 +8,7 @@ struct aio_tcp_transport_handler_t
 	/// param[in] ptr user-defined pointer input from aio_tcp_transport_create ptr parameter 
 	/// param[in] session transport session parameter. use with send/sendv/addref/release
 	/// @return user-defined pointer
-	void* (*onconnected)(void* ptr, void* session, const char* ip, int port);
+	void* (*onconnected)(void* ptr, void* session, const struct sockaddr* sa, socklen_t salen);
 
 	/// param[in] data user-defined pointer return by onconnected
 	/// @return 1-receive more data, 0-don't receive

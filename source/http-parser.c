@@ -122,7 +122,7 @@ inline int is_transfer_encoding_chunked(struct http_context *ctx)
 static int http_rawdata(struct http_context *ctx, const void* data, size_t bytes)
 {
 	void *p;
-	int capacity;
+	size_t capacity;
 
 	if(ctx->raw_capacity - ctx->raw_size < bytes + 1)
 	{

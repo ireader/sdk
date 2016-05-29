@@ -3,39 +3,45 @@
 
 #include "sys/sock.h"
 
-inline socket_t udpsocket_create(const char* ip, int port)
+inline socket_t udpsocket_create(const char* ip, int port, int ipv6)
 {
-	int ret;
-	socket_t socket;
-	struct sockaddr_in addr;
+	int r;
+	socket_t sock;
+	char portstr[16];
+	struct addrinfo hints, *addr, *ptr;
 
-	// new a UDP socket
-	socket = socket_udp();
-	if(socket_error == socket)
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = ipv6 ? AF_INET6 : AF_INET;
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AI_PASSIVE;
+	sprintf(portstr, "%hu", port);
+	r = getaddrinfo(ip, portstr, &hints, &addr);
+	if (0 != r)
 		return socket_invalid;
 
-	// reuse addr
-//	socket_setreuseaddr(socket, 1);
-
-	// bind
-	if(ip && ip[0])
+	r = -1; // not found
+	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
-		ret = socket_addr_ipv4(&addr, ip, (unsigned short)port);
-		if(0 == ret)
-			ret = socket_bind(socket, (struct sockaddr*)&addr, sizeof(addr));
-	}
-	else
-	{
-		ret = socket_bind_any(socket, (unsigned short)port);
+		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+		if (socket < 0)
+			continue;
+
+		// reuse addr
+//		socket_setreuseaddr(sock, 1);
+
+		// restrict IPv6 only
+#if defined(OS_LINUX)
+		if (AF_INET6 == ptr->ai_addr->sa_family)
+			socket_setipv6only(sock, 1);
+#endif
+
+		r = socket_bind(sock, ptr->ai_addr, ptr->ai_addrlen);
+		if (0 != r)
+			socket_close(sock);
 	}
 
-	if(0 != ret)
-	{
-		socket_close(socket);
-		return socket_invalid;
-	}
-
-	return socket;
+	freeaddrinfo(addr);
+	return 0 == r ? sock : socket_invalid;
 }
 
 #endif /* !_udpsocket_h_ */

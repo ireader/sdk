@@ -8,7 +8,7 @@ struct aio_udp_transport_handler_t
 	/// param[in] ptr user-defined pointer input from aio_udp_transport_create ptr parameter 
 	/// param[in] session transport session parameter. use with send/sendv/addref/release
 	/// param[out] user user-defined pointer, use for onsend
-	void (*onrecv)(void* ptr, void* session, const void* msg, size_t bytes, const char* ip, int port, void** user);
+	void (*onrecv)(void* ptr, void* session, const void* msg, size_t bytes, const struct sockaddr* addr, socklen_t addrlen, void** user);
 
 	/// param[in] user user-defined pointer(onrecv parameter)
 	void (*onsend)(void* ptr, void* session, void* user, int code, size_t bytes);

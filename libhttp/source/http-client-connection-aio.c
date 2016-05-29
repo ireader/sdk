@@ -275,7 +275,7 @@ static int http_connect(struct http_client_aio_transport_t *http, const char* ip
 
 	assert(http->running);
 	assert(invalid_aio_socket == http->socket);
-	r = socket_ip(ip, ipaddr);
+	r = socket_ipv4(ip, ipaddr);
 	if(0 != r)
 		return r;
 

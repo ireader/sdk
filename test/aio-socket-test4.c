@@ -15,7 +15,7 @@ static int STDCALL worker0(IN void* param)
 	socklen_t len = sizeof(addr);
 
 	param = param;
-	socket = tcpserver_create(NULL, 8008, 64);
+	socket = tcpserver_create(NULL, 8008, 64, 0);
 
 //	while(1)
 	{
@@ -54,7 +54,6 @@ static void OnSend(void* aiosocket, int code, size_t bytes)
 
 void aio_socket_test4(void)
 {
-	int r = 0;
 	socket_t socket;
 	aio_socket_t aiosocket;
 	pthread_t thread[3];
@@ -68,9 +67,8 @@ void aio_socket_test4(void)
 	system_sleep(3000);
 
 	printf("aio tcp socket\n");
-	socket = socket_tcp();
-	r = socket_connect_ipv4_by_time(socket, "127.0.0.1", 8008, 5000);
-	printf("connect:%d\n",r);
+	socket = socket_connect_host("127.0.0.1", 8008, 5000);
+	printf("connect:%d\n", errno);
 	aiosocket = aio_socket_create(socket, 1);
 	//system_sleep(5000);
 	aio_socket_send(aiosocket, msg, sizeof(msg), OnSend, aiosocket);

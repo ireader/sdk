@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <Mmdeviceapi.h>
 #include <Endpointvolume.h>
+#include <VersionHelpers.h>
 #pragma comment(lib, "Winmm.lib")
 #else
 #include <sys/types.h>
@@ -437,11 +438,7 @@ static int GetEndpointMute(int* mute)
 
 int GetMasterVolume(int* v)
 {
-	OSVERSIONINFO version;
-	memset(&version, 0, sizeof(version));
-	version.dwOSVersionInfoSize = sizeof(version);
-	GetVersionEx(&version);
-	if(version.dwMajorVersion >= 6)
+	if (IsWindowsVistaOrGreater())
 	{
 		// Windows Vista / Windows Server 2008 / Windows 7
 		return GetEndpointVolume(v);
@@ -456,11 +453,7 @@ int GetMasterVolume(int* v)
 
 int SetMasterVolume(int v)
 {
-	OSVERSIONINFO version;
-	memset(&version, 0, sizeof(version));
-	version.dwOSVersionInfoSize = sizeof(version);
-	GetVersionEx(&version);
-	if(version.dwMajorVersion >= 6)
+	if (IsWindowsVistaOrGreater())
 	{
 		// Windows Vista / Windows Server 2008 / Windows 7
 		return SetEndpointVolume(v);
@@ -475,11 +468,7 @@ int SetMasterVolume(int v)
 
 int SetMasterVolumeMute(int mute)
 {
-	OSVERSIONINFO version;
-	memset(&version, 0, sizeof(version));
-	version.dwOSVersionInfoSize = sizeof(version);
-	GetVersionEx(&version);
-	if(version.dwMajorVersion >= 6)
+	if (IsWindowsVistaOrGreater())
 	{
 		// Windows Vista / Windows Server 2008 / Windows 7
 		return SetEndpointMute(mute);
@@ -494,11 +483,7 @@ int SetMasterVolumeMute(int mute)
 
 int GetMasterVolumeMute(int* mute)
 {
-	OSVERSIONINFO version;
-	memset(&version, 0, sizeof(version));
-	version.dwOSVersionInfoSize = sizeof(version);
-	GetVersionEx(&version);
-	if(version.dwMajorVersion >= 6)
+	if(IsWindowsVistaOrGreater())
 	{
 		// Windows Vista / Windows Server 2008 / Windows 7
 		return GetEndpointMute(mute);

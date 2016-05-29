@@ -35,9 +35,9 @@ typedef void* aio_socket_t;
 /// aio_socket_accept callback
 /// @param[in] param user-defined parameter
 /// @param[in] code 0-ok, other-error, ip/port value undefined
-/// @param[in] ip remote client ip address
-/// @param[in] port remote client ip port
-typedef void (*aio_onaccept)(void* param, int code, socket_t socket, const char* ip, int port);
+/// @param[in] addr peer socket address(IPv4/IPv6)
+/// @param[in] addrlen peer socket address length in bytes
+typedef void (*aio_onaccept)(void* param, int code, socket_t socket, const struct sockaddr* addr, socklen_t addrlen);
 
 /// aio_socket_connect callback
 /// @param[in] param user-defined parameter
@@ -60,9 +60,9 @@ typedef void (*aio_onrecv)(void* param, int code, size_t bytes);
 /// @param[in] param user-defined parameter
 /// @param[in] code 0-ok, other-error
 /// @param[in] bytes 0-means socket closed, >0-transfered bytes
-/// @param[in] ip remote client ip address
-/// @param[in] port remote client ip port
-typedef void (*aio_onrecvfrom)(void* param, int code, size_t bytes, const char* ip, int port);
+/// @param[in] addr peer socket address(IPv4/IPv6)
+/// @param[in] addrlen peer socket address length in bytes
+typedef void (*aio_onrecvfrom)(void* param, int code, size_t bytes, const struct sockaddr* addr, socklen_t addrlen);
 
 /// aio initialization
 /// @param[in] threads max concurrent thread call aio_socket_process
@@ -97,11 +97,11 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param);
 
 /// connect to remote server
 /// @param[in] socket aio socket
-/// @param[in] ip server IPv4 address
-/// @param[in] port server listen port
+/// @param[in] addr peer socket address(IPv4 or IPv6)
+/// @param[in] addrlen addr length in bytes
 /// @return 0-ok, 10022-don't bound(see remark), <0-error don't call proc if return error
 /// Remark: windows socket need bind() port before connect. e.g. socket_bind_any(socket, 0);
-int aio_socket_connect(aio_socket_t socket, const char* ipv4, int port, aio_onconnect proc, void* param);
+int aio_socket_connect(aio_socket_t socket, const struct sockaddr *addr, socklen_t addrlen, aio_onconnect proc, void* param);
 
 /// aio send
 /// @param[in] socket aio socket
@@ -127,14 +127,14 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 
 /// aio udp send
 /// @param[in] socket aio socket
-/// @param[in] ip remote host IPv4 address
-/// @param[in] port remote host port
+/// @param[in] addr peer socket address(IPv4 or IPv6)
+/// @param[in] addrlen addr length in bytes
 /// @param[in] buffer outbound buffer
 /// @param[in] bytes buffer size
 /// @param[in] proc user-defined callback
 /// @param[in] param user-defined parameter
 /// @return 0-ok, <0-error, don't call proc if return error
-int aio_socket_sendto(aio_socket_t socket, const char* ipv4, int port, const void* buffer, size_t bytes, aio_onsend proc, void* param);
+int aio_socket_sendto(aio_socket_t socket, const struct sockaddr *addr, socklen_t addrlen, const void* buffer, size_t bytes, aio_onsend proc, void* param);
 
 /// aio udp recv
 /// @param[out] buffer data buffer(must valid before aio_onrecvfrom callback)
@@ -146,14 +146,14 @@ int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onr
 
 /// aio udp send
 /// @param[in] socket aio socket
-/// @param[in] ip remote host IPv4 address
-/// @param[in] port remote host port
+/// @param[in] addr peer socket address(IPv4 or IPv6)
+/// @param[in] addrlen addr length in bytes
 /// @param[in] vec buffer array(must valid before aio_onsend callback)
 /// @param[in] n vec item number
 /// @param[in] proc user-defined callback
 /// @param[in] param user-defined parameter
 /// @return 0-ok, <0-error, don't call proc if return error
-int aio_socket_sendto_v(aio_socket_t socket, const char* ip, int port, socket_bufvec_t* vec, int n, aio_onsend proc, void* param);
+int aio_socket_sendto_v(aio_socket_t socket, const struct sockaddr *addr, socklen_t addrlen, socket_bufvec_t* vec, int n, aio_onsend proc, void* param);
 
 /// aio udp recv
 /// @param[in] socket aio socket

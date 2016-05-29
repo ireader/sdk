@@ -21,7 +21,7 @@ void* http_server_create(const char* ip, int port)
 	struct aio_tcp_transport_handler_t handler;
 
 	// create server socket
-	socket = tcpserver_create(ip, port, 64);
+	socket = tcpserver_create(ip, port, 64, 0);
 	if(socket_invalid == socket)
 	{
 		printf("http_server_create(%s, %d): create socket error.\n", ip, port);

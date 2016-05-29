@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdarg.h>
 
+#if defined(_MSC_VER) && (_MSC_VER < 1900)
 int snprintf(char *str, size_t size, const char *format, ...)
 {
 	int n = -1;
@@ -20,3 +21,4 @@ int snprintf(char *str, size_t size, const char *format, ...)
 	}
 	return n;
 }
+#endif
