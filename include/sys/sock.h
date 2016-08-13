@@ -82,12 +82,12 @@ inline int socket_close(socket_t sock);
 
 inline int socket_connect(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
 inline int socket_connect_by_time(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen, IN int timeout); // need restore block status
-inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN unsigned short port, IN int timeout); // timeout: -1, wait forever
+inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int timeout); // timeout: -1, wait forever
 
 // MSDN: When using bind with the SO_EXCLUSIVEADDR or SO_REUSEADDR socket option, 
 //       the socket option must be set prior to executing bind to have any affect
 inline int socket_bind(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
-inline int socket_bind_any(IN socket_t sock, IN unsigned short port);
+inline int socket_bind_any(IN socket_t sock, IN u_short port);
 
 inline int socket_listen(IN socket_t sock, IN int backlog);
 inline socket_t socket_accept(IN socket_t sock, OUT struct sockaddr* addr, INOUT socklen_t* addrlen);
@@ -144,18 +144,19 @@ inline int socket_setnonblock(IN socket_t sock, IN int noblock); // non-block io
 inline int socket_setnondelay(IN socket_t sock, IN int nodelay); // non-delay io(Nagle Algorithm), 0-delay, 1-nodelay
 inline int socket_getunread(IN socket_t sock, OUT size_t* size); // MSDN: Use to determine the amount of data pending in the network's input buffer that can be read from socket s
 
-inline int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT unsigned short* port);
-inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT unsigned short* port);
+inline int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
+inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
 
 // socket utility
 inline int socket_isip(IN const char* ip); // socket_isip("192.168.1.2") -> 0, socket_isip("www.google.com") -> -1
 inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN]);
 inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN]);
 
-inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ip_or_dns, IN unsigned short port);
-inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* ip_or_dns, IN unsigned short port);
-inline int socket_addr_to(IN const struct sockaddr* sa, socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT unsigned short* port);
-inline int socket_addr_name(IN const struct sockaddr* sa, socklen_t salen, char* host, size_t hostlen);
+inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ip_or_dns, IN u_short port);
+inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* ip_or_dns, IN u_short port);
+inline int socket_addr_from(OUT struct sockaddr* sa, INOUT socklen_t* len, IN const char* ipv4_or_ipv6_or_dns, IN u_short port);
+inline int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
+inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN size_t hostlen);
 
 inline void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len);
 
@@ -304,7 +305,7 @@ inline int socket_connect_by_time(IN socket_t sock, IN const struct sockaddr* ad
 	return r;
 }
 
-inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN unsigned short port, IN int timeout)
+inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int timeout)
 {
 	int r;
 	socket_t sock;
@@ -344,7 +345,7 @@ inline int socket_bind(IN socket_t sock, IN const struct sockaddr* addr, IN sock
 	return bind(sock, addr, addrlen);
 }
 
-inline int socket_bind_any(IN socket_t sock, IN unsigned short port)
+inline int socket_bind_any(IN socket_t sock, IN u_short port)
 {
 	int r;
 	int domain;
@@ -869,7 +870,7 @@ inline int socket_getdomain(IN socket_t sock, OUT int* domain)
 	return r;
 }
 
-inline int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT unsigned short* port)
+inline int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
@@ -879,7 +880,7 @@ inline int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT uns
 	return socket_addr_to((struct sockaddr*)&addr, addrlen, ip, port);
 }
 
-inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT unsigned short* port)
+inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
@@ -891,27 +892,38 @@ inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT
 
 inline int socket_isip(IN const char* ip)
 {
+#if 1
 	char str[SOCKET_ADDRLEN];
 	if(1 != inet_pton(AF_INET, ip, str) && 1 != inet_pton(AF_INET6, ip, str))
 		return -1;
+	return 0;
+#else
+	struct addrinfo hints, *addr;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC; // AF_INET/AF_INET6 only
+	hints.ai_flags = AI_NUMERICHOST;
+	if (0 != getaddrinfo(ip, NULL, &hints, &addr))
+		return -1;
+	freeaddrinfo(&addr);
+#endif
 	return 0;
 }
 
 inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN])
 {
 	int r;
-	struct addrinfo *addr, *ptr;
-	r = getaddrinfo(ipv4_or_dns, NULL, NULL, &addr);
+	struct addrinfo hints, *addr, *ptr;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	r = getaddrinfo(ipv4_or_dns, NULL, &hints, &addr);
 	if (0 != r)
 		return r;
 
 	for(ptr = addr; ptr != NULL; ptr = ptr->ai_next)
 	{
-		if (AF_INET == ptr->ai_family)
-		{
-			if (NULL != inet_ntop(AF_INET, &(((struct sockaddr_in*)ptr->ai_addr)->sin_addr), ip, SOCKET_ADDRLEN))
-				break;
-		}
+		assert(AF_INET == ptr->ai_family);
+		if (NULL != inet_ntop(AF_INET, &(((struct sockaddr_in*)ptr->ai_addr)->sin_addr), ip, SOCKET_ADDRLEN))
+			break;
 	}
 
 	freeaddrinfo(addr);
@@ -921,54 +933,78 @@ inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN])
 inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN])
 {
 	int r;
-	struct addrinfo *addr, *ptr;
-	r = getaddrinfo(ipv6_or_dns, NULL, NULL, &addr);
+	struct addrinfo hints, *addr, *ptr;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET6;
+	r = getaddrinfo(ipv6_or_dns, NULL, &hints, &addr);
 	if (0 != r)
 		return r;
 
 	for (ptr = addr; ptr != NULL; ptr = ptr->ai_next)
 	{
-		if (AF_INET6 == ptr->ai_family)
-		{
-			if(NULL != inet_ntop(AF_INET6, &(((struct sockaddr_in6*)ptr->ai_addr)->sin6_addr), ip, SOCKET_ADDRLEN))
-				break; // only use the first address
-		}
+		assert(AF_INET6 == ptr->ai_family);
+		if(NULL != inet_ntop(AF_INET6, &(((struct sockaddr_in6*)ptr->ai_addr)->sin6_addr), ip, SOCKET_ADDRLEN))
+			break; // only use the first address
 	}
 
 	freeaddrinfo(addr);
 	return ptr ? 0 : -1;
 }
 
-inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ip_or_dns, IN unsigned short port)
+inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ipv4_or_dns, IN u_short port)
 {
 	int r;
-	char ip[SOCKET_ADDRLEN];
-	r = socket_ipv4(ip_or_dns, ip);
-	if(r < 0)
+	char portstr[16];
+	struct addrinfo hints, *addr;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	sprintf(portstr, "%hu", port);
+	r = getaddrinfo(ipv4_or_dns, portstr, &hints, &addr);
+	if (0 != r)
 		return r;
 
-	addr4->sin_family = AF_INET;
-	addr4->sin_port = htons(port);
-	inet_pton(AF_INET, ip, &addr4->sin_addr);
+	assert(sizeof(struct sockaddr_in) == addr->ai_addrlen);
+	memcpy(addr4, addr->ai_addr, addr->ai_addrlen);
+	freeaddrinfo(addr);
 	return 0;
 }
 
-inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* ip_or_dns, IN unsigned short port)
+inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* ipv6_or_dns, IN u_short port)
 {
 	int r;
-	char ip[SOCKET_ADDRLEN];
-	r = socket_ipv6(ip_or_dns, ip);
-	if (r < 0)
+	char portstr[16];
+	struct addrinfo hints, *addr;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET6;
+	sprintf(portstr, "%hu", port);
+	r = getaddrinfo(ipv6_or_dns, portstr, &hints, &addr);
+	if (0 != r)
 		return r;
 
-	memset(addr6, 0, sizeof(struct sockaddr_in6));
-	addr6->sin6_family = AF_INET6;
-	addr6->sin6_port = htons(port);
-	inet_pton(AF_INET6, ip, &addr6->sin6_addr);
+	assert(sizeof(struct sockaddr_in6) == addr->ai_addrlen);
+	memcpy(addr6, addr->ai_addr, addr->ai_addrlen);
+	freeaddrinfo(addr);
 	return 0;
 }
 
-inline int socket_addr_to(IN const struct sockaddr* sa, socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT unsigned short* port)
+inline int socket_addr_from(OUT struct sockaddr* sa, INOUT socklen_t* len, IN const char* ipv4_or_ipv6_or_dns, IN u_short port)
+{
+	int r;
+	char portstr[16];
+	struct addrinfo *addr;
+	sprintf(portstr, "%hu", port);
+	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, NULL, &addr);
+	if (0 != r || *len < (socklen_t)addr->ai_addrlen)
+		return 0 != r ? r : EAI_MEMORY;
+
+	assert(*len >= (socklen_t)addr->ai_addrlen);
+	memcpy(sa, addr->ai_addr, addr->ai_addrlen);
+	*len = addr->ai_addrlen;
+	freeaddrinfo(addr);
+	return 0;
+}
+
+inline int socket_addr_to(IN const struct sockaddr* sa, socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port)
 {
 	if (AF_INET == sa->sa_family)
 	{
