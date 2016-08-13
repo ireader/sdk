@@ -19,6 +19,7 @@ typedef DWORD tid_t;
 
 #else
 #include <pthread.h>
+#include <sched.h>
 
 typedef pthread_t tid_t;
 
@@ -36,7 +37,9 @@ typedef pthread_t tid_t;
 // int thread_setpriority(pthread_t thread, int priority);
 // int thread_getid(pthread_t thread, tid_t* id);
 // int thread_isself(pthread_t thread);
+// int thread_valid(pthread_t thread);
 // tid_t thread_self(void);
+// int thread_yield(void);
 //-------------------------------------------------------------------------------------
 
 typedef int (STDCALL *thread_proc)(void* param);
@@ -160,6 +163,17 @@ inline int thread_valid(pthread_t thread)
 	return 0 != thread.id ? 1 : 0;
 #else
 	return 0 != thread ? 1 : 0;
+#endif
+}
+
+inline int thread_yield(void)
+{
+#if defined(OS_WINDOWS)
+	// Causes the calling thread to yield execution to another thread that is ready to run 
+	// on the current processor. The operating system selects the next thread to be executed.
+	return (int)SwitchToThread();
+#else
+	return sched_yield();
 #endif
 }
 
