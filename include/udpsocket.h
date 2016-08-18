@@ -3,7 +3,7 @@
 
 #include "sys/sock.h"
 
-inline socket_t udpsocket_create(const char* ip, int port, int ipv6)
+inline socket_t udpsocket_create(const char* ip, int port)
 {
 	int r;
 	socket_t sock;
@@ -11,10 +11,9 @@ inline socket_t udpsocket_create(const char* ip, int port, int ipv6)
 	struct addrinfo hints, *addr, *ptr;
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = ipv6 ? AF_INET6 : AF_INET;
 	hints.ai_socktype = SOCK_DGRAM;
-	hints.ai_flags = AI_PASSIVE;
-	sprintf(portstr, "%hu", port);
+	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
+	sprintf(portstr, "%d", port);
 	r = getaddrinfo(ip, portstr, &hints, &addr);
 	if (0 != r)
 		return socket_invalid;
@@ -22,6 +21,10 @@ inline socket_t udpsocket_create(const char* ip, int port, int ipv6)
 	r = -1; // not found
 	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
+#if !defined(IPV6)
+		if (AF_INET6 == ptr->ai_family)
+			continue;
+#endif
 		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
 		if (socket < 0)
 			continue;
