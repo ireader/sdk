@@ -90,7 +90,7 @@ inline int socket_bind(IN socket_t sock, IN const struct sockaddr* addr, IN sock
 inline int socket_bind_any(IN socket_t sock, IN u_short port);
 
 inline int socket_listen(IN socket_t sock, IN int backlog);
-inline socket_t socket_accept(IN socket_t sock, OUT struct sockaddr* addr, INOUT socklen_t* addrlen);
+inline socket_t socket_accept(IN socket_t sock, OUT struct sockaddr_storage* ss, OUT socklen_t* addrlen);
 
 // socket read/write
 inline int socket_send(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags);
@@ -154,7 +154,7 @@ inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN]);
 
 inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ip_or_dns, IN u_short port);
 inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* ip_or_dns, IN u_short port);
-inline int socket_addr_from(OUT struct sockaddr* sa, INOUT socklen_t* len, IN const char* ipv4_or_ipv6_or_dns, IN u_short port);
+inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_t* len, IN const char* ipv4_or_ipv6_or_dns, IN u_short port);
 inline int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
 inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN size_t hostlen);
 
@@ -313,7 +313,6 @@ inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_sho
 	struct addrinfo hints, *addr, *ptr;
 	
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	sprintf(portstr, "%hu", port);
 	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
@@ -381,9 +380,10 @@ inline int socket_listen(IN socket_t sock, IN int backlog)
 	return listen(sock, backlog);
 }
 
-inline socket_t socket_accept(IN socket_t sock, OUT struct sockaddr* addr, INOUT socklen_t* addrlen)
+inline socket_t socket_accept(IN socket_t sock, OUT struct sockaddr_storage* addr, OUT socklen_t* addrlen)
 {
-	return accept(sock, addr, addrlen);
+	*addrlen = sizeof(struct sockaddr_storage);
+	return accept(sock, (struct sockaddr*)addr, addrlen);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -900,7 +900,6 @@ inline int socket_isip(IN const char* ip)
 #else
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC; // AF_INET/AF_INET6 only
 	hints.ai_flags = AI_NUMERICHOST;
 	if (0 != getaddrinfo(ip, NULL, &hints, &addr))
 		return -1;
@@ -912,43 +911,33 @@ inline int socket_isip(IN const char* ip)
 inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN])
 {
 	int r;
-	struct addrinfo hints, *addr, *ptr;
+	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
 	r = getaddrinfo(ipv4_or_dns, NULL, &hints, &addr);
 	if (0 != r)
 		return r;
 
-	for(ptr = addr; ptr != NULL; ptr = ptr->ai_next)
-	{
-		assert(AF_INET == ptr->ai_family);
-		if (NULL != inet_ntop(AF_INET, &(((struct sockaddr_in*)ptr->ai_addr)->sin_addr), ip, SOCKET_ADDRLEN))
-			break;
-	}
-
+	assert(AF_INET == addr->ai_family);
+	inet_ntop(AF_INET, &(((struct sockaddr_in*)addr->ai_addr)->sin_addr), ip, SOCKET_ADDRLEN);
 	freeaddrinfo(addr);
-	return ptr ? 0 : -1;
+	return 0;
 }
 
 inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN])
 {
 	int r;
-	struct addrinfo hints, *addr, *ptr;
+	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET6;
 	r = getaddrinfo(ipv6_or_dns, NULL, &hints, &addr);
 	if (0 != r)
 		return r;
 
-	for (ptr = addr; ptr != NULL; ptr = ptr->ai_next)
-	{
-		assert(AF_INET6 == ptr->ai_family);
-		if(NULL != inet_ntop(AF_INET6, &(((struct sockaddr_in6*)ptr->ai_addr)->sin6_addr), ip, SOCKET_ADDRLEN))
-			break; // only use the first address
-	}
-
+	assert(AF_INET6 == addr->ai_family);
+	inet_ntop(AF_INET6, &(((struct sockaddr_in6*)addr->ai_addr)->sin6_addr), ip, SOCKET_ADDRLEN);
 	freeaddrinfo(addr);
-	return ptr ? 0 : -1;
+	return 0;
 }
 
 inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ipv4_or_dns, IN u_short port)
@@ -987,18 +976,18 @@ inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* 
 	return 0;
 }
 
-inline int socket_addr_from(OUT struct sockaddr* sa, INOUT socklen_t* len, IN const char* ipv4_or_ipv6_or_dns, IN u_short port)
+inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_t* len, IN const char* ipv4_or_ipv6_or_dns, IN u_short port)
 {
 	int r;
 	char portstr[16];
 	struct addrinfo *addr;
 	sprintf(portstr, "%hu", port);
 	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, NULL, &addr);
-	if (0 != r || *len < (socklen_t)addr->ai_addrlen)
-		return 0 != r ? r : EAI_MEMORY;
+	if (0 != r)
+		return r;
 
-	assert(*len >= (socklen_t)addr->ai_addrlen);
-	memcpy(sa, addr->ai_addr, addr->ai_addrlen);
+	assert(addr->ai_addrlen <= sizeof(struct sockaddr_storage));
+	memcpy(ss, addr->ai_addr, addr->ai_addrlen);
 	*len = addr->ai_addrlen;
 	freeaddrinfo(addr);
 	return 0;
