@@ -45,7 +45,7 @@ static int log_close()
 	return 0;
 }
 
-static void log_write(int level, const char* format, va_list vl)
+void log_log_va(int level, const char* format, va_list vl)
 {
 #if defined(_DEBUG)
 	vprintf(format, vl);
@@ -123,7 +123,7 @@ void log_debug(const char* format, ...)
 {
 	va_list vl;
 	va_start(vl, format);
-	log_write(LOG_DEBUG, format, vl);
+	log_log_va(LOG_DEBUG, format, vl);
 	va_end(vl);
 }
 
@@ -131,7 +131,7 @@ void log_warning(const char* format, ...)
 {
 	va_list vl;
 	va_start(vl, format);
-	log_write(LOG_WARNING, format, vl);
+	log_log_va(LOG_WARNING, format, vl);
 	va_end(vl);
 }
 
@@ -139,7 +139,7 @@ void log_info(const char* format, ...)
 {
 	va_list vl;
 	va_start(vl, format);
-	log_write(LOG_INFO, format, vl);
+	log_log_va(LOG_INFO, format, vl);
 	va_end(vl);
 }
 
@@ -147,7 +147,7 @@ void log_error(const char* format, ...)
 {
 	va_list vl;
 	va_start(vl, format);
-	log_write(LOG_ERROR, format, vl);
+	log_log_va(LOG_ERROR, format, vl);
 	va_end(vl);
 }
 
@@ -155,7 +155,7 @@ void log_log(int level, const char* format, ...)
 {
 	va_list vl;
 	va_start(vl, format);
-	log_write(level, format, vl);
+	log_log_va(level, format, vl);
 	va_end(vl);
 }
 
