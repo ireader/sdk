@@ -36,4 +36,6 @@
 	#define PRIptrdiff_t		"tx"	// C99
 #endif
 
+#include <stddef.h> // size_t/ptrdiff_t/nullptr_t/max_align_t
+
 #endif /* !_ctypedef_h_ */
