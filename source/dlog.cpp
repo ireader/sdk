@@ -19,6 +19,8 @@
 
 #define MODULE_LEN 128
 
+static const char* g_logLevelDesc[] = { "D", "W", "I", "E" };
+
 typedef struct
 {
 	char name[256];
@@ -139,15 +141,16 @@ static int dummy = dlog_init();
 
 
 #if defined(_WIN32) || defined(_WIN64)
-int dlog_log_va(const char* format, va_list va)
+int dlog_log_va(int level, const char* format, va_list va)
 {
 	SYSTEMTIME st;
 	char msg[1024*4] = {0};
 	
 	GetSystemTime(&st);
-	sprintf(msg, "%04d-%02d-%02d %02d:%02d:%02d|%s|", 
+	sprintf(msg, "%04d-%02d-%02d %02d:%02d:%02d|%s|%s|", 
 		(int)st.wYear, (int)st.wMonth, (int)st.wDay,
 		(int)st.wHour, (int)st.wMinute, (int)st.wSecond,
+		g_logLevelDesc[((1 <= level && level <= sizeof(g_logLevelDesc)/sizeof(g_logLevelDesc[0])) ? level-1 : 0)],
 		s_log.module);
 
 	vsnprintf(msg+strlen(msg), sizeof(msg)-1-strlen(msg), format, va);
@@ -174,7 +177,7 @@ static int dlog_open(const char* name)
 //	return 0;
 //}
 
-int dlog_log_va(const char* format, va_list va)
+int dlog_log_va(int level, const char* format, va_list va)
 {
 	int r;
 	time_t t;
@@ -183,13 +186,14 @@ int dlog_log_va(const char* format, va_list va)
 	
 	t = time(NULL);
 	lt = localtime(&t);
-	sprintf(msg, "%04d-%02d-%02d %02d:%02d:%02d|%s|",
+	sprintf(msg, "%04d-%02d-%02d %02d:%02d:%02d|%s|%s|",
 		lt->tm_year+1900,	// year
 		lt->tm_mon+1,		// month
 		lt->tm_mday,		// day
 		lt->tm_hour,		// hour
 		lt->tm_min,			// minute
 		lt->tm_sec,			// second
+		g_logLevelDesc[((1 <= level && level <= sizeof(g_logLevelDesc) / sizeof(g_logLevelDesc[0])) ? level-1 : 0) ],
 		s_log.module);
 
 	vsnprintf(msg+strlen(msg), sizeof(msg)-1-strlen(msg), format, va);
@@ -210,13 +214,13 @@ int dlog_log_va(const char* format, va_list va)
 }
 #endif
 
-int dlog_log(const char* format, ...)
+int dlog_log(int level, const char* format, ...)
 {
 	int r;
 	va_list va;
 
 	va_start(va, format);
-	r = dlog_log_va(format, va);
+	r = dlog_log_va(level, format, va);
 	va_end(va);
 	return r;
 }

@@ -8,8 +8,8 @@ extern "C" {
 #endif
 
 /// 写内存日志
-int dlog_log(const char* format, ...);
-int dlog_log_va(const char* format, va_list args);
+int dlog_log(int level, const char* format, ...);
+int dlog_log_va(int level, const char* format, va_list args);
 
 /// 设置日志模块名
 int dlog_setmodule(const char* module);
