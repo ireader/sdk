@@ -224,7 +224,7 @@ void* http_client_create(const char* ip, unsigned short port, int flags)
 	memset(pool, 0, sizeof(*pool));
 	locker_create(&pool->locker);
 	pool->ref = 1;
-	strcpy(pool->ip, ip);
+	strlcpy(pool->ip, ip, sizeof(pool->ip));
 	pool->port = port;
 	pool->wtimeout = 10000;
 	pool->rtimeout = 10000;

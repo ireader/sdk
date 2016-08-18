@@ -14,8 +14,8 @@ struct http_session_t
 
 	void* session;
 	void* parser;
-	char ip[40];
-	int port;
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
 
     char status_line[64];
 	char data[2 * 1024];
@@ -34,7 +34,7 @@ struct http_server_t
 	void* param;
 };
 
-void* http_session_onconnected(void* ptr, void* session, const char* ip, int port);
+void* http_session_onconnected(void* ptr, void* session, const struct sockaddr* sa, socklen_t salen);
 void http_session_ondisconnected(void* param);
 int http_session_onsend(void* param, int code, size_t bytes);
 int http_session_onrecv(void* param, const void* msg, size_t bytes);

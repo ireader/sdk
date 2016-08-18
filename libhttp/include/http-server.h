@@ -35,10 +35,10 @@ int http_server_get_content(void* session, void **content, size_t *length);
 
 /// Get client ip/port
 /// @param[in] session handle callback session parameter
-/// @param[out] ip client bind ip(don't need free)
+/// @param[out] ip client bind ip
 /// @param[out] port client bind port
 /// @return 0-ok, other-error
-int http_server_get_client(void* session, const char** ip, int *port);
+int http_server_get_client(void* session, char ip[65], unsigned short *port);
 
 // Response
 

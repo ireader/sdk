@@ -65,9 +65,9 @@ static int STDCALL http_server_thread(void* param)
 		int r = socket_select_read(socket, 1000);
 		if(1 == r)
 		{
-			struct sockaddr_in in4;
-			socklen_t len = sizeof(in4);
-			socket_t client = socket_accept(socket, (sockaddr*)&in4, &len);
+			struct sockaddr_storage ss;
+			socklen_t len = sizeof(ss);
+			socket_t client = socket_accept(socket, &ss, &len);
 			if(client != socket_invalid)
 			{
 				r = socket_recv_by_time(client, req, sizeof(req), 0, 5000);

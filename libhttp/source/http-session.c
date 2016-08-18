@@ -184,7 +184,7 @@ int http_session_onsend(void* param, int code, size_t bytes)
 	}
 }
 
-void* http_session_onconnected(void* ptr, void* sid, const char* ip, int port)
+void* http_session_onconnected(void* ptr, void* sid, const struct sockaddr* sa, socklen_t salen)
 {
 	struct http_session_t *session;
 
@@ -193,10 +193,10 @@ void* http_session_onconnected(void* ptr, void* sid, const char* ip, int port)
 
 	session->server = (struct http_server_t *)ptr;
 	session->session = sid;
-	memcpy(session->ip, ip, sizeof(session->ip)-1);
-	session->ip[sizeof(session->ip)-1] = '\0';
-	session->port = port;
-
+	assert(AF_INET == sa->sa_family || AF_INET6 == sa->sa_family);
+	assert(salen <= sizeof(session->addr));
+	memcpy(&session->addr, sa, salen);
+	session->addrlen = salen;
 	return session;
 }
 
@@ -211,13 +211,13 @@ void http_session_ondisconnected(void* param)
 }
 
 // Request
-int http_server_get_client(void* param, const char** ip, int *port)
+int http_server_get_client(void* param, char ip[65], unsigned short *port)
 {
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
-	if(ip) *ip = session->ip;
-	if(port) *port = session->port;
-	return 0;
+	if (NULL == ip || NULL == port)
+		return -1;
+	return socket_addr_to((struct sockaddr*)&session->addr, session->addrlen, ip, port);
 }
 
 const char* http_server_get_header(void* param, const char *name)
@@ -271,9 +271,9 @@ int http_server_send_vec(void* param, int code, void** bundles, int num)
 	}
 
 	// HTTP Response Header
-	sprintf(msg, "Content-Length: %u\r\n\r\n", (unsigned int)len);
-	strcat(session->data, msg);
-	sprintf(session->status_line, "HTTP/1.1 %d %s\r\n", code, http_reason_phrase(code));
+	snprintf(msg, sizeof(msg), "Content-Length: %u\r\n\r\n", (unsigned int)len);
+	strlcat(session->data, msg, sizeof(session->data));
+	snprintf(session->status_line, sizeof(session->status_line), "HTTP/1.1 %d %s\r\n", code, http_reason_phrase(code));
 
 	socket_setbufvec(session->vec, 0, session->status_line, strlen(session->status_line));
 	socket_setbufvec(session->vec, 1, session->data, strlen(session->data));
@@ -292,7 +292,7 @@ int http_server_set_header(void* param, const char* name, const char* value)
 
 	assert(!strieq("Content-Length", name));
 	snprintf(msg, sizeof(msg), "%s: %s\r\n", name, value);
-	strcat(session->data, msg);
+	strlcat(session->data, msg, sizeof(session->data));
 	return 0;
 }
 
@@ -304,7 +304,7 @@ int http_server_set_header_int(void* param, const char* name, int value)
 
 	assert(!strieq("Content-Length", name));
 	snprintf(msg, sizeof(msg), "%s: %d\r\n", name, value);
-	strcat(session->data, msg);
+	strlcat(session->data, msg, sizeof(session->data));
 	return 0;
 }
 

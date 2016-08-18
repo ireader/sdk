@@ -270,39 +270,43 @@ static void http_onconnect(void* param, int code)
 static int http_connect(struct http_client_aio_transport_t *http, const char* ip, int port)
 {
 	int r = 0;
-	char ipaddr[16];
-	socket_t socket;
-
+	socket_t tcp;
+	socklen_t addrlen;
+	struct sockaddr* addr;
+	struct sockaddr_storage ss;
+	addr = (struct sockaddr*)&ss;
+	
 	assert(http->running);
 	assert(invalid_aio_socket == http->socket);
-	r = socket_ipv4(ip, ipaddr);
-	if(0 != r)
+	r = socket_addr_from(&ss, &addrlen, ip, (u_short)port);
+	if (0 != r)
 		return r;
 
-	socket = socket_tcp();
+	assert(addr->sa_family == AF_INET || addr->sa_family == AF_INET6);
+	tcp = socket(addr->sa_family, SOCK_STREAM, 0);
 #if defined(OS_WINDOWS)
-	r = socket_bind_any(socket, 0);
+	r = socket_bind_any(tcp, 0);
 	if(0 != r)
 	{
-		socket_close(socket);
+		socket_close(tcp);
 		return r;
 	}
 #endif
 
-	http->socket = aio_socket_create(socket, 1);
+	http->socket = aio_socket_create(tcp, 1);
 	if(!http->socket)
 	{
-		socket_close(socket);
+		socket_close(tcp);
 		return -1;
 	}
 
 	atomic_increment32(&http->ref);
-	r = aio_socket_connect(http->socket, ipaddr, port, http_onconnect, http);
+	r = aio_socket_connect(http->socket, addr, addrlen, http_onconnect, http);
 	if(0 != r)
 	{
 		atomic_decrement32(&http->ref);
 		aio_socket_destroy(http->socket);
-		http->socket = invalid_aio_socket;	
+		http->socket = invalid_aio_socket;
 		return r;
 	}
 
