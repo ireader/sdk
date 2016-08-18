@@ -7,9 +7,8 @@
 /// @param[in] ip socket bind local address, NULL-bind any address
 /// @param[in] port bind local port
 /// @param[in] backlog the maximum length to which the queue of pending connections for socket may grow
-/// @param[in] ipv6 1-bind IPv6 address, 0-bind IPv4 address
 /// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
-inline socket_t tcpserver_create(const char* ip, int port, int backlog, int ipv6)
+inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 {
 	int r;
 	socket_t sock;
@@ -17,10 +16,9 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog, int ipv6
 	struct addrinfo hints, *addr, *ptr;
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = ipv6 ? AF_INET6 : AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
-	sprintf(portstr, "%hu", port);
+	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
+	sprintf(portstr, "%d", port);
 	r = getaddrinfo(ip, portstr, &hints, &addr);
 	if (0 != r)
 		return socket_invalid;
@@ -28,6 +26,10 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog, int ipv6
 	r = -1; // not found
 	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
+#if !defined(IPV6)
+		if(AF_INET6 == ptr->ai_family)
+			continue;
+#endif
 		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
 		if (socket < 0)
 			continue;
@@ -42,7 +44,7 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog, int ipv6
 #endif
 
 		r = socket_bind(sock, ptr->ai_addr, ptr->ai_addrlen);
-		if(0 != r)
+		if(0 == r)
 			r = socket_listen(sock, backlog);
 
 		if (0 != r)
@@ -55,11 +57,11 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog, int ipv6
 
 /// wait for client connection
 /// @param[in] socket server socket(must be bound and listening)
-/// @param[in/out] addr struct sockaddr_in for IPv4
-/// @param[in/out] addrlen addr length in bytes
+/// @param[out] addr struct sockaddr_in for IPv4
+/// @param[out] addrlen addr length in bytes
 /// @param[in] mstimeout timeout in millisecond
 /// @return 0-timeout, socket_invalid-error, use socket_geterror() to get error code, other-ok  
-inline socket_t tcpserver_accept(socket_t socket, struct sockaddr* addr, socklen_t* addrlen, int mstimeout)
+inline socket_t tcpserver_accept(socket_t socket, struct sockaddr_storage* addr, socklen_t* addrlen, int mstimeout)
 {
 	int ret;
 	socket_t client;
