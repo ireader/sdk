@@ -137,6 +137,7 @@ int snprintf(char *str, size_t size, const char *format, ...);
 #if !defined(OS_MAC)
 
 size_t strlcpy(char *dst, const char *src, size_t siz);
+size_t strlcat(char *dst, const char *src, size_t siz);
 
 #endif
 
