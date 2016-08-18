@@ -45,7 +45,7 @@ struct aio_context_accept
 	void* param;
 	
 	SOCKET socket;
-	char buffer[(sizeof(struct sockaddr_in)+16)*2];
+	char buffer[sizeof(struct sockaddr_storage)*2];
 };
 
 struct aio_context_connect
@@ -186,7 +186,6 @@ static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio,
 	int locallen, remotelen;
 	struct sockaddr *local;
 	struct sockaddr *remote;
-//	bytes = sizeof(struct sockaddr_in)+16;
 
 	if(0 == error)
 	{
@@ -199,7 +198,7 @@ static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio,
 
 		local = remote = NULL;
 		locallen = remotelen = 0;
-		GetAcceptExSockaddrs(aio->accept.buffer, 0, bytes, bytes, &local, &locallen, &remote, &remotelen);
+		GetAcceptExSockaddrs(aio->accept.buffer, 0, sizeof(aio->accept.buffer)/2, sizeof(aio->accept.buffer)/2, &local, &locallen, &remote, &remotelen);
 		aio->accept.proc(aio->accept.param, 0, aio->accept.socket, remote, remotelen);
 		//aio->accept.proc(aio->accept.param, 0, aio->accept.socket, ip, (int)ntohs(remote->sin_port));
 	}
@@ -424,14 +423,19 @@ int aio_socket_destroy(aio_socket_t socket)
 int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 {
 	struct aio_context *ctx = (struct aio_context*)socket;
-	DWORD dwBytes = sizeof(struct sockaddr_in)+16;
 	struct aio_context_action *aio;
+	DWORD dwBytes = 0;
+
+	WSAPROTOCOL_INFOW pi;
+	int len = sizeof(pi);
+	if (0 != getsockopt(ctx->socket, SOL_SOCKET, SO_PROTOCOL_INFO, (char*)&pi, &len))
+		return WSAGetLastError();
 
 	aio = util_alloc(ctx);
 	aio->action = iocp_accept;
 	aio->accept.proc = proc;
 	aio->accept.param = param;
-	aio->accept.socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+	aio->accept.socket = WSASocket(pi.iAddressFamily, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
 	if(INVALID_SOCKET == aio->accept.socket)
 	{
 		closesocket(aio->accept.socket);
@@ -439,6 +443,7 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 		return WSAGetLastError();
 	}
 
+	dwBytes = sizeof(aio->accept.buffer) / 2;
 	if(!AcceptEx(ctx->socket, aio->accept.socket, aio->accept.buffer, 0, dwBytes, dwBytes, &dwBytes, &aio->overlapped))
 	{
 		DWORD ret = WSAGetLastError();
