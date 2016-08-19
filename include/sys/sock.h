@@ -17,7 +17,7 @@ typedef WSABUF	socket_bufvec_t;
 
 #if defined(_MSC_VER)
 #pragma comment(lib, "Ws2_32.lib")
-#pragma warning(disable: 4127)
+#pragma warning(disable: 6031) // warning C6031: Return value ignored: 'snprintf'
 #endif
 
 #define SHUT_RD SD_RECEIVE
@@ -313,7 +313,7 @@ inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_sho
 	
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = SOCK_STREAM;
-	sprintf(portstr, "%hu", port);
+	snprintf(portstr, sizeof(portstr), "%hu", port);
 	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return socket_invalid;
@@ -946,7 +946,7 @@ inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* i
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
-	sprintf(portstr, "%hu", port);
+	snprintf(portstr, sizeof(portstr), "%hu", port);
 	r = getaddrinfo(ipv4_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return r;
@@ -964,7 +964,7 @@ inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* 
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET6;
-	sprintf(portstr, "%hu", port);
+	snprintf(portstr, sizeof(portstr), "%hu", port);
 	r = getaddrinfo(ipv6_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return r;
@@ -980,7 +980,7 @@ inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_t* len,
 	int r;
 	char portstr[16];
 	struct addrinfo *addr;
-	sprintf(portstr, "%hu", port);
+	snprintf(portstr, sizeof(portstr), "%hu", port);
 	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, NULL, &addr);
 	if (0 != r)
 		return r;
@@ -1071,7 +1071,7 @@ inline int socket_multicast_leave_source(IN socket_t sock, IN const char* group,
 }
 
 #if defined(_MSC_VER)
-#pragma warning(default: 4127)
+#pragma warning(default: 6031)
 #endif
 
 #endif /* !_platform_socket_h_ */
