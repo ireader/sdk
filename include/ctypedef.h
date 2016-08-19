@@ -1,8 +1,7 @@
 #ifndef _ctypedef_h_
 #define _ctypedef_h_
 
-#define bool_true	1
-#define bool_false	0
+#include <stddef.h> // size_t/ptrdiff_t/nullptr_t/max_align_t
 
 #if defined(OS_WINDOWS)
 #if _MSC_VER >= 1900
@@ -24,7 +23,6 @@
 #endif
 	#define PRIsize_t			"Iu"	// MSDN: Size Specification
 	#define PRIptrdiff_t		"Ix"	// MSDN: Size Specification
-	typedef unsigned char		bool_t;
 
 #else
 	/* The ISO C99 standard specifies that these macros must only be defined if explicitly requested.  */
@@ -36,6 +34,8 @@
 	#define PRIptrdiff_t		"tx"	// C99
 #endif
 
-#include <stddef.h> // size_t/ptrdiff_t/nullptr_t/max_align_t
+#define bool_true				1
+#define bool_false				0
+typedef unsigned char			bool_t;
 
 #endif /* !_ctypedef_h_ */

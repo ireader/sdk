@@ -8,7 +8,6 @@
 
 #ifndef OS_SOCKET_TYPE
 typedef SOCKET	socket_t;
-typedef int		socklen_t;
 typedef WSABUF	socket_bufvec_t;
 #define OS_SOCKET_TYPE
 #endif /* OS_SOCKET_TYPE */
@@ -431,7 +430,7 @@ inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN siz
 {
 #if defined(OS_WINDOWS)
 	DWORD count;
-	int r = WSASend(sock, (socket_bufvec_t*)vec, n, &count, flags, NULL, NULL);
+	int r = WSASend(sock, (socket_bufvec_t*)vec, (DWORD)n, &count, flags, NULL, NULL);
 	if(0 == r)
 		return (int)count;
 	return r;
@@ -449,7 +448,7 @@ inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n,
 {
 #if defined(OS_WINDOWS)
 	DWORD count;
-	int r = WSARecv(sock, vec, n, &count, (LPDWORD)&flags, NULL, NULL);
+	int r = WSARecv(sock, vec, (DWORD)n, &count, (LPDWORD)&flags, NULL, NULL);
 	if(0 == r)
 		return (int)count;
 	return r;
@@ -467,7 +466,7 @@ inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN s
 {
 #if defined(OS_WINDOWS)
 	DWORD count;
-	int r = WSASendTo(sock, (socket_bufvec_t*)vec, n, &count, flags, to, tolen, NULL, NULL);
+	int r = WSASendTo(sock, (socket_bufvec_t*)vec, (DWORD)n, &count, flags, to, tolen, NULL, NULL);
 	if(0 == r)
 		return (int)count;
 	return r;
@@ -487,7 +486,7 @@ inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_
 {
 #if defined(OS_WINDOWS)
 	DWORD count;
-	int r = WSARecvFrom(sock, vec, n, &count, (LPDWORD)&flags, from, fromlen, NULL, NULL);
+	int r = WSARecvFrom(sock, vec, (DWORD)n, &count, (LPDWORD)&flags, from, fromlen, NULL, NULL);
 	if(0 == r)
 		return (int)count;
 	return r;

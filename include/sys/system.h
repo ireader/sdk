@@ -34,7 +34,7 @@ inline void system_sleep(useconds_t millisecond);
 
 // Get CPU count
 inline size_t system_getcpucount(void);
-inline long long system_getcyclecount(void);
+inline int64_t system_getcyclecount(void);
 
 ///@return second.milliseconds(absolute time)
 inline uint64_t system_time(void);

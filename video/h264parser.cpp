@@ -420,7 +420,7 @@ static void pic_parameter_set_rbsp(bitstream_t* stream)
 	rbsp_trailing_bits(stream);
 }
 
-void nal_unit(bitstream_t* stream)
+extern "C" void nal_unit(bitstream_t* stream)
 {
 	int forbidden_zero_bit = bitstream_read_bit(stream);
 	int nal_ref_idc = bitstream_read_bits(stream, 2);

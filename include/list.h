@@ -50,7 +50,7 @@ inline int list_empty(const struct list_head *head)
 #define LIST_INIT_HEAD(list) do { (list)->next = (list)->prev = (list); } while (0)
 
 #define list_entry(ptr, type, member) \
-	((type*)((char*)ptr-(unsigned long)(&((type*)0)->member)))
+	((type*)((char*)ptr-(ptrdiff_t)(&((type*)0)->member)))
 
 #define list_for_each(pos, head) \
 	for(pos = (head)->next; pos != (head); pos = pos->next)
