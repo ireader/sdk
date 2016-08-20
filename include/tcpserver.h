@@ -18,7 +18,7 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
-	sprintf(portstr, "%d", port);
+	snprintf(portstr, sizeof(portstr), "%d", port);
 	r = getaddrinfo(ip, portstr, &hints, &addr);
 	if (0 != r)
 		return socket_invalid;
@@ -31,7 +31,7 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 			continue;
 #endif
 		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-		if (socket < 0)
+		if (socket_invalid == socket)
 			continue;
 
 		// reuse addr
