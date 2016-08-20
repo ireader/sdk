@@ -13,12 +13,12 @@ Cookie::Cookie()
 
 Cookie::Cookie(const char* name, const char* value, const char* expires)
 {
-	Cookie(name, value, expires, "");
+	this->Cookie::Cookie(name, value, expires, "");
 }
 
 Cookie::Cookie(const char* name, const char* value, const char* expires, const char* path)
 {
-	if(NULL==name || 0==*name || NULL==value || 0==*name || NULL==expires || NULL==path)
+	if(NULL==name || 0==*name || NULL==value || 0==*value || NULL==expires || NULL==path)
 	{
 		assert(false);
 	}
