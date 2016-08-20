@@ -331,6 +331,9 @@ static int http_parse_request_line(struct http_context *ctx)
 			}
 			else
 			{
+				// RFC2326 (p14)
+				// 3.2 RTSP URL
+				//
 				// RFC3986 
 				// 2.2 Reserved Characters
 				// reserved    = gen-delims / sub-delims
@@ -338,7 +341,7 @@ static int http_parse_request_line(struct http_context *ctx)
 				// sub-delims  = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
 				// 2.3.  Unreserved Characters
 				// unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
-				assert(isalnum(ctx->raw[ctx->offset]) || strchr("-._~:/?#[]@!$&'()*+,;=", ctx->raw[ctx->offset]));
+				assert(isalnum(ctx->raw[ctx->offset]) || strchr("-._~:/?#[]@!$&'()*+,;=", ctx->raw[ctx->offset]) || '%' == ctx->raw[ctx->offset]);
 			}
 			break;
 
