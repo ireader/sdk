@@ -17,6 +17,7 @@ typedef WSABUF	socket_bufvec_t;
 
 #if defined(_MSC_VER)
 #pragma comment(lib, "Ws2_32.lib")
+#pragma warning(push)
 #pragma warning(disable: 6031) // warning C6031: Return value ignored: 'snprintf'
 #endif
 
@@ -272,7 +273,7 @@ inline int socket_connect_by_time(IN socket_t sock, IN const struct sockaddr* ad
 	int errcode = 0;
 	int errlen = sizeof(errcode);
 #endif
-	r = socket_setnonblock(sock, 1);
+	socket_setnonblock(sock, 1);
 	r = socket_connect(sock, addr, addrlen);
 	assert(r <= 0);
 #if defined(OS_WINDOWS)
@@ -322,7 +323,7 @@ inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_sho
 	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
 		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-		if(sock < 0)
+		if(socket_invalid == sock)
 			continue;
 
 		if (-1 == timeout)
@@ -678,7 +679,7 @@ inline int socket_getopt_bool(IN socket_t sock, IN int optname, OUT int* enable)
 	len = sizeof(v);
 	r = getsockopt(sock, SOL_SOCKET, optname, (char*)&v, &len);
 	if(0 == r)
-		*enable = TRUE==v?1:0;
+		*enable = (TRUE==v)?1:0;
 	return r;
 #else
 	len = sizeof(*enable);
@@ -1071,7 +1072,7 @@ inline int socket_multicast_leave_source(IN socket_t sock, IN const char* group,
 }
 
 #if defined(_MSC_VER)
-#pragma warning(default: 6031)
+#pragma warning(pop)
 #endif
 
 #endif /* !_platform_socket_h_ */
