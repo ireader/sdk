@@ -31,7 +31,7 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 			continue;
 #endif
 		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-		if (socket_invalid == socket)
+		if (socket_invalid == sock)
 			continue;
 
 		// reuse addr
