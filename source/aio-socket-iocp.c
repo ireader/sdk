@@ -330,7 +330,7 @@ int aio_socket_process(int timeout)
 {
 	BOOL status;
 	DWORD bytes;
-	ULONG completionKey;
+	ULONG_PTR completionKey;
 	OVERLAPPED *pOverlapped;
 	struct aio_context *ctx;
 	struct aio_context_action *aio;
