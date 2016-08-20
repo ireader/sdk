@@ -109,10 +109,10 @@ static int http_make_request(struct http_pool_t *pool, void *req, int method, co
 	{
 		size_t nc, vc;
 
-		nc = strlen(headers[i].name);
-		vc = strlen(headers[i].value);
-
 		assert(headers[i].name && headers[i].value);
+		nc = headers[i].name ? strlen(headers[i].name) : 0;
+		vc = headers[i].value ? strlen(headers[i].value) : 0;
+
 		if(0 == stricmp("Content-Length", headers[i].name)
 			|| 0 == stricmp("HOST", headers[i].name))
 		{
@@ -148,6 +148,7 @@ static int http_make_request(struct http_pool_t *pool, void *req, int method, co
 
 static void http_client_onaction(void *param, void *parser, int code)
 {
+	int len;
 	char buffer[512];
 	const char* cookie;
 	struct http_conn_t *http;
@@ -169,8 +170,8 @@ static void http_client_onaction(void *param, void *parser, int code)
 				// TODO: check cookie buffer length
 				assert(cookiename && cookievalue);
 				assert(STRLEN(cookiename) + STRLEN(cookievalue) + 1 < sizeof(buffer));
-				snprintf(buffer, sizeof(buffer), "%s=%s", cookiename, cookievalue);
-				http_pool_setcookie(http->pool, buffer, strlen(buffer));
+				len = snprintf(buffer, sizeof(buffer), "%s=%s", cookiename, cookievalue);
+				http_pool_setcookie(http->pool, buffer, len);
 				http_cookie_destroy(ck);
 			}
 		}
