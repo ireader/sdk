@@ -6,11 +6,14 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <assert.h>
+#include <errno.h>
 
 #if defined(OS_WINDOWS)
 #define iov_base buf
 #define iov_len	 len
 #endif
+
+#define CONTENT_LENGTH_LEN 32
 
 // create a new http session
 static struct http_session_t* http_session_new()
@@ -113,7 +116,7 @@ int http_session_onrecv(void* param, const void* msg, size_t bytes)
 	remain = bytes;
 	if(0 == http_parser_input(session->parser, msg, &remain))
 	{
-		session->data[0] = '\0'; // clear for save user-defined header
+		session->offset = 0; // clear for save user-defined header
 
         atomic_increment32(&session->ref); // for http reply
 
@@ -247,7 +250,6 @@ int http_server_send_vec(void* param, int code, void** bundles, int num)
 {
 	int i;
     size_t len;
-	char msg[128];
 	struct http_bundle_t *bundle;
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
@@ -271,12 +273,11 @@ int http_server_send_vec(void* param, int code, void** bundles, int num)
 	}
 
 	// HTTP Response Header
-	snprintf(msg, sizeof(msg), "Content-Length: %u\r\n\r\n", (unsigned int)len);
-	strlcat(session->data, msg, sizeof(session->data));
-	snprintf(session->status_line, sizeof(session->status_line), "HTTP/1.1 %d %s\r\n", code, http_reason_phrase(code));
+	session->offset += snprintf(session->header + session->offset, sizeof(session->header) - session->offset, "Content-Length: %u\r\n\r\n", (unsigned int)len);
+	len = snprintf(session->status_line, sizeof(session->status_line), "HTTP/1.1 %d %s\r\n", code, http_reason_phrase(code));
 
-	socket_setbufvec(session->vec, 0, session->status_line, strlen(session->status_line));
-	socket_setbufvec(session->vec, 1, session->data, strlen(session->data));
+	socket_setbufvec(session->vec, 0, session->status_line, len);
+	socket_setbufvec(session->vec, 1, session->header, session->offset);
 
 	i = http_session_send(session, 0);
 	if(0 != i)
@@ -286,26 +287,20 @@ int http_server_send_vec(void* param, int code, void** bundles, int num)
 
 int http_server_set_header(void* param, const char* name, const char* value)
 {
-	char msg[512];
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
-
 	assert(!strieq("Content-Length", name));
-	snprintf(msg, sizeof(msg), "%s: %s\r\n", name, value);
-	strlcat(session->data, msg, sizeof(session->data));
-	return 0;
+	session->offset += snprintf(session->header + session->offset, sizeof(session->header) - session->offset - CONTENT_LENGTH_LEN, "%s: %s\r\n", name, value);
+	return (session->offset + CONTENT_LENGTH_LEN < sizeof(session->header)) ? 0 : ENOMEM;
 }
 
 int http_server_set_header_int(void* param, const char* name, int value)
 {
-	char msg[512];
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
-
 	assert(!strieq("Content-Length", name));
-	snprintf(msg, sizeof(msg), "%s: %d\r\n", name, value);
-	strlcat(session->data, msg, sizeof(session->data));
-	return 0;
+	session->offset += snprintf(session->header + session->offset, sizeof(session->header) - session->offset - CONTENT_LENGTH_LEN, "%s: %d\r\n", name, value);
+	return (session->offset + CONTENT_LENGTH_LEN < sizeof(session->header)) ? 0 : ENOMEM;
 }
 
 int http_server_set_content_type(void* session, const char* value)

@@ -1,5 +1,7 @@
 #include "http-request.h"
 #include "cstringext.h"
+#include <assert.h>
+#include <errno.h>
 
 struct http_request_t
 {
@@ -83,8 +85,8 @@ int http_request_set_uri(void* p, int method, const char* uri)
 
 int http_request_set_host(void* req, const char* ip, int port)
 {
-	char host[128] = {0};
-	if(snprintf(host, sizeof(host), "%s:%d", ip, port)+1 >= sizeof(host))
+	char host[256] = {0};
+	if(sizeof(host) <= snprintf(host, sizeof(host), "%s:%d", ip, port) + 1)
 		return -1;
 	return http_request_set_header(req, "Host", host);
 }
@@ -96,8 +98,9 @@ int http_request_set_cookie(void* req, const char* cookie)
 
 int http_request_set_content_lenth(void* req, unsigned int bytes)
 {
-	char length[16] = {0};
-	snprintf(length, sizeof(length), "%u", bytes);
+	char length[32] = { 0 };
+	if (sizeof(length) <= snprintf(length, sizeof(length), "%u", bytes) + 1)
+		return -1;
 	return http_request_set_header(req, "Content-Length", length);
 }
 
@@ -108,8 +111,9 @@ int http_request_set_content_type(void* req, const char* value)
 
 int http_request_set_header_int(void* req, const char* name, int value)
 {
-	char length[16] = {0};
-	snprintf(length, sizeof(length), "%d", value);
+	char length[32] = {0};
+	if (sizeof(length) <= snprintf(length, sizeof(length), "%d", value) + 1)
+		return -1;
 	return http_request_set_header(req, name, length);
 }
 

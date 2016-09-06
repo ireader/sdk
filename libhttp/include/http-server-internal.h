@@ -18,7 +18,8 @@ struct http_session_t
 	socklen_t addrlen;
 
     char status_line[64];
-	char data[2 * 1024];
+	char header[2 * 1024];
+	size_t offset; // header offset/length
 
 	// send buffer vector
 	int vec_count;
