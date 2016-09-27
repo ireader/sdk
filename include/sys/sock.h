@@ -144,7 +144,7 @@ inline int socket_setnonblock(IN socket_t sock, IN int noblock); // non-block io
 inline int socket_setnondelay(IN socket_t sock, IN int nodelay); // non-delay io(Nagle Algorithm), 0-delay, 1-nodelay
 inline int socket_getunread(IN socket_t sock, OUT size_t* size); // MSDN: Use to determine the amount of data pending in the network's input buffer that can be read from socket s
 
-inline int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
+inline int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port); // must be bound/connected
 inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
 
 // socket utility
@@ -157,6 +157,7 @@ inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* 
 inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_t* len, IN const char* ipv4_or_ipv6_or_dns, IN u_short port);
 inline int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
 inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN size_t hostlen);
+inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen, u_short port);
 
 inline void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len);
 
@@ -313,7 +314,9 @@ inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_sho
 	struct addrinfo hints, *addr, *ptr;
 	
 	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
 	snprintf(portstr, sizeof(portstr), "%hu", port);
 	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
 	if (0 != r)
@@ -325,6 +328,8 @@ inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_sho
 		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
 		if(socket_invalid == sock)
 			continue;
+
+		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port); // fixed ios getaddrinfo don't set port if nodename is ipv4 address
 
 		if (-1 == timeout)
 			r = socket_connect(sock, ptr->ai_addr, ptr->ai_addrlen);
@@ -355,6 +360,7 @@ inline int socket_bind_any(IN socket_t sock, IN u_short port)
 	if (AF_INET == domain)
 	{
 		struct sockaddr_in addr;
+		memset(&addr, 0, sizeof(addr));
 		addr.sin_family = AF_INET;
 		addr.sin_port = htons(port);
 		addr.sin_addr.s_addr = INADDR_ANY;
@@ -371,6 +377,7 @@ inline int socket_bind_any(IN socket_t sock, IN u_short port)
 	}
 	else
 	{
+		assert(0);
 		return -1;
 	}
 }
@@ -430,7 +437,7 @@ inline int socket_recvfrom(IN socket_t sock, OUT void* buf, IN size_t len, IN in
 inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags)
 {
 #if defined(OS_WINDOWS)
-	DWORD count;
+	DWORD count = 0;
 	int r = WSASend(sock, (socket_bufvec_t*)vec, (DWORD)n, &count, flags, NULL, NULL);
 	if(0 == r)
 		return (int)count;
@@ -448,7 +455,7 @@ inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN siz
 inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags)
 {
 #if defined(OS_WINDOWS)
-	DWORD count;
+	DWORD count = 0;
 	int r = WSARecv(sock, vec, (DWORD)n, &count, (LPDWORD)&flags, NULL, NULL);
 	if(0 == r)
 		return (int)count;
@@ -466,7 +473,7 @@ inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n,
 inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen)
 {
 #if defined(OS_WINDOWS)
-	DWORD count;
+	DWORD count = 0;
 	int r = WSASendTo(sock, (socket_bufvec_t*)vec, (DWORD)n, &count, flags, to, tolen, NULL, NULL);
 	if(0 == r)
 		return (int)count;
@@ -486,7 +493,7 @@ inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN s
 inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN struct sockaddr* from, IN socklen_t* fromlen)
 {
 #if defined(OS_WINDOWS)
-	DWORD count;
+	DWORD count = 0;
 	int r = WSARecvFrom(sock, vec, (DWORD)n, &count, (LPDWORD)&flags, from, fromlen, NULL, NULL);
 	if(0 == r)
 		return (int)count;
@@ -870,6 +877,7 @@ inline int socket_getdomain(IN socket_t sock, OUT int* domain)
 	return r;
 }
 
+// must be bound/connected
 inline int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port)
 {
 	struct sockaddr_storage addr;
@@ -900,7 +908,7 @@ inline int socket_isip(IN const char* ip)
 #else
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_flags = AI_NUMERICHOST;
+	hints.ai_flags = AI_NUMERICHOST | AI_V4MAPPED | AI_ADDRCONFIG;
 	if (0 != getaddrinfo(ip, NULL, &hints, &addr))
 		return -1;
 	freeaddrinfo(&addr);
@@ -914,6 +922,7 @@ inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN])
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
+	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
 	r = getaddrinfo(ipv4_or_dns, NULL, &hints, &addr);
 	if (0 != r)
 		return r;
@@ -930,6 +939,7 @@ inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN])
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET6;
+	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
 	r = getaddrinfo(ipv6_or_dns, NULL, &hints, &addr);
 	if (0 != r)
 		return r;
@@ -947,11 +957,13 @@ inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* i
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
+	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
 	snprintf(portstr, sizeof(portstr), "%hu", port);
 	r = getaddrinfo(ipv4_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return r;
 
+	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port); // fixed ios getaddrinfo don't set port if node is ipv4 address
 	assert(sizeof(struct sockaddr_in) == addr->ai_addrlen);
 	memcpy(addr4, addr->ai_addr, addr->ai_addrlen);
 	freeaddrinfo(addr);
@@ -965,11 +977,13 @@ inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* 
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET6;
+	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
 	snprintf(portstr, sizeof(portstr), "%hu", port);
 	r = getaddrinfo(ipv6_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return r;
 
+	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port); // fixed ios getaddrinfo don't set port if node is ipv4 address
 	assert(sizeof(struct sockaddr_in6) == addr->ai_addrlen);
 	memcpy(addr6, addr->ai_addr, addr->ai_addrlen);
 	freeaddrinfo(addr);
@@ -986,6 +1000,7 @@ inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_t* len,
 	if (0 != r)
 		return r;
 
+	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port); // fixed ios getaddrinfo don't set port if node is ipv4 address
 	assert(addr->ai_addrlen <= sizeof(struct sockaddr_storage));
 	memcpy(ss, addr->ai_addr, addr->ai_addrlen);
 	*len = addr->ai_addrlen;
@@ -997,19 +1012,44 @@ inline int socket_addr_to(IN const struct sockaddr* sa, socklen_t salen, OUT cha
 {
 	if (AF_INET == sa->sa_family)
 	{
-		if (salen < sizeof(struct sockaddr_in)) return -1;
-		inet_ntop(AF_INET, &((struct sockaddr_in*)sa)->sin_addr, ip, SOCKET_ADDRLEN);
-		*port = ntohs(((struct sockaddr_in*)sa)->sin_port);
+		struct sockaddr_in* in = (struct sockaddr_in*)sa;
+		assert(sizeof(struct sockaddr_in) == salen);
+		inet_ntop(AF_INET, &in->sin_addr, ip, SOCKET_ADDRLEN);
+		*port = ntohs(in->sin_port);
 	}
 	else if (AF_INET6 == sa->sa_family)
 	{
-		if (salen < sizeof(struct sockaddr_in6)) return -1;
-		inet_ntop(AF_INET6, &((struct sockaddr_in6*)sa)->sin6_addr, ip, SOCKET_ADDRLEN);
-		*port = ntohs(((struct sockaddr_in6*)sa)->sin6_port);
+		struct sockaddr_in6* in6 = (struct sockaddr_in6*)sa;
+		assert(sizeof(struct sockaddr_in6) == salen);
+		inet_ntop(AF_INET6, &in6->sin6_addr, ip, SOCKET_ADDRLEN);
+		*port = ntohs(in6->sin6_port);
 	}
 	else
 	{
 		return -1; // unknown address family
+	}
+
+	return 0;
+}
+
+inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen, u_short port)
+{
+	if (AF_INET == sa->sa_family)
+	{
+		struct sockaddr_in* in = (struct sockaddr_in*)sa;
+		assert(sizeof(struct sockaddr_in) == salen);
+		in->sin_port = in->sin_port ? in->sin_port : htons(port);
+	}
+	else if (AF_INET6 == sa->sa_family)
+	{
+		struct sockaddr_in6* in6 = (struct sockaddr_in6*)sa;
+		assert(sizeof(struct sockaddr_in6) == salen);
+		in6->sin6_port = in6->sin6_port ? in6->sin6_port : htons(port);
+	}
+	else
+	{
+		assert(0);
+		return -1;
 	}
 
 	return 0;
