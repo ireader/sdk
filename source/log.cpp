@@ -47,10 +47,6 @@ static int log_close()
 
 void log_log_va(int level, const char* format, va_list vl)
 {
-#if defined(_DEBUG)
-	vprintf(format, vl);
-#endif
-
 	if(level < g_logLevel)
 		return;
 

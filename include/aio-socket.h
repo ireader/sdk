@@ -4,8 +4,8 @@
 #ifndef OS_SOCKET_TYPE
 #if defined(OS_WINDOWS)
 #include <WinSock2.h>
+#include <WS2tcpip.h> // socklen_t
 
-typedef int	   socklen_t;
 typedef SOCKET socket_t;
 typedef WSABUF socket_bufvec_t;
 #else

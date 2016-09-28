@@ -136,7 +136,7 @@ static int iocp_create(int threads)
 	if(NULL == s_iocp)
 		return GetLastError();
 
-#if (_WIN32_WINNT >= 0x0403)
+#if (WINVER >= 0x0403)
 	InitializeCriticalSectionAndSpinCount(&s_locker, 0x00000400); // spin-lock
 #else
 	InitializeCriticalSection(&s_locker);

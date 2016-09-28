@@ -68,7 +68,7 @@ inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
 	return oldvalue == InterlockedCompareExchangePointer(value, newvalue, oldvalue) ? 1 : 0;
 }
 
-#if (_WIN32_WINNT >= 0x0502)
+#if (WINVER >= _WIN32_WINNT_WS03)
 
 inline int64_t atomic_increment64(volatile int64_t *value)
 {
@@ -98,7 +98,7 @@ inline int atomic_cas64(volatile int64_t *value, int64_t oldvalue, int64_t newva
 	return oldvalue == InterlockedCompareExchange64(value, newvalue, oldvalue) ? 1 : 0;
 }
 
-#endif /* _WIN32_WINNT >= 0x0502 */
+#endif /* WINVER >= 0x0502 */
 
 //-------------------------------------OS_MAC------------------------------------------
 #elif defined(OS_MAC)

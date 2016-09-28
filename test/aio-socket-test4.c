@@ -11,15 +11,15 @@ static int STDCALL worker0(IN void* param)
 {
 	socket_t socket;
 	socket_t client;
-	struct sockaddr_in addr;
+	struct sockaddr_storage addr;
 	socklen_t len = sizeof(addr);
 
 	param = param;
-	socket = tcpserver_create(NULL, 8008, 64, 0);
+	socket = tcpserver_create(NULL, 8008, 64);
 
 //	while(1)
 	{
-		client = socket_accept(socket, (struct sockaddr*)&addr, &len);
+		client = socket_accept(socket, &addr, &len);
 		//socket_recv(client, msg, sizeof(msg), 0);
 		//socket_recv(client, msg, 10, 0);
 		//system_sleep(1000);

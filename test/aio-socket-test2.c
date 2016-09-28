@@ -255,7 +255,7 @@ void aio_socket_test2(void)
 	socket_addr_from_ipv4(&addr, "127.0.0.1", PORT);
 
 	// bind and listen
-	socket = aio_socket_create(tcpserver_create(NULL, PORT, 32, 0), 1);
+	socket = aio_socket_create(tcpserver_create(NULL, PORT, 32), 1);
 	r = aio_socket_accept(socket, aio_server_onaccept, &server);
 	assert(0 == r);
 

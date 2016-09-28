@@ -42,11 +42,10 @@ int main(int argc, char* argv[])
 	}
 
 	socket_init();
-	tcp = socket_tcp();
-	r = socket_connect_ipv4(tcp, host, (unsigned short)port);
-	if(r < 0)
+	tcp = socket_connect_host(host, (unsigned short)port);
+	if(socket_invalid == tcp)
 	{
-		printf("socket connect %s:%d error: %d/%d\n", host, port, r, socket_geterror());
+		printf("socket connect %s:%d error: %d/%d\n", host, port, errno, socket_geterror());
 		return 1;
 	}
 

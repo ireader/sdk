@@ -100,6 +100,7 @@ static int url_parse_host(const char* url, size_t len, url_t* uri)
 	return 0;
 }
 
+// TODO: IPv6 url
 void* url_parse(const char* url)
 {
 	size_t len;
@@ -163,62 +164,63 @@ void* url_parse(const char* url)
 	return uri;
 }
 
-int url_geturl(void* id, char* url, size_t len)
-{
-	size_t n;
-	url_t* uri = (url_t*)id;
-	if(!uri || !url || !uri->host)
-		return -1;
-
-	n = STRLEN(uri->scheme) + STRLEN(uri->host) + STRLEN(uri->path) + 8;
-	if(len < n)
-		return n;
-
-	if(uri->scheme)
-	{
-		strcpy(url, uri->scheme);
-		strcat(url, "://");
-	}
-
-	if(uri->host)
-		strcat(url, uri->host);
-
-	if(uri->port)
-		sprintf(url+strlen(url), ":%d", uri->port);
-
-	n = strlen(url);
-	return url_geturlpath(id, url+n, len-n);
-}
-
 int url_geturlpath(void* id, char* url, size_t len)
 {
-	int i;
+	int i, offset;
 	char buffer[MAX_PATH];
 
 	url_t* uri = (url_t*)id;
 
-	if(uri->path)
+	offset = 0;
+	if (uri->path)
 	{
-		assert('/'==uri->path[0]);
-		strcpy(url, uri->path);
+		assert('/' == uri->path[0]);
+		offset += strlcpy(url + offset, uri->path, len - offset);
 	}
 	else
 	{
-		strcpy(url, "/");
+		offset += strlcpy(url + offset, "/", len - offset);
 	}
 
-	for(i=0; i<uri->count; i++)
+	for (i = 0; i < uri->count; i++)
 	{
-		strcat(url, 0==i ? "?" : "&");
+		offset += strlcat(url + offset, 0 == i ? "?" : "&", len - offset);
 
 		url_encode(uri->params[i].name, -1, buffer, sizeof(buffer));
-		strcat(url, buffer);
-		strcat(url, "=");
+		offset += strlcat(url + offset, buffer, len - offset);
+		offset += strlcat(url + offset, "=", len - offset);
 		url_encode(uri->params[i].value, -1, buffer, sizeof(buffer));
-		strcat(url, buffer);
+		offset += strlcat(url + offset, buffer, len - offset);
 	}
 
 	return 0;
+}
+
+int url_geturl(void* id, char* url, size_t len)
+{
+	size_t n, offset;
+	url_t* uri = (url_t*)id;
+	if(!uri || !url || !uri->host)
+		return -1;
+
+	n = STRLEN(uri->scheme) + STRLEN(uri->host) + STRLEN(uri->path) + uri->count + 8;
+	if(len < n)
+		return n;
+
+	offset = 0;
+	if(uri->scheme)
+	{
+		offset += strlcpy(url + offset, uri->scheme, len-offset);
+		offset += strlcat(url + offset, "://", len - offset);
+	}
+
+	if(uri->host)
+		offset += strlcat(url + offset, uri->host, len - offset);
+
+	if(uri->port)
+		offset += snprintf(url + offset, len - offset, ":%d", uri->port);
+
+	return offset + url_geturlpath(id, url + offset, len - offset);
 }
 
 int url_setscheme(void* id, const char* scheme)

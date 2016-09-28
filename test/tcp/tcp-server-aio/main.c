@@ -1,6 +1,7 @@
 #include "cstringext.h"
 #include "sys/sock.h"
 #include "sys/system.h"
+#include "sys/thread.h"
 #include "sys/process.h"
 #include "aio-socket.h"
 #include "thread-pool.h"
@@ -16,7 +17,7 @@ static void AIOWorker(void* param)
 	int r;
 	while(1)
 	{
-		r = aio_socket_process();
+		r = aio_socket_process(10);
 	}
 }
 
@@ -43,7 +44,7 @@ static void OnRead(void* param, int code, int bytes)
 	aio = *(aio_socket_t*)param;
 	ptr = (aio_socket_t*)param + 1;
 
-	printf("[%u]OnRead[%p] code=%d, bytes=%d, recv=%s\n", thread_self(), aio, code, bytes, ptr);
+	printf("[%u]OnRead[%p] code=%d, bytes=%d, recv=%s\n", thread_self(), aio, code, bytes, (char*)ptr);
 
 	aio_socket_send(aio, s_buffer, sizeof(s_buffer), OnWrite, param);
 }
@@ -100,7 +101,7 @@ int main(int argc, char* argv[])
 
 	memset(s_buffer, 'A', sizeof(s_buffer)-1);
 
-	aio_socket_init(cpu, 100000);
+	aio_socket_init(cpu);
 	s_thpool = thread_pool_create(cpu, cpu, cpu*2);
 
 	while(cpu > 0)

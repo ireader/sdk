@@ -164,7 +164,7 @@ std::string Cookie::CreateExpire(int hours)
 	tm* gmt = gmtime(&t);
 
 	char buffer[64] = {0};
-	sprintf(buffer, "%s, %02d-%s-%02d %02d:%02d:%02d GMT",
+	snprintf(buffer, sizeof(buffer), "%s, %02d-%s-%02d %02d:%02d:%02d GMT",
 		week[gmt->tm_wday],	// weekday
 		gmt->tm_mday,		// day
 		month[gmt->tm_mon],	// month

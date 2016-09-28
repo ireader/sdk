@@ -145,6 +145,34 @@ static void url_without_host()
 	url_free(uri);
 }
 
+static void url_ipv6()
+{
+	void *uri;
+	const char *name, *value;
+
+	uri = url_parse("http://[::1]");
+	assert(0 == strcmp("::1", url_gethost(uri)));
+	assert(0 == strcmp("http", url_getscheme(uri)));
+	assert(0 == strcmp("/", url_getpath(uri)));
+	assert(0 == url_getparam_count(uri));
+	url_free(uri);
+
+	uri = url_parse("http://[fe80::1%2511]");
+	assert(0 == strcmp("fe80::1%2511", url_gethost(uri)));
+	assert(0 == strcmp("http", url_getscheme(uri)));
+	assert(0 == strcmp("/", url_getpath(uri)));
+	assert(0 == url_getparam_count(uri));
+	url_free(uri);
+
+	uri = url_parse("http://[FEDC:BA98:7654:3210:FEDC:BA98:7654:3210]:80/index.html");
+	assert(0 == strcmp("FEDC:BA98:7654:3210:FEDC:BA98:7654:3210", url_gethost(uri)));
+	assert(0 == strcmp("http", url_getscheme(uri)));
+	assert(0 == strcmp("/index.html", url_getpath(uri)));
+	assert(0 == url_getparam_count(uri));
+	assert(80 == url_getport(uri));
+	url_free(uri);
+}
+
 void url_test(void)
 {
 	void *uri;
@@ -161,4 +189,5 @@ void url_test(void)
 	url_standard();
 	url_without_scheme();
 	url_without_host();
+	url_ipv6();
 }

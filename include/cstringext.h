@@ -36,7 +36,7 @@
 	#endif
 #else
 	#if !defined(__cplusplus)
-		#define inline static __attribute__((unused))
+		#define inline __inline__
 	#endif
 
 	#ifndef stricmp
@@ -103,9 +103,9 @@ inline const char* skips(const char* p, const char* chars)
 
 /// token("abc def", " ") => "abc"
 /// token("abc def", " c") => "ab"
-inline int token(const char* p, const char* chars, char* buf, int len)
+inline size_t token(const char* p, const char* chars, char* buf, size_t len)
 {
-	int i = 0;
+	size_t i = 0;
 	while(p && *p && !strchr(chars, *p) && i<len-1)
 	{
 		buf[i++] = *p;

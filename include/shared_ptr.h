@@ -17,7 +17,7 @@
 #define shared_ptr tr1::shared_ptr
 #endif
 
-#elif __GNUC__>=4 && __GNUC_MINOR__<3
+#elif __GNUC__>=4 && __GNUC_MINOR__<=4
 #include <tr1/memory>
 #define shared_ptr tr1::shared_ptr
 #endif // OS_WINDOWS
