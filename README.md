@@ -1,5 +1,10 @@
 # WIN32/WIN64/Linux/MacOS
 
+# AIO
+1. IOCP (source/aio-socket-iocp.c)
+2. epoll (source/aio-socket-epoll.c)
+3. kqueue (source/aio-socket-kqueue.c)
+
 # atomic  (include/sys/atomic.h)
 1. increment32/increment64
 2. decrement32/decrement64
