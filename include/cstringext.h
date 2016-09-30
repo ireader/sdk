@@ -36,7 +36,7 @@
 	#endif
 #else
 	#if !defined(__cplusplus)
-		#define inline __inline__
+		#define inline static __attribute__((unused))
 	#endif
 
 	#ifndef stricmp
