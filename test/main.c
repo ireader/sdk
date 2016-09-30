@@ -35,6 +35,7 @@ void aio_socket_test2(void);
 void aio_socket_test3(void);
 void aio_socket_test4(void);
 void ip_route_test(void);
+void onetime_test(void);
 
 #if defined(HTTP_TEST)
 void http_test(void);
@@ -50,6 +51,7 @@ void sdp_test(void);
 
 int main(int argc, char* argv[])
 {
+	onetime_test();
 	locker_test();
 	atomic_test();
 #if defined(ATOMIC_TEST)
