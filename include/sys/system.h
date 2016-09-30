@@ -253,6 +253,9 @@ inline funcptr_t system_getproc(module_t module, const char* producer)
 #if defined(OS_WINDOWS)
 	return GetProcAddress(module, producer);
 #else
+	// https://linux.die.net/man/3/dlsym
+	// cosine = (double (*)(double)) dlsym(handle, "cos")
+	// ===> *(void **) (&cosine) = dlsym(handle, "cos");
 	return (funcptr_t)dlsym(module, producer);
 #endif
 }
