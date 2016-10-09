@@ -158,6 +158,7 @@ inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_t* len,
 inline int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
 inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN size_t hostlen);
 inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen, u_short port);
+inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t salen);
 
 inline void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len);
 
@@ -901,8 +902,9 @@ inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT
 inline int socket_isip(IN const char* ip)
 {
 #if 1
-	char str[SOCKET_ADDRLEN];
-	if(1 != inet_pton(AF_INET, ip, str) && 1 != inet_pton(AF_INET6, ip, str))
+	struct sockaddr_storage addr;
+	if(1 != inet_pton(AF_INET, ip, &((struct sockaddr_in*)&addr)->sin_addr) 
+		&& 1 != inet_pton(AF_INET6, ip, &((struct sockaddr_in6*)&addr)->sin6_addr))
 		return -1;
 	return 0;
 #else
@@ -1058,6 +1060,28 @@ inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen, u_sho
 inline int socket_addr_name(IN const struct sockaddr* sa, socklen_t salen, char* host, size_t hostlen)
 {
 	return getnameinfo(sa, salen, host, hostlen, NULL, 0, 0);
+}
+
+inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t salen)
+{
+	if (AF_INET == sa->sa_family)
+	{
+		const struct sockaddr_in* in = (const struct sockaddr_in*)sa;
+		assert(sizeof(struct sockaddr_in) == salen);
+		return (in->sin_addr.s_addr & 0xf0000000) == 0xe0000000 ? 1 : 0;
+	}
+	else if (AF_INET6 == sa->sa_family)
+	{
+		const struct sockaddr_in6* in6 = (const struct sockaddr_in6*)sa;
+		assert(sizeof(struct sockaddr_in6) == salen);
+		return in6->sin6_addr.s6_addr[0] == 0xff ? 1 : 0;
+	}
+	else
+	{
+		assert(0);
+	}
+
+	return 0;
 }
 
 inline void socket_setbufvec(socket_bufvec_t* vec, int idx, void* ptr, size_t len)
