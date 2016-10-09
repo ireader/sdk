@@ -1068,7 +1068,7 @@ inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t s
 	{
 		const struct sockaddr_in* in = (const struct sockaddr_in*)sa;
 		assert(sizeof(struct sockaddr_in) == salen);
-		return (in->sin_addr.s_addr & 0xf0000000) == 0xe0000000 ? 1 : 0;
+		return (ntohl(in->sin_addr.s_addr) & 0xf0000000) == 0xe0000000 ? 1 : 0;
 	}
 	else if (AF_INET6 == sa->sa_family)
 	{

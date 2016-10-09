@@ -59,6 +59,13 @@ static void socket_name_ipv6_test(void)
 	socket_close(socket);
 }
 
+static void socket_addr_is_multicast_test(void)
+{
+	struct sockaddr_in in;
+	socket_addr_from_ipv4(&in, "224.0.0.0", 0);
+	assert(socket_addr_is_multicast(&in, sizeof(in)));
+}
+
 void socket_test(void)
 {
 	socket_init();
@@ -66,6 +73,7 @@ void socket_test(void)
 	socket_ip_test();
 	socket_name_ipv4_test();
 	socket_name_ipv6_test();
+	socket_addr_is_multicast_test();
 
 	socket_cleanup();
 }
