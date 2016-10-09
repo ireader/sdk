@@ -831,7 +831,7 @@ inline int socket_setnonblock(IN socket_t sock, IN int noblock)
 	// Prior to standardization there was ioctl(...FIONBIO...) and fcntl(...O_NDELAY...) ...
 	// POSIX addressed this with the introduction of O_NONBLOCK.
 	int flags = fcntl(sock, F_GETFL, 0);
-	return fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+	return fcntl(sock, F_SETFL, noblock ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK));
 	//return ioctl(sock, FIONBIO, &noblock);
 #endif
 }
