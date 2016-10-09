@@ -13,7 +13,11 @@ Cookie::Cookie()
 
 Cookie::Cookie(const char* name, const char* value, const char* expires)
 {
-	this->Cookie::Cookie(name, value, expires, "");
+	m_path = "/";
+	m_name = name;
+	m_value = value;
+	m_secure = false;
+	m_httponly = false;
 }
 
 Cookie::Cookie(const char* name, const char* value, const char* expires, const char* path)

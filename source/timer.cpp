@@ -55,7 +55,7 @@ int TimerManager::AddTimer(timer_t &id, int period, fcbTimer callback, void *par
 	AutoThreadLocker locker(m_locker);
 	TimerItem* item = (TimerItem*)malloc(sizeof(TimerItem));
 	if(!item) return -1;
-	memset(item, 0, sizeof(item));
+	memset(item, 0, sizeof(*item));
 	item->_id = (timer_t)item;
 	item->_period = period;
 	item->_param = param;
