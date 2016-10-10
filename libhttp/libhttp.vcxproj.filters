@@ -60,6 +60,12 @@
     <ClCompile Include="test\http-client-test2.cpp">
       <Filter>test</Filter>
     </ClCompile>
+    <ClCompile Include="source\http-parser.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\http-upload.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\http-bundle.h">
@@ -90,6 +96,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\http-server.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http-parser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http-upload.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -140,10 +140,12 @@
     <ClCompile Include="source\http-cookie.c" />
     <ClCompile Include="source\http-header-content-type.c" />
     <ClCompile Include="source\http-header-host.c" />
+    <ClCompile Include="source\http-parser.c" />
     <ClCompile Include="source\http-reason.c" />
     <ClCompile Include="source\http-request.c" />
     <ClCompile Include="source\http-server.c" />
     <ClCompile Include="source\http-session.c" />
+    <ClCompile Include="source\http-upload.c" />
     <ClCompile Include="test\benchmark.c" />
     <ClCompile Include="test\http-client-test.cpp" />
     <ClCompile Include="test\http-client-test2.cpp" />
@@ -155,10 +157,12 @@
     <ClInclude Include="include\http-cookie.h" />
     <ClInclude Include="include\http-header-content-type.h" />
     <ClInclude Include="include\http-header-host.h" />
+    <ClInclude Include="include\http-parser.h" />
     <ClInclude Include="include\http-reason.h" />
     <ClInclude Include="include\http-request.h" />
     <ClInclude Include="include\http-server-internal.h" />
     <ClInclude Include="include\http-server.h" />
+    <ClInclude Include="include\http-upload.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
