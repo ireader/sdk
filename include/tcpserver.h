@@ -12,7 +12,7 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 {
 	int r;
 	socket_t sock;
-	char portstr[16];
+	char portstr[22];
 	struct addrinfo hints, *addr, *ptr;
 
 	memset(&hints, 0, sizeof(hints));

@@ -21,6 +21,8 @@ static void socket_ip_test(void)
 	socket_ipv6("2001:0db8:0000:0000:0000:ff00:0042:8329", ip);
 	socket_ipv6("2001:db8::ff00:42:8329", ip); // 2001:db8:0:0:0:ff00:42:8329
 	socket_ipv6("::1", ip); // 0000:0000:0000:0000:0000:0000:0000:0001
+	socket_ipv6("::ffff:c000:0280", ip); // ::ffff:192.0.2.128
+	socket_ipv6("::ffff:192.0.2.128", ip); // ::ffff:c000:0280 IPv4-mapped IPv6 address
 }
 
 static void socket_name_ipv4_test(void)
@@ -62,8 +64,31 @@ static void socket_name_ipv6_test(void)
 static void socket_addr_is_multicast_test(void)
 {
 	struct sockaddr_in in;
+	struct sockaddr_in6 in6;
+
 	socket_addr_from_ipv4(&in, "224.0.0.0", 0);
-	assert(socket_addr_is_multicast(&in, sizeof(in)));
+	assert(socket_addr_is_multicast((struct sockaddr*)&in, sizeof(in)));
+	socket_addr_from_ipv4(&in, "224.255.255.255", 0);
+	assert(socket_addr_is_multicast((struct sockaddr*)&in, sizeof(in)));
+	socket_addr_from_ipv4(&in, "239.0.0.0", 0);
+	assert(socket_addr_is_multicast((struct sockaddr*)&in, sizeof(in)));
+	socket_addr_from_ipv4(&in, "239.255.255.255", 0);
+	assert(socket_addr_is_multicast((struct sockaddr*)&in, sizeof(in)));
+
+	socket_addr_from_ipv4(&in, "240.0.0.0", 0);
+	assert(0 == socket_addr_is_multicast((struct sockaddr*)&in, sizeof(in)));
+	socket_addr_from_ipv4(&in, "223.255.255.255", 0);
+	assert(0 == socket_addr_is_multicast((struct sockaddr*)&in, sizeof(in)));
+
+	socket_addr_from_ipv6(&in6, "ff00::", 0);
+	assert(socket_addr_is_multicast((struct sockaddr*)&in6, sizeof(in6)));
+	socket_addr_from_ipv6(&in6, "ffff::", 0);
+	assert(socket_addr_is_multicast((struct sockaddr*)&in6, sizeof(in6)));
+
+	socket_addr_from_ipv6(&in6, "::", 0); // 0:0:0:0:0:0:0:0
+	assert(0 == socket_addr_is_multicast((struct sockaddr*)&in6, sizeof(in6)));
+	socket_addr_from_ipv6(&in6, "::1", 0); // 0:0:0:0:0:0:0:1
+	assert(0 == socket_addr_is_multicast((struct sockaddr*)&in6, sizeof(in6)));
 }
 
 void socket_test(void)

@@ -234,8 +234,8 @@ void aio_socket_test3(void)
 	memset(&client, 0, sizeof(client));
 	memset(&server, 0, sizeof(server));
 
-	server.socket = aio_socket_create(udpsocket_create(NULL, PORT, 0), 1);
-	client.socket = aio_socket_create(udpsocket_create(NULL, PORT+1, 0), 1);
+	server.socket = aio_socket_create(udpsocket_create(NULL, PORT), 1);
+	client.socket = aio_socket_create(udpsocket_create(NULL, PORT+1), 1);
 
 	printf("aio-server round: %d\n", ++server.cc);
 	r = aio_socket_recvfrom(server.socket, server.msg, strlen(s_cmsg1), aio_server_onrecvfrom, &server);

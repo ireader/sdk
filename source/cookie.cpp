@@ -1,7 +1,7 @@
 #include <time.h>
+#include <string>
 #include <assert.h>
 #include "cookie.h"
-#include "cstringext.h"
 #include "cppstringext.h"
 
 Cookie::Cookie()
@@ -40,15 +40,15 @@ static bool ParseCookieItem(const char* p, std::string& name, std::string& value
 	if(NULL==p || 0==*p)
 		return false;
 
-	const char* pn1 = skip(p, ' ');
+	const char* pn1 = p + strspn(p, " \t");
 	const char* pn2 = pn1+1;
 	while(isalnum(*pn2))
 		++pn2;
 
-	const char* pv1 = skip(pn2, ' ');
+	const char* pv1 = pn2 + strspn(pn2, " \t");
 	if('=' == *pv1)
 	{
-		pv1 = skip(pv1+1, ' ');
+		pv1 += strspn(pv1+1, " \t");
 		const char* pv2 = p+strlen(p)-1;
 		while(isspace(*pv2) && pv2 > pv1)
 			--pv2;

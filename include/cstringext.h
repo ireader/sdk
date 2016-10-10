@@ -60,9 +60,9 @@
 	#endif
 #endif
 
-#define char_isnum(c)				('0'<=(c) && '9'>=(c))
-#define char_isalpha(c)				(('a'<=(c) && 'z'>=(c)) || ('A'<=(c) && 'Z'>=(c)))
-#define char_isalnum(c)				(char_isnum(c) || char_isalpha(c))
+//#define char_isnum(c)				('0'<=(c) && '9'>=(c))
+//#define char_isalpha(c)				(('a'<=(c) && 'z'>=(c)) || ('A'<=(c) && 'Z'>=(c)))
+//#define char_isalnum(c)				(char_isnum(c) || char_isalpha(c))
 
 #define strempty(s)					((!s || 0==*s) ? 1 : 0)
 #define streq(s, t)					(strcmp(s, t) ? 0 : 1)
@@ -87,37 +87,16 @@
 #define MAX_PATH					260
 #endif
 
-inline const char* skip(const char* p, char c)
-{
-	while(p && *p==c)
-		++p;
-	return p;
-}
-
-inline const char* skips(const char* p, const char* chars)
-{
-	while(p && strchr(chars, *p))
-		++p;
-	return p;
-}
-
-/// token("abc def", " ") => "abc"
-/// token("abc def", " c") => "ab"
-inline size_t token(const char* p, const char* chars, char* buf, size_t len)
-{
-	size_t i = 0;
-	while(p && *p && !strchr(chars, *p) && i<len-1)
-	{
-		buf[i++] = *p;
-		++p;
-	}
-	buf[i] = 0;
-	return i;
-}
-
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+/// get token(trim prefix/suffix)
+/// @param[in] s source string(value will be changed '\0')
+/// e.g.
+/// strtoken("abc def", " ") => "abc"
+/// strtoken("abc def", " c") => "ab"
+char *strtoken(char *s, const char *delim, char **saveptr);
 
 #if defined(OS_WINDOWS)
 char* strndup(const char* p, size_t n);
