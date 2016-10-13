@@ -3,19 +3,19 @@
 
 #include "sys/tls.h"
 
-class ThreadLocal
+class ThreadLocalStorage
 {
 private:
-	ThreadLocal(const ThreadLocal&) {}
-	ThreadLocal& operator=(const ThreadLocal&) { return *this; }
+	ThreadLocalStorage(const ThreadLocalStorage&) {}
+	ThreadLocalStorage& operator=(const ThreadLocalStorage&) { return *this; }
 
 public:
-	ThreadLocal() 
+	ThreadLocalStorage()
 	{ 
 		tls_create(&m_key); 
 	}
 	
-	~ThreadLocal()
+	~ThreadLocalStorage()
 	{
 		tls_destroy(m_key);
 	}

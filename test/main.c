@@ -20,9 +20,11 @@ void atomic_test2(void);
 void spinlock_test(void);
 void event_test(void);
 void semaphore_test(void);
+void onetime_test(void);
 
 void stack_test(void);
 void time64_test(void);
+void bits_test(void);
 
 void url_test(void);
 void unicode_test(void);
@@ -51,7 +53,7 @@ void sdp_test(void);
 
 int main(int argc, char* argv[])
 {
-	onetime_test();
+	socket_test();
 	locker_test();
 	atomic_test();
 #if defined(ATOMIC_TEST)
@@ -62,12 +64,14 @@ int main(int argc, char* argv[])
 #if !defined(OS_MAC)
 	semaphore_test();
 #endif
+	onetime_test();
+
 	stack_test();
-	socket_test();
+	time64_test();
+	bits_test();
 
     url_test();
-    time64_test();
-
+  
 #if defined(HTTP_TEST)
 	http_test();
 #endif
