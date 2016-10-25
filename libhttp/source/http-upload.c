@@ -1,7 +1,8 @@
+#include "http-upload.h"
 #include <string.h>
 #include <memory.h>
 #include <assert.h>
-#include "http-upload.h"
+#include "cstringext.h"
 
 #define WHITESPACE " \t"
 

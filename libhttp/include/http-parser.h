@@ -1,6 +1,8 @@
 #ifndef _http_parser_h_
 #define _http_parser_h_
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

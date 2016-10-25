@@ -1,9 +1,9 @@
+#include "http-parser.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "http-parser.h"
-#include "cstringext.h"
 #include <assert.h>
 #include <ctype.h>
+#include "cstringext.h"
 
 #define KB (1024)
 #define MB (1024*1024)
