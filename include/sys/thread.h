@@ -27,6 +27,17 @@ typedef pthread_t tid_t;
 #define STDCALL
 #endif
 
+enum thread_priority
+{
+	THREAD_PRIORITY_IDLE			= 1,
+	THREAD_PRIORITY_LOWEST			= 25,
+	THREAD_PRIORITY_BELOW_NORMAL	= 40,
+	THREAD_PRIORITY_NORMAL			= 50,
+	THREAD_PRIORITY_ABOVE_NORMAL	= 60,
+	THREAD_PRIORITY_HIGHEST			= 75,
+	THREAD_PRIORITY_TIME_CRITICAL	= 99,
+};
+
 #endif
 
 //-------------------------------------------------------------------------------------
@@ -102,8 +113,9 @@ inline int thread_getpriority(pthread_t thread, int* priority)
 	*priority = r;
 	return 0;
 #else
+	int policy;
 	struct sched_param sched;
-	int r = pthread_getschedparam(thread, priority, &sched);
+	int r = pthread_getschedparam(thread, &policy, &sched);
 	if(0 == r)
 		*priority = sched.sched_priority;
 	return r;
@@ -116,10 +128,17 @@ inline int thread_setpriority(pthread_t thread, int priority)
 	BOOL r = SetThreadPriority(thread.handle, priority);
 	return TRUE==r?1:0;
 #else
+	int policy = SCHED_RR;
 	struct sched_param sched;
-	sched.sched_priority = 0;
-	int r = pthread_setschedparam(thread, priority, &sched);
-	return r;
+	pthread_getschedparam(thread, &policy, &sched);
+
+	// For processes scheduled under one of the normal scheduling policies 
+	// (SCHED_OTHER, SCHED_IDLE, SCHED_BATCH), 
+	// sched_priority is not used in scheduling decisions (it must be specified as 0).
+	// Processes scheduled under one of the real-time policies(SCHED_FIFO, SCHED_RR) 
+	// have a sched_priority value in the range 1 (low)to 99 (high)
+	sched.sched_priority = (SCHED_FIFO==policy || SCHED_RR==policy) ? priority : 0;
+	return pthread_setschedparam(thread, policy, &sched);
 #endif
 }
 
