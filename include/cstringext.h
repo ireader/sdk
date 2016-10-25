@@ -8,13 +8,30 @@
 #include <assert.h>
 #include <errno.h>
 
-#if defined(OS_WINDOWS)
-	#if !defined(__cplusplus)
-		#ifndef inline
-			#define inline __inline
-		#endif
+// inline keyword
+#if !defined(__cplusplus) && !defined(inline)
+	#if _MSC_VER
+		#define inline __inline
+	#elif __GNUC__ && !__GNUC_STDC_INLINE__ && !__GNUC_GNU_INLINE__
+		#define inline static __inline__ //__attribute__((unused))
+		//#define inline static __inline__ __attribute__((always_inline))
 	#endif
+#endif
 
+// UNUSED
+#if defined(__cplusplus)
+	#define UNUSED(x)
+#else
+	#if defined(_MSC_VER)
+		#define UNUSED(x) x
+	#elif defined(__GNUC__)
+		#define UNUSED(x) x __attribute__((unused))
+	#else
+		#define UNUSED(x) x
+	#endif
+#endif
+
+#if defined(OS_WINDOWS)
 	#if !defined(stricmp)
 		#define stricmp		_stricmp
 	#endif
@@ -35,28 +52,12 @@
 		#undef snprintf
 	#endif
 #else
-	#if !defined(__cplusplus)
-		#define inline static __attribute__((unused))
-	#endif
-
 	#ifndef stricmp
 		#define stricmp strcasecmp
 	#endif
 
 	#ifndef strnicmp
 		#define strnicmp strncasecmp
-	#endif
-#endif
-
-#if defined(__cplusplus)
-	#define UNUSED(x)
-#else
-	#if defined(_MSC_VER)
-		#define UNUSED(x) x
-	#elif defined(__GNUC__)
-		#define UNUSED(x) x __attribute__((unused))
-	#else
-		#define UNUSED(x) x
 	#endif
 #endif
 

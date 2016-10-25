@@ -3,7 +3,9 @@
 
 #include <memory>
 
+// https://en.wikipedia.org/wiki/Visual_C%2B%2B
 #if defined(OS_WINDOWS)
+#define VC5		1100	// MS VC++ 5.0
 #define VC6		1200	// MS VC++ 6.0
 #define VS2002	1300	// MS VC++ 7.0
 #define VS2003	1310	// MS VC++ 7.1
@@ -12,6 +14,8 @@
 #define VS2010	1600	// MS VC++ 10.0
 #define VS2012	1700	// MS VC++ 11.0
 #define VS2013	1800	// MS VC++ 12.0
+#define VS2015	1900	// MS VC++ 13.0
+#define VS14	2000	// MS VC++ 14.0
 
 #if _MSC_VER <= VS2008
 #define shared_ptr tr1::shared_ptr
