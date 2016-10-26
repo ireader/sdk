@@ -33,7 +33,7 @@ typedef struct
 // int event_reset(event_t* event);
 //-------------------------------------------------------------------------------------
 
-inline int event_create(event_t* event)
+static inline int event_create(event_t* event)
 {
 #if defined(OS_WINDOWS)
 	HANDLE h = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -57,7 +57,7 @@ inline int event_create(event_t* event)
 #endif
 }
 
-inline int event_destroy(event_t* event)
+static inline int event_destroy(event_t* event)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = CloseHandle(*event);
@@ -75,7 +75,7 @@ inline int event_destroy(event_t* event)
 }
 
 // 0-success, other-error
-inline int event_wait(event_t* event)
+static inline int event_wait(event_t* event)
 {
 #if defined(OS_WINDOWS)
 	DWORD r = WaitForSingleObjectEx(*event, INFINITE, TRUE);
@@ -92,7 +92,7 @@ inline int event_wait(event_t* event)
 }
 
 // 0-success, WAIT_TIMEOUT-timeout, other-error
-inline int event_timewait(event_t* event, int timeout)
+static inline int event_timewait(event_t* event, int timeout)
 {
 #if defined(OS_WINDOWS)
 	DWORD r = WaitForSingleObjectEx(*event, timeout, TRUE);
@@ -131,7 +131,7 @@ inline int event_timewait(event_t* event, int timeout)
 #endif
 }
 
-inline int event_signal(event_t* event)
+static inline int event_signal(event_t* event)
 {
 #if defined(OS_WINDOWS)
 	return SetEvent(*event)?0:(int)GetLastError();
@@ -145,7 +145,7 @@ inline int event_signal(event_t* event)
 #endif
 }
 
-inline int event_reset(event_t* event)
+static inline int event_reset(event_t* event)
 {
 #if defined(OS_WINDOWS)
 	return ResetEvent(*event)?0:(int)GetLastError();

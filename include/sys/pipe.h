@@ -24,10 +24,18 @@ typedef int pipe_t;
 #define invalid_pipe_value (-1)
 #endif
 
+//-------------------------------------------------------------------------------------
+// pipe_t pipe_server(const char* name, int flags)
+// pipe_t pipe_open(const char* name, int flags)
+// int pipe_close(pipe_t pipe)
+// int pipe_write(pipe_t pipe, const void* msg, int len)
+// int pipe_read(pipe_t pipe, void* msg, int len)
+//-------------------------------------------------------------------------------------
+
 /// windows: pipe_server("\\.\pipe\pipename")
 /// linux:	pipe_server("pipename")
 /// Linux pipe can't be open with read and write
-inline pipe_t pipe_server(const char* name, int flags)
+static inline pipe_t pipe_server(const char* name, int flags)
 {
 #if defined(OS_WINDOWS)
 	HANDLE pipe;
@@ -58,7 +66,7 @@ inline pipe_t pipe_server(const char* name, int flags)
 /// windows: pipe_server("\\.\pipe\pipename")
 /// linux:	pipe_server("pipename")
 /// Linux pipe can't be open with read and write
-inline pipe_t pipe_open(const char* name, int flags)
+static inline pipe_t pipe_open(const char* name, int flags)
 {
 #if defined(OS_WINDOWS)
 	HANDLE pipe;
@@ -92,7 +100,7 @@ inline pipe_t pipe_open(const char* name, int flags)
 /// close pipe line
 /// @param[in] pipe id
 /// @return 0-ok, other-error
-inline int pipe_close(pipe_t pipe)
+static inline int pipe_close(pipe_t pipe)
 {
 #if defined(OS_WINDOWS)
 	CloseHandle(pipe);
@@ -107,7 +115,7 @@ inline int pipe_close(pipe_t pipe)
 /// @param[in] msg message to send
 /// @param[in] len message length in byte
 /// @return >0-send bytes, other-error
-inline int pipe_write(pipe_t pipe, const void* msg, int len)
+static inline int pipe_write(pipe_t pipe, const void* msg, int len)
 {
 #if defined(OS_WINDOWS)
 	DWORD bytes = 0;
@@ -122,7 +130,7 @@ inline int pipe_write(pipe_t pipe, const void* msg, int len)
 /// @param[out] msg message buffer
 /// @param[in] len message length in byte
 /// @return >0-receive bytes, other-error
-inline int pipe_read(pipe_t pipe, void* msg, int len)
+static inline int pipe_read(pipe_t pipe, void* msg, int len)
 {
 #if defined(OS_WINDOWS)
 	DWORD bytes = 0;

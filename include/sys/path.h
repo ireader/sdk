@@ -5,6 +5,8 @@
 #include <Windows.h>
 #include <direct.h>
 
+#define PATH_MAX _MAX_PATH
+
 #else
 #include <unistd.h>
 #include <limits.h>

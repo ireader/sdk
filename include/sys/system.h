@@ -30,34 +30,25 @@ typedef void (*funcptr_t)(void);
 #include <stdint.h>
 #include <stdio.h>
 
-inline void system_sleep(useconds_t millisecond);
-
-// Get CPU count
-inline size_t system_getcpucount(void);
-inline int64_t system_getcyclecount(void);
-
-///@return second.milliseconds(absolute time)
-inline uint64_t system_time(void);
-///@return milliseconds(relative time)
-inline uint64_t system_clock(void);
-
-inline int system_version(int* major, int* minor);
-
-//////////////////////////////////////////////////////////////////////////
-///
-/// dynamic module load/unload
-///
-//////////////////////////////////////////////////////////////////////////
-inline module_t system_load(const char* module);
-inline int system_unload(module_t module);
-inline funcptr_t system_getproc(module_t module, const char* producer);
+//-----------------------------------------------------------------------
+// void system_sleep(useconds_t millisecond);
+// uint64_t system_time(void);
+// uint64_t system_clock(void);
+// int64_t system_getcyclecount(void);
+// size_t system_getcpucount(void);
+//
+// int system_version(int* major, int* minor);
+// module_t system_load(const char* module);
+// int system_unload(module_t module);
+// funcptr_t system_getproc(module_t module, const char* producer);
+//-----------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////
 ///
 /// implement
 ///
 //////////////////////////////////////////////////////////////////////////
-inline void system_sleep(useconds_t milliseconds)
+static inline void system_sleep(useconds_t milliseconds)
 {
 #if defined(OS_WINDOWS)
 	Sleep(milliseconds);
@@ -66,7 +57,7 @@ inline void system_sleep(useconds_t milliseconds)
 #endif
 }
 
-inline size_t system_getcpucount(void)
+static inline size_t system_getcpucount(void)
 {
 #if defined(OS_WINDOWS)
 	SYSTEM_INFO sysinfo;
@@ -110,7 +101,7 @@ inline size_t system_getcpucount(void)
 #endif
 }
 
-inline int64_t system_getcyclecount(void)
+static inline int64_t system_getcyclecount(void)
 {
 #if defined(OS_WINDOWS)
 	LARGE_INTEGER freq;
@@ -123,7 +114,7 @@ inline int64_t system_getcyclecount(void)
 }
 
 ///@return second.milliseconds(absolute time)
-inline uint64_t system_time(void)
+static inline uint64_t system_time(void)
 {
 #if defined(OS_WINDOWS)
 	uint64_t t;
@@ -143,7 +134,7 @@ inline uint64_t system_time(void)
 }
 
 ///@return milliseconds(relative time)
-inline uint64_t system_clock(void)
+static inline uint64_t system_clock(void)
 {
 #if defined(OS_WINDOWS)
 	LARGE_INTEGER freq;
@@ -172,7 +163,7 @@ inline uint64_t system_clock(void)
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <mach/mach_time.h>
-inline int mac_gettime(struct timespec *t){
+static inline int mac_gettime(struct timespec *t){
 	mach_timebase_info_data_t timebase;
 	mach_timebase_info(&timebase);
 	uint64_t time;
@@ -190,7 +181,7 @@ inline int mac_gettime(struct timespec *t){
 #pragma warning(disable: 4996) // GetVersionEx
 #pragma warning(disable: 28159)
 #endif
-inline int system_version(int* major, int* minor)
+static inline int system_version(int* major, int* minor)
 {
 #if defined(OS_WINDOWS)
 	/*
@@ -230,7 +221,13 @@ inline int system_version(int* major, int* minor)
 #pragma warning(pop)
 #endif
 
-inline module_t system_load(const char* module)
+
+//////////////////////////////////////////////////////////////////////////
+///
+/// dynamic module load/unload
+///
+//////////////////////////////////////////////////////////////////////////
+static inline module_t system_load(const char* module)
 {
 #if defined(OS_WINDOWS)
 	return LoadLibraryExA(module, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
@@ -239,7 +236,7 @@ inline module_t system_load(const char* module)
 #endif
 }
 
-inline int system_unload(module_t module)
+static inline int system_unload(module_t module)
 {
 #if defined(OS_WINDOWS)
 	return FreeLibrary(module);
@@ -248,7 +245,7 @@ inline int system_unload(module_t module)
 #endif
 }
 
-inline funcptr_t system_getproc(module_t module, const char* producer)
+static inline funcptr_t system_getproc(module_t module, const char* producer)
 {
 #if defined(OS_WINDOWS)
 	return GetProcAddress(module, producer);

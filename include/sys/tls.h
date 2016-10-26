@@ -18,7 +18,7 @@ typedef pthread_key_t tlskey_t;
 //-------------------------------------------------------------------------------------
 
 ///@return 0-ok, other-error
-inline int tls_create(tlskey_t* key)
+static inline int tls_create(tlskey_t* key)
 {
 #if defined(OS_WINDOWS)
 	*key = TlsAlloc();
@@ -29,7 +29,7 @@ inline int tls_create(tlskey_t* key)
 }
 
 ///@return 0-ok, other-error
-inline int tls_destroy(tlskey_t key)
+static inline int tls_destroy(tlskey_t key)
 {
 #if defined(OS_WINDOWS)
 	return TlsFree(key) ? 0 : GetLastError();
@@ -39,7 +39,7 @@ inline int tls_destroy(tlskey_t key)
 }
 
 ///@return 0-ok, other-error
-inline int tls_setvalue(tlskey_t key, void* value)
+static inline int tls_setvalue(tlskey_t key, void* value)
 {
 #if defined(OS_WINDOWS)
 	return TlsSetValue(key, value) ? 0 : GetLastError();
@@ -48,7 +48,7 @@ inline int tls_setvalue(tlskey_t key, void* value)
 #endif
 }
 
-inline void* tls_getvalue(tlskey_t key)
+static inline void* tls_getvalue(tlskey_t key)
 {
 #if defined(OS_WINDOWS)
 	return TlsGetValue(key);
