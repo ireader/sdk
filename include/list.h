@@ -6,7 +6,7 @@ struct list_head
 	struct list_head *next, *prev;
 };
 
-inline void list_insert_after(struct list_head *item, struct list_head *head)
+static inline void list_insert_after(struct list_head *item, struct list_head *head)
 {
 	struct list_head *prev, *next;
 	prev = head;
@@ -18,7 +18,7 @@ inline void list_insert_after(struct list_head *item, struct list_head *head)
 	prev->next = item;
 }
 
-inline void list_insert_before(struct list_head *item, struct list_head *head)
+static inline void list_insert_before(struct list_head *item, struct list_head *head)
 {
 	struct list_head *prev, *next;
 	prev = head->prev;
@@ -30,7 +30,7 @@ inline void list_insert_before(struct list_head *item, struct list_head *head)
 	prev->next = item;
 }
 
-inline void list_remove(struct list_head *item)
+static inline void list_remove(struct list_head *item)
 {
 	struct list_head *prev, *next;
 	prev = item->prev;
@@ -42,7 +42,7 @@ inline void list_remove(struct list_head *item)
 	item->prev = item->next = 0;
 }
 
-inline int list_empty(const struct list_head *head)
+static inline int list_empty(const struct list_head *head)
 {
 	return head->next == head;
 }

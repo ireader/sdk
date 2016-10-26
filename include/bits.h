@@ -2,6 +2,7 @@
 #define _bits_h_
 
 #include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {

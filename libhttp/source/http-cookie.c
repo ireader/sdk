@@ -4,11 +4,7 @@
 #include <assert.h>
 #include <time.h>
 #include "http-cookie.h"
-
-#if defined(OS_WINDOWS)
-	#define strcasecmp _stricmp
-	#define snprintf _snprintf
-#endif
+#include "cstringext.h"
 
 #define isblank(c) (' '==(c) || '\t'==(c))
 

@@ -1,7 +1,6 @@
+#include "HttpSocket.h"
 #include <assert.h>
 #include <stdlib.h>
-#include "cstringext.h"
-#include "HttpSocket.h"
 #include "StrConvert.h"
 #include "cookie.h"
 #include "error.h"
@@ -260,7 +259,7 @@ HttpSocket::THttpHeaders::iterator HttpSocket::FindHeader(const char* name)
 	for(THttpHeaders::iterator it=m_headers.begin(); it!=m_headers.end(); ++it)
 	{
 		const std::string& header = it->first;
-		if(0 == stricmp(header.c_str(), name))
+		if(0 == strcasecmp(header.c_str(), name))
 			return it;
 	}
 	return m_headers.end();
@@ -271,7 +270,7 @@ HttpSocket::THttpHeaders::const_iterator HttpSocket::FindHeader(const char* name
 	for(THttpHeaders::const_iterator it=m_headers.begin(); it!=m_headers.end(); ++it)
 	{
 		const std::string& header = it->first;
-		if(0 == stricmp(header.c_str(), name))
+		if(0 == strcasecmp(header.c_str(), name))
 			return it;
 	}
 	return m_headers.end();
@@ -284,12 +283,12 @@ void HttpSocket::SetHeader(const char* name, int value)
 
 void HttpSocket::SetHeader(const char* name, const char* value)
 {
-	if(0 == stricmp("HOST", name))
+	if(0 == strcasecmp("HOST", name))
 	{
 		// ignore
 		return;
 	}
-	else if(0 == stricmp("Content-Length", name))
+	else if(0 == strcasecmp("Content-Length", name))
 	{
 		// ignore
 		return;
@@ -409,8 +408,8 @@ int HttpSocket::MakeHttpHeader(mmptr& reply, const char* method, const char* uri
 		const std::string& name = it->first;
 		const std::string& value = it->second;
 
-		assert(0 != stricmp("HOST", name.c_str())); // Host
-		assert(0 != stricmp("Content-Length", name.c_str())); // ignore Content-Length
+		assert(0 != strcasecmp("HOST", name.c_str())); // Host
+		assert(0 != strcasecmp("Content-Length", name.c_str())); // ignore Content-Length
 		AddHeader(reply, name.c_str(), value.c_str());
 	}
 
@@ -437,8 +436,8 @@ int HttpSocket::MakeHttpHeader(mmptr& reply, const char* method, const char* uri
 //		const std::string& name = it->first;
 //		const std::string& value = it->second;
 //
-//		assert(0 != stricmp("HOST", name.c_str())); // Host = m_host
-//		assert(0 != stricmp("Content-Length", name.c_str())); // ignore Content-Length
+//		assert(0 != strcasecmp("HOST", name.c_str())); // Host = m_host
+//		assert(0 != strcasecmp("Content-Length", name.c_str())); // ignore Content-Length
 //
 //		m_reqHeader += name;
 //		m_reqHeader += ":";

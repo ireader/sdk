@@ -8,7 +8,7 @@
 /// @param[in] port bind local port
 /// @param[in] backlog the maximum length to which the queue of pending connections for socket may grow
 /// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
-inline socket_t tcpserver_create(const char* ip, int port, int backlog)
+static inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 {
 	int r;
 	socket_t sock;
@@ -61,7 +61,7 @@ inline socket_t tcpserver_create(const char* ip, int port, int backlog)
 /// @param[out] addrlen addr length in bytes
 /// @param[in] mstimeout timeout in millisecond
 /// @return 0-timeout, socket_invalid-error, use socket_geterror() to get error code, other-ok  
-inline socket_t tcpserver_accept(socket_t socket, struct sockaddr_storage* addr, socklen_t* addrlen, int mstimeout)
+static inline socket_t tcpserver_accept(socket_t socket, struct sockaddr_storage* addr, socklen_t* addrlen, int mstimeout)
 {
 	int ret;
 	socket_t client;

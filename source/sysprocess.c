@@ -22,7 +22,7 @@ static int on_process(void* param, const char* name, pid_t pid)
 
 	p = path_basename(name);
 #if defined(OS_WINDOWS)
-	if(0 == stricmp(process, p))
+	if(0 == _stricmp(process, p))
 #else
 	if(0 == strcmp(process, p))
 #endif
@@ -123,7 +123,7 @@ int process_list(fcb_process_list callback, void* param)
 }
 
 #if defined(_WIN32)
-inline ULARGE_INTEGER FILETIME2UINT64(const FILETIME* ft)
+static inline ULARGE_INTEGER FILETIME2UINT64(const FILETIME* ft)
 {
 	ULARGE_INTEGER v;
 	v.HighPart = ft->dwHighDateTime;
@@ -311,7 +311,7 @@ int process_getmodules(pid_t pid, fcb_process_getmodules callback, void* param)
 int process_getmodules(pid_t pid, fcb_process_getmodules callback, void* param)
 {
 	char p[512];
-	char module[MAX_PATH];
+	char module[PATH_MAX];
 	FILE* fp;
 
 	snprintf(p, sizeof(p), "/proc/%d/maps", pid);

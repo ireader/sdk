@@ -12,7 +12,7 @@ void bits_init(struct bits_t* bits, const void* data, size_t bytes)
 	bits->offsetBytes = 0;
 }
 
-inline void bitstream_move(struct bits_t* bits, int n)
+static inline void bitstream_move(struct bits_t* bits, int n)
 {
 	bits->offsetBytes += (bits->offsetBits + n) / BIT_NUM_8;
 	bits->offsetBits = (bits->offsetBits + n) % BIT_NUM_8;

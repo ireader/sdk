@@ -119,7 +119,7 @@ static task_context_t* task_pop(task_queue_context_t* taskQ)
 	return task;
 }
 
-static task_context_t* task_pop_timeout(task_queue_context_t* taskQ)
+static inline  task_context_t* task_pop_timeout(task_queue_context_t* taskQ)
 {
 	size_t clock;
 	task_context_t *task;

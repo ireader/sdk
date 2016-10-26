@@ -1,8 +1,4 @@
 #include "sysnetconfig.h"
-#include "cstringext.h"
-#include "tools.h"
-#include <stdio.h>
-#include <string.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
@@ -31,6 +27,11 @@
 #include <ifaddrs.h>
 #include <netdb.h>
 #endif
+
+#include <stdio.h>
+#include <string.h>
+#include "tools.h"
+
 
 #if defined(_WIN32) || defined(_WIN64)
 //int system_netadaptors_count()
@@ -260,8 +261,8 @@ int system_getgateway(char* gateway, int len)
 
 	while(fgets(buffer, sizeof(buffer), fp))
 	{
-		p = skips(buffer, " \r\n");
-		if(strneq("default ", p, 8))
+		p += strspn(buffer, " \r\n");
+		if(0 == strncmp("default ", p, 8))
 		{
 			sscanf(p, "%*s %*s %s", gateway);
 			break;

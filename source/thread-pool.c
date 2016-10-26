@@ -163,7 +163,7 @@ static void thread_pool_create_threads(thread_pool_context_t *context,
 	context->thread_count_idle += i;
 }
 
-static void thread_pool_destroy_threads(thread_list_t *threads)
+static inline void thread_pool_destroy_threads(thread_list_t *threads)
 {
 	thread_list_t *next;
 

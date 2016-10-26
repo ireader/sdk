@@ -19,7 +19,7 @@ public:
 	bool IsTransferEncodingTrunked() const
 	{
 		const char* p = http_get_transfer_encoding(m_http);
-		return p && 0==stricmp("chunked", p);
+		return p && 0==strcasecmp("chunked", p);
 	}
 
 	bool GetContentEncoding(std::string& value) const

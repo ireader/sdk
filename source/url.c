@@ -6,7 +6,11 @@
 #include "cstringext.h"
 #include "urlcodec.h"
 
-#define MAX_PARAMS 128
+#define MAX_PARAMS	128
+#define MAX_URL		2048
+
+#define STRLEN(s)	(s?strlen(s):0)
+#define FREE(p)		do{if(p){free(p); p=NULL;}}while(p)
 
 typedef struct _url_param_t
 {
@@ -23,12 +27,13 @@ typedef struct
 
 	url_param_t params[MAX_PARAMS];
 	int count;
+
+	char buffer[MAX_URL];
 } url_t;
 
 static int url_parse_param(const char* param, url_t* uri)
 {
 	const char *pn, *pv;
-	char buffer[MAX_PATH];
 	url_param_t *pp;
 
 	for(pn = param; param && *param && uri->count < MAX_PARAMS; pn=param+1)
@@ -38,22 +43,22 @@ static int url_parse_param(const char* param, url_t* uri)
 		if(!pv || pv == pn || (param && pv>param)) // name is null
 			continue;
 
-		memset(buffer, 0, sizeof(buffer));
+		memset(uri->buffer, 0, sizeof(uri->buffer));
 
 		pp = &uri->params[uri->count++];
-		url_decode(pn, pv-pn, buffer, sizeof(buffer));
-		pp->name = strdup(buffer);
+		url_decode(pn, pv-pn, uri->buffer, sizeof(uri->buffer));
+		pp->name = strdup(uri->buffer);
 
 		++pv;
 		if(param)
 		{
-			url_decode(pv, param-pv, buffer, sizeof(buffer));
+			url_decode(pv, param-pv, uri->buffer, sizeof(uri->buffer));
 		}
 		else
 		{
-			url_decode(pv, -1, buffer, sizeof(buffer));
+			url_decode(pv, -1, uri->buffer, sizeof(uri->buffer));
 		}
-		pp->value = strdup(buffer);
+		pp->value = strdup(uri->buffer);
 	}
 	return 0;
 }
@@ -167,7 +172,6 @@ void* url_parse(const char* url)
 int url_geturlpath(void* id, char* url, size_t len)
 {
 	int i, offset;
-	char buffer[MAX_PATH];
 
 	url_t* uri = (url_t*)id;
 
@@ -186,11 +190,11 @@ int url_geturlpath(void* id, char* url, size_t len)
 	{
 		offset += strlcat(url + offset, 0 == i ? "?" : "&", len - offset);
 
-		url_encode(uri->params[i].name, -1, buffer, sizeof(buffer));
-		offset += strlcat(url + offset, buffer, len - offset);
+		url_encode(uri->params[i].name, -1, uri->buffer, sizeof(uri->buffer));
+		offset += strlcat(url + offset, uri->buffer, len - offset);
 		offset += strlcat(url + offset, "=", len - offset);
-		url_encode(uri->params[i].value, -1, buffer, sizeof(buffer));
-		offset += strlcat(url + offset, buffer, len - offset);
+		url_encode(uri->params[i].value, -1, uri->buffer, sizeof(uri->buffer));
+		offset += strlcat(url + offset, uri->buffer, len - offset);
 	}
 
 	return 0;

@@ -113,18 +113,18 @@ static int http_make_request(struct http_pool_t *pool, void *req, int method, co
 		nc = headers[i].name ? strlen(headers[i].name) : 0;
 		vc = headers[i].value ? strlen(headers[i].value) : 0;
 
-		if(0 == stricmp("Content-Length", headers[i].name)
-			|| 0 == stricmp("HOST", headers[i].name))
+		if(0 == strcasecmp("Content-Length", headers[i].name)
+			|| 0 == strcasecmp("HOST", headers[i].name))
 		{
 			continue; // ignore
 		}
-		else if(0 == stricmp("Cookie", headers[i].name))
+		else if(0 == strcasecmp("Cookie", headers[i].name))
 		{
 			// update cookie
 			http_pool_setcookie(pool, headers[i].value, vc);
 			continue;
 		}
-		else if(0 == stricmp("Content-Type", headers[i].name))
+		else if(0 == strcasecmp("Content-Type", headers[i].name))
 		{
 			content_type = headers[i].value;
 			continue;
@@ -167,11 +167,12 @@ static void http_client_onaction(void *param, void *parser, int code)
 				const char *cookiename, *cookievalue;
 				cookiename = http_cookie_get_name(ck);
 				cookievalue = http_cookie_get_value(ck);
-				// TODO: check cookie buffer length
-				assert(cookiename && cookievalue);
-				assert(STRLEN(cookiename) + STRLEN(cookievalue) + 1 < sizeof(buffer));
-				len = snprintf(buffer, sizeof(buffer), "%s=%s", cookiename, cookievalue);
-				http_pool_setcookie(http->pool, buffer, len);
+				if (cookiename && cookievalue)
+				{
+					len = snprintf(buffer, sizeof(buffer), "%s=%s", cookiename, cookievalue);
+					http_pool_setcookie(http->pool, buffer, len);
+					assert(len + 1 < sizeof(buffer));
+				}
 				http_cookie_destroy(ck);
 			}
 		}

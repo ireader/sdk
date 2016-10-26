@@ -12,6 +12,8 @@
 // Default: the recipient SHOULD treat it as type "application/octetstream"
 
 #include "http-header-content-type.h"
+#include <memory.h>
+#include <assert.h>
 #include "ctypedef.h"
 #include "cstringext.h"
 #include "string-util.h"

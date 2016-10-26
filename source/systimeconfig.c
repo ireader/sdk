@@ -1,7 +1,5 @@
 #include "systimeconfig.h"
 
-#include <stdio.h>
-
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 
@@ -12,7 +10,8 @@
 #include <sys/time.h>
 #endif
 
-#include "cstringext.h"
+#include <stdio.h>
+#include <assert.h>
 #include "tools.h"
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -138,7 +137,8 @@ static int system_ntp_getserver_handle(const char* str, int strLen, va_list val)
 {
 	char *servers;
 	const char *p;
-	int serversLen, n;
+	int serversLen;
+	size_t n;
 
 	if(0 == strncmp("server ", str, 7))
 	{
@@ -152,10 +152,16 @@ static int system_ntp_getserver_handle(const char* str, int strLen, va_list val)
 			servers += n+1;
 			serversLen -= 1;
 		}
-		serversLen -= n;
+		serversLen -= (int)n;
 
-		p = skip(str+6, ' ');
-		token(p, "\r\n ", servers, serversLen);
+		p = str + 6;
+		p += strcspn(p, " ");
+		n = strspn(p, "\r\n ");
+		if ((int)n + 1 < serversLen)
+		{
+			strncpy(servers, p, n);
+			servers[n] = '\0';
+		}
 	}
 	return 0;
 }
@@ -206,7 +212,7 @@ int system_ntp_setserver(const char *servers)
 	line = servers;
 	while(line && *line)
 	{
-		line = skips(line, " ;");
+		line += strcspn(line, " ;");
 		p = strchr(line, ';');
 		if(p)
 		{

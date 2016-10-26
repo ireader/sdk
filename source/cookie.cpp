@@ -1,7 +1,8 @@
+#include "cookie.h"
 #include <time.h>
 #include <string>
 #include <assert.h>
-#include "cookie.h"
+#include "cstringext.h"
 #include "cppstringext.h"
 
 Cookie::Cookie()
@@ -78,31 +79,31 @@ Cookie::Cookie(const char* cookie)
 		if(!ParseCookieItem(s.c_str(), name, value))
 			continue;
 
-		if(0 == stricmp(name.c_str(), "expires"))
+		if(0 == strcasecmp(name.c_str(), "expires"))
 		{
 			SetExpire(value.c_str());
 		}
-		else if(0 == stricmp(name.c_str(), "path"))
+		else if(0 == strcasecmp(name.c_str(), "path"))
 		{
 			SetPath(value.c_str());
 		}
-		else if(0 == stricmp(name.c_str(), "domain"))
+		else if(0 == strcasecmp(name.c_str(), "domain"))
 		{
 			SetDomain(value.c_str());
 		}
-		else if(0 == stricmp(name.c_str(), "version"))
+		else if(0 == strcasecmp(name.c_str(), "version"))
 		{
 			SetVersion(value.c_str());
 		}
-		else if(0 == stricmp(name.c_str(), "max-age"))
+		else if(0 == strcasecmp(name.c_str(), "max-age"))
 		{
 			SetMaxAge(value.c_str());
 		}
-		else if(0 == stricmp(name.c_str(), "secure"))
+		else if(0 == strcasecmp(name.c_str(), "secure"))
 		{
 			SetSecure(true);
 		}
-		else if(0 == stricmp(name.c_str(), "httponly"))
+		else if(0 == strcasecmp(name.c_str(), "httponly"))
 		{
 			SetHttpOnly(true);
 		}
@@ -195,7 +196,7 @@ bool Cookie::GetCookieValue(const char* cookies, const char* name, std::string& 
 		if(!cookie.GetNameValue(cookieName, cookieValue))
 			continue;
 
-		if(0 == stricmp(name, cookieName.c_str()))
+		if(0 == strcasecmp(name, cookieName.c_str()))
 		{
 			value = cookieValue;
 			return true;

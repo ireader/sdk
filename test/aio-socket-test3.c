@@ -225,15 +225,14 @@ void aio_socket_test3(void)
 	int r;
 	struct aio_client_t client;
 	struct aio_server_t server;
-
 	struct sockaddr_in addr;
-	socket_addr_from_ipv4(&addr, "127.0.0.1", PORT);
 
 	aio_socket_init(1);
 
+	socket_addr_from_ipv4(&addr, "127.0.0.1", PORT);
+
 	memset(&client, 0, sizeof(client));
 	memset(&server, 0, sizeof(server));
-
 	server.socket = aio_socket_create(udpsocket_create(NULL, PORT), 1);
 	client.socket = aio_socket_create(udpsocket_create(NULL, PORT+1), 1);
 

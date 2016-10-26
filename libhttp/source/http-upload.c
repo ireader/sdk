@@ -12,7 +12,7 @@ static const char* http_header_attr_token(const char* source, const char* token,
 	size_t n;
 	n = strlen(token);
 
-	if(0 != strnicmp(source, token, n))
+	if(0 != strncasecmp(source, token, n))
 		return NULL;
 
 	source += strspn(source+n, WHITESPACE);
@@ -48,7 +48,7 @@ int http_get_upload_boundary(const char* contentType, char boundary[128])
 	// application/x-www-form-urlencoded
 	// text/plain
 	// multipart/form-data
-	if(0 != strnicmp(pn, "multipart/form-data;", 20))
+	if(0 != strncasecmp(pn, "multipart/form-data;", 20))
 		return -1;
 
 	for(pn = strchr(contentType, ';'); pn; pn = strchr(pn, ';'))
@@ -116,7 +116,7 @@ static int http_upload_header_parse(const char* header, char* field, char* file)
 			continue;
 	
 		http_get_req_upload_file(pv, dispositionType, field, file);
-		assert(0 == stricmp(dispositionType, "form-data"));
+		assert(0 == strcasecmp(dispositionType, "form-data"));
 		return 1;
 	}
 	return 0;

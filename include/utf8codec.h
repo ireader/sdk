@@ -1,11 +1,11 @@
 #ifndef _utf8_h_
 #define _utf8_h_
 
-#include "cstringext.h"
-#include "unicode.h"
 #include <assert.h>
 #include <memory.h>
 #include <string.h>
+#include "cstringext.h"
+#include "unicode.h"
 
 class UTF8Encode
 {
@@ -41,13 +41,13 @@ public:
 	{
 		assert(text && encoding);
 		m_null[0] = 0;
-		if(0==stricmp("utf-8", encoding) || 0==stricmp("utf8", encoding))
+		if(0==strcasecmp("utf-8", encoding) || 0==strcasecmp("utf8", encoding))
 		{
 			int n = strlen(text) + 1;
 			m_p = new char[n];
 			strcpy(m_p, text);
 		}
-		else if(0==stricmp("gbk", encoding) || 0==stricmp("gb2312", encoding) || 0==stricmp("gb18030", encoding))
+		else if(0==strcasecmp("gbk", encoding) || 0==strcasecmp("gb2312", encoding) || 0==strcasecmp("gb18030", encoding))
 		{
 			int n = strlen(text) + 1;
 			wchar_t* wbuf = new wchar_t[n];

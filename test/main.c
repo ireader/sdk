@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include "sys/sock.h"
 
 // base library
 // gcc -I../include -DOS_LINUX main.c atomic-test.c semaphore-test.c spinlock-test.c event-test.c locker-test.c -o test -lpthread -ldl -lrt
@@ -71,9 +70,13 @@ int main(int argc, char* argv[])
 	bits_test();
 
     url_test();
-  
+
 #if defined(HTTP_TEST)
 	http_test();
+#endif
+
+#if defined(SDP_TEST)
+	sdp_test();
 #endif
 
 #if defined(RTSP_TEST)
@@ -90,13 +93,9 @@ int main(int argc, char* argv[])
 	aio_socket_test4();
 	aio_socket_test();
 
-#if defined(SDP_TEST)
-	sdp_test();
-#endif
-
 #if defined(OS_WINDOWS)
-    unicode_test();
-    utf8codec_test();
+	unicode_test();
+	utf8codec_test();
 	systimer_test();
 
 	system("pause");

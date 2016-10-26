@@ -3,7 +3,7 @@
 
 #include "sys/sock.h"
 
-inline socket_t udpsocket_create(const char* ip, int port)
+static inline socket_t udpsocket_create(const char* ip, int port)
 {
 	int r;
 	socket_t sock;

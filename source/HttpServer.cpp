@@ -113,7 +113,7 @@ int HttpServer::SetHeader(const char* name, const char* value)
 {
 	char msg[256] = {0};
 	int r = snprintf(msg, sizeof(msg), "%s: %s\r\n", name, value);
-	if (r + 1 >= sizeof(msg))
+	if (r + 1 >= (int)sizeof(msg))
 		return -1;
 	m_reply += msg;
 	return 0;
@@ -123,7 +123,7 @@ int HttpServer::SetHeader(const char* name, int value)
 {
 	char msg[256] = {0};
 	int r = snprintf(msg, sizeof(msg), "%s: %d\r\n", name, value);
-	if (r + 1 >= sizeof(msg))
+	if (r + 1 >= (int)sizeof(msg))
 		return -1;
 	m_reply += msg;
 	return 0;

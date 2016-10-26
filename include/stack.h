@@ -18,13 +18,13 @@ struct stack
 	struct stack_node *volatile top;
 };
 
-inline int stack_init(struct stack *stack)
+static inline int stack_init(struct stack *stack)
 {
 	stack->top = NULL;
 	return 0;
 }
 
-inline void stack_push(struct stack *stack, struct stack_node* node)
+static inline void stack_push(struct stack *stack, struct stack_node* node)
 {
 	struct stack_node *volatile top;
 
@@ -36,7 +36,7 @@ inline void stack_push(struct stack *stack, struct stack_node* node)
 }
 
 // Warning: only one thread can do pop action
-inline void stack_pop(struct stack *stack)
+static inline void stack_pop(struct stack *stack)
 {
 	struct stack_node *volatile top;
 
@@ -52,17 +52,17 @@ inline void stack_pop(struct stack *stack)
 	} while(!atomic_cas_ptr((void* volatile*)&stack->top, top, top->next));
 }
 
-inline struct stack_node* stack_top(struct stack *stack)
+static inline struct stack_node* stack_top(struct stack *stack)
 {
 	return stack->top;
 }
 
-inline int stack_empty(struct stack *stack)
+static inline int stack_empty(struct stack *stack)
 {
 	return atomic_cas_ptr((void* volatile*)&stack->top, NULL, NULL) ? 1 : 0;
 }
 
-inline int stack_clear(struct stack *stack)
+static inline int stack_clear(struct stack *stack)
 {
 	struct stack_node *volatile top;
 

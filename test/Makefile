@@ -55,12 +55,10 @@ DEFINES = OS_INT64_TYPE
 
 
 ifdef HTTP_TEST
+HTTP_PATHS = $(ROOT)/libhttp/source
 SOURCE_FILES += http-test.c
-SOURCE_FILES += $(ROOT)/libhttp/source/http-reason.c
-SOURCE_FILES += $(ROOT)/libhttp/source/http-header-content-type.c
-SOURCE_FILES += $(ROOT)/libhttp/source/http-header-host.c
-SOURCE_FILES += $(ROOT)/libhttp/source/http-cookie.c
-SOURCE_FILES += $(ROOT)/libhttp/source/http-request.c
+SOURCE_FILES += $(foreach dir,$(HTTP_PATHS),$(wildcard $(dir)/*.c))
+SOURCE_FILES += $(foreach dir,$(HTTP_PATHS),$(wildcard $(dir)/*.cpp))
 DEFINES += HTTP_TEST
 INCLUDES += $(ROOT)/libhttp/include
 endif
