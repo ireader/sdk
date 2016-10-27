@@ -9,16 +9,15 @@ int snprintf(char *str, size_t size, const char *format, ...)
 	int n = -1;
 	va_list args;
 
-	assert(size > 0);
+	if (size < 1)
+		return 0;
+
 	va_start(args, format);
 	n = _vsnprintf(str, size-1, format, args);
+	va_end(args);
 
-	if(n < 0 || n == (int)size-1)
-	{
-		// -1 indicating that output has been truncated
-		n = n < 0 ? size-1 : n;
+	if(n == (int)size-1)
 		str[n] = '\0';
-	}
 	return n;
 }
 #endif

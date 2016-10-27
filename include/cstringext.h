@@ -54,6 +54,7 @@ char *strtoken(char *s, const char *delim, char **saveptr);
 char* strndup(const char* p, size_t n);
 
 #if _MSC_VER < 1900 // VS2015
+// the _snprintf functions do not guarantee NULL termination
 int snprintf(char *str, size_t size, const char *format, ...);
 #endif
 
