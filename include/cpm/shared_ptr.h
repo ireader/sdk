@@ -21,7 +21,9 @@
 #define shared_ptr tr1::shared_ptr
 #endif
 
-#elif __GNUC__>=4 && __GNUC_MINOR__<=4
+#elif __GNUC__ && __cplusplus < 201103L
+// since GCC 4.3
+// http://stackoverflow.com/questions/8171444/c-stdshared-ptr-usage-and-information
 #include <tr1/memory>
 #define shared_ptr tr1::shared_ptr
 #endif // OS_WINDOWS
