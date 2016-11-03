@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 #include <wchar.h>
 
 class ToAString
@@ -37,9 +38,14 @@ public:
 		sprintf(_buffer, "%f", v);
 	}
 
-	ToAString(long long v)
+	ToAString(int64_t v)
 	{
-		sprintf(_buffer, "%lli", v);
+		sprintf(_buffer, "%" PRId64, v);
+	}
+
+	ToAString(uint64_t v)
+	{
+		sprintf(_buffer, "%" PRIu64, v);
 	}
 
 	operator const char*()
@@ -82,9 +88,14 @@ public:
 		swprintf(_buffer, sizeof(_buffer)/sizeof(_buffer[0]), L"%f", v);
 	}
 
-	ToWString(long long v)
+	ToWString(int64_t v)
 	{
-		swprintf(_buffer, sizeof(_buffer)/sizeof(_buffer[0]), L"%lli", v);
+		swprintf(_buffer, sizeof(_buffer) / sizeof(_buffer[0]), L"%" PRId64, v);
+	}
+
+	ToWString(uint64_t v)
+	{
+		swprintf(_buffer, sizeof(_buffer) / sizeof(_buffer[0]), L"%" PRIu64, v);
 	}
 
 	operator const wchar_t*()
