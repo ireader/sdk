@@ -38,7 +38,7 @@ endif
 CFLAGS += -fvisibility=hidden # default don't export anything
 
 COMPILE.CC = $(CC) $(addprefix -I,$(INCLUDES)) $(addprefix -D,$(DEFINES)) $(CFLAGS)
-COMPILE.CXX = $(CXX) $(addprefix -I,$(INCLUDES)) $(addprefix -D,$(DEFINES)) $(CFLAGS)
+COMPILE.CXX = $(CXX) $(addprefix -I,$(INCLUDES)) $(addprefix -D,$(DEFINES)) $(CXXFLAGS)
 
 #--------------------------------VERSION------------------------------
 # make NOVERSION=1
