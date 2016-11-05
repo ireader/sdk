@@ -5,6 +5,7 @@
 #include <memory.h>
 #include <assert.h>
 #include <string.h>
+#include <string>
 
 class mmptr
 {
@@ -56,6 +57,11 @@ public:
 		return set(s, n);
 	}
 
+	int set(const std::string& s)
+	{
+		return set(s.c_str(), s.length()+1);
+	}
+
 	int set(char c)
 	{
 		return set(&c, sizeof(c));
@@ -76,6 +82,11 @@ public:
 		memmove((char*)m_ptr+m_len, p, n);
 		m_len += n;
 		return 0;
+	}
+
+	int append(const std::string& s)
+	{
+		return append(s.c_str(), s.length() + 1);
 	}
 
 	int append(const char* s)
@@ -164,6 +175,12 @@ public:
 	}
 
 	mmptr& operator += (const char* s)
+	{
+		append(s);
+		return *this;
+	}
+
+	mmptr& operator += (const std::string& s)
 	{
 		append(s);
 		return *this;
