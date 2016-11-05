@@ -77,6 +77,7 @@ public:
 public:
 	void SetHeader(const char* name, int value);
 	void SetHeader(const char* name, const char* value);
+	void SetHeader(const char* name, const std::string& value);
 	void KeepAlive(int ms);
 
 	void SetCookie(const char* cookies); // SetCookie("name=value; name2=value2")

@@ -17,6 +17,7 @@ Cookie::Cookie(const char* name, const char* value, const char* expires)
 	m_path = "/";
 	m_name = name;
 	m_value = value;
+	m_expire = expires;
 	m_secure = false;
 	m_httponly = false;
 }

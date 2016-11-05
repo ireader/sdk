@@ -1,7 +1,7 @@
 #include "HttpSocket.h"
 #include <assert.h>
 #include <stdlib.h>
-#include "StrConvert.h"
+#include <string>
 #include "cookie.h"
 #include "error.h"
 #include "url.h"
@@ -278,10 +278,15 @@ HttpSocket::THttpHeaders::const_iterator HttpSocket::FindHeader(const char* name
 
 void HttpSocket::SetHeader(const char* name, int value)
 {
-	SetHeader(name, ToAString(value));
+	SetHeader(name, std::to_string(value));
 }
 
 void HttpSocket::SetHeader(const char* name, const char* value)
+{
+	SetHeader(name, std::string(value ? value : ""));
+}
+
+void HttpSocket::SetHeader(const char* name, const std::string& value)
 {
 	if(0 == strcasecmp("HOST", name))
 	{
@@ -297,11 +302,11 @@ void HttpSocket::SetHeader(const char* name, const char* value)
 	THttpHeaders::iterator it = FindHeader(name);
 	if(it != m_headers.end())
 	{
-		it->second = NULL==value?"":value;
+		it->second = value;
 	}
 	else
 	{
-		m_headers.push_back(std::make_pair(name, NULL==value?"":value));
+		m_headers.push_back(std::make_pair(name, value));
 	}
 }
 
@@ -349,7 +354,7 @@ inline bool SetHost(mmptr& reply, const char* host, int port)
 	if(80 != port)
 	{
 		reply += ':';
-		reply += ToAString(port);
+		reply += std::to_string(port);
 	}
 	reply += "\r\n";
 	return true;
@@ -359,7 +364,7 @@ inline bool AddHeader(mmptr& reply, const char* name, int value)
 {
 	reply += name;
 	reply += ": ";
-	reply += ToAString(value);
+	reply += std::to_string(value);
 	reply += "\r\n";
 	return true;
 }
