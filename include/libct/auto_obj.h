@@ -54,16 +54,16 @@ public:
 	const T* operator->() const { return m_obj; }
 
 public:
-	auto_obj(auto_obj<T>& o)
+	auto_obj(const auto_obj<T>& o)
 	{
-		o->addref();
-		m_obj = o.get();
+		m_obj = o.m_obj;
+		m_obj->addref();
 	}
 
-	auto_obj& operator= (auto_obj<T>& o)
+	auto_obj& operator= (const auto_obj<T>& o)
 	{
-		o->addref();
-		attach(o.get());
+		attach(o.m_obj);
+		m_obj->addref();
 		return *this;
 	}
 

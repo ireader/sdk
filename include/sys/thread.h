@@ -58,6 +58,9 @@ typedef int (STDCALL *thread_proc)(void* param);
 static inline int thread_create(pthread_t* thread, thread_proc func, void* param)
 {
 #if defined(OS_WINDOWS)
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms682453.aspx
+	// CreateThread function: By default, every thread has one megabyte of stack space. 
+
 	// http://msdn.microsoft.com/en-us/library/windows/desktop/ms682453%28v=vs.85%29.aspx
 	// A thread in an executable that calls the C run-time library (CRT) 
 	// should use the _beginthreadex and _endthreadex functions for thread management 
