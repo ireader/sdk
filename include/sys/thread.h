@@ -49,13 +49,13 @@ enum thread_priority
 // int thread_getid(pthread_t thread, tid_t* id);
 // int thread_isself(pthread_t thread);
 // int thread_valid(pthread_t thread);
-// tid_t thread_self(void);
 // int thread_yield(void);
+// tid_t thread_self(void);
 //-------------------------------------------------------------------------------------
 
 typedef int (STDCALL *thread_proc)(void* param);
 
-static inline int thread_create(pthread_t* thread, thread_proc func, void* param)
+static inline int thread_create2(pthread_t* thread, size_t stacksize, thread_proc func, void* param)
 {
 #if defined(OS_WINDOWS)
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms682453.aspx
@@ -66,16 +66,29 @@ static inline int thread_create(pthread_t* thread, thread_proc func, void* param
 	// should use the _beginthreadex and _endthreadex functions for thread management 
 	// rather than CreateThread and ExitThread;
 
-	//thread->handle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, param, 0, &thread->id);
-	typedef unsigned int (__stdcall *thread_routine)(void *);
-	thread->handle = (HANDLE)_beginthreadex(NULL, 0, (thread_routine)func, param, 0, (unsigned int*)&thread->id);
-	if(NULL == thread->handle)
-		return -1;
-	return 0;
+	//thread->handle = CreateThread(NULL, stacksize, (LPTHREAD_START_ROUTINE)func, param, 0, &thread->id);
+	typedef unsigned int(__stdcall *thread_routine)(void *);
+	thread->handle = (HANDLE)_beginthreadex(NULL, stacksize, (thread_routine)func, param, 0, (unsigned int*)&thread->id);
+	return NULL == thread->handle ? -1 : 0;
 #else
+	// https://linux.die.net/man/3/pthread_create
+	// On Linux/x86-32, the default stack size for a new thread is 2 megabytes(10M 64bits)
+
+	// http://udrepper.livejournal.com/20948.html
+	// mallopt(M_ARENA_MAX, cpu); // limit multithread virtual memory
 	typedef void* (*linux_thread_routine)(void*);
-	return pthread_create(thread, NULL, (linux_thread_routine)func, param);
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, stacksize);
+	r = pthread_create(thread, &attr, (linux_thread_routine)func, param);
+	pthread_attr_destroy(&attr);
+	return r;
 #endif
+}
+
+static inline int thread_create(pthread_t* thread, thread_proc func, void* param)
+{
+	return thread_create2(thread, 0, func, param);
 }
 
 static inline int thread_destroy(pthread_t thread)
