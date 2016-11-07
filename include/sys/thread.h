@@ -77,6 +77,7 @@ static inline int thread_create2(pthread_t* thread, size_t stacksize, thread_pro
 	// http://udrepper.livejournal.com/20948.html
 	// mallopt(M_ARENA_MAX, cpu); // limit multithread virtual memory
 	typedef void* (*linux_thread_routine)(void*);
+	int r;
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, stacksize);
