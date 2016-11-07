@@ -182,7 +182,9 @@ static int aio_socket_release(struct epoll_context* ctx)
 int aio_socket_init(int threads)
 {
 	s_threads = threads;
-	s_epoll = epoll_create(64);
+
+	// Since Linux 2.6.8, the size argument is ignored, but must be greater than zero
+	s_epoll = epoll_create(10000/*10k*/);
 	return -1 == s_epoll ? errno : 0;
 }
 
@@ -296,8 +298,8 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	ctx->own = own;
 	ctx->ref = 1; // 1-for EPOLLHUP(no in/out, shutdown), 2-destroy release
 	ctx->socket = socket;
-//	ctx->ev.events = EPOLLET|EPOLLRDHUP|EPOLLONESHOT; // Edge Triggered, for multi-thread epoll_wait(see more at epoll-wait-multithread.c)
-	ctx->ev.events = EPOLLONESHOT; // since Linux 2.6.2
+//	ctx->ev.events |= EPOLLET; // Edge Triggered, for multi-thread epoll_wait(see more at epoll-wait-multithread.c)
+	ctx->ev.events |= EPOLLONESHOT; // since Linux 2.6.2
 #if defined(EPOLLRDHUP)
 	ctx->ev.events |= EPOLLRDHUP; // since Linux 2.6.17
 #endif
@@ -323,7 +325,7 @@ int aio_socket_destroy(aio_socket_t socket)
 	assert(ctx->ev.data.ptr == ctx);
 
 	shutdown(ctx->socket, SHUT_RDWR);
-	//	close(sock); // can't close socket now, avoid socket reuse
+//	close(sock); // can't close socket now, avoid socket reuse
 
 	aio_socket_release(ctx); // shutdown will generate EPOLLHUP event
 	return 0;
