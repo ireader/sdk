@@ -26,6 +26,52 @@
 // http://stackoverflow.com/questions/8171444/c-stdshared-ptr-usage-and-information
 #include <tr1/memory>
 #define shared_ptr tr1::shared_ptr
+
+namespace std
+{
+	template<typename T>
+	inline std::shared_ptr<T> make_shared()
+	{
+		return std::shared_ptr<T>(new T());
+	}
+
+	template<typename T, typename Arg1>
+	inline std::shared_ptr<T> make_shared(Arg1 arg1)
+	{
+		return std::shared_ptr<T>(new T(arg1));
+	}
+
+	template<typename T, typename Arg1, typename Arg2>
+	inline std::shared_ptr<T> make_shared(Arg1 arg1, Arg2 arg2)
+	{
+		return std::shared_ptr<T>(new T(arg1, arg2));
+	}
+
+	template<typename T, typename Arg1, typename Arg2, typename Arg3>
+	inline std::shared_ptr<T> make_shared(Arg1 arg1, Arg2 arg2, Arg3 arg3)
+	{
+		return std::shared_ptr<T>(new T(arg1, arg2, arg3));
+	}
+
+	template<typename T, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+	inline std::shared_ptr<T> make_shared(Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4)
+	{
+		return std::shared_ptr<T>(new T(arg1, arg2, arg3, arg4));
+	}
+
+	template<typename T, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
+	inline std::shared_ptr<T> make_shared(Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4, Arg5 arg5)
+	{
+		return std::shared_ptr<T>(new T(arg1, arg2, arg3, arg4, arg5));
+	}
+
+	template<typename T, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6>
+	inline std::shared_ptr<T> make_shared(Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4, Arg5 arg5, Arg6 arg6)
+	{
+		return std::shared_ptr<T>(new T(arg1, arg2, arg3, arg4, arg5, arg6));
+	}
+}
+
 #endif // OS_WINDOWS
 
 #endif /* !_shared_ptr_h_ */
