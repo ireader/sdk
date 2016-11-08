@@ -159,11 +159,13 @@ static inline int thread_setpriority(pthread_t thread, int priority)
 #endif
 }
 
-static inline tid_t thread_self(void)
+static inline pthread_t thread_self(void)
 {
 #if defined(OS_WINDOWS)
-	DWORD id = GetCurrentThreadId();
-	return id;
+	pthread_t t;
+	t.handle = GetCurrentThread();
+	t.id = GetCurrentThreadId();
+	return t;
 #else
 	return pthread_self();
 #endif
