@@ -35,6 +35,13 @@ private:
 	int32_t m_ref;
 };
 
+struct object_deleter
+{
+	void operator()(object* p) {
+		p->release();
+	}
+};
+
 } // namespace
 
 #endif /* !_libct_object_h_ */
