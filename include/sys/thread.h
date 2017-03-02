@@ -46,11 +46,11 @@ enum thread_priority
 // int thread_detach(pthread_t thread);
 // int thread_getpriority(pthread_t thread, int* priority);
 // int thread_setpriority(pthread_t thread, int priority);
-// int thread_getid(pthread_t thread, tid_t* id);
 // int thread_isself(pthread_t thread);
 // int thread_valid(pthread_t thread);
 // int thread_yield(void);
-// tid_t thread_self(void);
+// tid_t thread_getid(pthread_t thread);
+// pthread_t thread_self(void);
 //-------------------------------------------------------------------------------------
 
 typedef int (STDCALL *thread_proc)(void* param);
@@ -171,18 +171,13 @@ static inline pthread_t thread_self(void)
 #endif
 }
 
-static inline int thread_getid(pthread_t thread, tid_t* id)
+static inline tid_t thread_getid(pthread_t thread)
 {
 #if defined(OS_WINDOWS)
-	*id = thread.id;
-	//DWORD tid = GetThreadId(thread.handle); // >= vista
-	//if(0 == tid)
-	//	return GetLastError();
-	//*id = (int)tid;
-	return 0;
+	//return GetThreadId(thread.handle); // >= vista
+	return thread.id;
 #else
-	*id = thread;
-	return 0;
+	return thread;
 #endif
 }
 
