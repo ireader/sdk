@@ -43,7 +43,7 @@ typedef struct _thread_pool_context_t
 
 } thread_pool_context_t;
 
-static void thread_pool_destroy_thread(thread_pool_context_t *context, tid_t tid);
+static void thread_pool_destroy_thread(thread_pool_context_t *context);
 
 static int STDCALL thread_pool_worker(void *param)
 {
@@ -93,7 +93,7 @@ static int STDCALL thread_pool_worker(void *param)
 
 	--context->thread_count;
 	--context->thread_count_idle;
-	thread_pool_destroy_thread(context, thread_self());
+	thread_pool_destroy_thread(context);
 	locker_unlock(&context->locker);
 
 	return 0;
@@ -119,19 +119,15 @@ static thread_list_t* thread_pool_create_thread(thread_pool_context_t *context)
 	return threads;
 }
 
-static void thread_pool_destroy_thread(thread_pool_context_t *context, 
-									   tid_t tid)
+static void thread_pool_destroy_thread(thread_pool_context_t *context)
 {
-	tid_t id;
 	thread_list_t **head;
 	thread_list_t *next;
 
-	id = 0;
 	head = &context->task_threads;
 	while(*head)
 	{
-		thread_getid((*head)->thread, &id);
-		if(id == tid)
+		if(thread_isself((*head)->thread))
 		{
 			next = *head;
 			*head = (*head)->next;
