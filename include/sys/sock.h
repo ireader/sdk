@@ -161,6 +161,7 @@ static inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen
 static inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t salen);
 
 static inline void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len);
+static inline void socket_getbufvec(IN const socket_bufvec_t* vec, IN int idx, OUT void** ptr, OUT size_t* len);
 
 // multicast
 static inline int socket_multicast_join(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
@@ -1092,6 +1093,17 @@ static inline void socket_setbufvec(socket_bufvec_t* vec, int idx, void* ptr, si
 #else
 	vec[idx].iov_base = ptr;
 	vec[idx].iov_len = len;
+#endif
+}
+
+static inline void socket_getbufvec(IN const socket_bufvec_t* vec, IN int idx, OUT void** ptr, OUT size_t* len)
+{
+#if defined(OS_WINDOWS)
+	*ptr = (void*)vec[idx].buf;
+	*len = (size_t)vec[idx].len;
+#else
+	*ptr = vec[idx].iov_base;
+	*len = vec[idx].iov_len;
 #endif
 }
 
