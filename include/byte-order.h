@@ -1,6 +1,8 @@
 #ifndef _byte_order_h_
 #define _byte_order_h_
 
+#include <stdint.h>
+
 // Intel/AMD little endian
 // 0x01020304 -> |04|03|02|01|
 //---------------------------------------------------------------
@@ -81,7 +83,7 @@ static inline void be_read_uint16(const uint8_t* ptr, uint16_t* val)
 	*val = (((uint16_t)ptr[0]) << 8) | ptr[1];
 }
 
-static void be_read_uint24(const uint8_t* ptr, uint32_t* val)
+static inline void be_read_uint24(const uint8_t* ptr, uint32_t* val)
 {
 	*val = (((uint32_t)ptr[0]) << 16) | (((uint32_t)ptr[1]) << 8) | ptr[2];
 }
