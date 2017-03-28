@@ -81,14 +81,8 @@ static inline int socket_shutdown(socket_t sock, int flag); // SHUT_RD/SHUT_WR/S
 static inline int socket_close(socket_t sock);
 
 static inline int socket_connect(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
-static inline int socket_connect_by_time(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen, IN int timeout); // need restore block status
-static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int timeout); // timeout: -1, wait forever
-
-// MSDN: When using bind with the SO_EXCLUSIVEADDR or SO_REUSEADDR socket option, 
-//       the socket option must be set prior to executing bind to have any affect
+// MSDN: When using bind with the SO_EXCLUSIVEADDR or SO_REUSEADDR socket option, the socket option must be set prior to executing bind to have any affect
 static inline int socket_bind(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
-static inline int socket_bind_any(IN socket_t sock, IN u_short port);
-
 static inline int socket_listen(IN socket_t sock, IN int backlog);
 static inline socket_t socket_accept(IN socket_t sock, OUT struct sockaddr_storage* ss, OUT socklen_t* addrlen);
 
@@ -97,15 +91,6 @@ static inline int socket_send(IN socket_t sock, IN const void* buf, IN size_t le
 static inline int socket_recv(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags);
 static inline int socket_sendto(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen);
 static inline int socket_recvfrom(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, OUT struct sockaddr* from, OUT socklen_t* fromlen);
-
-/// @return <0-timeout/error, >0-read bytes
-static inline int socket_send_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, -1==infinite
-/// @return <0-timeout/error, >0-read bytes
-static inline int socket_send_all_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, -1==infinite
-/// @return 0-connection closed, <0-timeout/error, >0-read bytes
-static inline int socket_recv_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, -1==infinite
-/// @return 0-connection closed, <0-timeout/error, >0-read bytes(always is len)
-static inline int socket_recv_all_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout);  // timeout: ms, -1==infinite
 
 static inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags);
 static inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags);
@@ -268,120 +253,9 @@ static inline int socket_connect(IN socket_t sock, IN const struct sockaddr* add
 	return connect(sock, addr, addrlen);
 }
 
-// need restore block status
-static inline int socket_connect_by_time(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen, IN int timeout)
-{
-	int r;
-#if !defined(OS_WINDOWS)
-	int errcode = 0;
-	int errlen = sizeof(errcode);
-#endif
-	socket_setnonblock(sock, 1);
-	r = socket_connect(sock, addr, addrlen);
-	assert(r <= 0);
-#if defined(OS_WINDOWS)
-	if (0 != r && WSAEWOULDBLOCK == WSAGetLastError())
-#else
-	if (0 != r && EINPROGRESS == errno)
-#endif
-	{
-		// check timeout
-		r = socket_select_write(sock, timeout);
-#if defined(OS_WINDOWS)
-		// r = socket_setnonblock(sock, 0);
-		return 1 == r ? 0 : -1;
-#else
-		if (1 == r)
-		{
-			r = getsockopt(sock, SOL_SOCKET, SO_ERROR, (void*)&errcode, (socklen_t*)&errlen);
-			if (0 == r)
-				r = -errcode;
-		}
-		else
-		{
-			r = -1;
-		}
-#endif
-	}
-
-	// r = socket_setnonblock(sock, 0);
-	return r;
-}
-
-static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int timeout)
-{
-	int r;
-	socket_t sock;
-	char portstr[16];
-	struct addrinfo hints, *addr, *ptr;
-	
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = PF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-//	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
-	snprintf(portstr, sizeof(portstr), "%hu", port);
-	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
-	if (0 != r)
-		return socket_invalid;
-
-	r = -1; // not found
-	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
-	{
-		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-		if(socket_invalid == sock)
-			continue;
-
-		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port); // fixed ios getaddrinfo don't set port if nodename is ipv4 address
-
-		if (-1 == timeout)
-			r = socket_connect(sock, ptr->ai_addr, ptr->ai_addrlen);
-		else
-			r = socket_connect_by_time(sock, ptr->ai_addr, ptr->ai_addrlen, timeout);
-
-		if (0 != r)
-			socket_close(sock);
-	}
-
-	freeaddrinfo(addr);
-	return 0 == r ? sock : socket_invalid;
-}
-
 static inline int socket_bind(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen)
 {
 	return bind(sock, addr, addrlen);
-}
-
-static inline int socket_bind_any(IN socket_t sock, IN u_short port)
-{
-	int r;
-	int domain;
-	r = socket_getdomain(sock, &domain);
-	if (0 != r)
-		return r;
-
-	if (AF_INET == domain)
-	{
-		struct sockaddr_in addr;
-		memset(&addr, 0, sizeof(addr));
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(port);
-		addr.sin_addr.s_addr = INADDR_ANY;
-		return socket_bind(sock, (struct sockaddr*)&addr, sizeof(addr));
-	}
-	else if (AF_INET6 == domain)
-	{
-		struct sockaddr_in6 addr6;
-		memset(&addr6, 0, sizeof(addr6));
-		addr6.sin6_family = AF_INET6;
-		addr6.sin6_port = htons(port);
-		addr6.sin6_addr = in6addr_any;
-		return socket_bind(sock, (struct sockaddr*)&addr6, sizeof(addr6));
-	}
-	else
-	{
-		assert(0);
-		return -1;
-	}
 }
 
 static inline int socket_listen(IN socket_t sock, IN int backlog)
@@ -441,16 +315,13 @@ static inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec,
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
 	int r = WSASend(sock, (socket_bufvec_t*)vec, (DWORD)n, &count, flags, NULL, NULL);
-	if(0 == r)
-		return (int)count;
-	return r;
+	return 0 == r ? (int)count : r;
 #else
 	struct msghdr msg;
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = (struct iovec*)vec;
 	msg.msg_iovlen = n;
-	int r = sendmsg(sock, &msg, flags);
-	return r;
+	return sendmsg(sock, &msg, flags);
 #endif
 }
 
@@ -459,16 +330,13 @@ static inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN si
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
 	int r = WSARecv(sock, vec, (DWORD)n, &count, (LPDWORD)&flags, NULL, NULL);
-	if(0 == r)
-		return (int)count;
-	return r;
+	return 0 == r ? (int)count : r;
 #else
 	struct msghdr msg;
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = vec;
 	msg.msg_iovlen = n;
-	int r = recvmsg(sock, &msg, flags);
-	return r;
+	return recvmsg(sock, &msg, flags);
 #endif
 }
 
@@ -477,9 +345,7 @@ static inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* ve
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
 	int r = WSASendTo(sock, (socket_bufvec_t*)vec, (DWORD)n, &count, flags, to, tolen, NULL, NULL);
-	if(0 == r)
-		return (int)count;
-	return r;
+	return 0 == r ? (int)count : r;
 #else
 	struct msghdr msg;
 	memset(&msg, 0, sizeof(msg));
@@ -487,8 +353,7 @@ static inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* ve
 	msg.msg_namelen = tolen;
 	msg.msg_iov = (struct iovec*)vec;
 	msg.msg_iovlen = n;
-	int r = sendmsg(sock, &msg, flags);
-	return r;
+	return sendmsg(sock, &msg, flags);
 #endif
 }
 
@@ -497,9 +362,7 @@ static inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, I
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
 	int r = WSARecvFrom(sock, vec, (DWORD)n, &count, (LPDWORD)&flags, from, fromlen, NULL, NULL);
-	if(0 == r)
-		return (int)count;
-	return r;
+	return 0 == r ? (int)count : r;
 #else
 	struct msghdr msg;
 	memset(&msg, 0, sizeof(msg));
@@ -507,8 +370,7 @@ static inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, I
 	msg.msg_namelen = *fromlen;
 	msg.msg_iov = vec;
 	msg.msg_iovlen = n;
-	int r = recvmsg(sock, &msg, flags);
-	return r;
+	return recvmsg(sock, &msg, flags);
 #endif
 }
 
@@ -598,70 +460,6 @@ static inline int socket_readable(IN socket_t sock)
 static inline int socket_writeable(IN socket_t sock)
 {
 	return socket_select_write(sock, 0);
-}
-
-static inline int socket_send_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout)
-{
-	int r;
-
-	r = socket_select_write(sock, timeout);
-	if(r <= 0)
-#if defined(OS_WINDOWS)
-		return 0==r?-WSAETIMEDOUT:r;
-#else
-		return 0==r?-ETIMEDOUT:r;
-#endif
-
-	r = socket_send(sock, buf, len, flags);
-	return r;
-}
-
-static inline int socket_send_all_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout)
-{
-	int r;
-	size_t bytes = 0;
-	
-	while(bytes < len)
-	{
-		r = socket_send_by_time(sock, (const char*)buf+bytes, len-bytes, flags, timeout);
-		if(r <= 0)
-			return r;	// <0-error
-
-		bytes += r;
-	}
-	return bytes;
-}
-
-static inline int socket_recv_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout)
-{
-	int r;
-
-	r = socket_select_read(sock, timeout);
-	if(r <= 0)
-#if defined(OS_WINDOWS)
-		return 0==r?-WSAETIMEDOUT:r;
-#else
-		return 0==r?-ETIMEDOUT:r;
-#endif
-
-	r = socket_recv(sock, buf, len, flags);
-	return r;
-}
-
-static inline int socket_recv_all_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout)
-{
-	int r;
-	size_t bytes = 0;
-
-	while(bytes < len)
-	{
-		r = socket_recv_by_time(sock, (char*)buf+bytes, len-bytes, flags, timeout);
-		if(r <= 0)
-			return r;	// <0-error / 0-connection closed
-
-		bytes += r;
-	}
-	return bytes;
 }
 
 //////////////////////////////////////////////////////////////////////////
