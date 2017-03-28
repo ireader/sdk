@@ -2,12 +2,11 @@
 // 测试自动重连功能
 
 #include "cstringext.h"
-#include "sys/sock.h"
+#include "sockutil.h"
 #include "sys/atomic.h"
 #include "sys/system.h"
 #include "sys/thread.h"
 #include "http-client.h"
-#include "tcpserver.h"
 #include "aio-socket.h"
 
 #define PORT 1234
@@ -58,7 +57,7 @@ static int STDCALL http_server_thread(void* param)
 {
 	char req[1024] = {0};
 	bool* running = (bool*)param;
-	socket_t socket = tcpserver_create(NULL, PORT, 32);
+	socket_t socket = socket_tcp_listen(NULL, PORT, 32);
 
 	while(*running)
 	{

@@ -1,5 +1,5 @@
 #include "cstringext.h"
-#include "sys/sock.h"
+#include "sockutil.h"
 
 static void socket_ip_test(void)
 {

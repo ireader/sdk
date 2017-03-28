@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include "http-server.h"
-#include "cstringext.h"
-#include "tcpserver.h"
+#include "sockutil.h"
 #include "http-server-internal.h"
+#include "cstringext.h"
 
 int http_server_init(void)
 {
@@ -21,7 +21,7 @@ void* http_server_create(const char* ip, int port)
 	struct aio_tcp_transport_handler_t handler;
 
 	// create server socket
-	socket = tcpserver_create(ip, port, 64);
+	socket = socket_tcp_listen(ip, port, 64);
 	if(socket_invalid == socket)
 	{
 		printf("http_server_create(%s, %d): create socket error.\n", ip, port);

@@ -1,8 +1,8 @@
 #include "cstringext.h"
-#include "tcpserver.h"
 #include "aio-socket.h"
 #include "sys/system.h"
 #include "sys/thread.h"
+#include "sockutil.h"
 #include <errno.h>
 
 #if defined(OS_WINDOWS) && !defined(EINPROGRESS)
@@ -19,7 +19,7 @@ static int STDCALL worker(IN void* param)
 	socklen_t len = sizeof(addr);
 
 	param = param;
-	socket = tcpserver_create(NULL, 8008, 64);
+	socket = socket_tcp_listen(NULL, 8008, 64);
 
 	//while(1)
 	{

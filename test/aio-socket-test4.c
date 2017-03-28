@@ -1,8 +1,8 @@
 #include "cstringext.h"
-#include "tcpserver.h"
 #include "aio-socket.h"
 #include "sys/system.h"
 #include "sys/thread.h"
+#include "sockutil.h"
 #include <errno.h>
 
 static char msg[10/*24*1024*8*/];
@@ -15,7 +15,7 @@ static int STDCALL worker0(IN void* param)
 	socklen_t len = sizeof(addr);
 
 	param = param;
-	socket = tcpserver_create(NULL, 8008, 64);
+	socket = socket_tcp_listen(NULL, 8008, 64);
 
 //	while(1)
 	{

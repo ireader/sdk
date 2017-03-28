@@ -1,4 +1,5 @@
 #include "HttpSocket.h"
+#include "sockutil.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string>

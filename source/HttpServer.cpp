@@ -1,6 +1,7 @@
 #include "HttpServer.h"
 #include "http-parser.h"
 #include "cstringext.h"
+#include "sockutil.h"
 #include "error.h"
 
 HttpServer::HttpServer(socket_t sock)
