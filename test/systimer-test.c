@@ -12,7 +12,7 @@ static void OnTimer(systimer_t id, void* param)
 #if defined(OS_LINUX)
 	printf("[%p]timer: %d\n", thread_self(), (int)param);
 #else
-	printf("[%u]timer: %d\n", (unsigned int)thread_self(), (int)param);
+	printf("[%u]timer: %d\n", (unsigned int)thread_getid(thread_self()), (int)param);
 #endif
 }
 
@@ -26,9 +26,9 @@ static void Test1(void)
 
 static void OnTest2(systimer_t id, void* param)
 {
-	printf("[%u]Test2: enter timer %d\n", (unsigned int)thread_self(), (int)param);
+	printf("[%u]Test2: enter timer %d\n", (unsigned int)thread_getid(thread_self()), (int)param);
 	system_sleep(10000);
-	printf("[%u]Test2: leave timer %d\n", (unsigned int)thread_self(), (int)param);
+	printf("[%u]Test2: leave timer %d\n", (unsigned int)thread_getid(thread_self()), (int)param);
 }
 
 static void Test2(void)

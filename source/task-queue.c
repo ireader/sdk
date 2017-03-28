@@ -163,7 +163,7 @@ static void task_action(void* param)
 		task->proc(task->param);
 
 	task->etime = system_clock();
-	task->thread = thread_self();
+	task->thread = thread_getid(thread_self());
 	locker_lock(&taskQ->locker);
 	task_recycle(taskQ, task); // recycle task
 	locker_unlock(&taskQ->locker);
