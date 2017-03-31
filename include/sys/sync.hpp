@@ -19,9 +19,7 @@ class ThreadLocker
 public:
 	ThreadLocker()
 	{
-		int r = locker_create(&m_locker);
-		if(0 != r)
-			throw r;
+		locker_create(&m_locker);
 	}
 
 	~ThreadLocker()
@@ -82,9 +80,7 @@ class ThreadEvent
 public:
 	ThreadEvent()
 	{
-		int r = event_create(&m_event);
-		if(0 != r)
-			throw r;
+		event_create(&m_event);
 	}
 
 	~ThreadEvent()
