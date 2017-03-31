@@ -10,23 +10,23 @@ typedef FARPROC funcptr_t;
 
 #else
 #include <sys/types.h>
-#include <sys/time.h>
-#include <sys/sysctl.h>
+#include <sys/sysconf.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <dlfcn.h>
 #include <errno.h>
+#include <time.h>
 
 typedef void* module_t;
 typedef void (*funcptr_t)(void);
 #endif
 
 #if defined(OS_MAC)
+#include <sys/sysctl.h>
 #include <mach/mach_time.h>  
 #endif
 
-#include <sys/timeb.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -113,7 +113,7 @@ static inline int64_t system_getcyclecount(void)
 	return 0;
 }
 
-///@return second.milliseconds(absolute time)
+/// milliseconds since the Epoch(1970-01-01 00:00:00 +0000 (UTC))
 static inline uint64_t system_time(void)
 {
 #if defined(OS_WINDOWS)
@@ -122,14 +122,17 @@ static inline uint64_t system_time(void)
 	GetSystemTimeAsFileTime(&ft);
 	t = (uint64_t)ft.dwHighDateTime << 32 | ft.dwLowDateTime;
 	return t / 10 - 11644473600000000; /* Jan 1, 1601 */
-#elif defined(OS_LINUX)
+#else
+#if defined(CLOCK_REALTIME)
+	struct timespec tp;
+	clock_gettime(CLOCK_REALTIME, &tp);
+	return (uint64_t)tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
+#else
+	// POSIX.1-2008 marks gettimeofday() as obsolete, recommending the use of clock_gettime(2) instead.
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	return (uint64_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
-#else
-	struct timeb t;
-	ftime(&t);
-	return (uint64_t)t.time * 1000 + t.millitm;
+#endif
 #endif
 }
 
@@ -148,14 +151,17 @@ static inline uint64_t system_clock(void)
 	tick = mach_absolute_time();
 	mach_timebase_info(timebase);
 	return tick * timebase.numer / timebase.denom / 1000000;
-#elif defined(OS_LINUX)
+#else
+#if defined(CLOCK_MONOTONIC)
 	struct timespec tp;
 	clock_gettime(CLOCK_MONOTONIC, &tp);
-	return (uint64_t)tp.tv_sec * 1000 + tp.tv_nsec/1000000;
+	return (uint64_t)tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
 #else
+	// POSIX.1-2008 marks gettimeofday() as obsolete, recommending the use of clock_gettime(2) instead.
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	return (uint64_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+#endif
 #endif
 }
 
