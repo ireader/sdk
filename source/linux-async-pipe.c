@@ -3,7 +3,7 @@
 #include "sys/atomic.h"
 #include <sys/ioctl.h>
 #include <stdlib.h>
-#include <memory.h>
+#include <string.h>
 #include <assert.h>
 #include <unistd.h>
 #include <aio.h>

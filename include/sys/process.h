@@ -1,7 +1,7 @@
 #ifndef _platform_process_h_
 #define _platform_process_h_
 
-#include <memory.h>
+#include <string.h>
 
 #if defined(OS_WINDOWS)
 #include <Windows.h>

@@ -12,7 +12,7 @@
 #endif
 
 #include <assert.h>
-#include <memory.h>
+#include <string.h>
 #include <stdlib.h>
 #include <errno.h>
 

@@ -1,6 +1,5 @@
 #include "http-upload.h"
 #include <string.h>
-#include <memory.h>
 #include <assert.h>
 #include "cstringext.h"
 

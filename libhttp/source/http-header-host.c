@@ -4,7 +4,6 @@
 #include "http-header-host.h"
 #include <stdlib.h>
 #include <string.h>
-#include <memory.h>
 #include <assert.h>
 
 int http_header_host(const char* field, char host[], size_t bytes, unsigned short *port)

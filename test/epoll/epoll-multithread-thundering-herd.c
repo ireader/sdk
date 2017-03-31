@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <stdio.h>
-#include <memory.h>
+#include <string.h>
 #include <pthread.h>
 
 #define THREAD 32

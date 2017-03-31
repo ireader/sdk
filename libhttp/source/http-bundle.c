@@ -1,6 +1,6 @@
 #include "http-bundle.h"
 #include <stdlib.h>
-#include <memory.h>
+#include <string.h>
 #include <assert.h>
 #include "http-server.h"
 #include "cstringext.h"

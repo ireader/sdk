@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <memory.h>
 
 char* strndup(const char* p, size_t n)
 {

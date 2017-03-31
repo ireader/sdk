@@ -119,7 +119,7 @@ size_t base64_decode(void* target, const char *source, size_t bytes)
 }
 
 #if defined(DEBUG) || defined(_DEBUG)
-#include <memory.h>
+#include <string.h>
 void base64_test(void)
 {
 	char source[512];

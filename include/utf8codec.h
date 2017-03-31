@@ -2,7 +2,6 @@
 #define _utf8_h_
 
 #include <assert.h>
-#include <memory.h>
 #include <string.h>
 #include "cstringext.h"
 #include "unicode.h"

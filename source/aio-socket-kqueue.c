@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <stdlib.h>
-#include <memory.h>
+#include <string.h>
 #include <assert.h>
 
 //#define MAX_EVENT 64

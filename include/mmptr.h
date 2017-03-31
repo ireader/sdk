@@ -2,7 +2,6 @@
 #define _mmptr_h_
 
 #include <stdlib.h>
-#include <memory.h>
 #include <assert.h>
 #include <string.h>
 #include <string>

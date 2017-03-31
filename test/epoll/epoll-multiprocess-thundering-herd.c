@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <stdio.h>
-#include <memory.h>
+#include <string.h>
 
 #define N_CHILD 32
 #define PORT 8888
