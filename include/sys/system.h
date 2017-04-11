@@ -10,7 +10,6 @@ typedef FARPROC funcptr_t;
 
 #else
 #include <sys/types.h>
-#include <sys/sysconf.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <pthread.h>
