@@ -2,6 +2,7 @@
 #define _sockutil_h_
 
 #include "sys/sock.h"
+#include <assert.h>
 
 #if defined(OS_WINDOWS)
 #define SOCKET_TIMEDOUT -WSAETIMEDOUT
@@ -16,34 +17,35 @@
 #pragma warning(disable: 6031) // warning C6031: Return value ignored: 'snprintf'
 #endif
 
-/// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
+/// @return >=0-socket, <0-socket_error(by socket_geterror())
 static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN int port, IN int backlog);
 static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN int port);
 
-static inline int socket_connect_by_time(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen, IN int timeout); // need restore block status
-static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int timeout); // timeout: -1, wait forever
-static inline socket_t socket_accept_by_time(IN socket_t socket, OUT struct sockaddr_storage* addr, OUT socklen_t* addrlen, IN int timeout);
+/// @Notice: need restore block status
+/// @param[in] timeout: ms, <0-forever
+/// @return >=0-ok, <0-error(by socket_geterror())
+static inline int socket_connect_by_time(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen, IN int timeout);
+/// @return >=0-socket, <0-socket_error(by socket_geterror())
+static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int timeout); // timeout: ms, <0-forever
+static inline socket_t socket_accept_by_time(IN socket_t socket, OUT struct sockaddr_storage* addr, OUT socklen_t* addrlen, IN int timeout); // timeout: <0-forever
 
-/// @return 0-ok, other-error
+/// @return 0-ok, <0-socket_error(by socket_geterror())
 static inline int socket_bind_any(IN socket_t sock, IN u_short port);
 
-/// @return <=0-timeout/error, >0-send bytes
-static inline int socket_send_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, -1==infinite
-/// @return <=0-timeout/error, >0-send bytes
-static inline int socket_send_all_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, -1==infinite
-/// @return 0-connection closed, <0-timeout/error, >0-read bytes
-static inline int socket_recv_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, -1==infinite
-/// @return 0-connection closed, <0-timeout/error, >0-read bytes(always is len)
-static inline int socket_recv_all_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout);  // timeout: ms, -1==infinite
-/// @return <=0-timeout/error, >0-send bytes
-static int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN int timeout); // timeout: ms, -1==infinite
+/// @return >0-sent/received bytes, SOCKET_TIMEDOUT-timeout, <0-error(by socket_geterror()), 0-connection closed(recv only)
+static inline int socket_send_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, <0-forever
+static inline int socket_send_all_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, <0-forever
+static inline int socket_recv_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, <0-forever
+static inline int socket_recv_all_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout);  // timeout: ms, <0-forever
+static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN int timeout); // timeout: ms, <0-forever
 
 //////////////////////////////////////////////////////////////////////////
 /// socket connect
 //////////////////////////////////////////////////////////////////////////
 
-/// @param[in] timeout ms, -1==infinite
 /// @Notice: need restore block status
+/// @param[in] timeout: <0-forever
+/// @return >=0-ok, <0-error(by socket_geterror())
 static inline int socket_connect_by_time(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen, IN int timeout)
 {
 	int r;
@@ -64,7 +66,7 @@ static inline int socket_connect_by_time(IN socket_t sock, IN const struct socka
 		r = socket_select_write(sock, timeout);
 #if defined(OS_WINDOWS)
 		// r = socket_setnonblock(sock, 0);
-		return 1 == r ? 0 : -1;
+		return 1 == r ? 0 : SOCKET_TIMEDOUT;
 #else
 		if (1 == r)
 		{
@@ -74,7 +76,7 @@ static inline int socket_connect_by_time(IN socket_t sock, IN const struct socka
 		}
 		else
 		{
-			r = -1;
+			r = SOCKET_TIMEDOUT;
 		}
 #endif
 	}
@@ -109,7 +111,7 @@ static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, I
 
 		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port); // fixed ios getaddrinfo don't set port if nodename is ipv4 address
 
-		if (-1 == timeout)
+		if (timeout < 0)
 			r = socket_connect(sock, ptr->ai_addr, ptr->ai_addrlen);
 		else
 			r = socket_connect_by_time(sock, ptr->ai_addr, ptr->ai_addrlen, timeout);
@@ -155,7 +157,7 @@ static inline int socket_bind_any(IN socket_t sock, IN u_short port)
 	else
 	{
 		assert(0);
-		return -1;
+		return socket_error;
 	}
 }
 
@@ -289,6 +291,7 @@ static inline socket_t socket_accept_by_time(IN socket_t socket, OUT struct sock
 //////////////////////////////////////////////////////////////////////////
 
 /// @param[in] timeout ms, -1==infinite
+/// @return >0-sent bytes, SOCKET_TIMEDOUT-timeout, <0-error(by socket_geterror())
 static inline int socket_send_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout)
 {
 	int r;
@@ -302,6 +305,7 @@ static inline int socket_send_by_time(IN socket_t sock, IN const void* buf, IN s
 }
 
 /// @param[in] timeout ms, -1==infinite
+/// @return >0-sent bytes, SOCKET_TIMEDOUT-timeout, <0-error(by socket_geterror())
 static inline int socket_send_all_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout)
 {
 	int r;
@@ -319,6 +323,7 @@ static inline int socket_send_all_by_time(IN socket_t sock, IN const void* buf, 
 }
 
 /// @param[in] timeout ms, -1==infinite
+/// @return >0-received bytes, SOCKET_TIMEDOUT-timeout, <0-error(by socket_geterror()), 0-connection closed(recv only)
 static inline int socket_recv_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout)
 {
 	int r;
@@ -332,6 +337,7 @@ static inline int socket_recv_by_time(IN socket_t sock, OUT void* buf, IN size_t
 }
 
 /// @param[in] timeout ms, -1==infinite
+/// @return >0-received bytes, SOCKET_TIMEDOUT-timeout, <0-error(by socket_geterror()), 0-connection closed(recv only)
 static inline int socket_recv_all_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout)
 {
 	int r;
@@ -349,6 +355,7 @@ static inline int socket_recv_all_by_time(IN socket_t sock, OUT void* buf, IN si
 }
 
 /// @param[in] timeout ms, -1==infinite
+/// @return >0-sent bytes, SOCKET_TIMEDOUT-timeout, <0-error(by socket_geterror())
 static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN int timeout)
 {
 	int r;

@@ -77,36 +77,44 @@ static inline socket_t socket_rdm(void);
 static inline socket_t socket_tcp_ipv6(void);
 static inline socket_t socket_udp_ipv6(void);
 static inline socket_t socket_raw_ipv6(void);
+// @return 0-ok, <0-socket_error(by socket_geterror())
 static inline int socket_shutdown(socket_t sock, int flag); // SHUT_RD/SHUT_WR/SHUT_RDWR
 static inline int socket_close(socket_t sock);
 
+// @return 0-ok, <0-socket_error(by socket_geterror())
 static inline int socket_connect(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
 // MSDN: When using bind with the SO_EXCLUSIVEADDR or SO_REUSEADDR socket option, the socket option must be set prior to executing bind to have any affect
 static inline int socket_bind(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
 static inline int socket_listen(IN socket_t sock, IN int backlog);
+// @return >=0-accepted socket, <0-socket_invalid(by socket_geterror())
 static inline socket_t socket_accept(IN socket_t sock, OUT struct sockaddr_storage* ss, OUT socklen_t* addrlen);
 
 // socket read/write
+// @return >0-sent/received bytes, <0-socket_error(by socket_geterror()), 0-peer shutdown(recv only)
 static inline int socket_send(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags);
 static inline int socket_recv(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags);
 static inline int socket_sendto(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen);
 static inline int socket_recvfrom(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, OUT struct sockaddr* from, OUT socklen_t* fromlen);
 
+// @return >0-sent/received bytes, <0-socket_error(by socket_geterror()), 0-peer shutdown(recv only)
 static inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags);
 static inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags);
 static inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen);
 static inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN struct sockaddr* from, IN socklen_t* fromlen);
 
-// Linux: select may update the timeout argument to indicate how much time was left
-static inline int socket_select(IN int n, IN fd_set* rfds, IN fd_set* wfds, IN fd_set* efds, IN struct timeval* timeout);
-static inline int socket_select_readfds(IN int n, IN fd_set* fds, IN struct timeval* timeout);
-static inline int socket_select_writefds(IN int n, IN fd_set* fds, IN struct timeval* timeout);
-static inline int socket_select_read(IN socket_t sock, IN int timeout); // 1-read able, 0-timeout, <0-forever
-static inline int socket_select_write(IN socket_t sock, IN int timeout); // 1-write able, 0-timeout, <0-forever
-static inline int socket_readable(IN socket_t sock); // 1-read able, 0-can't, <0-error
-static inline int socket_writeable(IN socket_t sock); // 1-write able, 0-can't, <0-error
+// Linux: 1. select may update the timeout argument to indicate how much time was left
+//        2. This interval will be rounded up to the system clock granularity, and kernel scheduling delays mean that the blocking interval may overrun by a small amount.
+// @return 0-timeout, >0-available fds, <0-socket_error(by socket_geterror())
+static inline int socket_select(IN int n, IN fd_set* rfds, IN fd_set* wfds, IN fd_set* efds, IN struct timeval* timeout); // timeout: NULL-forever, 0-immediately
+static inline int socket_select_readfds(IN int n, IN fd_set* fds, IN struct timeval* timeout); // timeout: NULL-forever, 0-immediately
+static inline int socket_select_writefds(IN int n, IN fd_set* fds, IN struct timeval* timeout); // timeout: NULL-forever, 0-immediately
+static inline int socket_select_read(IN socket_t sock, IN int timeout); // timeout: >0-milliseconds, 0-immediately, <0-forever
+static inline int socket_select_write(IN socket_t sock, IN int timeout); // timeout: >0-milliseconds, 0-immediately, <0-forever
+static inline int socket_readable(IN socket_t sock);
+static inline int socket_writeable(IN socket_t sock);
 
 // socket options
+// @return 0-ok, <0-socket_error(by socket_geterror())
 static inline int socket_setkeepalive(IN socket_t sock, IN int enable); // keep alive
 static inline int socket_getkeepalive(IN socket_t sock, OUT int* enable);
 static inline int socket_setlinger(IN socket_t sock, IN int onoff, IN int seconds); // linger
@@ -125,6 +133,7 @@ static inline int socket_setipv6only(IN socket_t sock, IN int ipv6_only); // 1-i
 static inline int socket_getdomain(IN socket_t sock, OUT int* domain); // get socket protocol address family(sock don't need bind)
 
 // socket status
+// @return 0-ok, <0-socket_error(by socket_geterror())
 static inline int socket_setnonblock(IN socket_t sock, IN int noblock); // non-block io, 0-block, 1-nonblock
 static inline int socket_setnondelay(IN socket_t sock, IN int nodelay); // non-delay io(Nagle Algorithm), 0-delay, 1-nodelay
 static inline int socket_getunread(IN socket_t sock, OUT size_t* size); // MSDN: Use to determine the amount of data pending in the network's input buffer that can be read from socket s
@@ -809,7 +818,7 @@ static inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_
 	return 0;
 }
 
-static inline int socket_addr_to(IN const struct sockaddr* sa, socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port)
+static inline int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port)
 {
 	if (AF_INET == sa->sa_family)
 	{
@@ -856,7 +865,7 @@ static inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen
 	return 0;
 }
 
-static inline int socket_addr_name(IN const struct sockaddr* sa, socklen_t salen, char* host, size_t hostlen)
+static inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN size_t hostlen)
 {
 	return getnameinfo(sa, salen, host, hostlen, NULL, 0, 0);
 }
@@ -883,7 +892,7 @@ static inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN sock
 	return 0;
 }
 
-static inline void socket_setbufvec(socket_bufvec_t* vec, int idx, void* ptr, size_t len)
+static inline void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len)
 {
 #if defined(OS_WINDOWS)
 	vec[idx].buf = (CHAR*)ptr;
