@@ -299,6 +299,7 @@ static inline int socket_send_by_time(IN socket_t sock, IN const void* buf, IN s
 	r = socket_select_write(sock, timeout);
 	if (r <= 0)
 		return 0 == r ? SOCKET_TIMEDOUT : r;
+	assert(1 == r);
 
 	r = socket_send(sock, buf, len, flags);
 	return r;
@@ -331,6 +332,7 @@ static inline int socket_recv_by_time(IN socket_t sock, OUT void* buf, IN size_t
 	r = socket_select_read(sock, timeout);
 	if (r <= 0)
 		return 0 == r ? SOCKET_TIMEDOUT : r;
+	assert(1 == r);
 
 	r = socket_recv(sock, buf, len, flags);
 	return r;
@@ -367,6 +369,7 @@ static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t
 		r = socket_select_write(sock, timeout);
 		if (r <= 0)
 			return 0 == r ? SOCKET_TIMEDOUT : r;
+		assert(1 == r);
 
 		r = socket_send_v(sock, vec, n, flags);
 		if (r <= 0)
