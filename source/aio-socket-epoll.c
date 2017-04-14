@@ -254,8 +254,17 @@ int aio_socket_process(int timeout)
 
 			// clear IN/OUT event
 			pthread_spin_lock(&ctx->locker);
-			assert(events[i].events == (events[i].events & ctx->ev.events));
-			ctx->ev.events &= ~(events[i].events & (EPOLLIN|EPOLLOUT));
+	
+			// 1. thread-1 aio_socket_send() set ctx->ev.events to EPOLLOUT
+			// 2. thread-2 epoll_wait -> events[i].events EPOLLOUT
+			// 3. thread-1 aio_socket_recv() set ctx->ev.events to EPOLLOUT|EPOLLIN
+			// 4. thread-1 epoll_wait -> events[i].events EPOLLOUT
+			// 5. thread-1 set ctx->ev.events to EPOLLIN
+			// 6. thread-2 check ctx->ev.events with EPOLLOUT failed
+			//assert(events[i].events == (events[i].events & ctx->ev.events));
+
+			events[i].events &= ctx->ev.events; // check events again(multi-thread condition)
+			ctx->ev.events &= ~(events[i].events & (EPOLLIN | EPOLLOUT));
 			if(ctx->ev.events & (EPOLLIN|EPOLLOUT))
 				epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev); // update epoll event(clear in/out cause EPOLLHUP)
 			pthread_spin_unlock(&ctx->locker);
@@ -299,7 +308,7 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	ctx->ref = 1; // 1-for EPOLLHUP(no in/out, shutdown), 2-destroy release
 	ctx->socket = socket;
 //	ctx->ev.events |= EPOLLET; // Edge Triggered, for multi-thread epoll_wait(see more at epoll-wait-multithread.c)
-	ctx->ev.events |= EPOLLONESHOT; // since Linux 2.6.2
+	ctx->ev.events |= EPOLLONESHOT; // since Linux 2.6.2(include EPOLLWAKEUP|EPOLLONESHOT|EPOLLET, see: linux/fs/eventpoll.c)
 #if defined(EPOLLRDHUP)
 	ctx->ev.events |= EPOLLRDHUP; // since Linux 2.6.17
 #endif
