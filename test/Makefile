@@ -83,3 +83,5 @@ INCLUDES += $(ROOT)/../media-server/librtsp/include
 endif
 
 include $(ROOT)/gcc.mk
+
+CXXFLAGS += -std=c++0x
