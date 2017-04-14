@@ -125,23 +125,12 @@ class CSemaphore
 public:
 	CSemaphore(int initValue)
 	{
-		semaphore_create(&m_sema, NULL, initValue);
+		m_err = semaphore_create(&m_sema, NULL, initValue);
 	}
 
 	CSemaphore(const char* name)
 	{
-		int r = semaphore_open(&m_sema, name);
-		if(0 != r)
-		{
-			r = semaphore_create(&m_sema, name, 1);
-			if(0 != r)
-			{
-				r = semaphore_open(&m_sema, name);
-			}
-		}
-
-		if(0 != r)
-			throw r;
+		m_err = Open(name);
 	}
 
 	~CSemaphore()
@@ -169,29 +158,29 @@ public:
 		return semaphore_trywait(&m_sema);
 	}
 
+	int CheckError() const
+	{
+		return m_err;
+	}
+
 private:
+	int Open(const char* name)
+	{
+		int r = semaphore_open(&m_sema, name);
+		if (0 != r)
+		{
+			r = semaphore_create(&m_sema, name, 1);
+			if (0 == r)
+			{
+				r = semaphore_open(&m_sema, name);
+			}
+		}
+		return r;
+	}
+
+private:
+	int m_err;
 	semaphore_t m_sema;
-};
-
-class CAutoSemaphore
-{
-	CAutoSemaphore(const CAutoSemaphore& sema):m_sema(sema.m_sema){}
-	CAutoSemaphore& operator =(const CAutoSemaphore&){ return *this; }
-
-public:
-	CAutoSemaphore(CSemaphore& sema)
-		:m_sema(sema)
-	{
-		m_sema.Wait();
-	}
-
-	~CAutoSemaphore()
-	{
-		m_sema.Post();
-	}
-
-private:
-	CSemaphore& m_sema;
 };
 
 #endif /* !_platform_sync_hpp_ */
