@@ -25,7 +25,7 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN in
 /// @param[in] timeout: ms, <0-forever
 /// @return >=0-ok, <0-error(by socket_geterror())
 static inline int socket_connect_by_time(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen, IN int timeout);
-/// @return >=0-socket, <0-socket_error(by socket_geterror())
+/// @return >=0-socket, <0-socket_invalid(by socket_geterror())
 static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int timeout); // timeout: ms, <0-forever
 static inline socket_t socket_accept_by_time(IN socket_t socket, OUT struct sockaddr_storage* addr, OUT socklen_t* addrlen, IN int timeout); // timeout: <0-forever
 
@@ -266,7 +266,7 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN in
 /// @param[out] addr struct sockaddr_in for IPv4
 /// @param[out] addrlen addr length in bytes
 /// @param[in] timeout timeout in millisecond
-/// @return 0-timeout, socket_invalid-error, use socket_geterror() to get error code, other-ok  
+/// @return socket_invalid-error, use socket_geterror() to get error code, other-ok  
 static inline socket_t socket_accept_by_time(IN socket_t socket, OUT struct sockaddr_storage* addr, OUT socklen_t* addrlen, IN int timeout)
 {
 	int ret;
@@ -279,7 +279,7 @@ static inline socket_t socket_accept_by_time(IN socket_t socket, OUT struct sock
 	}
 	else if (0 == ret)
 	{
-		return 0; // timeout
+		return socket_invalid; //SOCKET_TIMEDOUT
 	}
 
 	return socket_accept(socket, addr, addrlen);
