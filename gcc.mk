@@ -94,10 +94,10 @@ OBJECT_FILES := $(foreach file,$(OBJECT_FILES),$(OUTPATH)/$(notdir $(file)))
 
 $(OUTPATH)/$(OUTFILE): $(OBJS_VER) $(OBJECT_FILES) $(STATIC_LIBS)
 ifeq ($(OUTTYPE),0)
-	$(CXX) -o $@ -Wl,-rpath . $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS)) -static-libgcc
+	$(CXX) -o $@ -Wl,-rpath . $(LDFLAGS) $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS)) -static-libgcc
 else
 ifeq ($(OUTTYPE),1)
-	$(CXX) -o $@ -shared -fpic -rdynamic -Wl,-rpath . $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS))
+	$(CXX) -o $@ -shared -fpic -rdynamic -Wl,-rpath . $(LDFLAGS) $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS))
 else
 	$(AR) -rc $@ $^
 endif
