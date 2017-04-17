@@ -1,5 +1,4 @@
 #include "app-log.h"
-#include "time64.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
@@ -7,6 +6,7 @@
 #if defined(OS_WINDOWS)
 #include <Windows.h>
 #elif defined(OS_LINUX)
+#include <sys/time.h>
 #include <pthread.h>
 #include <syslog.h>
 #if defined(OS_ANDROID)
@@ -14,9 +14,11 @@
 #endif
 #endif
 
-//static const char* g_logLevelDesc[] = { "EMERG", "ALERT", "CRIT", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG" };
-static const char* g_logLevelDesc[] = { "X", "A", "C", "E", "W", "N", "I", "D" };
-static const char g_month[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+//static const char s_month[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+//static const char* s_level_tag[] = { "EMERG", "ALERT", "CRIT", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG" };
+static const char* s_level_tag[] = { "X", "A", "C", "E", "W", "N", "I", "D" };
+
+#define LOG_LEVEL(level) ((LOG_EMERG <= level && level <= LOG_DEBUG) ? level : LOG_DEBUG)
 
 #if defined(OS_LINUX)
 static void app_log_init(void)
@@ -27,17 +29,34 @@ static void app_log_init(void)
 }
 #endif
 
+/// @return time format string, e.g. 00:00:00.000|
+static int app_log_time(char timestr[], unsigned int bytes)
+{
+#if defined(OS_WINDOWS)
+	SYSTEMTIME t;
+	GetLocalTime(&t);
+	return snprintf(timestr, bytes, "%02hu:%02hu:%02hu.%03hu|", t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
+#else
+	struct tm t;
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	localtime_r(&tv.tv_sec, &t);
+	return snprintf(timestr, bytes, "%02d:%02d:%02d.%03d|", (int)t.tm_hour, (int)t.tm_min, (int)t.tm_sec, (int)(tv.tv_usec / 1000) % 1000);
+#endif
+	//return snprintf(timestr, sizeof(timestr), "%s-%02d %02d:%02d:%02d.%03d|", /*t.year+1900,*/ s_month[t.month % 12], t.day, t.hour, t.minute, t.second, t.millisecond);
+}
+
 static void app_log_syslog(int level, const char* format, va_list args)
 {
 #if defined(OS_WINDOWS)
-	int n;
-	struct tm64 t;
-	static char s_log[1024 * 4];
-	time64_local(time64_now(), &t);
-	n = snprintf(s_log, sizeof(s_log), "%02d:%02d.%03d", t.minute, t.second, t.millisecond);
-	vsnprintf(s_log + n, sizeof(s_log) - n - 1, format, args);
-	OutputDebugStringA(s_log);
-	(void)level;
+	int n = 0;
+	char log[1024 * 4];
+#if defined(_DEBUG) || defined(DEBUG)
+	n += app_log_time(log + n, sizeof(log) - n - 1);
+#endif
+	n += snprintf(log + n, sizeof(log) -n - 1, "%s|", s_level_tag[LOG_LEVEL(level)]);
+	vsnprintf(log + n, sizeof(log) - n - 1, format, args);
+	OutputDebugStringA(log);
 #elif defined(OS_ANDROID)
 	static int s_level[] = { LOG_NOTICE, LOG_NOTICE , LOG_NOTICE, LOG_DEBUG, LOG_INFO, LOG_WARNING, LOG_ERROR, LOG_CRIT, LOG_EMERG };
 	assert(sizeof(s_level) / sizeof(s_level[0]) == ANDROID_LOG_SILENT + 1);
@@ -53,14 +72,9 @@ static void app_log_syslog(int level, const char* format, va_list args)
 
 static void app_log_print(int level, const char* format, va_list args)
 {
-	struct tm64 t;
-	char timestr[64] = { 0 };
-
-	time64_local(time64_now(), &t);
-	snprintf(timestr, sizeof(timestr), "%s-%02d %02d:%02d:%02d.%03d",
-		/*t.year+1900,*/ g_month[t.month % 12], t.day, t.hour, t.minute, t.second, t.millisecond);
-
-	printf("%s|%s|", timestr, g_logLevelDesc[(LOG_EMERG <= level && level <= LOG_DEBUG) ? level : LOG_DEBUG]);
+	char timestr[65] = { 0 };
+	app_log_time(timestr, sizeof(timestr) - 1);
+	printf("%s%s|", timestr, s_level_tag[LOG_LEVEL(level)]);
 	vprintf(format, args);
 }
 
