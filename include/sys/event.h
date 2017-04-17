@@ -6,6 +6,7 @@
 typedef HANDLE	event_t;
 
 #else
+#include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/time.h>
