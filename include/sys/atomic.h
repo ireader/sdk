@@ -3,10 +3,13 @@
 
 #if defined(OS_WINDOWS)
 #include <Windows.h>
+#if _MSC_VER >= 1900
+#include <stdint.h>
+#else
 typedef int		int32_t;
 typedef __int64 int64_t;
+#endif
 #elif defined(OS_LINUX)
-#include <inttypes.h>
 #include <stdint.h>
 #elif defined(OS_MAC)
 #include <libkern/OSAtomic.h>
