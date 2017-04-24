@@ -45,15 +45,26 @@ static inline int event_create(event_t* event)
 #else
 	int r;
 	pthread_condattr_t attr;
+	pthread_mutexattr_t mutex;
+
+	pthread_mutexattr_init(&mutex);
+#if defined(OS_LINUX)
+	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
+#else
+	pthread_mutexattr_settype(&mutex, PTHREAD_MUTEX_RECURSIVE);
+#endif
+	pthread_mutex_init(&event->mutex, &mutex);
+
+#if defined(OS_LINUX) && defined(CLOCK_MONOTONIC) // && defined(__USE_XOPEN2K)
 	pthread_condattr_init(&attr);
-#if defined(OS_LINUX) && defined(__USE_XOPEN2K)
 	pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+	r = pthread_cond_init(&event->event, &attr);
+	pthread_condattr_destroy(&attr);
+#else
+	r = pthread_cond_init(&event->event, NULL);
 #endif
 
 	event->count = 0;
-	pthread_mutex_init(&event->mutex, NULL);
-	r = pthread_cond_init(&event->event, &attr);
-	pthread_condattr_destroy(&attr);
 	return r;
 #endif
 }
@@ -103,7 +114,7 @@ static inline int event_timewait(event_t* event, int timeout)
 #if defined(OS_LINUX)
 	int r = 0;
 	struct timespec ts;
-#ifdef __USE_XOPEN2K
+#ifdef CLOCK_MONOTONIC // __USE_XOPEN2K
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 #else
 	clock_gettime(CLOCK_REALTIME, &ts);
