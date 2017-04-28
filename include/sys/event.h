@@ -9,7 +9,7 @@ typedef HANDLE	event_t;
 #include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <sys/time.h>
+#include <time.h>
 typedef struct
 {
 	int count; // fixed pthread_cond_signal/pthread_cond_wait call order
@@ -55,7 +55,7 @@ static inline int event_create(event_t* event)
 #endif
 	pthread_mutex_init(&event->mutex, &mutex);
 
-#if defined(OS_LINUX) && defined(CLOCK_MONOTONIC) // && defined(__USE_XOPEN2K)
+#if defined(OS_LINUX) && defined(CLOCK_MONOTONIC) && defined(__USE_XOPEN2K)
 	pthread_condattr_init(&attr);
 	pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
 	r = pthread_cond_init(&event->event, &attr);
