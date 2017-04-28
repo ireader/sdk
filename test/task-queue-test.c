@@ -13,9 +13,9 @@ static void tasktest(void* param)
 {
 	char* p = (char*)param;
 #if defined(OS_WINDOWS)
-	printf("[%d]: %s\n", thread_self(), p);
+	printf("[%d]: %s\n", thread_getid(thread_self()), p);
 #else
-	printf("[%p]: %s\n", thread_self(), p);
+	printf("[%p]: %s\n", thread_getid(thread_self()), p);
 #endif
 	free(p);
 

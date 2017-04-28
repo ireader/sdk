@@ -24,6 +24,7 @@ void onetime_test(void);
 void stack_test(void);
 void time64_test(void);
 void bits_test(void);
+void ring_buffer_test(void);
 
 void url_test(void);
 void unicode_test(void);
@@ -68,6 +69,7 @@ int main(int argc, char* argv[])
 	stack_test();
 	time64_test();
 	bits_test();
+	ring_buffer_test();
 
     url_test();
 
