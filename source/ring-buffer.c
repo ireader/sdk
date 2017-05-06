@@ -35,6 +35,14 @@ void ring_buffer_destroy(void* p)
 	free(rb);
 }
 
+void ring_buffer_clear(void* p)
+{
+	struct ring_buffer_t* rb;
+	rb = (struct ring_buffer_t*)p;
+	rb->read = 0;
+	rb->size = 0;
+}
+
 int ring_buffer_write(void* _rb, const void* data, size_t bytes)
 {
 	size_t n, write;

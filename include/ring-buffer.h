@@ -9,6 +9,7 @@ extern "C" {
 
 void* ring_buffer_create(size_t bytes);
 void ring_buffer_destroy(void* rb);
+void ring_buffer_clear(void* rb);
 
 int ring_buffer_write(void* rb, const void* data, size_t bytes);
 int ring_buffer_read(void* rb, void* data, size_t bytes);
