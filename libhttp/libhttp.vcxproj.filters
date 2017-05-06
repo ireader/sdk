@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
-    <Filter Include="test">
-      <UniqueIdentifier>{1d8e4390-b365-4697-98ca-87a5b192ecde}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\http-bundle.c">
@@ -50,15 +47,6 @@
     </ClCompile>
     <ClCompile Include="source\http-session.c">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="test\benchmark.c">
-      <Filter>test</Filter>
-    </ClCompile>
-    <ClCompile Include="test\http-client-test.cpp">
-      <Filter>test</Filter>
-    </ClCompile>
-    <ClCompile Include="test\http-client-test2.cpp">
-      <Filter>test</Filter>
     </ClCompile>
     <ClCompile Include="source\http-parser.c">
       <Filter>Source Files</Filter>

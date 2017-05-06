@@ -146,9 +146,6 @@
     <ClCompile Include="source\http-server.c" />
     <ClCompile Include="source\http-session.c" />
     <ClCompile Include="source\http-upload.c" />
-    <ClCompile Include="test\benchmark.c" />
-    <ClCompile Include="test\http-client-test.cpp" />
-    <ClCompile Include="test\http-client-test2.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\http-bundle.h" />
