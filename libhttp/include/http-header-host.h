@@ -1,6 +1,8 @@
 #ifndef _http_header_host_h_
 #define _http_header_host_h_
 
+#include <stdlib.h>
+
 /// parse HTTP HOST header
 /// @param[in] field host value(don't include "HOST: " and "\r\n")
 /// @param[out] host ip or domain

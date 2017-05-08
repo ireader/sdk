@@ -14,9 +14,6 @@
 #include "http-header-content-type.h"
 #include <string.h>
 #include <assert.h>
-#include "ctypedef.h"
-#include "cstringext.h"
-#include "string-util.h"
 
 #define SPECIAL_CHARS ";\r\n"
 
@@ -29,9 +26,8 @@ static int http_header_content_type_parameter(const char* parameters, struct htt
     while(p && *p && v->parameter_count < sizeof(v->parameters)/sizeof(v->parameters[0]))
     {
         while(' ' == *p) ++p; // skip blank space
-        p1 = string_token(p, "="SPECIAL_CHARS);
-        assert(p1);
-        if('=' == *p1)
+        p1 = strpbrk(p, "="SPECIAL_CHARS);
+        if(p1 && '=' == *p1)
         {
             v->parameters[v->parameter_count].name = p;
             v->parameters[v->parameter_count].name_len = (size_t)(p1 - p);
@@ -40,13 +36,13 @@ static int http_header_content_type_parameter(const char* parameters, struct htt
             v->parameters[v->parameter_count].value = p1;
 
             p = p1;
-            p1 = string_token(p, SPECIAL_CHARS);
-            v->parameters[v->parameter_count].value_len = (size_t)(p1 - p);
+            p1 = strpbrk(p, SPECIAL_CHARS);
+            v->parameters[v->parameter_count].value_len = p1 ? (size_t)(p1 - p) : strlen(p);
         }
         else
         {
             v->parameters[v->parameter_count].name = p;
-            v->parameters[v->parameter_count].name_len = (size_t)(p1 - p);
+            v->parameters[v->parameter_count].name_len = p1 ? (size_t)(p1 - p) : strlen(p);
             v->parameters[v->parameter_count].value = NULL;
             v->parameters[v->parameter_count].value_len = 0;
         }
@@ -62,7 +58,7 @@ static int http_header_content_type_parameter(const char* parameters, struct htt
         
         ++v->parameter_count;
         
-        if('\r' == *p1 || '\n' == *p1 || '\0' == *p1)
+        if(!p1 || '\r' == *p1 || '\n' == *p1 || '\0' == *p1)
             break;
         p = p1 + 1;
     }
@@ -79,8 +75,8 @@ int http_header_content_type(const char* field, struct http_header_content_type_
 	v->parameter_count = 0;
 
     // media type
-	p1 = string_token(p, "/"SPECIAL_CHARS);
-    if('/' != *p1)
+	p1 = strpbrk(p, "/"SPECIAL_CHARS);
+    if(!p1 || '/' != *p1)
         return -1; // invalid content-type
 
     n = (size_t)(p1 - p); // ptrdiff_t -> size_t
@@ -91,17 +87,19 @@ int http_header_content_type(const char* field, struct http_header_content_type_
 
     // media subtype
     p = p1 + 1;
-    p1 = string_token(p, SPECIAL_CHARS);
-    n = (size_t)(p1 - p); // ptrdiff_t -> size_t
+    p1 = strpbrk(p, " "SPECIAL_CHARS);
+    n = p1 ? (size_t)(p1 - p) : strlen(p); // ptrdiff_t -> size_t
     if(n + 1 > sizeof(v->media_subtype))
         return -1;
     memcpy(v->media_subtype, p, n);
     v->media_subtype[n] = '\0';
 
     // parameters
-    if(';' == *p1)
+    if(p1)
     {
-        return http_header_content_type_parameter(p1+1, v);
+		p1 += strspn(p1, " \t");
+		if (';' == *p1)
+			return http_header_content_type_parameter(p1+1, v);
     }
 
 	return 0;
@@ -116,5 +114,11 @@ void http_header_content_type_test(void)
 	assert(0 == strcmp("html", content.media_subtype));
 	assert(1==content.parameter_count);
 	assert(0 == strncmp("charset", content.parameters[0].name, content.parameters[0].name_len) && 0 == strncmp("ISO-8859-4", content.parameters[0].value, content.parameters[0].value_len));
+
+	http_header_content_type("text/; ISO-8859-4; charset=ISO-8859-4", &content);
+	assert(0 == strcmp("text", content.media_type));
+	assert(0 == strcmp("", content.media_subtype));
+	assert(2 == content.parameter_count);
+	assert(0 == strncmp("ISO-8859-4", content.parameters[0].name, content.parameters[0].name_len));
 }
 #endif

@@ -1,6 +1,3 @@
-#include "ctypedef.h"
-#include "cstringext.h"
-#include "string-util.h"
 #include "http-header-host.h"
 #include <stdlib.h>
 #include <string.h>
