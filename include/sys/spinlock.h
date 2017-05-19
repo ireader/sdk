@@ -32,9 +32,9 @@ static inline int spinlock_create(spinlock_t *locker)
 	// OSSpinLock is an integer type.  The convention is that unlocked is zero, and locked is nonzero.  
 	// Locks must be naturally aligned and cannot be in cache-inhibited memory.
 #if TARGET_CPU_X86_64 || TARGET_CPU_PPC64
-	assert((int32_t)locker % 8 == 0);
+	assert((intptr_t)locker % 8 == 0);
 #else
-	assert((int32_t)locker % 4 == 0);
+	assert((intptr_t)locker % 4 == 0);
 #endif
 	*locker = 0;
 	return 0;
