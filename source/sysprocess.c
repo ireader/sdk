@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #if defined(_WIN32)
 #undef UNICODE
 #include <Tlhelp32.h>
