@@ -55,7 +55,7 @@ enum thread_priority
 
 typedef int (STDCALL *thread_proc)(void* param);
 
-static inline int thread_create2(pthread_t* thread, size_t stacksize, thread_proc func, void* param)
+static int thread_create2(pthread_t* thread, size_t stacksize, thread_proc func, void* param)
 {
 #if defined(OS_WINDOWS)
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms682453.aspx
@@ -87,12 +87,12 @@ static inline int thread_create2(pthread_t* thread, size_t stacksize, thread_pro
 #endif
 }
 
-static inline int thread_create(pthread_t* thread, thread_proc func, void* param)
+static int thread_create(pthread_t* thread, thread_proc func, void* param)
 {
 	return thread_create2(thread, 0, func, param);
 }
 
-static inline int thread_destroy(pthread_t thread)
+static int thread_destroy(pthread_t thread)
 {
 #if defined(OS_WINDOWS)
 	if(thread.id != GetCurrentThreadId())
@@ -108,7 +108,7 @@ static inline int thread_destroy(pthread_t thread)
 #endif
 }
 
-static inline int thread_detach(pthread_t thread)
+static int thread_detach(pthread_t thread)
 {
 #if defined(OS_WINDOWS)
 	CloseHandle(thread.handle);
@@ -120,7 +120,7 @@ static inline int thread_detach(pthread_t thread)
 
 // priority: [-15, 15]
 // 0: normal / -15: idle / 15: critical
-static inline int thread_getpriority(pthread_t thread, int* priority)
+static int thread_getpriority(pthread_t thread, int* priority)
 {
 #if defined(OS_WINDOWS)
 	int r = GetThreadPriority(thread.handle);
@@ -139,7 +139,7 @@ static inline int thread_getpriority(pthread_t thread, int* priority)
 #endif
 }
 
-static inline int thread_setpriority(pthread_t thread, int priority)
+static int thread_setpriority(pthread_t thread, int priority)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = SetThreadPriority(thread.handle, priority);
@@ -159,7 +159,7 @@ static inline int thread_setpriority(pthread_t thread, int priority)
 #endif
 }
 
-static inline pthread_t thread_self(void)
+static pthread_t thread_self(void)
 {
 #if defined(OS_WINDOWS)
 	pthread_t t;
@@ -171,7 +171,7 @@ static inline pthread_t thread_self(void)
 #endif
 }
 
-static inline tid_t thread_getid(pthread_t thread)
+static tid_t thread_getid(pthread_t thread)
 {
 #if defined(OS_WINDOWS)
 	//return GetThreadId(thread.handle); // >= vista
@@ -181,7 +181,7 @@ static inline tid_t thread_getid(pthread_t thread)
 #endif
 }
 
-static inline int thread_isself(pthread_t thread)
+static int thread_isself(pthread_t thread)
 {
 #if defined(OS_WINDOWS)
 	return thread.id==GetCurrentThreadId() ? 1 : 0;
@@ -190,7 +190,7 @@ static inline int thread_isself(pthread_t thread)
 #endif
 }
 
-static inline int thread_valid(pthread_t thread)
+static int thread_valid(pthread_t thread)
 {
 #if defined(OS_WINDOWS)
 	return 0 != thread.id ? 1 : 0;
@@ -199,12 +199,12 @@ static inline int thread_valid(pthread_t thread)
 #endif
 }
 
-static inline int thread_yield(void)
+static int thread_yield(void)
 {
 #if defined(OS_WINDOWS)
 	// Causes the calling thread to yield execution to another thread that is ready to run 
 	// on the current processor. The operating system selects the next thread to be executed.
-	return (int)SwitchToThread();
+	return SwitchToThread() ? 0 : -1;
 #else
 	return sched_yield();
 #endif

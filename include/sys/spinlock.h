@@ -22,7 +22,7 @@ typedef pthread_spinlock_t spinlock_t;
 // int spinlock_trylock(spinlock_t *locker)
 //----------------------------------------------
 
-static inline int spinlock_create(spinlock_t *locker)
+static int spinlock_create(spinlock_t *locker)
 {
 #if defined(OS_WINDOWS)
 	// Minimum support OS: WinXP
@@ -46,7 +46,7 @@ static inline int spinlock_create(spinlock_t *locker)
 #endif
 }
 
-static inline int spinlock_destroy(spinlock_t *locker)
+static int spinlock_destroy(spinlock_t *locker)
 {
 #if defined(OS_WINDOWS)
 	DeleteCriticalSection(locker); return 0;
@@ -60,7 +60,7 @@ static inline int spinlock_destroy(spinlock_t *locker)
 #endif
 }
 
-static inline void spinlock_lock(spinlock_t *locker)
+static void spinlock_lock(spinlock_t *locker)
 {
 #if defined(OS_WINDOWS)
 	EnterCriticalSection(locker);
@@ -73,7 +73,7 @@ static inline void spinlock_lock(spinlock_t *locker)
 #endif
 }
 
-static inline void spinlock_unlock(spinlock_t *locker)
+static void spinlock_unlock(spinlock_t *locker)
 {
 #if defined(OS_WINDOWS)
 	LeaveCriticalSection(locker);
@@ -86,7 +86,7 @@ static inline void spinlock_unlock(spinlock_t *locker)
 #endif
 }
 
-static inline int spinlock_trylock(spinlock_t *locker)
+static int spinlock_trylock(spinlock_t *locker)
 {
 #if defined(OS_WINDOWS)
 	return TryEnterCriticalSection(locker) ? 1 : 0;

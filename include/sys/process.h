@@ -56,7 +56,7 @@ typedef struct
 /// process
 ///
 //////////////////////////////////////////////////////////////////////////
-static inline int process_createve(const char* filename, process_create_param_t *param, pid_t* pid)
+static int process_createve(const char* filename, process_create_param_t *param, pid_t* pid)
 {
 #if defined(OS_WINDOWS)
 	PROCESS_INFORMATION pi;
@@ -109,7 +109,7 @@ static inline int process_createve(const char* filename, process_create_param_t 
 #endif
 }
 
-static inline int process_create(const char* filename, pid_t* pid)
+static int process_create(const char* filename, pid_t* pid)
 {
     process_create_param_t param;
 #if defined(OS_WINDOWS)
@@ -124,7 +124,7 @@ static inline int process_create(const char* filename, pid_t* pid)
     return process_createve(filename, &param, pid);
 }
 
-static inline int process_kill(pid_t pid)
+static int process_kill(pid_t pid)
 {
 #if defined(OS_WINDOWS)
 	HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
@@ -146,7 +146,7 @@ static inline int process_kill(pid_t pid)
 #endif
 }
 
-static inline pid_t process_self(void)
+static pid_t process_self(void)
 {
 #if defined(OS_WINDOWS)
 	return GetCurrentProcessId();
@@ -155,7 +155,7 @@ static inline pid_t process_self(void)
 #endif
 }
 
-static inline int process_selfname(char* name, size_t size)
+static int process_selfname(char* name, size_t size)
 {
 #if defined(OS_WINDOWS)
 	if(0 == GetModuleFileNameA(NULL, name, size))
@@ -170,7 +170,7 @@ static inline int process_selfname(char* name, size_t size)
 #endif
 }
 
-static inline int process_name(pid_t pid, char* name, size_t size)
+static int process_name(pid_t pid, char* name, size_t size)
 {
 #if defined(OS_WINDOWS)
 	DWORD r = 0;

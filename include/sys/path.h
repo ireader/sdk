@@ -20,7 +20,7 @@
 
 /// test file
 /// 0-don't found, other-exist
-inline int path_testfile(const char* filename)
+static int path_testfile(const char* filename)
 {
 #if defined(OS_WINDOWS)
 	// we must use GetFileAttributes() instead of the ANSI C functions because
@@ -35,7 +35,7 @@ inline int path_testfile(const char* filename)
 
 /// test file
 /// 0-don't found, other-exist
-inline int path_testdir(const char* path)
+static int path_testdir(const char* path)
 {
 #if defined(OS_WINDOWS)
 	size_t ret = GetFileAttributesA(path);
@@ -48,7 +48,7 @@ inline int path_testdir(const char* path)
 
 /// create a directory
 /// 0-ok, other-error
-inline int path_makedir(const char* path)
+static int path_makedir(const char* path)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = CreateDirectoryA(path, NULL);
@@ -61,7 +61,7 @@ inline int path_makedir(const char* path)
 
 /// create a directory
 /// 0-ok, other-error
-inline int path_rmdir(const char* path)
+static int path_rmdir(const char* path)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = RemoveDirectoryA(path);
@@ -74,7 +74,7 @@ inline int path_rmdir(const char* path)
 
 /// get current work directory
 /// 0-ok, other-error
-inline int path_getcwd(char* path, unsigned int bytes)
+static int path_getcwd(char* path, unsigned int bytes)
 {
 #if defined(OS_WINDOWS)
 	DWORD r = GetCurrentDirectoryA(bytes, path);
@@ -87,7 +87,7 @@ inline int path_getcwd(char* path, unsigned int bytes)
 
 /// set work directory
 /// 0-ok, other-error
-inline int path_chcwd(const char* path)
+static int path_chcwd(const char* path)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = SetCurrentDirectoryA(path);
@@ -100,7 +100,7 @@ inline int path_chcwd(const char* path)
 
 /// get full path name
 /// 0-ok, other-error
-inline int path_realpath(const char* path, char* resolved_path, unsigned int bytes)
+static int path_realpath(const char* path, char* resolved_path, unsigned int bytes)
 {
 #if defined(OS_WINDOWS)
 	DWORD r = GetFullPathNameA(path, bytes, resolved_path, NULL);
@@ -111,7 +111,7 @@ inline int path_realpath(const char* path, char* resolved_path, unsigned int byt
 #endif
 }
 
-inline const char* path_basename(const char* fullname)
+static const char* path_basename(const char* fullname)
 {
 	const char* p = strrchr(fullname, '/');
 	const char* p2 = strrchr(fullname, '\\');
@@ -119,7 +119,7 @@ inline const char* path_basename(const char* fullname)
 	return p ? p+1 : fullname;
 }
 
-inline int path_dirname(const char* fullname, char* dir)
+static int path_dirname(const char* fullname, char* dir)
 {
 	const char* p = path_basename(fullname);
 	if(p == fullname)
@@ -132,7 +132,7 @@ inline int path_dirname(const char* fullname, char* dir)
 
 /// delete a name and possibly the file it refers to
 /// 0-ok, other-error
-inline int path_rmfile(const char* file)
+static int path_rmfile(const char* file)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = DeleteFileA(file);
@@ -145,7 +145,7 @@ inline int path_rmfile(const char* file)
 
 /// change the name or location of a file
 /// 0-ok, other-error
-inline int path_rename(const char* oldpath, const char* newpath)
+static int path_rename(const char* oldpath, const char* newpath)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = MoveFileA(oldpath, newpath);
@@ -158,7 +158,7 @@ inline int path_rename(const char* oldpath, const char* newpath)
 
 /// get file size in bytes
 /// return file size
-inline long path_filesize(const char* filename)
+static long path_filesize(const char* filename)
 {
 	struct stat info;
 	return (stat(filename, &info)==0 && (info.st_mode&S_IFREG)) ? info.st_size : 0;

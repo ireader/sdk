@@ -47,7 +47,7 @@ typedef void (*funcptr_t)(void);
 /// implement
 ///
 //////////////////////////////////////////////////////////////////////////
-static inline void system_sleep(useconds_t milliseconds)
+static void system_sleep(useconds_t milliseconds)
 {
 #if defined(OS_WINDOWS)
 	Sleep(milliseconds);
@@ -56,7 +56,7 @@ static inline void system_sleep(useconds_t milliseconds)
 #endif
 }
 
-static inline size_t system_getcpucount(void)
+static size_t system_getcpucount(void)
 {
 #if defined(OS_WINDOWS)
 	SYSTEM_INFO sysinfo;
@@ -100,7 +100,7 @@ static inline size_t system_getcpucount(void)
 #endif
 }
 
-static inline int64_t system_getcyclecount(void)
+static int64_t system_getcyclecount(void)
 {
 #if defined(OS_WINDOWS)
 	LARGE_INTEGER freq;
@@ -113,7 +113,7 @@ static inline int64_t system_getcyclecount(void)
 }
 
 /// milliseconds since the Epoch(1970-01-01 00:00:00 +0000 (UTC))
-static inline uint64_t system_time(void)
+static uint64_t system_time(void)
 {
 #if defined(OS_WINDOWS)
 	uint64_t t;
@@ -136,7 +136,7 @@ static inline uint64_t system_time(void)
 }
 
 ///@return milliseconds(relative time)
-static inline uint64_t system_clock(void)
+static uint64_t system_clock(void)
 {
 #if defined(OS_WINDOWS)
 	LARGE_INTEGER freq;
@@ -168,7 +168,7 @@ static inline uint64_t system_clock(void)
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <mach/mach_time.h>
-static inline int mac_gettime(struct timespec *t){
+static int mac_gettime(struct timespec *t){
 	mach_timebase_info_data_t timebase;
 	mach_timebase_info(&timebase);
 	uint64_t time;
@@ -186,7 +186,7 @@ static inline int mac_gettime(struct timespec *t){
 #pragma warning(disable: 4996) // GetVersionEx
 #pragma warning(disable: 28159)
 #endif
-static inline int system_version(int* major, int* minor)
+static int system_version(int* major, int* minor)
 {
 #if defined(OS_WINDOWS)
 	/*
@@ -232,7 +232,7 @@ static inline int system_version(int* major, int* minor)
 /// dynamic module load/unload
 ///
 //////////////////////////////////////////////////////////////////////////
-static inline module_t system_load(const char* module)
+static module_t system_load(const char* module)
 {
 #if defined(OS_WINDOWS)
 	return LoadLibraryExA(module, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
@@ -241,7 +241,7 @@ static inline module_t system_load(const char* module)
 #endif
 }
 
-static inline int system_unload(module_t module)
+static int system_unload(module_t module)
 {
 #if defined(OS_WINDOWS)
 	return FreeLibrary(module);
@@ -250,7 +250,7 @@ static inline int system_unload(module_t module)
 #endif
 }
 
-static inline funcptr_t system_getproc(module_t module, const char* producer)
+static funcptr_t system_getproc(module_t module, const char* producer)
 {
 #if defined(OS_WINDOWS)
 	return GetProcAddress(module, producer);
