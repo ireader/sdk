@@ -28,7 +28,7 @@ static BOOL CALLBACK onetime_callback(PINIT_ONCE once, PVOID param, PVOID* conte
 }
 #endif
 
-static int onetime_exec(onetime_t* key, onetime_routine routine)
+static inline int onetime_exec(onetime_t* key, onetime_routine routine)
 {
 #if defined(OS_WINDOWS)
 	// http://stackoverflow.com/questions/12358843/why-are-function-pointers-and-data-pointers-incompatible-in-c-c

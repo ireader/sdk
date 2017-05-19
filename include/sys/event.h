@@ -34,7 +34,7 @@ typedef struct
 // int event_reset(event_t* event);
 //-------------------------------------------------------------------------------------
 
-static int event_create(event_t* event)
+static inline int event_create(event_t* event)
 {
 #if defined(OS_WINDOWS)
 	HANDLE h = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -49,7 +49,7 @@ static int event_create(event_t* event)
 
 	pthread_mutexattr_init(&mutex);
 #if defined(OS_LINUX)
-	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
+	pthread_mutexattr_settype(&mutex, PTHREAD_MUTEX_RECURSIVE_NP);
 #else
 	pthread_mutexattr_settype(&mutex, PTHREAD_MUTEX_RECURSIVE);
 #endif
@@ -69,7 +69,7 @@ static int event_create(event_t* event)
 #endif
 }
 
-static int event_destroy(event_t* event)
+static inline int event_destroy(event_t* event)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = CloseHandle(*event);
@@ -87,7 +87,7 @@ static int event_destroy(event_t* event)
 }
 
 // 0-success, other-error
-static int event_wait(event_t* event)
+static inline int event_wait(event_t* event)
 {
 #if defined(OS_WINDOWS)
 	DWORD r = WaitForSingleObjectEx(*event, INFINITE, TRUE);
@@ -104,7 +104,7 @@ static int event_wait(event_t* event)
 }
 
 // 0-success, WAIT_TIMEOUT-timeout, other-error
-static int event_timewait(event_t* event, int timeout)
+static inline int event_timewait(event_t* event, int timeout)
 {
 #if defined(OS_WINDOWS)
 	DWORD r = WaitForSingleObjectEx(*event, timeout, TRUE);
@@ -143,7 +143,7 @@ static int event_timewait(event_t* event, int timeout)
 #endif
 }
 
-static int event_signal(event_t* event)
+static inline int event_signal(event_t* event)
 {
 #if defined(OS_WINDOWS)
 	return SetEvent(*event)?0:(int)GetLastError();
@@ -157,7 +157,7 @@ static int event_signal(event_t* event)
 #endif
 }
 
-static int event_reset(event_t* event)
+static inline int event_reset(event_t* event)
 {
 #if defined(OS_WINDOWS)
 	return ResetEvent(*event)?0:(int)GetLastError();

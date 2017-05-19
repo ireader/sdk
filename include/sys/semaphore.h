@@ -41,7 +41,7 @@ typedef struct
 
 // Windows: the name can contain any character except the backslash
 // 0-success, other-error
-static int semaphore_create(semaphore_t* semaphore, const char* name, long value)
+static inline int semaphore_create(semaphore_t* semaphore, const char* name, long value)
 {
 #if defined(OS_WINDOWS)
 	HANDLE handle = CreateSemaphoreA(NULL, value, 0x7FFFFFFF, name);
@@ -78,7 +78,7 @@ static int semaphore_create(semaphore_t* semaphore, const char* name, long value
 }
 
 // 0-success, other-error
-static int semaphore_open(semaphore_t* semaphore, const char* name)
+static inline int semaphore_open(semaphore_t* semaphore, const char* name)
 {
 	if(!name || !*name)
 		return EINVAL;
@@ -97,7 +97,7 @@ static int semaphore_open(semaphore_t* semaphore, const char* name)
 }
 
 // 0-success, other-error
-static int semaphore_wait(semaphore_t* semaphore)
+static inline int semaphore_wait(semaphore_t* semaphore)
 {
 #if defined(OS_WINDOWS)
 	DWORD r = WaitForSingleObjectEx(*semaphore, INFINITE, TRUE);
@@ -109,13 +109,13 @@ static int semaphore_wait(semaphore_t* semaphore)
 
 #if defined(OS_WINDOWS)
 // 0-success, WAIT_TIMEOUT-timeout, other-error
-static int semaphore_timewait(semaphore_t* semaphore, int timeout)
+static inline int semaphore_timewait(semaphore_t* semaphore, int timeout)
 {
 	DWORD r = WaitForSingleObjectEx(*semaphore, timeout, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
 }
 #elif defined(OS_LINUX)
-static int semaphore_timewait(semaphore_t* semaphore, int timeout)
+static inline int semaphore_timewait(semaphore_t* semaphore, int timeout)
 {
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
@@ -130,7 +130,7 @@ static int semaphore_timewait(semaphore_t* semaphore, int timeout)
 #endif
 
 // 0-success, other-error
-static int semaphore_trywait(semaphore_t* semaphore)
+static inline int semaphore_trywait(semaphore_t* semaphore)
 {
 #if defined(OS_WINDOWS)
 	DWORD r = WaitForSingleObjectEx(*semaphore, 0, TRUE);
@@ -141,7 +141,7 @@ static int semaphore_trywait(semaphore_t* semaphore)
 }
 
 // 0-success, other-error
-static int semaphore_post(semaphore_t* semaphore)
+static inline int semaphore_post(semaphore_t* semaphore)
 {
 #if defined(OS_WINDOWS)
 	long r;
@@ -152,7 +152,7 @@ static int semaphore_post(semaphore_t* semaphore)
 }
 
 // 0-success, other-error
-static int semaphore_destroy(semaphore_t* semaphore)
+static inline int semaphore_destroy(semaphore_t* semaphore)
 {
 #if defined(OS_WINDOWS)
 	return CloseHandle(*semaphore)?0:GetLastError();

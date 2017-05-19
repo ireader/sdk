@@ -66,109 +66,109 @@ typedef struct iovec socket_bufvec_t;
 
 #define SOCKET_ADDRLEN INET6_ADDRSTRLEN
 
-static int socket_init(void);
-static int socket_cleanup(void);
-static int socket_geterror(void);
+static inline int socket_init(void);
+static inline int socket_cleanup(void);
+static inline int socket_geterror(void);
 
-static socket_t socket_tcp(void);
-static socket_t socket_udp(void);
-static socket_t socket_raw(void);
-static socket_t socket_rdm(void);
-static socket_t socket_tcp_ipv6(void);
-static socket_t socket_udp_ipv6(void);
-static socket_t socket_raw_ipv6(void);
+static inline socket_t socket_tcp(void);
+static inline socket_t socket_udp(void);
+static inline socket_t socket_raw(void);
+static inline socket_t socket_rdm(void);
+static inline socket_t socket_tcp_ipv6(void);
+static inline socket_t socket_udp_ipv6(void);
+static inline socket_t socket_raw_ipv6(void);
 // @return 0-ok, <0-socket_error(by socket_geterror())
-static int socket_shutdown(socket_t sock, int flag); // SHUT_RD/SHUT_WR/SHUT_RDWR
-static int socket_close(socket_t sock);
+static inline int socket_shutdown(socket_t sock, int flag); // SHUT_RD/SHUT_WR/SHUT_RDWR
+static inline int socket_close(socket_t sock);
 
 // @return 0-ok, <0-socket_error(by socket_geterror())
-static int socket_connect(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
+static inline int socket_connect(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
 // MSDN: When using bind with the SO_EXCLUSIVEADDR or SO_REUSEADDR socket option, the socket option must be set prior to executing bind to have any affect
-static int socket_bind(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
-static int socket_listen(IN socket_t sock, IN int backlog);
+static inline int socket_bind(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen);
+static inline int socket_listen(IN socket_t sock, IN int backlog);
 // @return >=0-accepted socket, <0-socket_invalid(by socket_geterror())
-static socket_t socket_accept(IN socket_t sock, OUT struct sockaddr_storage* ss, OUT socklen_t* addrlen);
+static inline socket_t socket_accept(IN socket_t sock, OUT struct sockaddr_storage* ss, OUT socklen_t* addrlen);
 
 // socket read/write
 // @return >0-sent/received bytes, <0-socket_error(by socket_geterror()), 0-peer shutdown(recv only)
-static int socket_send(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags);
-static int socket_recv(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags);
-static int socket_sendto(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen);
-static int socket_recvfrom(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, OUT struct sockaddr* from, OUT socklen_t* fromlen);
+static inline int socket_send(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags);
+static inline int socket_recv(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags);
+static inline int socket_sendto(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen);
+static inline int socket_recvfrom(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, OUT struct sockaddr* from, OUT socklen_t* fromlen);
 
 // @return >0-sent/received bytes, <0-socket_error(by socket_geterror()), 0-peer shutdown(recv only)
-static int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags);
-static int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags);
-static int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen);
-static int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN struct sockaddr* from, IN socklen_t* fromlen);
+static inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags);
+static inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags);
+static inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen);
+static inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN struct sockaddr* from, IN socklen_t* fromlen);
 
 // Linux: 1. select may update the timeout argument to indicate how much time was left
 //        2. This interval will be rounded up to the system clock granularity, and kernel scheduling delays mean that the blocking interval may overrun by a small amount.
 // @return 0-timeout, >0-available fds, <0-socket_error(by socket_geterror())
-static int socket_select(IN int n, IN fd_set* rfds, IN fd_set* wfds, IN fd_set* efds, IN struct timeval* timeout); // timeout: NULL-forever, 0-immediately
-static int socket_select_readfds(IN int n, IN fd_set* fds, IN struct timeval* timeout); // timeout: NULL-forever, 0-immediately
-static int socket_select_writefds(IN int n, IN fd_set* fds, IN struct timeval* timeout); // timeout: NULL-forever, 0-immediately
-static int socket_select_read(IN socket_t sock, IN int timeout); // timeout: >0-milliseconds, 0-immediately, <0-forever
-static int socket_select_write(IN socket_t sock, IN int timeout); // timeout: >0-milliseconds, 0-immediately, <0-forever
-static int socket_readable(IN socket_t sock);
-static int socket_writeable(IN socket_t sock);
+static inline int socket_select(IN int n, IN fd_set* rfds, IN fd_set* wfds, IN fd_set* efds, IN struct timeval* timeout); // timeout: NULL-forever, 0-immediately
+static inline int socket_select_readfds(IN int n, IN fd_set* fds, IN struct timeval* timeout); // timeout: NULL-forever, 0-immediately
+static inline int socket_select_writefds(IN int n, IN fd_set* fds, IN struct timeval* timeout); // timeout: NULL-forever, 0-immediately
+static inline int socket_select_read(IN socket_t sock, IN int timeout); // timeout: >0-milliseconds, 0-immediately, <0-forever
+static inline int socket_select_write(IN socket_t sock, IN int timeout); // timeout: >0-milliseconds, 0-immediately, <0-forever
+static inline int socket_readable(IN socket_t sock);
+static inline int socket_writeable(IN socket_t sock);
 
 // socket options
 // @return 0-ok, <0-socket_error(by socket_geterror())
-static int socket_setkeepalive(IN socket_t sock, IN int enable); // keep alive
-static int socket_getkeepalive(IN socket_t sock, OUT int* enable);
-static int socket_setlinger(IN socket_t sock, IN int onoff, IN int seconds); // linger
-static int socket_getlinger(IN socket_t sock, OUT int* onoff, OUT int* seconds);
-static int socket_setsendbuf(IN socket_t sock, IN size_t size); // send buf
-static int socket_getsendbuf(IN socket_t sock, OUT size_t* size);
-static int socket_setrecvbuf(IN socket_t sock, IN size_t size); // recv buf
-static int socket_getrecvbuf(IN socket_t sock, OUT size_t* size);
-static int socket_setsendtimeout(IN socket_t sock, IN size_t seconds); // send timeout
-static int socket_getsendtimeout(IN socket_t sock, OUT size_t* seconds);
-static int socket_setrecvtimeout(IN socket_t sock, IN size_t seconds); // recv timeout
-static int socket_getrecvtimeout(IN socket_t sock, OUT size_t* seconds);
-static int socket_setreuseaddr(IN socket_t sock, IN int enable); // reuse addr. 
-static int socket_getreuseaddr(IN socket_t sock, OUT int* enable);
-static int socket_setipv6only(IN socket_t sock, IN int ipv6_only); // 1-ipv6 only, 0-both ipv4 and ipv6
-static int socket_getdomain(IN socket_t sock, OUT int* domain); // get socket protocol address family(sock don't need bind)
+static inline int socket_setkeepalive(IN socket_t sock, IN int enable); // keep alive
+static inline int socket_getkeepalive(IN socket_t sock, OUT int* enable);
+static inline int socket_setlinger(IN socket_t sock, IN int onoff, IN int seconds); // linger
+static inline int socket_getlinger(IN socket_t sock, OUT int* onoff, OUT int* seconds);
+static inline int socket_setsendbuf(IN socket_t sock, IN size_t size); // send buf
+static inline int socket_getsendbuf(IN socket_t sock, OUT size_t* size);
+static inline int socket_setrecvbuf(IN socket_t sock, IN size_t size); // recv buf
+static inline int socket_getrecvbuf(IN socket_t sock, OUT size_t* size);
+static inline int socket_setsendtimeout(IN socket_t sock, IN size_t seconds); // send timeout
+static inline int socket_getsendtimeout(IN socket_t sock, OUT size_t* seconds);
+static inline int socket_setrecvtimeout(IN socket_t sock, IN size_t seconds); // recv timeout
+static inline int socket_getrecvtimeout(IN socket_t sock, OUT size_t* seconds);
+static inline int socket_setreuseaddr(IN socket_t sock, IN int enable); // reuse addr. 
+static inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable);
+static inline int socket_setipv6only(IN socket_t sock, IN int ipv6_only); // 1-ipv6 only, 0-both ipv4 and ipv6
+static inline int socket_getdomain(IN socket_t sock, OUT int* domain); // get socket protocol address family(sock don't need bind)
 
 // socket status
 // @return 0-ok, <0-socket_error(by socket_geterror())
-static int socket_setnonblock(IN socket_t sock, IN int noblock); // non-block io, 0-block, 1-nonblock
-static int socket_setnondelay(IN socket_t sock, IN int nodelay); // non-delay io(Nagle Algorithm), 0-delay, 1-nodelay
-static int socket_getunread(IN socket_t sock, OUT size_t* size); // MSDN: Use to determine the amount of data pending in the network's input buffer that can be read from socket s
+static inline int socket_setnonblock(IN socket_t sock, IN int noblock); // non-block io, 0-block, 1-nonblock
+static inline int socket_setnondelay(IN socket_t sock, IN int nodelay); // non-delay io(Nagle Algorithm), 0-delay, 1-nodelay
+static inline int socket_getunread(IN socket_t sock, OUT size_t* size); // MSDN: Use to determine the amount of data pending in the network's input buffer that can be read from socket s
 
-static int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port); // must be bound/connected
-static int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
+static inline int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port); // must be bound/connected
+static inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
 
 // socket utility
-static int socket_isip(IN const char* ip); // socket_isip("192.168.1.2") -> 0, socket_isip("www.google.com") -> -1
-static int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN]);
-static int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN]);
+static inline int socket_isip(IN const char* ip); // socket_isip("192.168.1.2") -> 0, socket_isip("www.google.com") -> -1
+static inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN]);
+static inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN]);
 
-static int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ip_or_dns, IN u_short port);
-static int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* ip_or_dns, IN u_short port);
-static int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_t* len, IN const char* ipv4_or_ipv6_or_dns, IN u_short port);
-static int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
-static int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN size_t hostlen);
-static int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen, u_short port);
-static int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t salen);
+static inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ip_or_dns, IN u_short port);
+static inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* ip_or_dns, IN u_short port);
+static inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_t* len, IN const char* ipv4_or_ipv6_or_dns, IN u_short port);
+static inline int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
+static inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN size_t hostlen);
+static inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen, u_short port);
+static inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t salen);
 
-static void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len);
-static void socket_getbufvec(IN const socket_bufvec_t* vec, IN int idx, OUT void** ptr, OUT size_t* len);
+static inline void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len);
+static inline void socket_getbufvec(IN const socket_bufvec_t* vec, IN int idx, OUT void** ptr, OUT size_t* len);
 
 // multicast
-static int socket_multicast_join(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
-static int socket_multicast_leave(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
-static int socket_multicast_join_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
-static int socket_multicast_leave_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
+static inline int socket_multicast_join(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
+static inline int socket_multicast_leave(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
+static inline int socket_multicast_join_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
+static inline int socket_multicast_leave_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
 
 //////////////////////////////////////////////////////////////////////////
 ///
 /// socket create/close 
 /// 
 //////////////////////////////////////////////////////////////////////////
-static int socket_init(void)
+static inline int socket_init(void)
 {
 #if defined(OS_WINDOWS)
 	WORD wVersionRequested;
@@ -181,7 +181,7 @@ static int socket_init(void)
 #endif
 }
 
-static int socket_cleanup(void)
+static inline int socket_cleanup(void)
 {
 #if defined(OS_WINDOWS)
 	return WSACleanup();
@@ -190,7 +190,7 @@ static int socket_cleanup(void)
 #endif
 }
 
-static int socket_geterror(void)
+static inline int socket_geterror(void)
 {
 #if defined(OS_WINDOWS)
 	return WSAGetLastError();
@@ -199,47 +199,47 @@ static int socket_geterror(void)
 #endif
 }
 
-static socket_t socket_tcp(void)
+static inline socket_t socket_tcp(void)
 {
 	return socket(PF_INET, SOCK_STREAM, 0);
 }
 
-static socket_t socket_udp(void)
+static inline socket_t socket_udp(void)
 {
 	return socket(PF_INET, SOCK_DGRAM, 0);
 }
 
-static socket_t socket_raw(void)
+static inline socket_t socket_raw(void)
 {
 	return socket(PF_INET, SOCK_RAW, IPPROTO_RAW);
 }
 
-static socket_t socket_rdm(void)
+static inline socket_t socket_rdm(void)
 {
 	return socket(PF_INET, SOCK_RDM, 0);
 }
 
-static socket_t socket_tcp_ipv6(void)
+static inline socket_t socket_tcp_ipv6(void)
 {
 	return socket(PF_INET6, SOCK_STREAM, 0);
 }
 
-static socket_t socket_udp_ipv6(void)
+static inline socket_t socket_udp_ipv6(void)
 {
 	return socket(PF_INET6, SOCK_DGRAM, 0);
 }
 
-static socket_t socket_raw_ipv6(void)
+static inline socket_t socket_raw_ipv6(void)
 {
 	return socket(PF_INET6, SOCK_RAW, IPPROTO_RAW);
 }
 
-static int socket_shutdown(socket_t sock, int flag)
+static inline int socket_shutdown(socket_t sock, int flag)
 {
 	return shutdown(sock, flag);
 }
 
-static int socket_close(socket_t sock)
+static inline int socket_close(socket_t sock)
 {
 #if defined(OS_WINDOWS)
 	// MSDN:
@@ -257,22 +257,22 @@ static int socket_close(socket_t sock)
 /// socket operation
 /// 
 //////////////////////////////////////////////////////////////////////////
-static int socket_connect(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen)
+static inline int socket_connect(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen)
 {
 	return connect(sock, addr, addrlen);
 }
 
-static int socket_bind(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen)
+static inline int socket_bind(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen)
 {
 	return bind(sock, addr, addrlen);
 }
 
-static int socket_listen(IN socket_t sock, IN int backlog)
+static inline int socket_listen(IN socket_t sock, IN int backlog)
 {
 	return listen(sock, backlog);
 }
 
-static socket_t socket_accept(IN socket_t sock, OUT struct sockaddr_storage* addr, OUT socklen_t* addrlen)
+static inline socket_t socket_accept(IN socket_t sock, OUT struct sockaddr_storage* addr, OUT socklen_t* addrlen)
 {
 	*addrlen = sizeof(struct sockaddr_storage);
 	return accept(sock, (struct sockaddr*)addr, addrlen);
@@ -283,7 +283,7 @@ static socket_t socket_accept(IN socket_t sock, OUT struct sockaddr_storage* add
 /// socket read/write
 /// 
 //////////////////////////////////////////////////////////////////////////
-static int socket_send(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags)
+static inline int socket_send(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags)
 {
 #if defined(OS_WINDOWS)
 	return send(sock, (const char*)buf, (int)len, flags);
@@ -292,7 +292,7 @@ static int socket_send(IN socket_t sock, IN const void* buf, IN size_t len, IN i
 #endif
 }
 
-static int socket_recv(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags)
+static inline int socket_recv(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags)
 {
 #if defined(OS_WINDOWS)
 	return recv(sock, (char*)buf, (int)len, flags);
@@ -301,7 +301,7 @@ static int socket_recv(IN socket_t sock, OUT void* buf, IN size_t len, IN int fl
 #endif
 }
 
-static int socket_sendto(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen)
+static inline int socket_sendto(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen)
 {
 #if defined(OS_WINDOWS)
 	return sendto(sock, (const char*)buf, (int)len, flags, to, tolen);
@@ -310,7 +310,7 @@ static int socket_sendto(IN socket_t sock, IN const void* buf, IN size_t len, IN
 #endif
 }
 
-static int socket_recvfrom(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, OUT struct sockaddr* from, OUT socklen_t* fromlen)
+static inline int socket_recvfrom(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, OUT struct sockaddr* from, OUT socklen_t* fromlen)
 {
 #if defined(OS_WINDOWS)
 	return recvfrom(sock, (char*)buf, (int)len, flags, from, fromlen);
@@ -319,7 +319,7 @@ static int socket_recvfrom(IN socket_t sock, OUT void* buf, IN size_t len, IN in
 #endif
 }
 
-static int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags)
+static inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags)
 {
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
@@ -334,7 +334,7 @@ static int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN siz
 #endif
 }
 
-static int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags)
+static inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags)
 {
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
@@ -349,7 +349,7 @@ static int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n,
 #endif
 }
 
-static int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen)
+static inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen)
 {
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
@@ -366,7 +366,7 @@ static int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN s
 #endif
 }
 
-static int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN struct sockaddr* from, IN socklen_t* fromlen)
+static inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN struct sockaddr* from, IN socklen_t* fromlen)
 {
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
@@ -383,7 +383,7 @@ static int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_
 #endif
 }
 
-static int socket_select(IN int n, IN fd_set* rfds, IN fd_set* wfds, IN fd_set* efds, IN struct timeval* timeout)
+static inline int socket_select(IN int n, IN fd_set* rfds, IN fd_set* wfds, IN fd_set* efds, IN struct timeval* timeout)
 {
 #if defined(OS_WINDOWS)
 	return select(n, rfds, wfds, efds, timeout);
@@ -395,17 +395,17 @@ static int socket_select(IN int n, IN fd_set* rfds, IN fd_set* wfds, IN fd_set* 
 #endif
 }
 
-static int socket_select_readfds(IN int n, IN fd_set* fds, IN struct timeval* timeout)
+static inline int socket_select_readfds(IN int n, IN fd_set* fds, IN struct timeval* timeout)
 {
 	return socket_select(n, fds, NULL, NULL, timeout);
 }
 
-static int socket_select_writefds(IN int n, IN fd_set* fds, IN struct timeval* timeout)
+static inline int socket_select_writefds(IN int n, IN fd_set* fds, IN struct timeval* timeout)
 {
 	return socket_select(n, NULL, fds, NULL, timeout);
 }
 
-static int socket_select_read(IN socket_t sock, IN int timeout)
+static inline int socket_select_read(IN socket_t sock, IN int timeout)
 {
 #if defined(OS_WINDOWS)
 	fd_set fds;
@@ -432,7 +432,7 @@ static int socket_select_read(IN socket_t sock, IN int timeout)
 #endif
 }
 
-static int socket_select_write(IN socket_t sock, IN int timeout)
+static inline int socket_select_write(IN socket_t sock, IN int timeout)
 {
 #if defined(OS_WINDOWS)
 	fd_set fds;
@@ -461,12 +461,12 @@ static int socket_select_write(IN socket_t sock, IN int timeout)
 #endif
 }
 
-static int socket_readable(IN socket_t sock)
+static inline int socket_readable(IN socket_t sock)
 {
 	return socket_select_read(sock, 0);
 }
 
-static int socket_writeable(IN socket_t sock)
+static inline int socket_writeable(IN socket_t sock)
 {
 	return socket_select_write(sock, 0);
 }
@@ -476,7 +476,7 @@ static int socket_writeable(IN socket_t sock)
 /// socket options
 /// 
 //////////////////////////////////////////////////////////////////////////
-static int socket_setopt_bool(IN socket_t sock, IN int optname, IN int enable)
+static inline int socket_setopt_bool(IN socket_t sock, IN int optname, IN int enable)
 {
 #if defined(OS_WINDOWS)
 	BOOL v = enable ? TRUE : FALSE;
@@ -486,7 +486,7 @@ static int socket_setopt_bool(IN socket_t sock, IN int optname, IN int enable)
 #endif
 }
 
-static int socket_getopt_bool(IN socket_t sock, IN int optname, OUT int* enable)
+static inline int socket_getopt_bool(IN socket_t sock, IN int optname, OUT int* enable)
 {
 	socklen_t len;
 #if defined(OS_WINDOWS)
@@ -503,17 +503,17 @@ static int socket_getopt_bool(IN socket_t sock, IN int optname, OUT int* enable)
 #endif
 }
 
-static int socket_setkeepalive(IN socket_t sock, IN int enable)
+static inline int socket_setkeepalive(IN socket_t sock, IN int enable)
 {
 	return socket_setopt_bool(sock, SO_KEEPALIVE, enable);
 }
 
-static int socket_getkeepalive(IN socket_t sock, OUT int* enable)
+static inline int socket_getkeepalive(IN socket_t sock, OUT int* enable)
 {
 	return socket_getopt_bool(sock, SO_KEEPALIVE, enable);
 }
 
-static int socket_setlinger(IN socket_t sock, IN int onoff, IN int seconds)
+static inline int socket_setlinger(IN socket_t sock, IN int onoff, IN int seconds)
 {
 	struct linger l;
 	l.l_onoff = (u_short)onoff;
@@ -521,7 +521,7 @@ static int socket_setlinger(IN socket_t sock, IN int onoff, IN int seconds)
 	return setsockopt(sock, SOL_SOCKET, SO_LINGER, (const char*)&l, sizeof(l));
 }
 
-static int socket_getlinger(IN socket_t sock, OUT int* onoff, OUT int* seconds)
+static inline int socket_getlinger(IN socket_t sock, OUT int* onoff, OUT int* seconds)
 {
 	int r;
 	socklen_t len;
@@ -537,31 +537,31 @@ static int socket_getlinger(IN socket_t sock, OUT int* onoff, OUT int* seconds)
 	return r;
 }
 
-static int socket_setsendbuf(IN socket_t sock, IN size_t size)
+static inline int socket_setsendbuf(IN socket_t sock, IN size_t size)
 {
 	return setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&size, sizeof(size));
 }
 
-static int socket_getsendbuf(IN socket_t sock, OUT size_t* size)
+static inline int socket_getsendbuf(IN socket_t sock, OUT size_t* size)
 {
 	socklen_t len;
 	len = sizeof(*size);
 	return getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)size, &len);
 }
 
-static int socket_setrecvbuf(IN socket_t sock, IN size_t size)
+static inline int socket_setrecvbuf(IN socket_t sock, IN size_t size)
 {
 	return setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (const char*)&size, sizeof(size));
 }
 
-static int socket_getrecvbuf(IN socket_t sock, OUT size_t* size)
+static inline int socket_getrecvbuf(IN socket_t sock, OUT size_t* size)
 {
 	socklen_t len;
 	len = sizeof(*size);
 	return getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)size, &len);
 }
 
-static int socket_setsendtimeout(IN socket_t sock, IN size_t seconds)
+static inline int socket_setsendtimeout(IN socket_t sock, IN size_t seconds)
 {
 #if defined(OS_WINDOWS)
 	return setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char*)&seconds, sizeof(seconds));
@@ -573,7 +573,7 @@ static int socket_setsendtimeout(IN socket_t sock, IN size_t seconds)
 #endif
 }
 
-static int socket_getsendtimeout(IN socket_t sock, OUT size_t* seconds)
+static inline int socket_getsendtimeout(IN socket_t sock, OUT size_t* seconds)
 {
 	socklen_t len;
 #if defined(OS_WINDOWS)
@@ -590,7 +590,7 @@ static int socket_getsendtimeout(IN socket_t sock, OUT size_t* seconds)
 #endif
 }
 
-static int socket_setrecvtimeout(IN socket_t sock, IN size_t seconds)
+static inline int socket_setrecvtimeout(IN socket_t sock, IN size_t seconds)
 {
 #if defined(OS_WINDOWS)
 	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&seconds, sizeof(seconds));
@@ -602,7 +602,7 @@ static int socket_setrecvtimeout(IN socket_t sock, IN size_t seconds)
 #endif
 }
 
-static int socket_getrecvtimeout(IN socket_t sock, OUT size_t* seconds)
+static inline int socket_getrecvtimeout(IN socket_t sock, OUT size_t* seconds)
 {
 	socklen_t len;
 #if defined(OS_WINDOWS)
@@ -619,17 +619,17 @@ static int socket_getrecvtimeout(IN socket_t sock, OUT size_t* seconds)
 #endif
 }
 
-static int socket_setreuseaddr(IN socket_t sock, IN int enable)
+static inline int socket_setreuseaddr(IN socket_t sock, IN int enable)
 {
 	return socket_setopt_bool(sock, SO_REUSEADDR, enable);
 }
 
-static int socket_getreuseaddr(IN socket_t sock, OUT int* enable)
+static inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable)
 {
 	return socket_getopt_bool(sock, SO_REUSEADDR, enable);
 }
 
-static int socket_setnonblock(IN socket_t sock, IN int noblock)
+static inline int socket_setnonblock(IN socket_t sock, IN int noblock)
 {
 	// 0-block, 1-no-block
 #if defined(OS_WINDOWS)
@@ -644,7 +644,7 @@ static int socket_setnonblock(IN socket_t sock, IN int noblock)
 #endif
 }
 
-static int socket_setnondelay(IN socket_t sock, IN int nodelay)
+static inline int socket_setnondelay(IN socket_t sock, IN int nodelay)
 {
 	// 0-delay(enable the Nagle algorithm)
 	// 1-no-delay(disable the Nagle algorithm)
@@ -652,7 +652,7 @@ static int socket_setnondelay(IN socket_t sock, IN int nodelay)
 	return setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&nodelay, sizeof(nodelay));
 }
 
-static int socket_getunread(IN socket_t sock, OUT size_t* size)
+static inline int socket_getunread(IN socket_t sock, OUT size_t* size)
 {
 #if defined(OS_WINDOWS)
 	return ioctlsocket(sock, FIONREAD, (u_long*)size);
@@ -661,7 +661,7 @@ static int socket_getunread(IN socket_t sock, OUT size_t* size)
 #endif
 }
 
-static int socket_setipv6only(IN socket_t sock, IN int ipv6_only)
+static inline int socket_setipv6only(IN socket_t sock, IN int ipv6_only)
 {
 	// Windows Vista or later: default 1
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms738574%28v=vs.85%29.aspx
@@ -670,7 +670,7 @@ static int socket_setipv6only(IN socket_t sock, IN int ipv6_only)
 	return setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (const char*)&ipv6_only, sizeof(ipv6_only));
 }
 
-static int socket_getdomain(IN socket_t sock, OUT int* domain)
+static inline int socket_getdomain(IN socket_t sock, OUT int* domain)
 {
 	int r;
 #if defined(OS_WINDOWS)
@@ -687,7 +687,7 @@ static int socket_getdomain(IN socket_t sock, OUT int* domain)
 }
 
 // must be bound/connected
-static int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port)
+static inline int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
@@ -697,7 +697,7 @@ static int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_s
 	return socket_addr_to((struct sockaddr*)&addr, addrlen, ip, port);
 }
 
-static int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port)
+static inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
@@ -707,7 +707,7 @@ static int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT
 	return socket_addr_to((struct sockaddr*)&addr, addrlen, ip, port);
 }
 
-static int socket_isip(IN const char* ip)
+static inline int socket_isip(IN const char* ip)
 {
 #if 1
 	struct sockaddr_storage addr;
@@ -726,7 +726,7 @@ static int socket_isip(IN const char* ip)
 	return 0;
 }
 
-static int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN])
+static inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN])
 {
 	int r;
 	struct addrinfo hints, *addr;
@@ -743,7 +743,7 @@ static int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN])
 	return 0;
 }
 
-static int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN])
+static inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN])
 {
 	int r;
 	struct addrinfo hints, *addr;
@@ -760,7 +760,7 @@ static int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN])
 	return 0;
 }
 
-static int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ipv4_or_dns, IN u_short port)
+static inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ipv4_or_dns, IN u_short port)
 {
 	int r;
 	char portstr[16];
@@ -780,7 +780,7 @@ static int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* i
 	return 0;
 }
 
-static int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* ipv6_or_dns, IN u_short port)
+static inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* ipv6_or_dns, IN u_short port)
 {
 	int r;
 	char portstr[16];
@@ -800,7 +800,7 @@ static int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* 
 	return 0;
 }
 
-static int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_t* len, IN const char* ipv4_or_ipv6_or_dns, IN u_short port)
+static inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_t* len, IN const char* ipv4_or_ipv6_or_dns, IN u_short port)
 {
 	int r;
 	char portstr[16];
@@ -818,7 +818,7 @@ static int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_t* len,
 	return 0;
 }
 
-static int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port)
+static inline int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port)
 {
 	if (AF_INET == sa->sa_family)
 	{
@@ -842,7 +842,7 @@ static int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t salen, OUT 
 	return 0;
 }
 
-static int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen, u_short port)
+static inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen, u_short port)
 {
 	if (AF_INET == sa->sa_family)
 	{
@@ -865,12 +865,12 @@ static int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen, u_sho
 	return 0;
 }
 
-static int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN size_t hostlen)
+static inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN size_t hostlen)
 {
 	return getnameinfo(sa, salen, host, hostlen, NULL, 0, 0);
 }
 
-static int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t salen)
+static inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t salen)
 {
 	if (AF_INET == sa->sa_family)
 	{
@@ -892,7 +892,7 @@ static int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t s
 	return 0;
 }
 
-static void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len)
+static inline void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len)
 {
 #if defined(OS_WINDOWS)
 	vec[idx].buf = (CHAR*)ptr;
@@ -903,7 +903,7 @@ static void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* pt
 #endif
 }
 
-static void socket_getbufvec(IN const socket_bufvec_t* vec, IN int idx, OUT void** ptr, OUT size_t* len)
+static inline void socket_getbufvec(IN const socket_bufvec_t* vec, IN int idx, OUT void** ptr, OUT size_t* len)
 {
 #if defined(OS_WINDOWS)
 	*ptr = (void*)vec[idx].buf;
@@ -914,7 +914,7 @@ static void socket_getbufvec(IN const socket_bufvec_t* vec, IN int idx, OUT void
 #endif
 }
 
-static int socket_multicast_join(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
+static inline int socket_multicast_join(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
 {
 	struct ip_mreq_source imr;
 	memset(&imr, 0, sizeof(imr));
@@ -924,7 +924,7 @@ static int socket_multicast_join(IN socket_t sock, IN const char* group, IN cons
 	return setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *) &imr, sizeof(imr));
 }
 
-static int socket_multicast_leave(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
+static inline int socket_multicast_leave(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
 {
 	struct ip_mreq_source imr;
 	memset(&imr, 0, sizeof(imr));
@@ -934,7 +934,7 @@ static int socket_multicast_leave(IN socket_t sock, IN const char* group, IN con
 	return setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char *) &imr, sizeof(imr));
 }
 
-static int socket_multicast_join_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
+static inline int socket_multicast_join_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
 {
 	struct ip_mreq_source imr;
 	memset(&imr, 0, sizeof(imr));
@@ -944,7 +944,7 @@ static int socket_multicast_join_source(IN socket_t sock, IN const char* group, 
 	return setsockopt(sock, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, (char *) &imr, sizeof(imr));
 }
 
-static int socket_multicast_leave_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
+static inline int socket_multicast_leave_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
 {
 	struct ip_mreq_source imr;
 	memset(&imr, 0, sizeof(imr));

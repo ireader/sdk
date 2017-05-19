@@ -22,7 +22,7 @@ typedef pthread_rwlock_t rwlocker_t;
 // int rwlocker_trywrlock(rwlocker_t* locker);
 //-------------------------------------------------------------------------------------
 
-static int rwlocker_create(rwlocker_t* locker)
+static inline int rwlocker_create(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	InitializeSRWLock(locker); return 0;
@@ -34,7 +34,7 @@ static int rwlocker_create(rwlocker_t* locker)
 #endif
 }
 
-static int rwlocker_destroy(rwlocker_t* locker)
+static inline int rwlocker_destroy(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	//MSDN: SRW locks do not need to be explicitly destroyed.
@@ -44,7 +44,7 @@ static int rwlocker_destroy(rwlocker_t* locker)
 #endif
 }
 
-static int rwlocker_rdlock(rwlocker_t* locker)
+static inline int rwlocker_rdlock(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	AcquireSRWLockShared(locker); return 0;
@@ -53,7 +53,7 @@ static int rwlocker_rdlock(rwlocker_t* locker)
 #endif
 }
 
-static int rwlocker_wrlock(rwlocker_t* locker)
+static inline int rwlocker_wrlock(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	AcquireSRWLockExclusive(locker); return 0;
@@ -62,7 +62,7 @@ static int rwlocker_wrlock(rwlocker_t* locker)
 #endif
 }
 
-static int rwlocker_rdunlock(rwlocker_t* locker)
+static inline int rwlocker_rdunlock(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	ReleaseSRWLockShared(locker); return 0;
@@ -71,7 +71,7 @@ static int rwlocker_rdunlock(rwlocker_t* locker)
 #endif
 }
 
-static int rwlocker_wrunlock(rwlocker_t* locker)
+static inline int rwlocker_wrunlock(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	ReleaseSRWLockExclusive(locker); return 0;
@@ -81,7 +81,7 @@ static int rwlocker_wrunlock(rwlocker_t* locker)
 }
 
 // @return 0-ok, other-error
-static int rwlocker_tryrdlock(rwlocker_t* locker)
+static inline int rwlocker_tryrdlock(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	return 0 == TryAcquireSRWLockShared(locker) ? -1 : 0;
@@ -91,7 +91,7 @@ static int rwlocker_tryrdlock(rwlocker_t* locker)
 }
 
 // @return 0-ok, other-error
-static int rwlocker_trywrlock(rwlocker_t* locker)
+static inline int rwlocker_trywrlock(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	return 0 == TryAcquireSRWLockExclusive(locker) ? -1 : 0;

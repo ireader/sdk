@@ -19,7 +19,7 @@ typedef pthread_mutex_t		locker_t;
 // int locker_trylock(locker_t* locker);
 //-------------------------------------------------------------------------------------
 
-static int locker_create(locker_t* locker)
+static inline int locker_create(locker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	InitializeCriticalSection(locker);
@@ -48,7 +48,7 @@ static int locker_create(locker_t* locker)
 #endif
 }
 
-static int locker_destroy(locker_t* locker)
+static inline int locker_destroy(locker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	DeleteCriticalSection(locker);
@@ -58,7 +58,7 @@ static int locker_destroy(locker_t* locker)
 #endif
 }
 
-static int locker_lock(locker_t* locker)
+static inline int locker_lock(locker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	EnterCriticalSection(locker);
@@ -69,7 +69,7 @@ static int locker_lock(locker_t* locker)
 }
 
 // linux: unlock thread must is the lock thread
-static int locker_unlock(locker_t* locker)
+static inline int locker_unlock(locker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	LeaveCriticalSection(locker);
@@ -79,7 +79,7 @@ static int locker_unlock(locker_t* locker)
 #endif
 }
 
-static int locker_trylock(locker_t* locker)
+static inline int locker_trylock(locker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	return TryEnterCriticalSection(locker)?0:-1;

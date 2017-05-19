@@ -56,7 +56,7 @@ typedef struct
 /// flags: mmap_mode
 /// 0-success, other-error
 //////////////////////////////////////////////////////////////////////////
-static int mmap_create(IN mmap_t* view, IN const char* filename, IN int flags, IN size_t offset, IN size_t length)
+static inline int mmap_create(IN mmap_t* view, IN const char* filename, IN int flags, IN size_t offset, IN size_t length)
 {
 	void* p = NULL;
 
@@ -166,7 +166,7 @@ static int mmap_create(IN mmap_t* view, IN const char* filename, IN int flags, I
 }
 
 /// 0-success, other-error
-static int mmap_open(IN mmap_t* view, IN const char* filename, IN int flags, IN size_t offset, IN size_t length)
+static inline int mmap_open(IN mmap_t* view, IN const char* filename, IN int flags, IN size_t offset, IN size_t length)
 {
 #if defined(OS_WINDOWS)
 	HANDLE mapping;
@@ -207,7 +207,7 @@ static int mmap_open(IN mmap_t* view, IN const char* filename, IN int flags, IN 
 }
 
 /// 0-success, other-error
-static int mmap_flush(IN mmap_t* view)
+static inline int mmap_flush(IN mmap_t* view)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = FlushViewOfFile(view->ptr, view->len);
@@ -217,7 +217,7 @@ static int mmap_flush(IN mmap_t* view)
 #endif
 }
 
-static void mmap_close(IN mmap_t* view)
+static inline void mmap_close(IN mmap_t* view)
 {
 #if defined(OS_WINDOWS)
 	UnmapViewOfFile(view->ptr);
@@ -230,7 +230,7 @@ static void mmap_close(IN mmap_t* view)
 
 /*
 /// 0-success, other-error
-static int mmap_open_ex(OUT mmap_t* view, IN const char* filename, IN size_t offset, IN size_t size)
+static inline int mmap_open_ex(OUT mmap_t* view, IN const char* filename, IN size_t offset, IN size_t size)
 {
 	int r = 0;
 	int flags = mmap_read|mmap_write|mmap_share|mmap_open_existing;
