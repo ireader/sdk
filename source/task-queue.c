@@ -1,5 +1,4 @@
 #include "task-queue.h"
-#include "cstringext.h"
 #include "sys/atomic.h"
 #include "sys/thread.h"
 #include "sys/system.h"
@@ -119,7 +118,7 @@ static task_context_t* task_pop(task_queue_context_t* taskQ)
 	return task;
 }
 
-static inline  task_context_t* task_pop_timeout(task_queue_context_t* taskQ)
+static task_context_t* task_pop_timeout(task_queue_context_t* taskQ)
 {
 	size_t clock;
 	task_context_t *task;

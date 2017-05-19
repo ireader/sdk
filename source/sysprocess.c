@@ -1,4 +1,3 @@
-#include "cstringext.h"
 #include "sysprocess.h"
 #include "sys/system.h"
 #include "sys/path.h"
@@ -123,7 +122,7 @@ int process_list(fcb_process_list callback, void* param)
 }
 
 #if defined(_WIN32)
-static inline ULARGE_INTEGER FILETIME2UINT64(const FILETIME* ft)
+static ULARGE_INTEGER FILETIME2UINT64(const FILETIME* ft)
 {
 	ULARGE_INTEGER v;
 	v.HighPart = ft->dwHighDateTime;

@@ -84,7 +84,7 @@ static size_t s_body_max_size = 0*MB;
 //				| "," | ";" | ":" | "\" | <">
 //				| "/" | "[" | "]" | "?" | "="
 //				| "{" | "}" | SP | HT
-static inline int is_valid_token(const char* s, size_t len)
+static int is_valid_token(const char* s, size_t len)
 {
 	const char *p;
 	for(p = s; p < s + len && *p; ++p)
@@ -97,7 +97,7 @@ static inline int is_valid_token(const char* s, size_t len)
 	return p == s+len ? 1 : 0;
 }
 
-static inline void trim_right(const char* s, size_t *pos, size_t *len)
+static void trim_right(const char* s, size_t *pos, size_t *len)
 {
 	//// left trim
 	//while(*len > 0 && ISSPACE(s[*pos]))
@@ -113,12 +113,12 @@ static inline void trim_right(const char* s, size_t *pos, size_t *len)
 	}
 }
 
-static inline int is_server_mode(struct http_context *ctx)
+static int is_server_mode(struct http_context *ctx)
 {
 	return HTTP_PARSER_SERVER==ctx->server_mode ? 1 : 0;
 }
 
-static inline int is_transfer_encoding_chunked(struct http_context *ctx)
+static int is_transfer_encoding_chunked(struct http_context *ctx)
 {
 	return (ctx->transfer_encoding>0 && 0==strncasecmp("chunked", ctx->raw+ctx->transfer_encoding, 7)) ? 1 : 0;
 }

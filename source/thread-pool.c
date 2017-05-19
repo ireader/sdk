@@ -1,5 +1,4 @@
 #include "thread-pool.h"
-#include "cstringext.h"
 #include "sys/locker.h"
 #include "sys/event.h"
 #include "sys/system.h"
@@ -159,7 +158,7 @@ static void thread_pool_create_threads(thread_pool_context_t *context,
 	context->thread_count_idle += i;
 }
 
-static inline void thread_pool_destroy_threads(thread_list_t *threads)
+static void thread_pool_destroy_threads(thread_list_t *threads)
 {
 	thread_list_t *next;
 
