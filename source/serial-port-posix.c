@@ -19,18 +19,18 @@ void* serial_port_open(const char *name)
 
 //	fcntl(fd, F_SETFL, FNDELAY); // no block
 	fcntl(fd, F_SETFL, 0); // block
-	return (void*)fd;
+	return (void*)(intptr_t)fd;
 }
 
 int serial_port_close(void* port)
 {
-	int fd = (int)port;
+	int fd = (intptr_t)port;
 	return close(fd);
 }
 
 int serial_port_flush(void* port)
 {
-	int fd = (int)port;
+	int fd = (intptr_t)port;
 	return tcflush(fd, TCIOFLUSH);
 }
 
@@ -65,7 +65,7 @@ static int serial_port_baud_rate(int baudrate)
 
 int serial_port_setattr(void* port, int baudrate, int databits, int parity, int stopbits, int flowctrl)
 {
-	int fd = (int)port;
+	int fd = (intptr_t)port;
 	struct termios options;
 
 	baudrate = serial_port_baud_rate(baudrate);
@@ -164,12 +164,12 @@ int serial_port_setattr(void* port, int baudrate, int databits, int parity, int 
 
 int serial_port_write(void* port, const void* data, int bytes)
 {
-	int fd = (int)port;
+	int fd = (intptr_t)port;
 	return write(fd, data, bytes);
 }
 
 int serial_port_read(void* port, void* data, int bytes)
 {
-	int fd = (int)port;
+	int fd = (intptr_t)port;
 	return read(fd, data, bytes);
 }
