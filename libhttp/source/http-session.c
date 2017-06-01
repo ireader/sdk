@@ -243,7 +243,7 @@ int http_server_get_content(void* param, void **content, size_t *length)
 
 int http_server_send(void* param, int code, void* bundle)
 {
-	return http_server_send_vec(param, code, &bundle, 1);
+	return http_server_send_vec(param, code, bundle ? &bundle : NULL, bundle ? 1 : 0);
 }
 
 int http_server_send_vec(void* param, int code, void** bundles, int num)
@@ -255,8 +255,8 @@ int http_server_send_vec(void* param, int code, void** bundles, int num)
 	session = (struct http_session_t*)param;
 
 	assert(0 == session->vec_count);
-	session->vec = (1 == num) ? session->vec3 : malloc(sizeof(socket_bufvec_t) * (num+2));
-	if(!session->vec)
+	session->vec = (num <= 1) ? session->vec3 : malloc(sizeof(socket_bufvec_t) * (num+2));
+	if(!session->vec || num < 0)
 		return -1;
 
 	session->vec_count = num + 2;
