@@ -272,18 +272,16 @@ static int http_connect(struct http_client_aio_transport_t *http, const char* ip
 	int r = 0;
 	socket_t tcp;
 	socklen_t addrlen;
-	struct sockaddr* addr;
 	struct sockaddr_storage ss;
-	addr = (struct sockaddr*)&ss;
-	
+
 	assert(http->running);
 	assert(invalid_aio_socket == http->socket);
 	r = socket_addr_from(&ss, &addrlen, ip, (u_short)port);
 	if (0 != r)
 		return r;
 
-	assert(addr->sa_family == AF_INET || addr->sa_family == AF_INET6);
-	tcp = socket(addr->sa_family, SOCK_STREAM, 0);
+	assert(ss.ss_family == AF_INET || ss.ss_family == AF_INET6);
+	tcp = socket(ss.ss_family, SOCK_STREAM, 0);
 #if defined(OS_WINDOWS)
 	r = socket_bind_any(tcp, 0);
 	if(0 != r)
@@ -301,7 +299,7 @@ static int http_connect(struct http_client_aio_transport_t *http, const char* ip
 	}
 
 	atomic_increment32(&http->ref);
-	r = aio_socket_connect(http->socket, addr, addrlen, http_onconnect, http);
+	r = aio_socket_connect(http->socket, (struct sockaddr*)&ss, addrlen, http_onconnect, http);
 	if(0 != r)
 	{
 		atomic_decrement32(&http->ref);
