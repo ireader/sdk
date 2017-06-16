@@ -17,9 +17,10 @@
 #pragma warning(disable: 6031) // warning C6031: Return value ignored: 'snprintf'
 #endif
 
+/// @param[in] backlog Maximum queue length specifiable by listen, use SOMAXCONN if you don't known how to choose value
 /// @return >=0-socket, <0-socket_error(by socket_geterror())
-static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN int port, IN int backlog);
-static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN int port);
+static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int backlog);
+static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_short port);
 
 /// @Notice: need restore block status
 /// @param[in] timeout: ms, <0-forever
@@ -109,7 +110,8 @@ static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, I
 		if (socket_invalid == sock)
 			continue;
 
-		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port); // fixed ios getaddrinfo don't set port if nodename is ipv4 address
+		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
+		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
 
 		if (timeout < 0)
 			r = socket_connect(sock, ptr->ai_addr, ptr->ai_addrlen);
@@ -170,7 +172,7 @@ static inline int socket_bind_any(IN socket_t sock, IN u_short port)
 /// @param[in] port bind local port
 /// @param[in] backlog the maximum length to which the queue of pending connections for socket may grow
 /// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
-static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN int port, IN int backlog)
+static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int backlog)
 {
 	int r;
 	socket_t sock;
@@ -180,7 +182,7 @@ static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
-	snprintf(portstr, sizeof(portstr), "%d", port);
+	snprintf(portstr, sizeof(portstr), "%hu", port);
 	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return socket_invalid;
@@ -205,6 +207,9 @@ static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN 
 			socket_setipv6only(sock, 1);
 #endif
 
+		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
+		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
+
 		r = socket_bind(sock, ptr->ai_addr, ptr->ai_addrlen);
 		if (0 == r)
 			r = socket_listen(sock, backlog);
@@ -217,7 +222,7 @@ static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN 
 	return 0 == r ? sock : socket_invalid;
 }
 
-static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN int port)
+static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_short port)
 {
 	int r;
 	socket_t sock;
@@ -227,7 +232,7 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN in
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
-	snprintf(portstr, sizeof(portstr), "%d", port);
+	snprintf(portstr, sizeof(portstr), "%hu", port);
 	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return socket_invalid;
@@ -251,6 +256,9 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN in
 		if (AF_INET6 == ptr->ai_addr->sa_family)
 			socket_setipv6only(sock, 1);
 #endif
+
+		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
+		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
 
 		r = socket_bind(sock, ptr->ai_addr, ptr->ai_addrlen);
 		if (0 != r)
