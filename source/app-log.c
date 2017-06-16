@@ -58,9 +58,8 @@ static void app_log_syslog(int level, const char* format, va_list args)
 	vsnprintf(log + n, sizeof(log) - n - 1, format, args);
 	OutputDebugStringA(log);
 #elif defined(OS_ANDROID)
-	static int s_level[] = { LOG_NOTICE, LOG_NOTICE , LOG_NOTICE, LOG_DEBUG, LOG_INFO, LOG_WARNING, LOG_ERROR, LOG_CRIT, LOG_EMERG };
-	assert(sizeof(s_level) / sizeof(s_level[0]) == ANDROID_LOG_SILENT + 1);
-	__android_log_vprint(s_level[level % (ANDROID_LOG_SILENT + 1)], "android", format, args); 
+	static int s_level[] = { ANDROID_LOG_FATAL/*emerg*/, ANDROID_LOG_FATAL/*alert*/, ANDROID_LOG_FATAL/*critical*/, ANDROID_LOG_ERROR/*error*/, ANDROID_LOG_WARN/*warning*/, ANDROID_LOG_INFO/*notice*/, ANDROID_LOG_INFO/*info*/, ANDROID_LOG_DEBUG/*debug*/ };
+	__android_log_vprint(s_level[level % 8], "android", format, args);
 #elif defined(OS_LINUX)
 	static pthread_once_t s_onetime = PTHREAD_ONCE_INIT;
 	pthread_once(&s_onetime, app_log_init);
