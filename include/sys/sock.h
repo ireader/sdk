@@ -848,13 +848,13 @@ static inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen
 	{
 		struct sockaddr_in* in = (struct sockaddr_in*)sa;
 		assert(sizeof(struct sockaddr_in) == salen);
-		in->sin_port = in->sin_port ? in->sin_port : htons(port);
+		in->sin_port = htons(port);
 	}
 	else if (AF_INET6 == sa->sa_family)
 	{
 		struct sockaddr_in6* in6 = (struct sockaddr_in6*)sa;
 		assert(sizeof(struct sockaddr_in6) == salen);
-		in6->sin6_port = in6->sin6_port ? in6->sin6_port : htons(port);
+		in6->sin6_port = htons(port);
 	}
 	else
 	{
