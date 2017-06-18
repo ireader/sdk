@@ -54,6 +54,12 @@
     <ClCompile Include="source\http-upload.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\http-header-www-authenticate.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\http-header-authorization.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\http-bundle.h">
@@ -90,6 +96,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\http-upload.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http-header-authorization.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http-header-www-authenticate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
