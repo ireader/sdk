@@ -1,4 +1,4 @@
-#include "http-header-authorization.h"
+#include "http-header-auth.h"
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -40,16 +40,16 @@ static int http_header_authorization_scheme(const char* scheme, size_t bytes)
 {
 	if (0 == strncasecmp(scheme, "Basic", bytes))
 	{
-		return 1;
+		return HTTP_AUTHENTICATION_BASIC;
 	}
 	else if (0 == strncasecmp(scheme, "Digest", bytes))
 	{
-		return 2;
+		return HTTP_AUTHENTICATION_DIGEST;
 	}
 	else
 	{
 		assert(0);
-		return -1; // unknown
+		return HTTP_AUTHENTICATION_NONE; // unknown
 	}
 }
 
@@ -104,7 +104,7 @@ static int http_header_authorization_param(struct http_header_authorization_t* a
 	else if (0 == strncasecmp(name, "nc", bytes))
 	{
 		// 8LHEX, The nc value is the hexadecimal count of the number of requests
-		auth->nc = (int)strtol(value, NULL, 16);
+		return s_strcpy(auth->nc, sizeof(auth->nc), value, bytes2);
 	}
 	else
 	{
@@ -175,7 +175,7 @@ void http_header_authorization_test(void)
 	struct http_header_authorization_t authorization;
 
 	http_header_authorization("Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==", &authorization);
-	assert(1 == authorization.scheme);
+	assert(HTTP_AUTHENTICATION_BASIC == authorization.scheme);
 	assert(0 == strcmp("QWxhZGRpbjpvcGVuIHNlc2FtZQ==", authorization.response));
 
 	/*
@@ -202,13 +202,13 @@ void http_header_authorization_test(void)
 		opaque = \"FQhe/qaU925kfnzjCev0ciny7QMkPqMAFRtzCUYo5tdS\"", 
 		&authorization);
 
-	assert(2 == authorization.scheme);
+	assert(HTTP_AUTHENTICATION_DIGEST == authorization.scheme);
 	assert(0 == strcmp("Mufasa", authorization.username));
 	assert(0 == strcmp("http-auth@example.org", authorization.realm));
 	assert(0 == strcmp("/dir/index.html", authorization.uri));
 	assert(0 == strcmp("MD5", authorization.algorithm));
 	assert(0 == strcmp("7ypf/xlj9XXwfDPEoM4URrv/xwf94BcCAzFZH4GiTo0v", authorization.nonce));
-	assert(1 == authorization.nc);
+	assert(0 == strcmp("00000001", authorization.nc));
 	assert(0 == strcmp("f2/wE4q74E6zIJEtWaHKaf5wv/H5QzzpXusqGemxURZJ", authorization.cnonce));
 	assert(0 == strcmp("auth", authorization.qop));
 	assert(0 == strcmp("8ca523f5e9506fed4657c9700eebdbec", authorization.response));

@@ -98,10 +98,7 @@
     <ClInclude Include="include\http-upload.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\http-header-authorization.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\http-header-www-authenticate.h">
+    <ClInclude Include="include\http-header-auth.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,4 +1,4 @@
-#include "http-header-www-authenticate.h"
+#include "http-header-auth.h"
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -18,16 +18,16 @@ static int http_header_authorization_scheme(const char* scheme, size_t bytes)
 {
 	if (0 == strncasecmp(scheme, "Basic", bytes))
 	{
-		return 1;
+		return HTTP_AUTHENTICATION_BASIC;
 	}
 	else if (0 == strncasecmp(scheme, "Digest", bytes))
 	{
-		return 2;
+		return HTTP_AUTHENTICATION_DIGEST;
 	}
 	else
 	{
 		assert(0);
-		return -1; // unknown
+		return HTTP_AUTHENTICATION_NONE; // unknown
 	}
 }
 
@@ -139,7 +139,7 @@ void http_header_www_authenticate_test(void)
 	struct http_header_www_authenticate_t authorization;
 
 	http_header_www_authenticate("Basic realm=\"WallyWorld\"", &authorization);
-	assert(1 == authorization.scheme);
+	assert(HTTP_AUTHENTICATION_BASIC == authorization.scheme);
 	assert(0 == strcmp("WallyWorld", authorization.realm));
 
 	/*
@@ -159,7 +159,7 @@ void http_header_www_authenticate_test(void)
 		opaque = \"FQhe/qaU925kfnzjCev0ciny7QMkPqMAFRtzCUYo5tdS\"",
 		&authorization);
 
-	assert(2 == authorization.scheme);
+	assert(HTTP_AUTHENTICATION_DIGEST == authorization.scheme);
 	assert(0 == strcmp("http-auth@example.org", authorization.realm));
 	assert(0 == strcmp("SHA-256", authorization.algorithm));
 	assert(0 == strcmp("7ypf/xlj9XXwfDPEoM4URrv/xwf94BcCAzFZH4GiTo0v", authorization.nonce));

@@ -154,10 +154,9 @@
     <ClInclude Include="include\http-client-connect.h" />
     <ClInclude Include="include\http-client.h" />
     <ClInclude Include="include\http-cookie.h" />
-    <ClInclude Include="include\http-header-authorization.h" />
+    <ClInclude Include="include\http-header-auth.h" />
     <ClInclude Include="include\http-header-content-type.h" />
     <ClInclude Include="include\http-header-host.h" />
-    <ClInclude Include="include\http-header-www-authenticate.h" />
     <ClInclude Include="include\http-parser.h" />
     <ClInclude Include="include\http-reason.h" />
     <ClInclude Include="include\http-request.h" />
