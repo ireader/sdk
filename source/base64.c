@@ -122,6 +122,8 @@ size_t base64_decode(void* target, const char *source, size_t bytes)
 #include <string.h>
 void base64_test(void)
 {
+	const char* s;
+	const char* r;
 	char source[512];
 	char target[512];
 
@@ -136,5 +138,13 @@ void base64_test(void)
 	assert(8 == base64_encode(source, "666666", 6)); // NjY2NjY2
 	assert(6 == base64_decode(target, source, 8));
 	assert(0 == memcmp(target, "666666", 6));
+
+	// RFC2617 2.Basic Authentication Scheme (p6)
+	s = "Aladdin:open sesame";
+	r = "QWxhZGRpbjpvcGVuIHNlc2FtZQ==";
+	assert(strlen(r) == base64_encode(source, s, strlen(s)));
+	assert(strlen(s) == base64_decode(target, source, strlen(r)));
+	assert(0 == memcmp(source, r, strlen(r)));
+	assert(0 == memcmp(target, s, strlen(s)));
 }
 #endif
