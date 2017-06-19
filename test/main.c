@@ -21,9 +21,10 @@ void event_test(void);
 void semaphore_test(void);
 void onetime_test(void);
 
+void bits_test(void);
 void stack_test(void);
 void time64_test(void);
-void bits_test(void);
+void base64_test(void);
 void ring_buffer_test(void);
 
 void url_test(void);
@@ -66,9 +67,10 @@ int main(int argc, char* argv[])
 #endif
 	onetime_test();
 
+	bits_test();
 	stack_test();
 	time64_test();
-	bits_test();
+	base64_test();
 	ring_buffer_test();
 
     url_test();
