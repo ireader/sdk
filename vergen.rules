@@ -7,7 +7,7 @@
 		<CustomBuildRule
 			Name="vergenerator"
 			DisplayName="vergenerator"
-			CommandLine="poversion.bat $(InputDir)"
+			CommandLine="version.bat $(InputDir)"
 			Outputs="$(InputName).obj"
 			FileExtensions="*.ver"
 			ExecutionDescription="Generating version info from SVN workcopy..."

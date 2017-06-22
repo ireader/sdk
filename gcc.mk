@@ -126,8 +126,8 @@ include $(OBJECT_FILES:.o=.d)
 #	$(CXX) -c -o $@ $(addprefix -I,$(INCLUDES)) $(addprefix -D,$(DEFINES)) $(CFLAGS) -MMD $<
 #	$(COMPILE.CXX) -c -o $@ $(filter $(patsubst %.o, \%%.cpp, $(@F), $(SOURCE_FILES)) -MMD;
 
-poversion.h : poversion.ver
-	$(ROOT)/svnver.sh poversion.ver poversion.h
+version.h : version.ver
+	$(ROOT)/svnver.sh version.ver version.h
 
 .PHONY: clean print
 clean:

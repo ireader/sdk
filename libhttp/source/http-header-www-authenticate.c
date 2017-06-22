@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 
 #if defined(OS_WINDOWS)
 	#define strncasecmp	_strnicmp
