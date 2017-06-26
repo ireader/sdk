@@ -20,6 +20,8 @@
 
 	#define PRId64				"I64d"
 	#define PRIu64				"I64u"
+
+	#define INT64_MIN			(-9223372036854775807i64 - 1)
 #endif
 	#define PRIsize_t			"Iu"	// MSDN: Size Specification
 	#define PRIptrdiff_t		"Ix"	// MSDN: Size Specification
@@ -27,6 +29,7 @@
 #else
 	/* The ISO C99 standard specifies that these macros must only be defined if explicitly requested.  */
 	#define __STDC_FORMAT_MACROS
+	#define __STDC_LIMIT_MACROS
 	#include <inttypes.h>
 	#include <stdint.h>
 
