@@ -347,6 +347,7 @@ static int http_parse_request_line(struct http_context *ctx)
 
 			case '\n':
 				ctx->stateM = SM_REQUEST_LF;
+				ctx->offset -= 1; // go back
 				break;
 
 			default:
@@ -362,9 +363,11 @@ static int http_parse_request_line(struct http_context *ctx)
 				return -1;
 			}
 			ctx->stateM = SM_REQUEST_LF;
+			ctx->offset -= 1; // go back
 			break;
 
 		case SM_REQUEST_LF:
+			assert('\n' == c);
 			// H5.1.1 Method (p24)
 			// Method = OPTIONS | GET | HEAD | POST | PUT | DELETE | TRACE | CONNECT | extension-method
 			if (ctx->u.req.method.len < 1
@@ -385,6 +388,7 @@ static int http_parse_request_line(struct http_context *ctx)
 			assert(1 == ctx->vermajor || 2 == ctx->vermajor);
 			assert(1 == ctx->verminor || 0 == ctx->verminor);
 			ctx->stateM = SM_HEADER;
+			ctx->offset += 1; // skip '\n'
 			return 0;
 
 		default:
@@ -461,6 +465,7 @@ static int http_parse_status_line(struct http_context *ctx)
 
 			case '\n':
 				ctx->stateM = SM_STATUS_LF;
+				ctx->offset -= 1; // go back
 				break;
 
 			default:
@@ -476,9 +481,11 @@ static int http_parse_status_line(struct http_context *ctx)
 				return -1;
 			}
 			ctx->stateM = SM_STATUS_LF;
+			ctx->offset -= 1; // go back
 			break;
 
 		case SM_STATUS_LF:
+			assert('\n' == c);
 			// H3.1 HTTP Version (p13)
 			// HTTP-Version = "HTTP" "/" 1*DIGIT "." 1*DIGIT
 			if (ctx->header.name.len < 8 || 2 != sscanf(ctx->raw + ctx->header.name.pos, "HTTP/%d.%d", &ctx->vermajor, &ctx->verminor)
@@ -496,6 +503,7 @@ static int http_parse_status_line(struct http_context *ctx)
 			assert(1 == ctx->vermajor || 2 == ctx->vermajor);
 			assert(1 == ctx->verminor || 0 == ctx->verminor);
 			ctx->stateM = SM_HEADER;
+			ctx->offset += 1; // skip '\n'
 			return 0;
 
 		default:
@@ -568,6 +576,7 @@ static int http_parse_header_line(struct http_context *ctx)
 			case '\n':
 				ctx->header.value.pos = 0; // use for header end flag
 				ctx->stateM = SM_HEADER_LF;
+				ctx->offset -= 1; // go back
 				break;
 
 			default:
@@ -622,6 +631,7 @@ static int http_parse_header_line(struct http_context *ctx)
 
 			case '\n':
 				ctx->stateM = SM_HEADER_LF;
+				ctx->offset -= 1; // go back
 				break;
 
 			default:
@@ -637,12 +647,15 @@ static int http_parse_header_line(struct http_context *ctx)
 				return -1;
 			}
 			ctx->stateM = SM_HEADER_LF;
+			ctx->offset -= 1; // go back
 			break;
 
 		case SM_HEADER_LF:
+			assert('\n' == c);
 			if (0 == ctx->header.value.pos)
 			{
 				ctx->stateM = SM_BODY;
+				ctx->offset += 1; // skip '\n'
 				return 0;
 			}
 
@@ -683,7 +696,6 @@ static int http_parse_header_line(struct http_context *ctx)
 			}
 
 			ctx->stateM = SM_HEADER; // continue
-			ctx->offset -= 1; // go back
 			break;
 
 		default:
