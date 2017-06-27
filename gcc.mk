@@ -47,7 +47,7 @@ ifneq ($(OUTTYPE),2)
 	ifeq ($(NOVERSION),1)
 		OBJS_VER := 
 	else
-		OBJS_VER := poversion.h
+		OBJS_VER := version.h
 	endif
 endif
 
