@@ -1,4 +1,3 @@
-#include "cstringext.h"
 #include "sockutil.h"
 #include "sys/atomic.h"
 #include "sys/locker.h"
@@ -15,11 +14,10 @@ struct http_client_transport_t
 static void* http_create(struct http_pool_t *pool)
 {
 	struct http_client_transport_t *http;
-	http = (struct http_client_transport_t *)malloc(sizeof(*http));
+	http = (struct http_client_transport_t *)calloc(1, sizeof(*http));
 	if(!http)
 		return NULL;
 
-	memset(http, 0, sizeof(*http));
 	http->pool = pool;
 	http->socket = socket_invalid;
 	http->parser = http_parser_create(HTTP_PARSER_CLIENT);

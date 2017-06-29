@@ -1,6 +1,8 @@
 #ifndef _http_cookie_h_
 #define _http_cookie_h_
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

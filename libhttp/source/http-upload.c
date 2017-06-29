@@ -1,7 +1,13 @@
 #include "http-upload.h"
 #include <string.h>
 #include <assert.h>
-#include "cstringext.h"
+
+#if defined(OS_WINDOWS)
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#endif
+
+//#include "cstringext.h"
 
 #define WHITESPACE " \t"
 

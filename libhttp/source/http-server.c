@@ -1,8 +1,7 @@
-#include <stdlib.h>
-#include "http-server.h"
 #include "sockutil.h"
+#include "http-server.h"
 #include "http-server-internal.h"
-#include "cstringext.h"
+#include <stdlib.h>
 
 int http_server_init(void)
 {
@@ -28,11 +27,10 @@ void* http_server_create(const char* ip, int port)
 		return NULL;
 	}
 
-	ctx = (struct http_server_t*)malloc(sizeof(ctx[0]));
+	ctx = (struct http_server_t*)calloc(1, sizeof(ctx[0]));
 	if(!ctx)
 		return NULL;
 
-	memset(ctx, 0, sizeof(ctx[0]));
 	handler.onconnected = http_session_onconnected;
 	handler.ondisconnected = http_session_ondisconnected;
 	handler.onrecv = http_session_onrecv;

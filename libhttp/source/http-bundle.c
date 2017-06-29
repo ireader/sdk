@@ -1,9 +1,8 @@
 #include "http-bundle.h"
+#include "http-server.h"
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "http-server.h"
-#include "cstringext.h"
 
 void* http_bundle_alloc(size_t sz)
 {

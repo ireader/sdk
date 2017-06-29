@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "cstringext.h"
 #include "sys/atomic.h"
 #include "sys/locker.h"
+#include "cstringext.h"
 #include "http-parser.h"
 #include "http-cookie.h"
 #include "http-client.h"

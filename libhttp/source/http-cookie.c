@@ -1,9 +1,9 @@
+#include "http-cookie.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <time.h>
-#include "http-cookie.h"
 #include "cstringext.h"
 
 #define isblank(c) (' '==(c) || '\t'==(c))
@@ -28,11 +28,10 @@ cookie_t http_cookie_parse(const char* cookie, size_t bytes)
 	if(!cookie || 0 == cookie[0] || 0 == bytes)
 		return NULL;
 
-	ck = (struct http_cookie_t *)malloc(sizeof(*ck) + bytes + 1);
+	ck = (struct http_cookie_t *)calloc(1, sizeof(*ck) + bytes + 1);
 	if(!ck)
 		return NULL;
 
-	memset(ck, 0, sizeof(*ck) + bytes + 1);
 	ck->cookie = (char*)(ck + 1);
 	memcpy(ck->cookie, cookie, bytes);
 	ck->cookie[bytes] = '\0';
@@ -240,6 +239,7 @@ int http_cookie_make(char cookie[], size_t bytes, const char* name, const char* 
 
 int http_cookie_expires(char expires[30], int hours)
 {
+	int n;
 	time_t t;
 	struct tm* gmt;
 	static const char week[][4] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
@@ -249,7 +249,7 @@ int http_cookie_expires(char expires[30], int hours)
 	t += hours * 3600; // current + expireDay
 	gmt = gmtime(&t);
 
-	snprintf(expires, 30, "%s, %02d-%s-%04d %02d:%02d:%02d GMT",
+	n = snprintf(expires, 30, "%s, %02d-%s-%04d %02d:%02d:%02d GMT",
 		week[((unsigned int)gmt->tm_wday) % 7],	// weekday
 		gmt->tm_mday,		// day
 		month[((unsigned int)gmt->tm_mon) % 12],// month
@@ -258,7 +258,7 @@ int http_cookie_expires(char expires[30], int hours)
 		gmt->tm_min,		// minute
 		gmt->tm_sec);		// second
 
-	return 0;
+	return n < 0 || n >= 30 ? -1 : 0;
 }
 
 #if defined(DEBUG) || defined(_DEBUG)

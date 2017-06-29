@@ -1,6 +1,8 @@
 #include "http-request.h"
-#include "cstringext.h"
+#include <stdlib.h>
+#include <string.h>
 #include <assert.h>
+#include <stdio.h>
 #include <errno.h>
 
 struct http_request_t

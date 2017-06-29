@@ -1,4 +1,3 @@
-#include "cstringext.h"
 #include "http-server-internal.h"
 #include "http-reason.h"
 #include "http-parser.h"
@@ -9,8 +8,9 @@
 #include <errno.h>
 
 #if defined(OS_WINDOWS)
-#define iov_base buf
-#define iov_len	 len
+#define iov_base	buf
+#define iov_len		len
+#define strcasecmp	_stricmp
 #endif
 
 #define CONTENT_LENGTH_LEN 32
@@ -20,11 +20,10 @@ static struct http_session_t* http_session_new()
 {
 	struct http_session_t* session;
 
-	session = (struct http_session_t*)malloc(sizeof(session[0]));
+	session = (struct http_session_t*)calloc(1, sizeof(session[0]));
 	if(!session)
 		return NULL;
 
-	memset(session, 0, sizeof(session[0]));
 	session->parser = http_parser_create(HTTP_PARSER_SERVER);
     locker_create(&session->locker);
     session->ref = 1;
@@ -289,7 +288,7 @@ int http_server_set_header(void* param, const char* name, const char* value)
 {
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
-	assert(!strieq("Content-Length", name));
+	assert(0 == strcasecmp("Content-Length", name));
 	session->offset += snprintf(session->header + session->offset, sizeof(session->header) - session->offset - CONTENT_LENGTH_LEN, "%s: %s\r\n", name, value);
 	return (session->offset + CONTENT_LENGTH_LEN < sizeof(session->header)) ? 0 : ENOMEM;
 }
@@ -298,7 +297,7 @@ int http_server_set_header_int(void* param, const char* name, int value)
 {
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
-	assert(!strieq("Content-Length", name));
+	assert(0 == strcasecmp("Content-Length", name));
 	session->offset += snprintf(session->header + session->offset, sizeof(session->header) - session->offset - CONTENT_LENGTH_LEN, "%s: %d\r\n", name, value);
 	return (session->offset + CONTENT_LENGTH_LEN < sizeof(session->header)) ? 0 : ENOMEM;
 }
