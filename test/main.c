@@ -29,6 +29,7 @@ void ring_buffer_test(void);
 
 void url_test(void);
 void unicode_test(void);
+void uri_parse_test(void);
 void utf8codec_test(void);
 void thread_pool_test(void);
 void task_queue_test(void);
@@ -74,6 +75,7 @@ int main(int argc, char* argv[])
 	ring_buffer_test();
 
     url_test();
+	uri_parse_test();
 
 #if defined(HTTP_TEST)
 	http_test();
