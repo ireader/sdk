@@ -59,7 +59,7 @@ static int http_connect(struct http_client_transport_t *http)
 		socket_t socket;
 		socket = socket_connect_host(http->pool->ip, http->pool->port, http->pool->wtimeout);
 		if(socket_invalid == socket)
-			return socket_geterror();
+			return -1;
 
 		socket_setnonblock(socket, 0); // restore block status
 		http->socket = socket;
@@ -70,15 +70,10 @@ static int http_connect(struct http_client_transport_t *http)
 
 static int http_send_request(socket_t socket, int timeout, const char* req, size_t nreq, const void* msg, size_t bytes)
 {
-	// TODO: use socket_send_v
-
-	if((int)nreq != socket_send_all_by_time(socket, req, nreq, 0, timeout))
-		return -1; // send failed(timeout)
-
-	if(bytes > 0 && (int)bytes != socket_send_all_by_time(socket, msg, bytes, 0, timeout))
-		return -1; // send failed(timeout)
-
-	return 0;
+	socket_bufvec_t vec[2];
+	socket_setbufvec(vec, 0, (void*)req, nreq);
+	socket_setbufvec(vec, 1, (void*)msg, bytes);
+	return ((int)(nreq + bytes) == socket_send_v_all_by_time(socket, vec, bytes > 0 ? 2 : 1, 0, timeout)) ? 0 : -1;
 }
 
 static int http_request(void *conn, const char* req, size_t nreq, const void* msg, size_t bytes, http_client_response callback, void *param)
