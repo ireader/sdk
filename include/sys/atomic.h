@@ -198,7 +198,7 @@ static inline int atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_
 static inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
 {
 	assert(0 == (intptr_t)value % 4 && 0 == (intptr_t)oldvalue % 4 && 0 == (intptr_t)newvalue % 4);
-	return __sync_bool_compare_and_swap(value, oldvalue, newvalue);
+	return __sync_bool_compare_and_swap(value, oldvalue, newvalue) ? 1 : 0;
 }
 
 static inline int64_t atomic_increment64(volatile int64_t *value)
