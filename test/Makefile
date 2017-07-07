@@ -20,7 +20,9 @@ SOURCE_PATHS = . $(ROOT)/source $(ROOT)/string
 SOURCE_FILES = $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.cpp))
 SOURCE_FILES += $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.c))
 
-_SOURCE_FILES = $(ROOT)/source/HttpHelper.cpp 
+_SOURCE_FILES = $(ROOT)/source/HttpServer.cpp 
+_SOURCE_FILES += $(ROOT)/source/HttpSocket.cpp 
+_SOURCE_FILES += $(ROOT)/source/HttpHelper.cpp 
 _SOURCE_FILES += $(ROOT)/source/aio-socket-iocp.c
 _SOURCE_FILES += $(ROOT)/source/aio-socket-kqueue.c
 _SOURCE_FILES += $(ROOT)/source/serial-port-win32.c
@@ -28,7 +30,9 @@ _SOURCE_FILES += $(ROOT)/source/win32-async-pipe.c
 _SOURCE_FILES += $(ROOT)/source/sysvolume.cpp
 _SOURCE_FILES += $(ROOT)/string/snprintf.c
 _SOURCE_FILES += $(ROOT)/string/strndup.c
-_SOURCE_FILES += http-test.c rtsp-test.c sdp-test.c
+_SOURCE_FILES += ./http-test.c
+_SOURCE_FILES += ./rtsp-test.c 
+_SOURCE_FILES += ./sdp-test.c
 SOURCE_FILES := $(filter-out $(_SOURCE_FILES),$(SOURCE_FILES))
 
 #-----------------------------Library--------------------------------

@@ -52,6 +52,10 @@ static void OnSend(void* aiosocket, int code, size_t bytes)
 		aio_socket_send(aiosocket, msg, sizeof(msg), OnSend, aiosocket);
 }
 
+static void OnDestroy(void* param)
+{
+}
+
 void aio_socket_test4(void)
 {
 	socket_t socket;
@@ -73,7 +77,7 @@ void aio_socket_test4(void)
 	//system_sleep(5000);
 	aio_socket_send(aiosocket, msg, sizeof(msg), OnSend, aiosocket);
 	//system_sleep(5000);
-	aio_socket_destroy(aiosocket);
+	aio_socket_destroy(aiosocket, OnDestroy, NULL);
 
 	//printf("aio udp socket\n");
 	//socket = socket_udp();

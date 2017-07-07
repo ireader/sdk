@@ -38,6 +38,7 @@ void aio_socket_test(void);
 void aio_socket_test2(void);
 void aio_socket_test3(void);
 void aio_socket_test4(void);
+void aio_socket_test_cancel(void);
 void ip_route_test(void);
 void onetime_test(void);
 
@@ -93,11 +94,12 @@ int main(int argc, char* argv[])
 	task_queue_test();
 
 	ip_route_test();
-    
-    aio_socket_test2();
-    aio_socket_test3();
-	aio_socket_test4();
+
+	aio_socket_test_cancel();
 	aio_socket_test();
+	aio_socket_test2();
+    aio_socket_test3();
+//	aio_socket_test4();
 
 #if defined(OS_WINDOWS)
 	unicode_test();
