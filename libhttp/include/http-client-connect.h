@@ -3,6 +3,8 @@
 
 #define MAX_HTTP_CONNECTION 5
 
+#include "sys/atomic.h"
+#include "sys/locker.h"
 #include "http-client.h"
 #include "time64.h"
 
