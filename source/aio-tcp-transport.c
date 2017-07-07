@@ -1,381 +1,217 @@
-#include "cstringext.h"
-#include "aio-socket.h"
 #include "aio-tcp-transport.h"
-#include "sys/atomic.h"
+#include "aio-rwutil.h"
 #include "sys/locker.h"
+#include "sys/atomic.h"
 #include "time64.h"
 #include "list.h"
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 
-#if defined(_DEBUG) || defined(DEBUG)
-#define CHECK_MODE
-#endif
-
-#define MAX_TCP_PACKET 1024 // 1KB
-
-struct aio_tcp_session_t
+struct aio_transport_list_t
 {
+	struct list_head root;
 	locker_t locker;
-	volatile int closed; // closed thread id
-	volatile int used; // used thread id
-
-	volatile int32_t ref;
-	volatile aio_socket_t socket;
-	struct sockaddr_storage addr;
-	socklen_t addrlen;
-
-	char msg[MAX_TCP_PACKET];
-
-	void* data; // user attach data
-	time64_t active; // TODO: recycle idle session	
-
-    struct aio_tcp_transport_handler_t handler;
-    void* ptr;
-
-#if defined(CHECK_MODE)
-    struct aio_tcp_transport_t *transport;
-	struct list_head node;
-#endif
+	int timeout;
 };
 
-struct aio_tcp_transport_t
+struct aio_connection_t
 {
 	locker_t locker;
-	volatile int closed; // closed thread id
-	volatile int used; // used thread id
+	time64_t active;
+	aio_socket_t* socket;
+	
+	struct aio_socket_rw_t write;
+	struct list_head node;
 
-	volatile int32_t ref;
-	volatile aio_socket_t socket;
+	char buffer[2*1024];
 
 	struct aio_tcp_transport_handler_t handler;
-	void* ptr;
-
-#if defined(CHECK_MODE)
-	int32_t num;
-	struct list_head head;
-#endif
+	void* param;
 };
 
-static void aio_tcp_transport_release(struct aio_tcp_transport_t *transport)
+static struct aio_transport_list_t s_list;
+
+static int aio_tcp_transport_start(struct aio_connection_t* conn);
+static int aio_tcp_transport_recv(struct aio_connection_t* conn);
+static int aio_tcp_transport_destroy(struct aio_connection_t* conn);
+static void aio_tcp_transport_onrecv(void* param, int code, size_t bytes);
+static void aio_tcp_transport_onsend(void* param, int code, size_t bytes);
+static void aio_tcp_transport_ondestroy(void* param);
+
+void aio_tcp_transport_init(void)
 {
-	if(0 == atomic_decrement32(&transport->ref))
+	LIST_INIT_HEAD(&s_list.root);
+	locker_create(&s_list.locker);
+	s_list.timeout = 4 * 60 * 1000; // 4min
+}
+
+void aio_tcp_transport_clean(void)
+{
+	locker_destroy(&s_list.locker);
+}
+
+int aio_tcp_transport_get_timeout(void)
+{
+	return s_list.timeout;
+}
+
+void aio_tcp_transport_set_timeout(int timeout)
+{
+	if (timeout > 1000)
+		s_list.timeout = timeout;
+}
+
+void aio_tcp_transport_recycle(void)
+{
+	time64_t clock;
+	struct list_head root;
+	struct list_head *p, *next;
+	struct aio_connection_t *conn;
+
+	clock = time64_now();
+	LIST_INIT_HEAD(&root);
+	locker_lock(&s_list.locker);
+	list_for_each_safe(p, next, &s_list.root)
 	{
-#if defined(CHECK_MODE)
-		assert(0 == transport->num);
-		assert(list_empty(&transport->head));
-#endif
-		assert(0 == transport->used);
-		if(transport->socket)
+		conn = list_entry(p, struct aio_connection_t, node);
+		if (clock - conn->active > s_list.timeout)
 		{
-			aio_socket_destroy(transport->socket);
-			transport->socket = NULL;
-		}
-
-		locker_destroy(&transport->locker);
-#if defined(_DEBUG) || defined(DEBUG)
-		memset(transport, 0xCC, sizeof(*transport));
-#endif
-		free(transport);
-	}
-}
-
-static struct aio_tcp_session_t* aio_tcp_session_create(struct aio_tcp_transport_t *transport, socket_t socket, const struct sockaddr* sa, socklen_t salen)
-{
-	struct aio_tcp_session_t *session;
-
-	session = (struct aio_tcp_session_t*)malloc(sizeof(*session));
-	if(session)
-	{
-		memset(session, 0, sizeof(*session));
-		locker_create(&session->locker);
-		session->ref = 1;
-		session->socket = aio_socket_create(socket, 1);
-		assert(salen <= sizeof(session->addr));
-		session->addrlen = salen < sizeof(session->addr) ? salen : sizeof(session->addr);
-		memcpy(&session->addr, sa, session->addrlen);
-        memcpy(&session->handler, &transport->handler, sizeof(session->handler));
-        session->ptr = transport->ptr;
-
-#if defined(CHECK_MODE)
-        // link session
-        session->transport = transport;
-        atomic_increment32(&transport->ref);
-		atomic_increment32(&transport->num);
-		locker_lock(&transport->locker);
-		list_insert_after(&session->node, transport->head.prev);
-		locker_unlock(&transport->locker);
-#endif
-	}
-
-	return session;
-}
-
-static void aio_tcp_session_destroy(struct aio_tcp_session_t *session)
-{
-#if defined(CHECK_MODE)
-    struct aio_tcp_transport_t *transport;
-    transport = session->transport;
-	locker_lock(&transport->locker);
-	list_remove(&session->node);
-	locker_unlock(&transport->locker);
-	atomic_decrement32(&transport->num);
-    aio_tcp_transport_release(transport);
-#endif
-
-    assert(0 == session->used);
-    if(session->socket)
-    {
-        aio_socket_destroy(session->socket);
-        session->socket = NULL;
-    }
-
-	locker_destroy(&session->locker);
-	assert(0 == session->ref);
-#if defined(DEBUG) || defined(_DEBUG)
-	memset(session, 0xCC, sizeof(*session));
-#endif
-
-	free(session);
-}
-
-static void aio_tcp_session_release(struct aio_tcp_session_t *session)
-{
-    assert(session->ref > 0);
-    if(0 == atomic_decrement32(&session->ref))
-    {
-        aio_tcp_session_destroy(session);
-    }
-}
-
-static void aio_tcp_session_onrecv(void* param, int code, size_t bytes);
-static void aio_tcp_session_recv(struct aio_tcp_session_t *session)
-{
-    int r = 0;
-    int closed = 0;
-    assert(session->ref > 0);
-
-    // check status
-    locker_lock(&session->locker);
-    closed = session->closed;
-    locker_unlock(&session->locker);
-
-    if(0 == closed)
-    {
-        // receive more data
-        locker_lock(&session->locker);
-        ++session->used;
-        atomic_increment32(&session->ref);
-        r = aio_socket_recv(session->socket, session->msg, sizeof(session->msg), aio_tcp_session_onrecv, session);
-        --session->used;
-        locker_unlock(&session->locker);
-
-        if(0 != r)
-        {
-			aio_tcp_session_release(session); // for addref
-            session->handler.ondisconnected(session->data);
-            aio_tcp_session_release(session); // for session create
-        }
-    }
-    
-    if(1 == closed)
-    {
-        aio_tcp_session_release(session);
-    }
-}
-
-static void aio_tcp_session_onrecv(void* param, int code, size_t bytes)
-{
-	struct aio_tcp_session_t *session;
-	session = (struct aio_tcp_session_t *)param;
-
-	assert(session->ref > 0 && session->ref < 10);
-	session->active = time64_now();
-
-	if(0 != code || 0 == bytes)
-	{
-		// 1. connection error
-		// 2. client close connection
-		session->handler.ondisconnected(session->data);
-        aio_tcp_session_release(session); // for session create
-	}
-	else
-	{
-		assert(0 != bytes);
-		if(1 == session->handler.onrecv(session->data, session->msg, bytes))
-			aio_tcp_session_recv(session);
-	}
-
-    aio_tcp_session_release(session); // for aio_socket_recv addref
-}
-
-static void aio_tcp_session_onsend(void* param, int code, size_t bytes)
-{
-	struct aio_tcp_session_t *session;
-	session = (struct aio_tcp_session_t *)param;
-    if(1 == session->handler.onsend(session->data, code, bytes))
-		aio_tcp_session_recv(session);
-	aio_tcp_session_release(session);
-}
-
-static void aio_tcp_transport_onaccept(void* param, int code, socket_t socket, const struct sockaddr* addr, socklen_t addrlen)
-{
-	int r = 0;
-	int closed = 0;
-	struct aio_tcp_session_t *session;
-	struct aio_tcp_transport_t *transport;
-	transport = (struct aio_tcp_transport_t*)param;
-
-	if(0 != code)
-	{
-		printf("aio_tcp_transport_onaccept => %d\n", code);
-		aio_tcp_transport_release(transport);
-		return;
-	}
-    else
-	{
-		session = aio_tcp_session_create(transport, socket, addr, addrlen);
-		if(!session)
-		{
-			assert(0);
-		}
-		else
-		{
-			session->data = session->handler.onconnected(session->ptr, session, addr, addrlen);
-
-            // start receive data
-            aio_tcp_session_recv(session);
+			list_remove(&conn->node);
+			list_insert_after(&conn->node, &root);
 		}
 	}
+	locker_unlock(&s_list.locker);
 
-    locker_lock(&transport->locker);
-    assert(transport->used >= 0);
-    if(0 == transport->closed)
-        transport->used += 1;
-    closed = transport->closed;
-    locker_unlock(&transport->locker);
-    
-    if(0 == closed)
-    {
-        // accept another connection
-        atomic_increment32(&transport->ref);
-        r = aio_socket_accept(transport->socket, aio_tcp_transport_onaccept, transport);
-        if(0 != r)
-            aio_tcp_transport_release(transport);
-        
-        locker_lock(&transport->locker);
-        --transport->used;
-        assert(transport->used >= 0);
-        locker_unlock(&transport->locker);
-    }
-
-	aio_tcp_transport_release(transport);
+	list_for_each_safe(p, next, &root)
+	{
+		conn = list_entry(p, struct aio_connection_t, node);
+		aio_tcp_transport_destroy(conn);
+	}
 }
 
-void* aio_tcp_transport_create(socket_t socket, const struct aio_tcp_transport_handler_t *handler, void* ptr)
+static void aio_tcp_transport_link(struct aio_connection_t *conn)
 {
-	struct aio_tcp_transport_t *transport;
-	transport = (struct aio_tcp_transport_t*)malloc(sizeof(*transport));
-	if(!transport)
-		return NULL;
-
-	memset(transport, 0, sizeof(*transport));
-	locker_create(&transport->locker);
-	transport->ref = 1;
-#if defined(CHECK_MODE)
-	transport->num = 0;
-	LIST_INIT_HEAD(&transport->head);
-#endif
-    memcpy(&transport->handler, handler, sizeof(transport->handler));
-    transport->ptr = ptr;
-
-    transport->socket = aio_socket_create(socket, 1);
-	if(invalid_aio_socket == transport->socket)
-	{
-		aio_tcp_transport_destroy(transport);
-		return NULL;
-	}
-
-	++transport->ref;
-	if(0 != aio_socket_accept(transport->socket, aio_tcp_transport_onaccept, transport))
-	{
-		printf("aio_tcp_transport_create aio accept error.\n");
-		--transport->ref;
-		aio_tcp_transport_destroy(transport);
-		return NULL;
-	}
-
-	return transport;
+	locker_lock(&s_list.locker);
+	list_insert_after(&s_list.root, &conn->node);
+	locker_unlock(&s_list.locker);
 }
 
-int aio_tcp_transport_destroy(void* t)
+int aio_tcp_transport_create(socket_t socket, struct aio_tcp_transport_handler_t *handler, void* param)
 {
-	struct aio_tcp_transport_t *transport;
-	transport = (struct aio_tcp_transport_t *)t;
+	struct aio_connection_t* conn;
+	conn = (struct aio_connection_t*)calloc(1, sizeof(*conn));
+	if (!conn) return -1;
 
-	locker_lock(&transport->locker);
-	assert(transport->ref > 0);
-	transport->closed = 1; // mark closed by user
-	if(invalid_aio_socket != transport->socket)
-	{
-		aio_socket_destroy(transport->socket);
-		transport->socket = invalid_aio_socket;
-	}
-	locker_unlock(&transport->locker);
-
-    aio_tcp_transport_release(transport);
-    return 0;
-}
-
-int aio_tcp_transport_disconnect(void* s)
-{
-	struct aio_tcp_session_t *session;
-	session = (struct aio_tcp_session_t *)s;
-
-    locker_lock(&session->locker);
-	assert(session->ref > 0);
-    session->closed = 1; // mark closed by user
-    if(invalid_aio_socket != session->socket)
-	{
-		aio_socket_destroy(session->socket);
-		session->socket = invalid_aio_socket;
-	}
-    locker_unlock(&session->locker);
+	conn->socket = aio_socket_create(socket, 1);
+	conn->active = time64_now();
+	conn->param = param;
+	memcpy(&conn->handler, handler, sizeof(conn->handler));
+	locker_create(&conn->locker);
+	aio_tcp_transport_link(conn);
+	aio_tcp_transport_start(conn);
 	return 0;
 }
 
-int aio_tcp_transport_send(void* s, const void* msg, size_t bytes)
+int aio_tcp_transport_send(void* transport, const void* data, size_t bytes)
 {
-    int r = -1;
-	struct aio_tcp_session_t *session;
-	session = (struct aio_tcp_session_t *)s;
-	locker_lock(&session->locker);
-	if(0 == session->closed)
-	{
-		session->active = time64_now();
-		atomic_increment32(&session->ref);
-		assert(session->ref > 0 && invalid_aio_socket!=session->socket);
-		r = aio_socket_send(session->socket, msg, bytes, aio_tcp_session_onsend, session);
-		if(0 != r)
-			atomic_decrement32(&session->ref);
-	}
-	locker_unlock(&session->locker);
-    return r;
+	int r = -1;
+	struct aio_connection_t* conn;
+	conn = (struct aio_connection_t*)transport;
+
+	locker_lock(&conn->locker);
+	conn->active = time64_now();
+	if (invalid_aio_socket != conn->socket)
+		r = aio_socket_send_all(&conn->write, conn->socket, data, bytes, aio_tcp_transport_onsend, conn);
+	locker_unlock(&conn->locker);
+	return r;
 }
 
-int aio_tcp_transport_sendv(void* s, socket_bufvec_t *vec, int n)
+int aio_tcp_transport_sendv(void* transport, socket_bufvec_t *vec, int n)
 {
-    int r = -1;
-	struct aio_tcp_session_t *session;
-	session = (struct aio_tcp_session_t *)s;
-	locker_lock(&session->locker);
-	if(0 == session->closed)
+	int r = -1;
+	struct aio_connection_t* conn;
+	conn = (struct aio_connection_t*)transport;
+
+	locker_lock(&conn->locker);
+	conn->active = time64_now();
+	if (invalid_aio_socket != conn->socket)
+		r = aio_socket_send_v_all(&conn->write, conn->socket, vec, n, aio_tcp_transport_onsend, conn);
+	locker_unlock(&conn->locker);
+	return r;
+}
+
+static int aio_tcp_transport_recv(struct aio_connection_t* conn)
+{
+	int r = -1;
+	locker_lock(&conn->locker);
+	conn->active = time64_now();
+	if(invalid_aio_socket != conn->socket)
+		r = aio_socket_recv(conn->socket, conn->buffer, sizeof(conn->buffer), aio_tcp_transport_onrecv, conn);
+	locker_unlock(&conn->locker);
+	return r;
+}
+
+static int aio_tcp_transport_start(struct aio_connection_t* conn)
+{
+	if (conn->handler.oncreate)
+		conn->handler.oncreate(conn->param, conn);
+
+	return aio_tcp_transport_recv(conn);
+}
+
+static void aio_tcp_transport_onrecv(void* param, int code, size_t bytes)
+{
+	struct aio_connection_t* conn;
+	conn = (struct aio_connection_t*)param;
+
+	if (0 == code && 0 != bytes)
 	{
-		session->active = time64_now();
-		atomic_increment32(&session->ref);
-		assert(session->ref > 0 && invalid_aio_socket!=session->socket);
-		r = aio_socket_send_v(session->socket, vec, n, aio_tcp_session_onsend, session);
-		if(0 != r)
-			atomic_decrement32(&session->ref);
+		conn->handler.onrecv(conn->param, conn, conn->buffer, bytes);
+
+		// read more data
+		code = aio_tcp_transport_recv(conn);
 	}
-	locker_unlock(&session->locker);
-    return r;
+
+	if (0 != code || 0 == bytes)
+	{
+		conn->active = 0; // recycle flag
+//		aio_tcp_transport_destroy(conn);
+	}
+}
+
+static void aio_tcp_transport_onsend(void* param, int code, size_t bytes)
+{
+	struct aio_connection_t* conn;
+	conn = (struct aio_connection_t*)param;
+	conn->handler.onsend(conn->param, conn, code);
+	conn->active = code ? 0 : time64_now();
+	(void)bytes;
+}
+
+static void aio_tcp_transport_ondestroy(void* param)
+{
+	struct aio_connection_t* conn;
+	conn = (struct aio_connection_t*)param;
+	assert(invalid_aio_socket == conn->socket);
+
+	if (conn->handler.ondestroy)
+		conn->handler.ondestroy(conn->param, conn);
+
+	locker_destroy(&conn->locker);
+#if defined(DEBUG) || defined(_DEBUG)
+	memset(conn, 0xCC, sizeof(*conn));
+#endif
+	free(conn);
+}
+
+static int aio_tcp_transport_destroy(struct aio_connection_t* conn)
+{
+	aio_socket_t socket;
+	socket = conn->socket;
+	locker_lock(&conn->locker);
+	conn->socket = invalid_aio_socket;
+	locker_unlock(&conn->locker);
+
+	return aio_socket_destroy(socket, aio_tcp_transport_ondestroy, conn);
 }

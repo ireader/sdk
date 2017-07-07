@@ -3,34 +3,53 @@
 
 #include "sys/sock.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct aio_tcp_transport_handler_t
 {
-	/// param[in] ptr user-defined pointer input from aio_tcp_transport_create ptr parameter 
-	/// param[in] session transport session parameter. use with send/sendv/addref/release
-	/// @return user-defined pointer
-	void* (*onconnected)(void* ptr, void* session, const struct sockaddr* sa, socklen_t salen);
+	/// aio transport create
+	void (*oncreate)(void* param, void* transport);
 
-	/// param[in] data user-defined pointer return by onconnected
-	/// @return 1-receive more data, 0-don't receive
-	int (*onrecv)(void* user, const void* msg, size_t bytes);
+	/// aio transport destroy
+	void (*ondestroy)(void* param, void* transport);
 
-	/// param[in] data user-defined pointer return by onconnected
-	/// @return 1-receive more data, 0-don't receive
-	int (*onsend)(void* user, int code, size_t bytes);
+	/// @param[in] param user-defined pointer return by onconnected
+	void (*onrecv)(void* param, void* transport, const void* data, size_t bytes);
 
-	/// param[in] data user-defined pointer return by onconnected
-	void (*ondisconnected)(void* user);
+	/// @param[in] param user-defined pointer return by onconnected
+	void (*onsend)(void* param, void* transport, int code);
 };
 
-void* aio_tcp_transport_create(socket_t socket, const struct aio_tcp_transport_handler_t *handler, void* ptr);
-int aio_tcp_transport_destroy(void* transport);
+void aio_tcp_transport_init(void);
+void aio_tcp_transport_clean(void);
+void aio_tcp_transport_recycle(void); /// recycle timeout(or error) transport
 
-int aio_tcp_transport_send(void* session, const void* msg, size_t bytes);
-int aio_tcp_transport_sendv(void* session, socket_bufvec_t *vec, int n);
+/// @param[in] timeout recv/send timeout(millisecond), default 4min
+void aio_tcp_transport_set_timeout(int timeout);
+int aio_tcp_transport_get_timeout(void);
 
-int aio_tcp_transport_disconnect(void* session);
+/// create tcp transport
+/// @param[in] socket transport socket, hold and close by internal
+/// @param[in] handler user-defined callback functions
+/// @param[in] param user-defined callback parameter
+/// @return 0-ok, other-error(user must close socket)
+int aio_tcp_transport_create(socket_t socket, struct aio_tcp_transport_handler_t *handler, void* param);
 
-// recycle idle session
-int aio_tcp_transport_recycle(void* transport);
+/// send data to peer
+/// @param[in] data use data send to peer, MUST BE VALID until onsend
+/// @param[in] bytes data length in byte
+/// @return 0-ok, other-error
+int aio_tcp_transport_send(void* transport, const void* data, size_t bytes);
 
+/// send data to peer
+/// @param[in] vec data vector, MUST BE VALID until onsend
+/// @param[in] n vector count
+/// @return 0-ok, other-error
+int aio_tcp_transport_sendv(void* transport, socket_bufvec_t *vec, int n);
+
+#ifdef __cplusplus
+}
+#endif
 #endif /* !_aio_tcp_transport_h_ */
