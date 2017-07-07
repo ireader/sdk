@@ -32,6 +32,8 @@ extern "C" {
 
 typedef void* aio_socket_t;
 
+typedef void (*aio_ondestroy)(void* param);
+
 /// aio_socket_accept callback
 /// @param[in] param user-defined parameter
 /// @param[in] code 0-ok, other-error, ip/port value undefined
@@ -85,7 +87,7 @@ aio_socket_t aio_socket_create(socket_t socket, int own);
 /// close aio-socket
 /// Remark: don't call any callback after this function
 /// @return 0-ok, other-error
-int aio_socket_destroy(aio_socket_t socket);
+int aio_socket_destroy(aio_socket_t socket, aio_ondestroy ondestroy, void* param);
 
 /// listen and accept client
 /// @param[in] ip local ip address for bind, NULL if bind all

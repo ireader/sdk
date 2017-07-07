@@ -110,6 +110,9 @@ struct epoll_context
 	int own;
 	int init; // epoll_ctl add
 
+	aio_ondestroy ondestroy;
+	void* param;
+
 	int (*read)(struct epoll_context *ctx, int flags, int code);
 	int (*write)(struct epoll_context *ctx, int flags, int code);
 
@@ -170,6 +173,9 @@ static int aio_socket_release(struct epoll_context* ctx)
 			close(ctx->socket);
 
 		pthread_spin_destroy(&ctx->locker);
+
+		if (ctx->ondestroy)
+			ctx->ondestroy(ctx->param);
 
 #if defined(DEBUG) || defined(_DEBUG)
 		memset(ctx, 0xCC, sizeof(*ctx));
@@ -298,11 +304,10 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 {
 //	int flags;
 	struct epoll_context* ctx;
-	ctx = (struct epoll_context*)malloc(sizeof(struct epoll_context));
+	ctx = (struct epoll_context*)calloc(1, sizeof(struct epoll_context));
 	if(!ctx)
 		return NULL;
 
-	memset(ctx, 0, sizeof(struct epoll_context));
 	pthread_spin_init(&ctx->locker, PTHREAD_PROCESS_PRIVATE);
 	ctx->own = own;
 	ctx->ref = 1; // 1-for EPOLLHUP(no in/out, shutdown), 2-destroy release
@@ -328,10 +333,12 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	return ctx;
 }
 
-int aio_socket_destroy(aio_socket_t socket)
+int aio_socket_destroy(aio_socket_t socket, aio_ondestroy ondestroy, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
 	assert(ctx->ev.data.ptr == ctx);
+	ctx->ondestroy = ondestroy;
+	ctx->param = param;
 
 	shutdown(ctx->socket, SHUT_RDWR);
 //	close(sock); // can't close socket now, avoid socket reuse

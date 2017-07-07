@@ -34,9 +34,12 @@ static FDisconnectEx DisconnectEx;
 struct aio_context
 {
 	volatile LONG ref;
-	volatile LONG closed;
+	//volatile LONG closed;
 	int own;
 	SOCKET socket;
+
+	aio_ondestroy ondestroy;
+	void* param;
 };
 
 struct aio_context_accept
@@ -241,6 +244,26 @@ static void iocp_recvfrom(struct aio_context* ctx, struct aio_context_action* ai
 //////////////////////////////////////////////////////////////////////////
 /// utility functions
 //////////////////////////////////////////////////////////////////////////
+static int aio_socket_release(struct aio_context *ctx)
+{
+	LONG ref;
+	ref = InterlockedDecrement(&ctx->ref);
+	if (0 == ref)
+	{
+		//assert(1 == ctx->closed);
+		if (ctx->ondestroy)
+			ctx->ondestroy(ctx->param);
+
+#if defined(DEBUG) || defined(_DEBUG)
+		memset(ctx, 0xCC, sizeof(*ctx));
+#endif
+		free(ctx);
+	}
+
+	assert(ref >= 0);
+	return ref;
+}
+
 static struct aio_context_action* util_alloc(struct aio_context *ctx)
 {
 	struct aio_context_action* aio = NULL;
@@ -271,14 +294,7 @@ static struct aio_context_action* util_alloc(struct aio_context *ctx)
 
 static void util_free(struct aio_context_action* aio)
 {
-	if(0 == InterlockedDecrement(&aio->context->ref))
-	{
-		assert(1 == aio->context->closed);
-#if defined(DEBUG) || defined(_DEBUG)
-		memset(aio->context, 0xCC, sizeof(*aio->context));
-#endif
-		free(aio->context);
-	}
+	aio_socket_release(aio->context);
 
 	// lock-free enqueue
 	EnterCriticalSection(&s_locker);
@@ -295,15 +311,15 @@ static void util_free(struct aio_context_action* aio)
 		free(aio);
 }
 
-__forceinline int iocp_check_closed(struct aio_context_action* aio)
-{
-	LONG r = InterlockedCompareExchange(&aio->context->closed, 1, 1);
-
-	if(0 != r && aio->action == iocp_accept)
-		closesocket(aio->accept.socket); // close socket(create in aio_socket_accept)
-
-	return r;
-}
+//__forceinline int iocp_check_closed(struct aio_context_action* aio)
+//{
+//	LONG r = InterlockedCompareExchange(&aio->context->closed, 1, 1);
+//
+//	if(0 != r && aio->action == iocp_accept)
+//		closesocket(aio->accept.socket); // close socket(create in aio_socket_accept)
+//
+//	return r;
+//}
 
 //////////////////////////////////////////////////////////////////////////
 /// aio functions
@@ -328,15 +344,13 @@ int aio_socket_clean(void)
 
 int aio_socket_process(int timeout)
 {
-	BOOL status;
 	DWORD bytes;
 	ULONG_PTR completionKey;
 	OVERLAPPED *pOverlapped;
 	struct aio_context *ctx;
 	struct aio_context_action *aio;
 
-	status = GetQueuedCompletionStatus(s_iocp, &bytes, &completionKey, &pOverlapped, timeout);
-	if(status)
+	if(GetQueuedCompletionStatus(s_iocp, &bytes, &completionKey, &pOverlapped, timeout))
 	{
 		assert(completionKey && pOverlapped);
 
@@ -359,8 +373,7 @@ int aio_socket_process(int timeout)
 			}
 			else
 			{
-				// exception
-				assert(0);
+				assert(0); // exception
 			}
 		}
 		else
@@ -380,15 +393,14 @@ int aio_socket_process(int timeout)
 aio_socket_t aio_socket_create(socket_t socket, int own)
 {
 	struct aio_context *ctx = NULL;
-	ctx = (struct aio_context*)malloc(sizeof(struct aio_context));
+	ctx = (struct aio_context*)calloc(1, sizeof(struct aio_context));
 	if(!ctx)
 		return NULL;
 
-	memset(ctx, 0, sizeof(struct aio_context));
 	ctx->socket = socket;
 	ctx->own = own;
 	ctx->ref = 1;
-	ctx->closed = 0;
+//	ctx->closed = 0;
 
 	if(0 != iocp_bind(ctx->socket, (ULONG_PTR)ctx))
 	{
@@ -399,10 +411,12 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	return ctx;
 }
 
-int aio_socket_destroy(aio_socket_t socket)
+int aio_socket_destroy(aio_socket_t socket, aio_ondestroy ondestroy, void* param)
 {
 	struct aio_context *ctx = (struct aio_context*)socket;
-	InterlockedExchange(&ctx->closed, 1);
+//	InterlockedExchange(&ctx->closed, 1);
+	ctx->ondestroy = ondestroy;
+	ctx->param = param;
 
 	if(ctx->own)
 	{
@@ -410,13 +424,7 @@ int aio_socket_destroy(aio_socket_t socket)
 		ctx->socket = INVALID_SOCKET;
 	}
 
-	if(0 == InterlockedDecrement(&ctx->ref))
-	{
-#if defined(DEBUG) || defined(_DEBUG)
-		memset(ctx, 0xCC, sizeof(*ctx));
-#endif
-		free(ctx);
-	}
+	aio_socket_release(ctx);
 	return 0;
 }
 
