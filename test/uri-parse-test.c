@@ -292,9 +292,10 @@ static void uri_ipv6()
 static void uri_character_test(void)
 {
 	char s[64];
+	unsigned char c;
 	struct uri_t *uri;
 
-	for (unsigned char c = 1; c < 255; c++)
+	for (c = 1; c < 255; c++)
 	{
 		if(strchr("~-_.abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ!$&'()*+,;=:/?#[]@%", c))
 			continue;
