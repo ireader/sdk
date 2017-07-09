@@ -132,7 +132,7 @@ int http_server_send_vec(void* param, int code, void** bundles, int num)
 	socket_setbufvec(session->vec, 0, session->status_line, r);
 	socket_setbufvec(session->vec, 1, session->header, session->offset);
 
-	r = aio_tcp_transport_sendv(&session->transport, session->vec, session->vec_count);
+	r = aio_tcp_transport_sendv(session->transport, session->vec, session->vec_count);
 	if (0 != r) http_session_bundle_clear(session);
 	return r;
 }

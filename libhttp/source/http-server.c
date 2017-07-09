@@ -121,7 +121,7 @@ int http_server_set_header(void* param, const char* name, const char* value)
 {
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
-	assert(0 == strcasecmp("Content-Length", name));
+	assert(0 != strcasecmp("Content-Length", name));
 	session->offset += snprintf(session->header + session->offset, sizeof(session->header) - session->offset - CONTENT_LENGTH_LEN, "%s: %s\r\n", name, value);
 	return (session->offset + CONTENT_LENGTH_LEN < sizeof(session->header)) ? 0 : ENOMEM;
 }
@@ -130,7 +130,7 @@ int http_server_set_header_int(void* param, const char* name, int value)
 {
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
-	assert(0 == strcasecmp("Content-Length", name));
+	assert(0 != strcasecmp("Content-Length", name));
 	session->offset += snprintf(session->header + session->offset, sizeof(session->header) - session->offset - CONTENT_LENGTH_LEN, "%s: %d\r\n", name, value);
 	return (session->offset + CONTENT_LENGTH_LEN < sizeof(session->header)) ? 0 : ENOMEM;
 }
