@@ -27,7 +27,7 @@ static void aio_accept_onclient(void* param, int code, socket_t socket, const st
 		// continue accept
 		locker_lock(&aio->locker);
 		if (invalid_aio_socket != aio->socket)
-			r = aio_socket_accept(aio->socket, aio_accept_onclient, param);
+			r = aio_socket_accept(aio->socket, aio_accept_onclient, aio);
 		else
 			r = -1; // destroy
 		locker_unlock(&aio->locker);
@@ -69,7 +69,7 @@ void* aio_accept_start(socket_t socket, aio_onaccept onaccept, void* param)
 	aio->onaccpet = onaccept;
 	locker_create(&aio->locker);
 	aio->socket = aio_socket_create(socket, 1);
-	if (0 != aio_socket_accept(aio->socket, aio_accept_onclient, param))
+	if (0 != aio_socket_accept(aio->socket, aio_accept_onclient, aio))
 	{
 		aio_accept_stop(aio, NULL, NULL);
 		return NULL;
