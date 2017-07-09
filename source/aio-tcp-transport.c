@@ -103,6 +103,7 @@ int aio_tcp_transport_create(socket_t socket, struct aio_tcp_transport_handler_t
 	conn = (struct aio_connection_t*)calloc(1, sizeof(*conn));
 	if (!conn) return -1;
 
+	LIST_INIT_HEAD(&conn->node);
 	conn->socket = aio_socket_create(socket, 1);
 	conn->active = time64_now();
 	conn->param = param;
