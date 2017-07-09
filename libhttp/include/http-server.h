@@ -10,12 +10,6 @@ extern "C" {
 void* http_server_create(const char* ip, int port);
 int http_server_destroy(void* http);
 
-/// recycle
-/// @param[in] http unused parameter
-void http_server_recycle(void* http);
-void http_server_set_timeout(void *http, int timeout);
-void http_server_get_timeout(void *http, int *timeout);
-
 // Request
 
 /// Get client request HTTP header field by name

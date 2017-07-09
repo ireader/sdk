@@ -91,24 +91,6 @@ int http_server_set_handler(void* http, http_server_handler handler, void* param
 	return 0;
 }
 
-void http_server_set_timeout(void *http, int timeout)
-{
-	(void)http;
-	aio_tcp_transport_set_timeout(timeout);
-}
-
-void http_server_get_timeout(void *http, int *timeout)
-{
-	(void)http;
-	*timeout = aio_tcp_transport_get_timeout();
-}
-
-void http_server_recycle(void* http)
-{
-	(void)http;
-	aio_tcp_transport_recycle();
-}
-
 // Request
 int http_server_get_client(void* param, char ip[65], unsigned short *port)
 {
