@@ -69,7 +69,7 @@ static void http_session_onrecv(void* param, void* transport, const void* data, 
 				session->handler(session->param, session, method, uri);
 			}
 
-			http_parser_clear(session->param); // reset parser
+			http_parser_clear(session->parser); // reset parser
 		}
 	} while (remain > 0 && r >= 0);
 }
