@@ -185,7 +185,7 @@ static void aio_tcp_transport_onsend(void* param, int code, size_t bytes)
 {
 	struct aio_connection_t* conn;
 	conn = (struct aio_connection_t*)param;
-	conn->handler.onsend(conn->param, conn, code);
+	conn->handler.onsend(conn->param, conn, code, bytes);
 	conn->active = code ? 0 : time64_now();
 	(void)bytes;
 }

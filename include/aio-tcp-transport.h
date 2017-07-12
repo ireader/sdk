@@ -19,7 +19,7 @@ struct aio_tcp_transport_handler_t
 	void (*onrecv)(void* param, void* transport, const void* data, size_t bytes);
 
 	/// @param[in] param user-defined pointer return by onconnected
-	void (*onsend)(void* param, void* transport, int code);
+	void (*onsend)(void* param, void* transport, int code, size_t bytes);
 };
 
 void aio_tcp_transport_init(void);

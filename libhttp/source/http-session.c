@@ -74,12 +74,12 @@ static void http_session_onrecv(void* param, void* transport, const void* data, 
 	} while (remain > 0 && r >= 0);
 }
 
-static void http_session_onsend(void* param, void* transport, int code)
+static void http_session_onsend(void* param, void* transport, int code, size_t bytes)
 {
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
 	http_session_bundle_clear(session);
-	(void)code; (void)transport;
+	(void)code; (void)bytes; (void)transport;
 }
 
 int http_session_create(struct http_server_t *server, socket_t socket, const struct sockaddr* sa, socklen_t salen)
