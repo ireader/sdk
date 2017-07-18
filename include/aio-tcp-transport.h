@@ -21,30 +21,34 @@ struct aio_tcp_transport_handler_t
 
 void aio_tcp_transport_init(void);
 void aio_tcp_transport_clean(void);
-void aio_tcp_transport_recycle(void); /// recycle timeout(or error) transport
+void aio_tcp_transport_recycle(void); /// recycle timeout transport
 
-/// @param[in] timeout recv/send timeout(millisecond), default 4min
-void aio_tcp_transport_set_timeout(int timeout);
-int aio_tcp_transport_get_timeout(void);
-
-/// create tcp transport
+/// Create tcp transport
 /// @param[in] socket transport socket, hold and close by internal
 /// @param[in] handler user-defined callback functions
 /// @param[in] param user-defined callback parameter
 /// @return NULL-error(user must close socket), other-ok
 void* aio_tcp_transport_create(socket_t socket, struct aio_tcp_transport_handler_t *handler, void* param);
 
-/// send data to peer
+/// Destroy tcp transport [OPTIONAL]
+/// aio_tcp_transport_destroy take action as aio_tcp_transport_recycle
+int aio_tcp_transport_destroy(void* transport);
+
+/// Send data to peer
 /// @param[in] data use data send to peer, MUST BE VALID until onsend
 /// @param[in] bytes data length in byte
 /// @return 0-ok, other-error
 int aio_tcp_transport_send(void* transport, const void* data, size_t bytes);
 
-/// send data to peer
+/// Send data to peer
 /// @param[in] vec data vector, MUST BE VALID until onsend
 /// @param[in] n vector count
 /// @return 0-ok, other-error
 int aio_tcp_transport_sendv(void* transport, socket_bufvec_t *vec, int n);
+
+/// @param[in] timeout recv/send timeout(millisecond), default 4min
+void aio_tcp_transport_set_timeout(void* transport, int timeout);
+int aio_tcp_transport_get_timeout(void* transport);
 
 #ifdef __cplusplus
 }
