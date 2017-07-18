@@ -17,7 +17,7 @@ static void http_session_bundle_clear(struct http_session_t *session);
 static int http_session_bundle_fill(struct http_session_t *session, void** bundles, int num);
 static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int count);
 
-static void http_session_ondestroy(void* param, void* transport)
+static void http_session_ondestroy(void* param)
 {
 	struct http_session_t *session;
 	session = (struct http_session_t *)param;
@@ -40,16 +40,14 @@ static void http_session_ondestroy(void* param, void* transport)
 	memset(session, 0xCC, sizeof(*session));
 #endif
 	free(session);
-	(void)transport;
 }
 
-static void http_session_onrecv(void* param, void* transport, const void* data, size_t bytes)
+static void http_session_onrecv(void* param, const void* data, size_t bytes)
 {
 	int r;
 	size_t remain;
 	struct http_session_t *session;
 	session = (struct http_session_t *)param;
-	session->transport = transport;
 
 	remain = bytes;
 	do
@@ -74,12 +72,12 @@ static void http_session_onrecv(void* param, void* transport, const void* data, 
 	} while (remain > 0 && r >= 0);
 }
 
-static void http_session_onsend(void* param, void* transport, int code, size_t bytes)
+static void http_session_onsend(void* param, int code, size_t bytes)
 {
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
 	http_session_bundle_clear(session);
-	(void)code; (void)bytes; (void)transport;
+	(void)code; (void)bytes;
 }
 
 int http_session_create(struct http_server_t *server, socket_t socket, const struct sockaddr* sa, socklen_t salen)
@@ -87,7 +85,6 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	struct http_session_t *session;
 	struct aio_tcp_transport_handler_t handler;
 
-	handler.oncreate = NULL; // don't need
 	handler.ondestroy = http_session_ondestroy;
 	handler.onrecv = http_session_onrecv;
 	handler.onsend = http_session_onsend;
@@ -102,10 +99,11 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	session->addrlen = salen;
 	session->param = server->param;
 	session->handler = server->handler;
+	session->transport = aio_tcp_transport_create(socket, &handler, session);
 
-	if (0 != aio_tcp_transport_create(socket, &handler, session))
+	if (NULL == session->transport)
 	{
-		http_session_ondestroy(session, NULL);
+		http_session_ondestroy(session);
 		return -1;
 	}
 	return 0;

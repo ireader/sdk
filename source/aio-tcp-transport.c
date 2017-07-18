@@ -32,7 +32,6 @@ struct aio_connection_t
 
 static struct aio_transport_list_t s_list;
 
-static int aio_tcp_transport_start(struct aio_connection_t* conn);
 static int aio_tcp_transport_recv(struct aio_connection_t* conn);
 static int aio_tcp_transport_destroy(struct aio_connection_t* conn);
 static void aio_tcp_transport_onrecv(void* param, int code, size_t bytes);
@@ -97,11 +96,11 @@ static void aio_tcp_transport_link(struct aio_connection_t *conn)
 	locker_unlock(&s_list.locker);
 }
 
-int aio_tcp_transport_create(socket_t socket, struct aio_tcp_transport_handler_t *handler, void* param)
+void* aio_tcp_transport_create(socket_t socket, struct aio_tcp_transport_handler_t *handler, void* param)
 {
 	struct aio_connection_t* conn;
 	conn = (struct aio_connection_t*)calloc(1, sizeof(*conn));
-	if (!conn) return -1;
+	if (!conn) return NULL;
 
 	LIST_INIT_HEAD(&conn->node);
 	conn->socket = aio_socket_create(socket, 1);
@@ -110,8 +109,13 @@ int aio_tcp_transport_create(socket_t socket, struct aio_tcp_transport_handler_t
 	memcpy(&conn->handler, handler, sizeof(conn->handler));
 	locker_create(&conn->locker);
 	aio_tcp_transport_link(conn);
-	aio_tcp_transport_start(conn);
-	return 0;
+
+	if (0 != aio_tcp_transport_recv(conn))
+	{
+		free(conn);
+		return NULL;
+	}
+	return conn;
 }
 
 int aio_tcp_transport_send(void* transport, const void* data, size_t bytes)
@@ -153,14 +157,6 @@ static int aio_tcp_transport_recv(struct aio_connection_t* conn)
 	return r;
 }
 
-static int aio_tcp_transport_start(struct aio_connection_t* conn)
-{
-	if (conn->handler.oncreate)
-		conn->handler.oncreate(conn->param, conn);
-
-	return aio_tcp_transport_recv(conn);
-}
-
 static void aio_tcp_transport_onrecv(void* param, int code, size_t bytes)
 {
 	struct aio_connection_t* conn;
@@ -168,7 +164,7 @@ static void aio_tcp_transport_onrecv(void* param, int code, size_t bytes)
 
 	if (0 == code && 0 != bytes)
 	{
-		conn->handler.onrecv(conn->param, conn, conn->buffer, bytes);
+		conn->handler.onrecv(conn->param, conn->buffer, bytes);
 
 		// read more data
 		code = aio_tcp_transport_recv(conn);
@@ -185,7 +181,7 @@ static void aio_tcp_transport_onsend(void* param, int code, size_t bytes)
 {
 	struct aio_connection_t* conn;
 	conn = (struct aio_connection_t*)param;
-	conn->handler.onsend(conn->param, conn, code, bytes);
+	conn->handler.onsend(conn->param, code, bytes);
 	conn->active = code ? 0 : time64_now();
 	(void)bytes;
 }
@@ -197,7 +193,7 @@ static void aio_tcp_transport_ondestroy(void* param)
 	assert(invalid_aio_socket == conn->socket);
 
 	if (conn->handler.ondestroy)
-		conn->handler.ondestroy(conn->param, conn);
+		conn->handler.ondestroy(conn->param);
 
 	locker_destroy(&conn->locker);
 #if defined(DEBUG) || defined(_DEBUG)

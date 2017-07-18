@@ -3,6 +3,7 @@
 #include "aio-rwutil.h"
 #include "http-parser.h"
 #include "http-client-connect.h"
+#include <stdlib.h>
 
 struct http_client_aio_transport_t
 {

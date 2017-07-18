@@ -3,6 +3,7 @@
 #include "sys/locker.h"
 #include "http-parser.h"
 #include "http-client-connect.h"
+#include <stdlib.h>
 
 struct http_client_transport_t
 {
