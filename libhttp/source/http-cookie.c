@@ -20,7 +20,7 @@ struct http_cookie_t
 	int secure;
 };
 
-cookie_t http_cookie_parse(const char* cookie, size_t bytes)
+struct http_cookie_t* http_cookie_parse(const char* cookie, size_t bytes)
 {
 	char *p;
 	struct http_cookie_t *ck;
@@ -105,71 +105,52 @@ cookie_t http_cookie_parse(const char* cookie, size_t bytes)
 	return ck;
 }
 
-void http_cookie_destroy(cookie_t cookie)
+void http_cookie_destroy(struct http_cookie_t* ck)
 {
-	struct http_cookie_t *ck;
-	ck = (struct http_cookie_t *)cookie;
 #if defined(DEBUG) || defined(_DEBUG)
 	memset(ck, 0xCC, sizeof(*ck));
 #endif
 	free(ck);
 }
 
-const char* http_cookie_get_name(cookie_t cookie)
+const char* http_cookie_get_name(struct http_cookie_t* ck)
 {
-	struct http_cookie_t *ck;
-	ck = (struct http_cookie_t *)cookie;
 	return ck->name;
 }
 
-const char* http_cookie_get_value(cookie_t cookie)
+const char* http_cookie_get_value(struct http_cookie_t* ck)
 {
-	struct http_cookie_t *ck;
-	ck = (struct http_cookie_t *)cookie;
 	return ck->value;
 }
 
-const char* http_cookie_get_path(cookie_t cookie)
+const char* http_cookie_get_path(struct http_cookie_t* ck)
 {
-	struct http_cookie_t *ck;
-	ck = (struct http_cookie_t *)cookie;
 	return ck->path;
 }
 
-const char* http_cookie_get_domain(cookie_t cookie)
+const char* http_cookie_get_domain(struct http_cookie_t* ck)
 {
-	struct http_cookie_t *ck;
-	ck = (struct http_cookie_t *)cookie;
 	return ck->domain;
 }
 
-const char* http_cookie_get_expires(cookie_t cookie)
+const char* http_cookie_get_expires(struct http_cookie_t* ck)
 {
-	struct http_cookie_t *ck;
-	ck = (struct http_cookie_t *)cookie;
 	return ck->expires;
 }
 
-int http_cookie_is_httponly(cookie_t cookie)
+int http_cookie_is_httponly(struct http_cookie_t* ck)
 {
-	struct http_cookie_t *ck;
-	ck = (struct http_cookie_t *)cookie;
 	return ck->httponly;
 }
 
-int http_cookie_is_secure(cookie_t cookie)
+int http_cookie_is_secure(struct http_cookie_t* ck)
 {
-	struct http_cookie_t *ck;
-	ck = (struct http_cookie_t *)cookie;
 	return ck->secure;
 }
 
-int http_cookie_check_path(cookie_t cookie, const char* path)
+int http_cookie_check_path(struct http_cookie_t* ck, const char* path)
 {
 	size_t n;
-	struct http_cookie_t *ck;
-	ck = (struct http_cookie_t *)cookie;
-
 	if(!ck->path || 0 == ck->path[0]) return 1; // empty path
 
 	n = strlen(ck->path);
@@ -177,11 +158,9 @@ int http_cookie_check_path(cookie_t cookie, const char* path)
 	return (path && path[0] && 0==strncmp(path, ck->path, n-1) && ('/'==path[n-1] || '\0'==path[n-1])) ? 1 : 0;
 }
 
-int http_cookie_check_domain(cookie_t cookie, const char* domain)
+int http_cookie_check_domain(struct http_cookie_t* ck, const char* domain)
 {
 	size_t n1, n2;
-	struct http_cookie_t *ck;
-	ck = (struct http_cookie_t *)cookie;
 
 	if(!domain || 0 == domain[0]) return 0;
 	if(!ck->domain || 0 == ck->domain[0]) return 1;
@@ -265,7 +244,7 @@ int http_cookie_expires(char expires[30], int hours)
 static void http_cookie_parse_test(void)
 {
 	const char* p;
-	cookie_t cookie;
+	struct http_cookie_t* cookie;
 
 	p = "LSID=DQAAAaem_vYg; Path=/accounts; Expires=Wed, 13 Jan 2021 22:23:01 GMT; Secure; HttpOnly";
 	cookie = http_cookie_parse(p, strlen(p));
