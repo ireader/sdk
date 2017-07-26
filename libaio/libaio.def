@@ -16,8 +16,6 @@ EXPORTS
 	aio_socket_sendto_v
 	aio_socket_recvfrom_v
 
-	aio_timeout_init
-	aio_timeout_clean
 	aio_timeout_process
 	aio_timeout_add
 	aio_timeout_delete

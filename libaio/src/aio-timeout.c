@@ -2,6 +2,7 @@
 #include "sys/locker.h"
 #include "sys/atomic.h"
 #include "sys/system.h"
+#include "sys/onetime.h"
 #include <assert.h>
 
 static struct
@@ -9,6 +10,7 @@ static struct
 	locker_t locker;
 	struct aio_timeout_t root;
 } s_list;
+static onetime_t s_init = ONETIME_INIT;
 
 static void aio_timeout_release(struct aio_timeout_t* timeout)
 {
@@ -19,16 +21,16 @@ static void aio_timeout_release(struct aio_timeout_t* timeout)
 	}
 }
 
-void aio_timeout_init(void)
+static void aio_timeout_init(void)
 {
 	s_list.root.next = s_list.root.prev = &s_list.root;
 	locker_create(&s_list.locker);
 }
 
-void aio_timeout_clean(void)
-{
-	locker_destroy(&s_list.locker);
-}
+//static void aio_timeout_clean(void)
+//{
+//	locker_destroy(&s_list.locker);
+//}
 
 void aio_timeout_process(void)
 {
@@ -67,6 +69,8 @@ void aio_timeout_process(void)
 void aio_timeout_add(struct aio_timeout_t* timeout, int timeoutMS, void (*notify)(void* param), void* param)
 {
 	struct aio_timeout_t* prev, *next;
+
+	onetime_exec(&s_init, aio_timeout_init);
 
 	timeout->ref = 2;
 	timeout->clock = 0;

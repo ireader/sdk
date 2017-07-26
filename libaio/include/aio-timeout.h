@@ -24,8 +24,6 @@ struct aio_timeout_t
 	void* param2;
 };
 
-void aio_timeout_init(void);
-void aio_timeout_clean(void);
 void aio_timeout_process(void);
 
 /// add aio timeout notify(disable status)
