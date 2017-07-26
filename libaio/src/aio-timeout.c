@@ -23,6 +23,7 @@ static void aio_timeout_release(struct aio_timeout_t* timeout)
 
 static void aio_timeout_init(void)
 {
+	assert(NULL == s_list.root.next);
 	s_list.root.next = s_list.root.prev = &s_list.root;
 	locker_create(&s_list.locker);
 }
@@ -38,6 +39,7 @@ void aio_timeout_process(void)
 	struct aio_timeout_t *p;
 	struct aio_timeout_t *prev, *next;
 
+	onetime_exec(&s_init, aio_timeout_init);
 	clock = system_clock();
 
 	do
