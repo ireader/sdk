@@ -105,10 +105,7 @@ static int aio_tcp_transport_recv(struct aio_tcp_transport_t* t)
 		r = aio_socket_recv(t->socket, t->buffer, sizeof(t->buffer), aio_tcp_transport_onrecv, t);
 	spinlock_unlock(&t->locker);
 
-	if (0 == r)
-		aio_timeout_start(&t->timer);
-	else
-		aio_tcp_transport_stop(t);
+	if (0 == r) aio_timeout_start(&t->timer);
 	return r;
 }
 
@@ -130,15 +127,17 @@ static void aio_tcp_transport_onrecv(void* param, int code, size_t bytes)
 
 	if (0 == code)
 	{
+		// enable bytes = 0 callback to notify socket close
 		t->handler.onrecv(t->param, t->buffer, bytes);
 	}
 
 	if (0 == code && 0 != bytes)
 	{
 		// read more data
-		aio_tcp_transport_recv(t);
+		code = aio_tcp_transport_recv(t);
 	}
-	else
+	
+	if(0 != code || 0 == bytes)
 	{
 		// close aio socket
 		aio_tcp_transport_stop(t);
