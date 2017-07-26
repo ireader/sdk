@@ -12,7 +12,8 @@ OUTFILE = libhttp.a
 #--------------------------------------------------------------------
 INCLUDES = . \
 					./include \
-					$(ROOT)/include
+					$(ROOT)/include \
+					$(ROOT)/libaio/include
 
 #-------------------------------Source-------------------------------
 #
