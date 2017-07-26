@@ -2,12 +2,14 @@
 #define _http_server_internal_h_
 
 #include "http-server.h"
+#include "http-parser.h"
+#include "aio-tcp-transport.h"
 #include "sys/sock.h"
 
 struct http_session_t
 {
-	void* parser; // HTTP parser
-	void* transport; // TCP transporot
+	http_parser_t* parser; // HTTP parser
+	aio_tcp_transport_t* transport; // TCP transporot
 	socklen_t addrlen;
 	struct sockaddr_storage addr;
 

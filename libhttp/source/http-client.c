@@ -159,7 +159,7 @@ static void http_client_onaction(void *param, void *parser, int code)
 		cookie = http_get_cookie(parser);
 		if(cookie)
 		{
-			cookie_t ck;
+			http_cookie_t* ck;
 			ck = http_cookie_parse(cookie, strlen(cookie));
 			if(ck)
 			{
