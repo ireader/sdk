@@ -17,7 +17,7 @@ struct aio_connect_t
 	struct aio_timeout_t timer;
 	int timeout;
 
-	aio_onconnect onconnect;
+	void (*onconnect)(void* param, aio_socket_t aio, int code);
 	void* param;
 };
 
@@ -29,7 +29,7 @@ static void aio_connect_onconnect(void* param, int code);
 
 static void aio_connect_destroy(struct aio_connect_t* conn, int code)
 {
-	conn->onconnect(conn->param, code);
+	conn->onconnect(conn->param, conn->aio, code);
 
 	if (conn->addr)
 		freeaddrinfo(conn->addr);
@@ -48,7 +48,7 @@ static void aio_timer_oncancel(void* param)
 	}
 	else
 	{
-		if(conn->aio);
+		if(conn->aio)
 			aio_socket_destroy(conn->aio, NULL, NULL);
 		aio_connect_addr(conn);
 	}
@@ -79,14 +79,18 @@ static void aio_connect_onconnect(void* param, int code)
 static void aio_connect_addr(struct aio_connect_t* conn)
 {
 	int r;
-	for (r = conn->code; conn->ptr != NULL; conn->ptr = conn->ptr->ai_next)
+	struct addrinfo *addr;
+
+	r = conn->code;
+	for(addr = conn->ptr; NULL != addr; addr = conn->ptr)
 	{
-		conn->socket = socket(conn->ptr->ai_family, conn->ptr->ai_socktype, conn->ptr->ai_protocol);
+		conn->ptr = conn->ptr->ai_next;
+		conn->socket = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
 		if (socket_invalid == conn->socket)
 			continue;
 
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
-		socket_addr_setport(conn->ptr->ai_addr, conn->ptr->ai_addrlen, conn->port);
+		socket_addr_setport(addr->ai_addr, addr->ai_addrlen, conn->port);
 
 #if defined(OS_WINDOWS)
 		socket_bind_any(conn->socket, 0);
@@ -96,7 +100,7 @@ static void aio_connect_addr(struct aio_connect_t* conn)
 		conn->aio2 = conn->aio = aio_socket_create(conn->socket, 1);
 
 		aio_timeout_add(&conn->timer, conn->timeout, aio_timer_onnotify, conn);
-		r = aio_socket_connect(conn->aio, conn->ptr->ai_addr, conn->ptr->ai_addrlen, aio_connect_onconnect, conn);
+		r = aio_socket_connect(conn->aio, addr->ai_addr, addr->ai_addrlen, aio_connect_onconnect, conn);
 		if (0 == r)
 		{
 			aio_timeout_start(&conn->timer);
@@ -110,7 +114,7 @@ static void aio_connect_addr(struct aio_connect_t* conn)
 	aio_connect_destroy(conn, r);
 }
 
-void aio_connect(const char* host, int port, int timeout, aio_onconnect onconnect, void* param)
+void aio_connect(const char* host, int port, int timeout, void (*onconnect)(void* param, aio_socket_t aio, int code), void* param)
 {
 	int r;
 	char portstr[16];
@@ -125,7 +129,7 @@ void aio_connect(const char* host, int port, int timeout, aio_onconnect onconnec
 	r = getaddrinfo(host, portstr, &hints, &addr);
 	if (0 != r)
 	{
-		onconnect(param, r);
+		onconnect(param, invalid_aio_socket, r);
 		return;
 	}
 

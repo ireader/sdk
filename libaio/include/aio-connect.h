@@ -13,7 +13,7 @@ extern "C" {
 /// @param[in] timeout connect timeout(MS)
 /// @param[in] onconnect user-defined callback, can't be NULL
 /// @param[in] param user-defined parameter
-void aio_connect(const char* host, int port, int timeout, aio_onconnect onconnect, void* param);
+void aio_connect(const char* host, int port, int timeout, void (*onconnect)(void* param, aio_socket_t aio, int code), void* param);
 
 #ifdef __cplusplus
 }
