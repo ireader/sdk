@@ -50,14 +50,16 @@ struct aio_tcp_transport_t* aio_tcp_transport_create2(aio_socket_t aio, struct a
 	spinlock_create(&t->locker);
 	memcpy(&t->handler, handler, sizeof(t->handler));
 	aio_timeout_add(&t->timer, TIMEOUT, aio_timer_onnotify, t);
-
-	if (0 != aio_tcp_transport_recv(t))
-	{
-		memset(&t->handler, 0, sizeof(t->handler));
-		aio_tcp_transport_stop(t);
-		return NULL;
-	}
 	return t;
+}
+
+int aio_tcp_transport_start(struct aio_tcp_transport_t* t)
+{
+	int r;
+	r = aio_tcp_transport_recv(t);
+	if (0 != r)
+		aio_tcp_transport_stop(t);
+	return r;
 }
 
 int aio_tcp_transport_stop(struct aio_tcp_transport_t* t)

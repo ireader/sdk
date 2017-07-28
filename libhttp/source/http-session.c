@@ -100,13 +100,7 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	session->param = server->param;
 	session->handler = server->handler;
 	session->transport = aio_tcp_transport_create(socket, &handler, session);
-
-	if (NULL == session->transport)
-	{
-		http_session_ondestroy(session);
-		return -1;
-	}
-	return 0;
+	return aio_tcp_transport_start(session->transport);
 }
 
 int http_server_send(void* param, int code, void* bundle)

@@ -30,6 +30,7 @@ EXPORTS
 
 	aio_tcp_transport_create
 	aio_tcp_transport_create2
+	aio_tcp_transport_start
 	aio_tcp_transport_stop
 	aio_tcp_transport_send
 	aio_tcp_transport_sendv

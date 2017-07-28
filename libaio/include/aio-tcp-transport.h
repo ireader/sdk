@@ -29,6 +29,8 @@ struct aio_tcp_transport_handler_t
 aio_tcp_transport_t* aio_tcp_transport_create(socket_t socket, struct aio_tcp_transport_handler_t *handler, void* param);
 aio_tcp_transport_t* aio_tcp_transport_create2(aio_socket_t aio, struct aio_tcp_transport_handler_t *handler, void* param);
 
+/// start recv, call once only
+int aio_tcp_transport_start(aio_tcp_transport_t* transport);
 /// cancel tcp transport recv/send
 int aio_tcp_transport_stop(aio_tcp_transport_t* transport);
 
