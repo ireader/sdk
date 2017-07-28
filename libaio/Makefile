@@ -45,3 +45,6 @@ STATIC_LIBS =
 DEFINES = 
 
 include $(ROOT)/gcc.mk
+
+CFLAGS += -fvisibility=default
+LDFLAGS += -Wl,--version-script=libaio.map
