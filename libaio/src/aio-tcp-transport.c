@@ -42,7 +42,7 @@ struct aio_tcp_transport_t* aio_tcp_transport_create(socket_t socket, struct aio
 struct aio_tcp_transport_t* aio_tcp_transport_create2(aio_socket_t aio, struct aio_tcp_transport_handler_t *handler, void* param)
 {
 	struct aio_tcp_transport_t* t;
-	t = (struct aio_tcp_transport_t*)calloc(1, sizeof(*t));
+	t = (struct aio_tcp_transport_t*)malloc(sizeof(*t));
 	if (!t) return NULL;
 
 	t->socket = aio;
