@@ -47,7 +47,7 @@ void aio_timeout_process(void)
 		locker_lock(&s_list.locker);
 		for (p = s_list.root.next; p != &s_list.root; p = p->next)
 		{
-			if (-1 == p->clock/*cancel*/ || (p->enable && clock - p->clock > p->timeout))
+			if (-1 == p->clock/*cancel*/ || (p->enable && clock > p->clock + p->timeout))
 			{
 				next = p->next;
 				prev = p->prev;
