@@ -11,7 +11,7 @@ OUTFILE = test
 #
 # INCLUDES = $(addprefix -I,$(INCLUDES)) # add -I prefix
 #--------------------------------------------------------------------
-INCLUDES = . $(ROOT)/include
+INCLUDES = . $(ROOT)/include $(ROOT)/libaio/include
 
 #-------------------------------Source-------------------------------
 #
@@ -24,6 +24,7 @@ _SOURCE_FILES = $(ROOT)/source/HttpServer.cpp
 _SOURCE_FILES += $(ROOT)/source/HttpSocket.cpp 
 _SOURCE_FILES += $(ROOT)/source/HttpHelper.cpp 
 _SOURCE_FILES += $(ROOT)/source/aio-socket-iocp.c
+_SOURCE_FILES += $(ROOT)/source/aio-socket-epoll.c
 _SOURCE_FILES += $(ROOT)/source/aio-socket-kqueue.c
 _SOURCE_FILES += $(ROOT)/source/serial-port-win32.c
 _SOURCE_FILES += $(ROOT)/source/win32-async-pipe.c
@@ -39,7 +40,7 @@ SOURCE_FILES := $(filter-out $(_SOURCE_FILES),$(SOURCE_FILES))
 #
 # LIBPATHS = $(addprefix -L,$(LIBPATHS)) # add -L prefix
 #--------------------------------------------------------------------
-LIBPATHS =
+LIBPATHS = $(ROOT)/libaio/$(BUILD).$(PLATFORM)
 ifdef RELEASE
 # relase library path
 LIBPATHS +=
@@ -47,7 +48,7 @@ else
 LIBPATHS +=
 endif
 
-LIBS = rt pthread dl bsd
+LIBS = rt pthread dl bsd aio
 
 STATIC_LIBS =
 
