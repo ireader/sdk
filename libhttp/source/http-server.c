@@ -92,50 +92,40 @@ int http_server_set_handler(void* http, http_server_handler handler, void* param
 }
 
 // Request
-int http_server_get_client(void* param, char ip[65], unsigned short *port)
+int http_server_get_client(struct http_session_t *session, char ip[65], unsigned short *port)
 {
-	struct http_session_t *session;
-	session = (struct http_session_t*)param;
 	if (NULL == ip || NULL == port)
 		return -1;
 	return socket_addr_to((struct sockaddr*)&session->addr, session->addrlen, ip, port);
 }
 
-const char* http_server_get_header(void* param, const char *name)
+const char* http_server_get_header(struct http_session_t *session, const char *name)
 {
-	struct http_session_t *session;
-	session = (struct http_session_t*)param;
 	return http_get_header_by_name(session->parser, name);
 }
 
-int http_server_get_content(void* param, void **content, size_t *length)
+int http_server_get_content(struct http_session_t *session, void **content, size_t *length)
 {
-	struct http_session_t *session;
-	session = (struct http_session_t*)param;
 	*content = (void*)http_get_content(session->parser);
 	*length = http_get_content_length(session->parser);
 	return 0;
 }
 
-int http_server_set_header(void* param, const char* name, const char* value)
+int http_server_set_header(struct http_session_t *session, const char* name, const char* value)
 {
-	struct http_session_t *session;
-	session = (struct http_session_t*)param;
 	assert(0 != strcasecmp("Content-Length", name));
 	session->offset += snprintf(session->header + session->offset, sizeof(session->header) - session->offset - CONTENT_LENGTH_LEN, "%s: %s\r\n", name, value);
 	return (session->offset + CONTENT_LENGTH_LEN < sizeof(session->header)) ? 0 : ENOMEM;
 }
 
-int http_server_set_header_int(void* param, const char* name, int value)
+int http_server_set_header_int(struct http_session_t *session, const char* name, int value)
 {
-	struct http_session_t *session;
-	session = (struct http_session_t*)param;
 	assert(0 != strcasecmp("Content-Length", name));
 	session->offset += snprintf(session->header + session->offset, sizeof(session->header) - session->offset - CONTENT_LENGTH_LEN, "%s: %d\r\n", name, value);
 	return (session->offset + CONTENT_LENGTH_LEN < sizeof(session->header)) ? 0 : ENOMEM;
 }
 
-int http_server_set_content_type(void* session, const char* value)
+int http_server_set_content_type(struct http_session_t *session, const char* value)
 {
 	//Content-Type: application/json
 	//Content-Type: text/html; charset=utf-8

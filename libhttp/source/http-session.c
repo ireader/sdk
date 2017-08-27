@@ -103,17 +103,14 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	return aio_tcp_transport_start(session->transport);
 }
 
-int http_server_send(void* param, int code, void* bundle)
+int http_server_send(struct http_session_t *session, int code, void* bundle)
 {
-	return http_server_send_vec(param, code, bundle ? &bundle : NULL, bundle ? 1 : 0);
+	return http_server_send_vec(session, code, bundle ? &bundle : NULL, bundle ? 1 : 0);
 }
 
-int http_server_send_vec(void* param, int code, void** bundles, int num)
+int http_server_send_vec(struct http_session_t *session, int code, void** bundles, int num)
 {
 	int r;
-	struct http_session_t *session;
-	session = (struct http_session_t*)param;
-
 	r = http_session_bundle_fill(session, bundles, num);
 	if (r < 0) 
 		return r;
