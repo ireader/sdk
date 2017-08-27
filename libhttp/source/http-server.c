@@ -114,15 +114,16 @@ int http_server_get_content(struct http_session_t *session, void **content, size
 int http_server_set_header(struct http_session_t *session, const char* name, const char* value)
 {
 	assert(0 != strcasecmp("Content-Length", name));
-	session->offset += snprintf(session->header + session->offset, sizeof(session->header) - session->offset - CONTENT_LENGTH_LEN, "%s: %s\r\n", name, value);
-	return (session->offset + CONTENT_LENGTH_LEN < sizeof(session->header)) ? 0 : ENOMEM;
+	return http_session_add_header(session, name, value, strlen(value?value:""));
 }
 
 int http_server_set_header_int(struct http_session_t *session, const char* name, int value)
 {
+	int len;
+	char str[64];
+	len = snprintf(str, sizeof(str), "%d", value);
 	assert(0 != strcasecmp("Content-Length", name));
-	session->offset += snprintf(session->header + session->offset, sizeof(session->header) - session->offset - CONTENT_LENGTH_LEN, "%s: %d\r\n", name, value);
-	return (session->offset + CONTENT_LENGTH_LEN < sizeof(session->header)) ? 0 : ENOMEM;
+	return http_session_add_header(session, name, str, len);
 }
 
 int http_server_set_content_type(struct http_session_t *session, const char* value)

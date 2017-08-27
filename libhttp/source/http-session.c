@@ -17,6 +17,8 @@ static void http_session_bundle_clear(struct http_session_t *session);
 static int http_session_bundle_fill(struct http_session_t *session, void** bundles, int num);
 static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int count);
 
+static const char* s_http_header_end = "\r\n";
+
 static void http_session_ondestroy(void* param)
 {
 	struct http_session_t *session;
@@ -34,6 +36,15 @@ static void http_session_ondestroy(void* param)
 		free(session->__vec);
 		session->__vec = NULL;
 		session->vec_capacity = 0;
+	}
+
+	if (session->header != (char*)(session + 1))
+	{
+		assert(session->header_capacity > 2 * 1024);
+		free(session->header);
+		session->header = NULL;
+		session->header_size = 0;
+		session->header_capacity = 0;
 	}
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -56,7 +67,7 @@ static void http_session_onrecv(void* param, const void* data, size_t bytes)
 		if (0 == r)
 		{
 			// clear for save user-defined header
-			session->offset = 0;
+			session->header_size = 0;
 
 			// call
 			// user must reply(send/send_vec/send_file) in handle
@@ -89,9 +100,12 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	handler.onrecv = http_session_onrecv;
 	handler.onsend = http_session_onsend;
 
-	session = (struct http_session_t *)calloc(1, sizeof(*session));
+	session = (struct http_session_t *)malloc(sizeof(*session) + 2 * 1024);
 	if (!session) return -1;
 
+	memset(session, 0, sizeof(*session));
+	session->header_capacity = 2 * 1024;
+	session->header = (char*)(session + 1);
 	session->parser = http_parser_create(HTTP_PARSER_SERVER);
 	assert(AF_INET == sa->sa_family || AF_INET6 == sa->sa_family);
 	assert(salen <= sizeof(session->addr));
@@ -111,15 +125,19 @@ int http_server_send(struct http_session_t *session, int code, void* bundle)
 int http_server_send_vec(struct http_session_t *session, int code, void** bundles, int num)
 {
 	int r;
+	char content_length[32];
 	r = http_session_bundle_fill(session, bundles, num);
 	if (r < 0) 
 		return r;
 
 	// HTTP Response Header
-	session->offset += snprintf(session->header + session->offset, sizeof(session->header) - session->offset, "Content-Length: %d\r\n\r\n", r);
+	r = snprintf(content_length, sizeof(content_length) , "%d", r);
+	http_session_add_header(session, "Content-Length", content_length, r);
+
 	r = snprintf(session->status_line, sizeof(session->status_line), "HTTP/1.1 %d %s\r\n", code, http_reason_phrase(code));
 	socket_setbufvec(session->vec, 0, session->status_line, r);
-	socket_setbufvec(session->vec, 1, session->header, session->offset);
+	socket_setbufvec(session->vec, 1, session->header, session->header_size);
+	socket_setbufvec(session->vec, 2, (void*)s_http_header_end, 2);
 
 	r = aio_tcp_transport_sendv(session->transport, session->vec, session->vec_count);
 	if (0 != r) http_session_bundle_clear(session);
@@ -129,8 +147,8 @@ int http_server_send_vec(struct http_session_t *session, int code, void** bundle
 static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int count)
 {
 	void* p;
-	if (count <= 4)
-		return session->vec4;
+	if (count <= 5)
+		return session->vec5;
 
 	if (count > session->vec_capacity)
 	{
@@ -152,7 +170,7 @@ static int http_session_bundle_fill(struct http_session_t *session, void** bundl
 
 	assert(NULL == session->vec);
 	assert(0 == session->vec_count);
-	session->vec = socket_bufvec_alloc(session, num + 2);
+	session->vec = socket_bufvec_alloc(session, num + 3);
 	if (!session->vec || num < 0)
 		return -1;
 
@@ -162,22 +180,53 @@ static int http_session_bundle_fill(struct http_session_t *session, void** bundl
 		bundle = (struct http_bundle_t*)bundles[i];
 		assert(bundle->len > 0);
 		http_bundle_addref(bundle); // addref
-		socket_setbufvec(session->vec, i + 2, bundle->ptr, bundle->len);
+		socket_setbufvec(session->vec, i + 3, bundle->ptr, bundle->len);
 		len += bundle->len;
 	}
 
-	session->vec_count = num + 2;
+	session->vec_count = num + 3;
 	return len;
 }
 
 static void http_session_bundle_clear(struct http_session_t *session)
 {
 	int i;
-	for (i = 2; i < session->vec_count; i++)
+	for (i = 3; i < session->vec_count; i++)
 	{
 		//http_bundle_free(session->vec[i].buf);
 		http_bundle_free((struct http_bundle_t *)session->vec[i].iov_base - 1);
 	}
 	session->vec_count = 0;
 	session->vec = NULL;
+}
+
+int http_session_add_header(struct http_session_t* session, const char* name, const char* value, size_t bytes)
+{
+	void* ptr;
+	size_t len;
+	len = strlen(name ? name : "");
+	if (len < 1 || bytes < 1)
+		return -EINVAL;
+
+	if (session->header_size + len + bytes + 4 > session->header_capacity)
+	{
+		if (session->header == (char*)(session + 1))
+		{
+			ptr = malloc(session->header_capacity + len + bytes + 2 * 1024);
+			if (ptr)
+				memcpy(ptr, session->header, session->header_size);
+		}
+		else
+		{
+			ptr = realloc(session->header, session->header_capacity + len + bytes + 2 * 1024);
+		}
+
+		if (!ptr)
+			return -ENOMEM;
+		session->header = ptr;
+		session->header_capacity += len + bytes + 2 * 1024;
+	}
+
+	session->header_size += snprintf(session->header + session->header_size, session->header_capacity - session->header_size, "%s: %s\r\n", name, value ? value : "");
+	return 0;
 }

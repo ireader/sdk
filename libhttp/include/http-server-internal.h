@@ -13,15 +13,16 @@ struct http_session_t
 	socklen_t addrlen;
 	struct sockaddr_storage addr;
 
-	size_t offset; // header offset/length
 	char status_line[64];
-	char header[2 * 1024];
+	char* header;
+	size_t header_capacity;
+	size_t header_size;
 	
 	// send buffer vector
 	int vec_count;
 	int vec_capacity;
 	socket_bufvec_t *vec;
-	socket_bufvec_t vec4[4];
+	socket_bufvec_t vec5[5];
 	socket_bufvec_t *__vec;
 
 	http_server_handler handler;
@@ -37,5 +38,7 @@ struct http_server_t
 };
 
 int http_session_create(struct http_server_t *server, socket_t socket, const struct sockaddr* sa, socklen_t salen);
+
+int http_session_add_header(struct http_session_t* session, const char* name, const char* value, size_t bytes);
 
 #endif /* !_http_server_internal_h_ */
