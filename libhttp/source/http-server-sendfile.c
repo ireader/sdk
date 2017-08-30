@@ -91,7 +91,7 @@ int http_server_sendfile(struct http_session_t* session, const char* localpath, 
 {
 	int n;
 	FILE* fp;
-	char content_disposition[MAX_PATH];
+	char content_disposition[512];
 	struct http_sendfile_t* sendfile;
 
 	n = snprintf(content_disposition, sizeof(content_disposition), "attachment; filename=\"%s\"", filename ? filename : path_basename(localpath));

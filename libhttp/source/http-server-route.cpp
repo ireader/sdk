@@ -43,7 +43,8 @@ int http_server_route(void* http, http_session_t* session, const char* method, c
 	url_decode(uri->path, -1, reqpath, sizeof(reqpath));
 	uri_free(uri);
 
-	for (auto it = s_handler.begin(); it != s_handler.end(); ++it)
+	std::vector<http_route_t>::iterator it;
+	for (it = s_handler.begin(); it != s_handler.end(); ++it)
 	{
 		if (0 == strncmp(it->first.c_str(), reqpath, it->first.length()))
 		{
