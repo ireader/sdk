@@ -133,7 +133,6 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="source\http-bundle.c" />
     <ClCompile Include="source\http-client-connection-aio.c" />
     <ClCompile Include="source\http-client-connection.c" />
     <ClCompile Include="source\http-client.c" />
@@ -145,12 +144,14 @@
     <ClCompile Include="source\http-parser.c" />
     <ClCompile Include="source\http-reason.c" />
     <ClCompile Include="source\http-request.c" />
+    <ClCompile Include="source\http-server-route.cpp" />
+    <ClCompile Include="source\http-server-sendfile.c" />
+    <ClCompile Include="source\http-server-reply.c" />
     <ClCompile Include="source\http-server.c" />
     <ClCompile Include="source\http-session.c" />
     <ClCompile Include="source\http-upload.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\http-bundle.h" />
     <ClInclude Include="include\http-client-connect.h" />
     <ClInclude Include="include\http-client.h" />
     <ClInclude Include="include\http-cookie.h" />
@@ -160,9 +161,10 @@
     <ClInclude Include="include\http-parser.h" />
     <ClInclude Include="include\http-reason.h" />
     <ClInclude Include="include\http-request.h" />
-    <ClInclude Include="include\http-server-internal.h" />
+    <ClInclude Include="include\http-route.h" />
     <ClInclude Include="include\http-server.h" />
     <ClInclude Include="include\http-upload.h" />
+    <ClInclude Include="source\http-server-internal.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -58,36 +58,32 @@ static void http_server_ondestroy(void* param)
 	free(server);
 }
 
-void* http_server_create(const char* ip, int port)
+struct http_server_t* http_server_create(const char* ip, int port)
 {
-	struct http_server_t *server;
+	struct http_server_t *http;
 
-	server = (struct http_server_t*)calloc(1, sizeof(*server));
-	if (server)
+	http = (struct http_server_t*)calloc(1, sizeof(*http));
+	if (http)
 	{
-		if (0 != http_server_listen(server, ip, port))
+		if (0 != http_server_listen(http, ip, port))
 		{
-			http_server_ondestroy(server);
+			http_server_ondestroy(http);
 			return NULL;
 		}
 	}
 
-	return server;
+	return http;
 }
 
-int http_server_destroy(void* http)
+int http_server_destroy(struct http_server_t* http)
 {
-	struct http_server_t *server;
-	server = (struct http_server_t*)http;
-	return aio_accept_stop(server->aio, http_server_ondestroy, server);
+	return aio_accept_stop(http->aio, http_server_ondestroy, http);
 }
 
-int http_server_set_handler(void* http, http_server_handler handler, void* param)
+int http_server_set_handler(struct http_server_t* http, http_server_handler handler, void* param)
 {
-	struct http_server_t *ctx;
-	ctx = (struct http_server_t*)http;
-	ctx->handler = handler;
-	ctx->param = param;
+	http->handler = handler;
+	http->param = param;
 	return 0;
 }
 
@@ -113,7 +109,12 @@ int http_server_get_content(struct http_session_t *session, void **content, size
 
 int http_server_set_header(struct http_session_t *session, const char* name, const char* value)
 {
-	assert(0 != strcasecmp("Content-Length", name));
+	// check http header
+	if (0 == strcasecmp(name, "Transfer-Encoding") && 0 == strcasecmp("chunked", value))
+		session->http_transfer_encoding = 1;
+	else if (0 == strcasecmp(name, "Content-Length"))
+		return 0;
+
 	return http_session_add_header(session, name, value, strlen(value?value:""));
 }
 

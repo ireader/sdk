@@ -2,7 +2,6 @@
 #include "aio-tcp-transport.h"
 #include "http-reason.h"
 #include "http-parser.h"
-#include "http-bundle.h"
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -13,9 +12,8 @@
 #define iov_len		len
 #endif
 
-static void http_session_bundle_clear(struct http_session_t *session);
-static int http_session_bundle_fill(struct http_session_t *session, void** bundles, int num);
 static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int count);
+static int http_session_data(struct http_session_t *session, const struct http_vec_t* vec, size_t num);
 
 static const char* s_http_header_end = "\r\n";
 
@@ -87,8 +85,10 @@ static void http_session_onsend(void* param, int code, size_t bytes)
 {
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
-	http_session_bundle_clear(session);
-	(void)code; (void)bytes;
+	session->vec_count = 0;
+	session->vec = NULL;
+	if (session->onsend)
+		session->onsend(session->onsendparam, code, bytes);
 }
 
 int http_session_create(struct http_server_t *server, socket_t socket, const struct sockaddr* sa, socklen_t salen)
@@ -111,37 +111,44 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	assert(salen <= sizeof(session->addr));
 	memcpy(&session->addr, sa, salen);
 	session->addrlen = salen;
+	session->socket = socket;
 	session->param = server->param;
 	session->handler = server->handler;
 	session->transport = aio_tcp_transport_create(socket, &handler, session);
 	return aio_tcp_transport_start(session->transport);
 }
 
-int http_server_send(struct http_session_t *session, int code, void* bundle)
+int http_server_send(struct http_session_t *session, int code, const void* data, size_t bytes, http_server_onsend onsend, void* param)
 {
-	return http_server_send_vec(session, code, bundle ? &bundle : NULL, bundle ? 1 : 0);
+	struct http_vec_t vec;
+	vec.data = data;
+	vec.bytes = bytes;
+	return http_server_send_vec(session, code, &vec, 1, onsend, param);
 }
 
-int http_server_send_vec(struct http_session_t *session, int code, void** bundles, int num)
+int http_server_send_vec(struct http_session_t *session, int code, const struct http_vec_t* vec, size_t num, http_server_onsend onsend, void* param)
 {
 	int r;
 	char content_length[32];
-	r = http_session_bundle_fill(session, bundles, num);
+	r = http_session_data(session, vec, num);
 	if (r < 0) 
 		return r;
 
 	// HTTP Response Header
-	r = snprintf(content_length, sizeof(content_length) , "%d", r);
-	http_session_add_header(session, "Content-Length", content_length, r);
+	if (0 == session->http_transfer_encoding)
+	{
+		r = snprintf(content_length, sizeof(content_length), "%d", r);
+		http_session_add_header(session, "Content-Length", content_length, r);
+	}
 
 	r = snprintf(session->status_line, sizeof(session->status_line), "HTTP/1.1 %d %s\r\n", code, http_reason_phrase(code));
 	socket_setbufvec(session->vec, 0, session->status_line, r);
 	socket_setbufvec(session->vec, 1, session->header, session->header_size);
 	socket_setbufvec(session->vec, 2, (void*)s_http_header_end, 2);
 
-	r = aio_tcp_transport_sendv(session->transport, session->vec, session->vec_count);
-	if (0 != r) http_session_bundle_clear(session);
-	return r;
+	session->onsend = onsend;
+	session->onsendparam = param;
+	return aio_tcp_transport_sendv(session->transport, session->vec, session->vec_count);
 }
 
 static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int count)
@@ -163,10 +170,10 @@ static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int 
 	return session->__vec;
 }
 
-static int http_session_bundle_fill(struct http_session_t *session, void** bundles, int num)
+static int http_session_data(struct http_session_t *session, const struct http_vec_t* vec, size_t num)
 {
-	int i, len = 0;
-	struct http_bundle_t *bundle;
+	size_t i;
+	int len = 0;
 
 	assert(NULL == session->vec);
 	assert(0 == session->vec_count);
@@ -177,27 +184,12 @@ static int http_session_bundle_fill(struct http_session_t *session, void** bundl
 	// HTTP Response Data
 	for (i = 0; i < num; i++)
 	{
-		bundle = (struct http_bundle_t*)bundles[i];
-		assert(bundle->len > 0);
-		http_bundle_addref(bundle); // addref
-		socket_setbufvec(session->vec, i + 3, bundle->ptr, bundle->len);
-		len += bundle->len;
+		socket_setbufvec(session->vec, i + 3, (void*)vec[i].data, vec[i].bytes);
+		len += vec[i].bytes;
 	}
 
 	session->vec_count = num + 3;
 	return len;
-}
-
-static void http_session_bundle_clear(struct http_session_t *session)
-{
-	int i;
-	for (i = 3; i < session->vec_count; i++)
-	{
-		//http_bundle_free(session->vec[i].buf);
-		http_bundle_free((struct http_bundle_t *)session->vec[i].iov_base - 1);
-	}
-	session->vec_count = 0;
-	session->vec = NULL;
 }
 
 int http_session_add_header(struct http_session_t* session, const char* name, const char* value, size_t bytes)

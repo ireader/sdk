@@ -48,24 +48,20 @@ static int cleanup()
 
 static int handler(void* param, void* session, const char* method, const char* path)
 {
-	return http_server_send(session, 200, param);
+	const char* msg = (const char*)param;
+	(void)method, (void)path;
+	return http_server_send(session, 200, msg, strlen(msg), NULL, NULL);
 }
 
 void http_benchmark()
 {
 	void *http;
-	void *bundle;
-	void *ptr;
+	const char* hello = "Hello World!";
 
 	init();
 
-	bundle = http_bundle_alloc(1024);
-	ptr = http_bundle_lock(bundle);
-	strcpy((char*)ptr, "Hello World!");
-	http_bundle_unlock(bundle, strlen((char*)ptr));
-
 	http = http_server_create(NULL, 8888);
-	http_server_set_handler(http, handler, bundle);
+	http_server_set_handler(http, handler, (void*)hello);
 
 	while(1)
 	{

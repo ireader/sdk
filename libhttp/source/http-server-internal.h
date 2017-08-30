@@ -10,6 +10,7 @@ struct http_session_t
 {
 	http_parser_t* parser; // HTTP parser
 	aio_tcp_transport_t* transport; // TCP transporot
+	socket_t socket;
 	socklen_t addrlen;
 	struct sockaddr_storage addr;
 
@@ -17,6 +18,8 @@ struct http_session_t
 	char* header;
 	size_t header_capacity;
 	size_t header_size;
+
+	int http_transfer_encoding; // 0-bytes, 1-chunked
 	
 	// send buffer vector
 	int vec_count;
@@ -27,6 +30,9 @@ struct http_session_t
 
 	http_server_handler handler;
 	void* param;
+
+	http_server_onsend onsend;
+	void* onsendparam;
 };
 
 struct http_server_t

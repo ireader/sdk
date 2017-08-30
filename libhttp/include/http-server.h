@@ -7,10 +7,20 @@
 extern "C" {
 #endif
 
+typedef struct http_server_t http_server_t;
 typedef struct http_session_t http_session_t;
 
-void* http_server_create(const char* ip, int port);
-int http_server_destroy(void* http);
+struct http_vec_t
+{
+	const void* data;
+	size_t bytes;
+};
+
+typedef void (*http_server_onsend)(void* param, int code, size_t bytes);
+
+
+http_server_t* http_server_create(const char* ip, int port);
+int http_server_destroy(http_server_t* http);
 
 // Request
 
@@ -41,7 +51,7 @@ int http_server_get_client(http_session_t* session, char ip[65], unsigned short 
 /// @param[in] code HTTP status-code(200-OK, 301-Move Permanently, ...)
 /// @param[in] bundle create by http_bundle_alloc
 /// @return 0-ok, other-error
-int http_server_send(http_session_t* session, int code, void* bundle);
+int http_server_send(http_session_t* session, int code, const void* data, size_t bytes, http_server_onsend onsend, void* param);
 
 /// Reply
 /// @param[in] session handle callback session parameter
@@ -49,14 +59,15 @@ int http_server_send(http_session_t* session, int code, void* bundle);
 /// @param[in] bundles bundle array
 /// @param[in] num array elementary number
 /// @return 0-ok, other-error
-int http_server_send_vec(http_session_t* session, int code, void** bundles, int num);
+int http_server_send_vec(http_session_t* session, int code, const struct http_vec_t* vec, size_t num, http_server_onsend onsend, void* param);
 
 /// Reply a server side file(must be local regular file)
 /// @param[in] session handle callback session parameter
 /// @param[in] code HTTP status-code(200-OK, 301-Move Permanently, ...)
 /// @param[in] localpath local regular file pathname
+/// @param[in] filename Content-Disposition attachment filename. NULL-use localpath name
 /// @return 0-ok, other-error
-int http_server_send_file(http_session_t* session, const char* localpath);
+int http_server_sendfile(http_session_t* session, const char* localpath, const char* filename, http_server_onsend onsend, void* param);
 
 /// Set response http header field(every reply must set it again)
 /// @param[in] session handle callback session parameter
@@ -94,13 +105,7 @@ typedef int (*http_server_handler)(void* param, http_session_t* session, const c
 /// @param[in] handler callback function
 /// @param[in] param user-defined parameter
 /// @return 0-ok, other-error
-int http_server_set_handler(void* http, http_server_handler handler, void* param);
-
-// Bundle
-void* http_bundle_alloc(size_t size);
-int http_bundle_free(void* bundle);
-void* http_bundle_lock(void* bundle);
-int http_bundle_unlock(void* bundle, size_t size);
+int http_server_set_handler(http_server_t* http, http_server_handler handler, void* param);
 
 #ifdef __cplusplus
 }

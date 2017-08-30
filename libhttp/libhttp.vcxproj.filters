@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\http-bundle.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\http-client-connection-aio.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -60,11 +57,17 @@
     <ClCompile Include="source\http-header-authorization.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\http-server-reply.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\http-server-sendfile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\http-server-route.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\http-bundle.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\http-client-connect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -86,9 +89,6 @@
     <ClInclude Include="include\http-request.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\http-server-internal.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\http-server.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -100,6 +100,12 @@
     </ClInclude>
     <ClInclude Include="include\http-header-auth.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http-route.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\http-server-internal.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
