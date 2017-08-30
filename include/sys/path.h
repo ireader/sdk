@@ -158,7 +158,7 @@ static inline int path_rename(const char* oldpath, const char* newpath)
 
 /// get file size in bytes
 /// return file size
-static inline long path_filesize(const char* filename)
+static inline off_t path_filesize(const char* filename)
 {
 	struct stat info;
 	return (stat(filename, &info)==0 && (info.st_mode&S_IFREG)) ? info.st_size : 0;
