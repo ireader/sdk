@@ -3,6 +3,10 @@
 
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct http_header_media_parameter
 {
 	const char* name;
@@ -29,4 +33,7 @@ struct http_header_content_type_t
 ///		check(r)
 int http_header_content_type(const char* field, struct http_header_content_type_t* content);
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* !_http_header_content_type_h_ */
