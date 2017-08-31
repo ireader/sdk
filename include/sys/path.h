@@ -16,6 +16,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdint.h>
 #include <sys/stat.h>
 
 /// test file
@@ -158,10 +159,24 @@ static inline int path_rename(const char* oldpath, const char* newpath)
 
 /// get file size in bytes
 /// return file size
-static inline off_t path_filesize(const char* filename)
+static inline int64_t path_filesize(const char* filename)
 {
-	struct stat info;
-	return (stat(filename, &info)==0 && (info.st_mode&S_IFREG)) ? info.st_size : 0;
+#if defined(OS_WINDOWS)
+	struct _stat64 st;
+	if (0 == _stat64(filename, &st) && (st.st_mode & S_IFREG))
+		return st.st_size;
+	return -1;
+#elif defined(OS_LINUX)
+	struct stat64 st;
+	if (0 == stat64(filename, &st) && (st.st_mode & S_IFREG))
+		return st.st_size;
+	return -1;
+#else
+	struct stat st;
+	if (0 == stat(filename, &st) && (st.st_mode & S_IFREG))
+		return st.st_size;
+	return -1;
+#endif
 }
 
 #endif /* !_platform_path_h_ */
