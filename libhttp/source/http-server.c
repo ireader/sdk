@@ -9,10 +9,6 @@
 
 #define CONTENT_LENGTH_LEN 32
 
-#if defined(OS_WINDOWS)
-#define strcasecmp	_stricmp
-#endif
-
 static void http_server_onaccept(void* param, int code, socket_t socket, const struct sockaddr* addr, socklen_t addrlen)
 {
 	struct http_server_t *server;
@@ -109,12 +105,6 @@ int http_server_get_content(struct http_session_t *session, void **content, size
 
 int http_server_set_header(struct http_session_t *session, const char* name, const char* value)
 {
-	// check http header
-	if (0 == strcasecmp(name, "Transfer-Encoding") && 0 == strcasecmp("chunked", value))
-		session->http_transfer_encoding = 1;
-	else if (0 == strcasecmp(name, "Content-Length"))
-		return 0;
-
 	return http_session_add_header(session, name, value, strlen(value?value:""));
 }
 
@@ -123,7 +113,6 @@ int http_server_set_header_int(struct http_session_t *session, const char* name,
 	int len;
 	char str[64];
 	len = snprintf(str, sizeof(str), "%d", value);
-	assert(0 != strcasecmp("Content-Length", name));
 	return http_session_add_header(session, name, str, len);
 }
 

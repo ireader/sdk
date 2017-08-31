@@ -1,11 +1,14 @@
 #include "http-server-internal.h"
+#include "http-header-range.h"
+#include "rfc822-datetime.h"
 #include "sys/path.h"
+#include "ctypedef.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 
-#define N_SENDFILE 65535
+#define N_SENDFILE (2 * 1024 * 1024)
 
 struct http_sendfile_t
 {
@@ -13,47 +16,105 @@ struct http_sendfile_t
 	http_server_onsend onsend;
 	void* param;
 
+	int code;
 	FILE* fp;
+	size_t capacity;
 	size_t bytes;
-	size_t total;
+	size_t sent;
+	int64_t total;
 	uint8_t* ptr;
-	int eof;
 };
 
-static void http_server_readfile(struct http_sendfile_t* sendfile)
+static struct http_sendfile_t* http_file_open(const char* filename)
 {
+	FILE* fp;
+	int64_t size;
+	size_t capacity;
+	struct http_sendfile_t* sendfile;
+
+	size = path_filesize(filename);
+	fp = fopen(filename, "rb");
+	if (NULL == fp || size < 0)
+		return NULL;
+
+	capacity = (size_t)(size < N_SENDFILE ? size : N_SENDFILE);
+	sendfile = (struct http_sendfile_t*)malloc(sizeof(*sendfile) + capacity + 10);
+	if (NULL == sendfile)
+	{
+		fclose(fp);
+		return NULL;
+	}
+
+	memset(sendfile, 0, sizeof(*sendfile));
+	sendfile->fp = fp;
+	sendfile->ptr = (uint8_t*)(sendfile + 1);
+	sendfile->total = size;
+	sendfile->capacity = capacity;
+	sendfile->code = 200;
+	return sendfile;
+}
+
+static void http_file_close(struct http_sendfile_t* sendfile)
+{
+	if (sendfile->fp)
+	{
+		fclose(sendfile->fp);
+		sendfile->fp = NULL;
+	}
+	free(sendfile);
+}
+
+static void http_file_read(struct http_sendfile_t* sendfile)
+{
+	size_t size;
 	static const char* hex = "0123456789ABCDEF";
 
-	sendfile->bytes = fread(sendfile->ptr + 6, 1, N_SENDFILE, sendfile->fp);
-	if (0 == sendfile->bytes)
-	{
-		// last-chunk
-		sendfile->ptr[0] = 0; // length
-		sendfile->ptr[1] = 0;
-		sendfile->ptr[2] = 0;
-		sendfile->ptr[3] = 0;
-		sendfile->ptr[4] = '\r';
-		sendfile->ptr[5] = '\n';
+	size = sendfile->total > sendfile->capacity ? sendfile->capacity : sendfile->total;
 
-		// \r\n
-		sendfile->ptr[6] = '\r';
-		sendfile->ptr[7] = '\n';
-		sendfile->bytes = 8;
-		sendfile->eof = 1;
+	if (1 == sendfile->session->http_transfer_encoding_flag)
+	{
+		sendfile->bytes = fread(sendfile->ptr + 8, 1, size, sendfile->fp);
+		sendfile->sent += sendfile->bytes;
+
+		if (0 == sendfile->bytes)
+		{
+			// last-chunk
+			sendfile->ptr[0] = 0; // length
+			sendfile->ptr[1] = 0;
+			sendfile->ptr[2] = 0;
+			sendfile->ptr[3] = 0;
+			sendfile->ptr[4] = 0;
+			sendfile->ptr[5] = 0;
+			sendfile->ptr[6] = '\r';
+			sendfile->ptr[7] = '\n';
+
+			// \r\n
+			sendfile->ptr[8] = '\r';
+			sendfile->ptr[9] = '\n';
+			sendfile->bytes = 10;
+		}
+		else
+		{
+			// chunk
+			assert(sendfile->bytes < (1 << 24));
+			sendfile->ptr[0] = (uint8_t)hex[(sendfile->bytes >> 20) & 0x0F];
+			sendfile->ptr[1] = (uint8_t)hex[(sendfile->bytes >> 16) & 0x0F];
+			sendfile->ptr[2] = (uint8_t)hex[(sendfile->bytes >> 12) & 0x0F];
+			sendfile->ptr[3] = (uint8_t)hex[(sendfile->bytes >> 8) & 0x0F];
+			sendfile->ptr[4] = (uint8_t)hex[(sendfile->bytes >> 4) & 0x0F];
+			sendfile->ptr[5] = (uint8_t)hex[sendfile->bytes & 0x0F];
+			sendfile->ptr[6] = '\r';
+			sendfile->ptr[7] = '\n';
+			sendfile->ptr[sendfile->bytes + 8] = '\r';
+			sendfile->ptr[sendfile->bytes + 9] = '\n';
+			sendfile->bytes += 10;
+		}
 	}
 	else
 	{
-		// chunk
-		sendfile->ptr[0] = (uint8_t)hex[(sendfile->bytes >> 12) & 0x0F];
-		sendfile->ptr[1] = (uint8_t)hex[(sendfile->bytes >> 8) & 0x0F];
-		sendfile->ptr[2] = (uint8_t)hex[(sendfile->bytes >> 4) & 0x0F];
-		sendfile->ptr[3] = (uint8_t)hex[sendfile->bytes & 0x0F];
-		sendfile->ptr[4] = '\r';
-		sendfile->ptr[5] = '\n';
-		sendfile->ptr[sendfile->bytes + 6] = '\r';
-		sendfile->ptr[sendfile->bytes + 7] = '\n';
-		sendfile->bytes += 8;
-	}	
+		sendfile->bytes = fread(sendfile->ptr, 1, sendfile->capacity, sendfile->fp);
+		sendfile->sent += sendfile->bytes;
+	}
 }
 
 static void http_server_onsendfile(void* param, int code, size_t bytes)
@@ -64,61 +125,119 @@ static void http_server_onsendfile(void* param, int code, size_t bytes)
 	if (0 == code)
 	{
 		assert(sendfile->bytes <= bytes); // bytes: http header + content
-		sendfile->total += sendfile->bytes - 8;
-		if (1 == sendfile->eof)
+		if (sendfile->sent == sendfile->total)
 		{
 			if (sendfile->onsend)
-				sendfile->onsend(sendfile->param, 0, sendfile->total);
-			fclose(sendfile->fp);
-			free(sendfile);
+				sendfile->onsend(sendfile->param, 0, (size_t)sendfile->total);
+			http_file_close(sendfile);
 			return;
 		}
 		
-		http_server_readfile(sendfile);
+		http_file_read(sendfile);
 		code = aio_tcp_transport_send(sendfile->session->transport, sendfile->ptr, sendfile->bytes);
 	}
 
 	if(0 != code)
 	{
 		if (sendfile->onsend)
-			sendfile->onsend(sendfile->param, code, sendfile->total);
-		fclose(sendfile->fp);
-		free(sendfile);
+			sendfile->onsend(sendfile->param, code, 0);
+		http_file_close(sendfile);
 	}
+}
+
+static int http_session_range(struct http_sendfile_t* sendfile)
+{
+	int n;
+	const char* prange;
+	struct http_header_range_t range[3];
+
+	prange = http_server_get_header(sendfile->session, "Range");
+	if (prange)
+	{
+		n = http_header_range(prange, range, 3);
+		if (1 != n || 0 == sendfile->total)
+			return -1;
+
+		if (-1 == range[0].start)
+		{
+			// rewind
+			if (-1 == range[0].end || 0 == range[0].end)
+				return -1;
+
+			range[0].start = (sendfile->total >= range[0].end) ? sendfile->total - range[0].end : 0;
+			range[0].end = sendfile->total - 1;
+		}
+		else
+		{
+			// seek
+			if (range[0].start >= sendfile->total)
+				return -1;
+
+			if (-1 != range[0].end)
+			{
+				// If the last-byte-pos value is absent, or if the value is greater than or equal to the current length of the entity-body,
+				// last-byte-pos is taken to be equal to one less than the current length of the entity-body in bytes.
+				if (range[0].end >= sendfile->total)
+					range[0].end = sendfile->total - 1;
+			}
+			else
+			{
+				range[0].end = sendfile->total - 1;
+			}
+		}
+
+		assert(range[0].start <= range[0].end);
+		n = snprintf((char*)sendfile->ptr, sendfile->capacity, "bytes %" PRId64 "-%" PRId64 "/%" PRId64, range[0].start, range[0].end, sendfile->total);
+		http_session_add_header(sendfile->session, "Content-Range", (char*)sendfile->ptr, n);
+
+		fseek(sendfile->fp, range[0].start, SEEK_SET);
+		sendfile->total = range[0].end + 1 - range[0].start;
+		assert(sendfile->total > 0);
+		sendfile->code = 206;
+	}
+
+	return 0;
 }
 
 int http_server_sendfile(struct http_session_t* session, const char* localpath, const char* filename, http_server_onsend onsend, void* param)
 {
 	int n;
-	FILE* fp;
-	char content_disposition[512];
 	struct http_sendfile_t* sendfile;
 
-	n = snprintf(content_disposition, sizeof(content_disposition), "attachment; filename=\"%s\"", filename ? filename : path_basename(localpath));
-
-	fp = fopen(localpath, "rb");
-	if (NULL == fp)
-		return -ENOENT;
-
-	sendfile = (struct http_sendfile_t*)malloc(sizeof(*sendfile) + N_SENDFILE + 8);
+	sendfile = http_file_open(localpath);
 	if (NULL == sendfile)
-	{
-		fclose(fp);
-		return -ENOMEM;
-	}
+		return -ENOENT;
 
 	sendfile->session = session;
 	sendfile->onsend = onsend;
 	sendfile->param = param;
-	sendfile->fp = fp;
-	sendfile->ptr = (uint8_t*)(sendfile + 1);
-	sendfile->total = 0;
-	sendfile->eof = 0;
-	http_server_readfile(sendfile);
 
-	http_server_set_header(session, "Transfer-Encoding", "chunked");
-	http_server_set_header(session, "Content-Disposition", content_disposition);
-	http_server_set_content_type(session, "application/octet-stream"); // add MIME
+	if (0 != http_session_range(sendfile))
+	{
+		// 416 Requested Range Not Satisfiable
+		return http_server_send(sendfile->session, 416, NULL, 0, NULL, NULL);
+	}
 
-	return http_server_send(session, 200, sendfile->ptr, sendfile->bytes, http_server_onsendfile, sendfile);
+	if (0 == session->http_content_length_flag)
+	{
+		n = snprintf((char*)sendfile->ptr, sendfile->capacity, "%" PRId64, sendfile->total);
+		http_session_add_header(session, "Content-Length", (char*)sendfile->ptr, n);
+	}
+
+	if (0)
+	{
+		n = snprintf((char*)sendfile->ptr, sendfile->capacity, "attachment; filename=\"%s\"", filename ? filename : path_basename(localpath));
+		http_session_add_header(session, "Content-Disposition", (char*)sendfile->ptr, n);
+	}
+
+	rfc822_datetime_t datetime;
+	rfc822_datetime_format(time(NULL), datetime);
+	http_server_set_header(session, "Date", datetime);
+
+	//http_server_set_content_type(session, "application/octet-stream"); // add MIME
+	http_server_set_content_type(session, "video/mp4"); // add MIME
+
+	http_file_read(sendfile);
+
+	return http_server_send(session, sendfile->code, sendfile->ptr, sendfile->bytes, http_server_onsendfile, sendfile);
 }

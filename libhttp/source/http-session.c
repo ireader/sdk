@@ -10,6 +10,7 @@
 #if defined(OS_WINDOWS)
 #define iov_base	buf
 #define iov_len		len
+#define strcasecmp	_stricmp
 #endif
 
 static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int count);
@@ -134,13 +135,14 @@ int http_server_send_vec(struct http_session_t *session, int code, const struct 
 	if (r < 0) 
 		return r;
 
-	// HTTP Response Header
-	if (0 == session->http_transfer_encoding)
+	// Content-Length
+	if (0 == session->http_content_length_flag)
 	{
 		r = snprintf(content_length, sizeof(content_length), "%d", r);
 		http_session_add_header(session, "Content-Length", content_length, r);
 	}
 
+	// HTTP Response Header
 	r = snprintf(session->status_line, sizeof(session->status_line), "HTTP/1.1 %d %s\r\n", code, http_reason_phrase(code));
 	socket_setbufvec(session->vec, 0, session->status_line, r);
 	socket_setbufvec(session->vec, 1, session->header, session->header_size);
@@ -220,5 +222,16 @@ int http_session_add_header(struct http_session_t* session, const char* name, co
 	}
 
 	session->header_size += snprintf(session->header + session->header_size, session->header_capacity - session->header_size, "%s: %s\r\n", name, value ? value : "");
+	
+	// check http header
+	if (0 == strcasecmp(name, "Transfer-Encoding") && 0 == strcasecmp("chunked", value))
+	{
+		session->http_transfer_encoding_flag = 1;
+		session->http_content_length_flag = 1; // don't need Content-Length
+	}
+	else if (0 == strcasecmp(name, "Content-Length"))
+	{
+		session->http_content_length_flag = 1;
+	}
 	return 0;
 }

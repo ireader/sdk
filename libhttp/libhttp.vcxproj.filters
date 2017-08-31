@@ -66,6 +66,12 @@
     <ClCompile Include="source\http-server-route.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\http-header-range.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rfc822-datetime.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\http-client-connect.h">
@@ -106,6 +112,12 @@
     </ClInclude>
     <ClInclude Include="source\http-server-internal.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http-header-range.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rfc822-datetime.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

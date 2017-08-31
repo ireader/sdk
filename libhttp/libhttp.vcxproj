@@ -140,6 +140,7 @@
     <ClCompile Include="source\http-header-authorization.c" />
     <ClCompile Include="source\http-header-content-type.c" />
     <ClCompile Include="source\http-header-host.c" />
+    <ClCompile Include="source\http-header-range.c" />
     <ClCompile Include="source\http-header-www-authenticate.c" />
     <ClCompile Include="source\http-parser.c" />
     <ClCompile Include="source\http-reason.c" />
@@ -150,6 +151,7 @@
     <ClCompile Include="source\http-server.c" />
     <ClCompile Include="source\http-session.c" />
     <ClCompile Include="source\http-upload.c" />
+    <ClCompile Include="source\rfc822-datetime.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\http-client-connect.h" />
@@ -158,12 +160,14 @@
     <ClInclude Include="include\http-header-auth.h" />
     <ClInclude Include="include\http-header-content-type.h" />
     <ClInclude Include="include\http-header-host.h" />
+    <ClInclude Include="include\http-header-range.h" />
     <ClInclude Include="include\http-parser.h" />
     <ClInclude Include="include\http-reason.h" />
     <ClInclude Include="include\http-request.h" />
     <ClInclude Include="include\http-route.h" />
     <ClInclude Include="include\http-server.h" />
     <ClInclude Include="include\http-upload.h" />
+    <ClInclude Include="include\rfc822-datetime.h" />
     <ClInclude Include="source\http-server-internal.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
