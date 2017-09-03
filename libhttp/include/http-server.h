@@ -65,9 +65,8 @@ int http_server_send_vec(http_session_t* session, int code, const struct http_ve
 /// @param[in] session handle callback session parameter
 /// @param[in] code HTTP status-code(200-OK, 301-Move Permanently, ...)
 /// @param[in] localpath local regular file pathname
-/// @param[in] filename Content-Disposition attachment filename. NULL-use localpath name
 /// @return 0-ok, other-error
-int http_server_sendfile(http_session_t* session, const char* localpath, const char* filename, http_server_onsend onsend, void* param);
+int http_server_sendfile(http_session_t* session, const char* localpath, http_server_onsend onsend, void* param);
 
 /// Set response http header field(every reply must set it again)
 /// @param[in] session handle callback session parameter

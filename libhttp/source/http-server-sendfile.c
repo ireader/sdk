@@ -69,7 +69,7 @@ static void http_file_read(struct http_sendfile_t* sendfile)
 	size_t size;
 	static const char* hex = "0123456789ABCDEF";
 
-	size = sendfile->total > sendfile->capacity ? sendfile->capacity : sendfile->total;
+	size = (size_t)(sendfile->total > sendfile->capacity ? sendfile->capacity : sendfile->total);
 
 	if (1 == sendfile->session->http_transfer_encoding_flag)
 	{
@@ -194,12 +194,19 @@ static int http_session_range(struct http_sendfile_t* sendfile)
 		sendfile->total = range[0].end + 1 - range[0].start;
 		assert(sendfile->total > 0);
 		sendfile->code = 206;
+
+		// add Date header
+		rfc822_datetime_t datetime;
+		rfc822_datetime_format(time(NULL), datetime);
+		http_server_set_header(sendfile->session, "Date", datetime);
+
+		// TODO: add cache control here
 	}
 
 	return 0;
 }
 
-int http_server_sendfile(struct http_session_t* session, const char* localpath, const char* filename, http_server_onsend onsend, void* param)
+int http_server_sendfile(struct http_session_t* session, const char* localpath, http_server_onsend onsend, void* param)
 {
 	int n;
 	struct http_sendfile_t* sendfile;
@@ -223,19 +230,6 @@ int http_server_sendfile(struct http_session_t* session, const char* localpath, 
 		n = snprintf((char*)sendfile->ptr, sendfile->capacity, "%" PRId64, sendfile->total);
 		http_session_add_header(session, "Content-Length", (char*)sendfile->ptr, n);
 	}
-
-	if (0)
-	{
-		n = snprintf((char*)sendfile->ptr, sendfile->capacity, "attachment; filename=\"%s\"", filename ? filename : path_basename(localpath));
-		http_session_add_header(session, "Content-Disposition", (char*)sendfile->ptr, n);
-	}
-
-	rfc822_datetime_t datetime;
-	rfc822_datetime_format(time(NULL), datetime);
-	http_server_set_header(session, "Date", datetime);
-
-	//http_server_set_content_type(session, "application/octet-stream"); // add MIME
-	http_server_set_content_type(session, "video/mp4"); // add MIME
 
 	http_file_read(sendfile);
 
