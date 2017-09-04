@@ -52,6 +52,13 @@ static void http_session_ondestroy(void* param)
 	free(session);
 }
 
+static void http_session_reset(struct http_session_t *session)
+{
+	session->header_size = 0;
+	session->http_content_length_flag = 0;
+	session->http_transfer_encoding_flag = 0;
+}
+
 static void http_session_onrecv(void* param, const void* data, size_t bytes)
 {
 	int r;
@@ -66,7 +73,7 @@ static void http_session_onrecv(void* param, const void* data, size_t bytes)
 		if (0 == r)
 		{
 			// clear for save user-defined header
-			session->header_size = 0;
+			http_session_reset(session);
 
 			// call
 			// user must reply(send/send_vec/send_file) in handle
