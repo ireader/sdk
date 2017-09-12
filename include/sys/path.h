@@ -166,11 +166,6 @@ static inline int64_t path_filesize(const char* filename)
 	if (0 == _stat64(filename, &st) && (st.st_mode & S_IFREG))
 		return st.st_size;
 	return -1;
-#elif defined(OS_LINUX)
-	struct stat64 st;
-	if (0 == stat64(filename, &st) && (st.st_mode & S_IFREG))
-		return st.st_size;
-	return -1;
 #else
 	struct stat st;
 	if (0 == stat(filename, &st) && (st.st_mode & S_IFREG))
