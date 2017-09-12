@@ -2,6 +2,7 @@
 #define _http_header_range_h_
 
 #include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
