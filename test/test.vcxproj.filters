@@ -1,0 +1,246 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="lib">
+      <UniqueIdentifier>{091163db-caf3-497d-9f62-bcb3671f633a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="librtsp">
+      <UniqueIdentifier>{c1b91e45-b061-4096-a9f3-b470be315e76}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libsdp">
+      <UniqueIdentifier>{8ae1eff4-245b-474d-8ef8-4102d5ecac28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="string">
+      <UniqueIdentifier>{49e52bf1-5c3d-4982-b26e-b10c7b8f7525}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="epoll">
+      <UniqueIdentifier>{381b9c70-c68b-4cb7-a4df-76223c4c7e09}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="aio-socket-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aio-socket-test2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aio-socket-test3.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aio-socket-test4.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="atomic-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="atomic-test2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="event-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="http-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ip-route-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="locker-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rtsp-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sdp-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="semaphore-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="socket-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="spinlock-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stack-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="systimer-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="task-queue-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="thread-pool-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="unicode-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="url-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="utf8codec-test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\base64.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\crc32.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\html-entities.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\ip-route.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\md5.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\memory-dump.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\serial-port-win32.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\sysnetconfig.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\sysprocess.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\systimeconfig.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\systimer.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\sysvolume.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\task-queue.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\thread-pool.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\time64.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\tools.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\unicode.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\url.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\urlcodec.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\win32-async-pipe.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\media-server\librtsp\source\rtsp-header-range.c">
+      <Filter>librtsp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\media-server\librtsp\source\rtsp-header-rtp-info.c">
+      <Filter>librtsp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\media-server\librtsp\source\rtsp-header-session.c">
+      <Filter>librtsp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\media-server\librtsp\source\rtsp-header-transport.c">
+      <Filter>librtsp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\media-server\librtsp\source\sdp-a-fmtp.c">
+      <Filter>libsdp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\media-server\librtsp\source\sdp-a-rtpmap.c">
+      <Filter>libsdp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\media-server\librtsp\source\sdp.c">
+      <Filter>libsdp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\string\snprintf.c">
+      <Filter>string</Filter>
+    </ClCompile>
+    <ClCompile Include="..\string\strlcat.c">
+      <Filter>string</Filter>
+    </ClCompile>
+    <ClCompile Include="..\string\strlcpy.c">
+      <Filter>string</Filter>
+    </ClCompile>
+    <ClCompile Include="..\string\strndup.c">
+      <Filter>string</Filter>
+    </ClCompile>
+    <ClCompile Include="onetime-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\bits.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\ntp-time.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\sysreboot.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\sysntpconfig.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\string\strtoken.c">
+      <Filter>string</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\ring-buffer.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\uri-parse.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="uri-parse-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aio-socket-test-cancel.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\algorithm\rbtree.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\algorithm\heap.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="rbtree-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\timer.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="timer-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\uri-parse.h">
+      <Filter>lib</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

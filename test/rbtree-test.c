@@ -177,5 +177,5 @@ void rbtree_test(void)
 		rbtree_delete(&root, parent);
 		rbtree_validate(&root);
 	}
-	printf(".");
+	printf("rb-tree test ok\n");
 }

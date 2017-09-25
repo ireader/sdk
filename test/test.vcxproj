@@ -1,0 +1,178 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{8DDF8E0A-A452-41A9-81AB-81EF44E52A2E}</ProjectGuid>
+    <RootNamespace>test</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>14.0.24730.2</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>../include;../libhttp/include;../libaio/include;../../media-server/librtsp/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;OS_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader />
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>../include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PrecompiledHeader />
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\media-server\librtsp\source\rtsp-header-range.c" />
+    <ClCompile Include="..\..\media-server\librtsp\source\rtsp-header-rtp-info.c" />
+    <ClCompile Include="..\..\media-server\librtsp\source\rtsp-header-session.c" />
+    <ClCompile Include="..\..\media-server\librtsp\source\rtsp-header-transport.c" />
+    <ClCompile Include="..\..\media-server\librtsp\source\sdp-a-fmtp.c" />
+    <ClCompile Include="..\..\media-server\librtsp\source\sdp-a-rtpmap.c" />
+    <ClCompile Include="..\..\media-server\librtsp\source\sdp.c" />
+    <ClCompile Include="..\algorithm\heap.c" />
+    <ClCompile Include="..\algorithm\rbtree.c" />
+    <ClCompile Include="..\source\base64.c" />
+    <ClCompile Include="..\source\bits.c" />
+    <ClCompile Include="..\source\crc32.c" />
+    <ClCompile Include="..\source\html-entities.c" />
+    <ClCompile Include="..\source\ip-route.c" />
+    <ClCompile Include="..\source\md5.c" />
+    <ClCompile Include="..\source\memory-dump.c" />
+    <ClCompile Include="..\source\ntp-time.c" />
+    <ClCompile Include="..\source\ring-buffer.c" />
+    <ClCompile Include="..\source\serial-port-win32.c" />
+    <ClCompile Include="..\source\sysnetconfig.c" />
+    <ClCompile Include="..\source\sysntpconfig.c" />
+    <ClCompile Include="..\source\sysprocess.c" />
+    <ClCompile Include="..\source\sysreboot.c" />
+    <ClCompile Include="..\source\systimeconfig.c" />
+    <ClCompile Include="..\source\systimer.c" />
+    <ClCompile Include="..\source\sysvolume.cpp" />
+    <ClCompile Include="..\source\task-queue.c" />
+    <ClCompile Include="..\source\thread-pool.c" />
+    <ClCompile Include="..\source\time64.c" />
+    <ClCompile Include="..\source\timer.c" />
+    <ClCompile Include="..\source\tools.c" />
+    <ClCompile Include="..\source\unicode.c" />
+    <ClCompile Include="..\source\uri-parse.c" />
+    <ClCompile Include="..\source\url.c" />
+    <ClCompile Include="..\source\urlcodec.c" />
+    <ClCompile Include="..\source\win32-async-pipe.c" />
+    <ClCompile Include="..\string\snprintf.c" />
+    <ClCompile Include="..\string\strlcat.c" />
+    <ClCompile Include="..\string\strlcpy.c" />
+    <ClCompile Include="..\string\strndup.c" />
+    <ClCompile Include="..\string\strtoken.c" />
+    <ClCompile Include="aio-socket-test-cancel.c" />
+    <ClCompile Include="aio-socket-test.c" />
+    <ClCompile Include="aio-socket-test2.c" />
+    <ClCompile Include="aio-socket-test3.c" />
+    <ClCompile Include="aio-socket-test4.c" />
+    <ClCompile Include="atomic-test.c" />
+    <ClCompile Include="atomic-test2.c" />
+    <ClCompile Include="event-test.c" />
+    <ClCompile Include="http-test.c" />
+    <ClCompile Include="ip-route-test.c" />
+    <ClCompile Include="locker-test.c" />
+    <ClCompile Include="main.c">
+      <CallingConvention Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Cdecl</CallingConvention>
+    </ClCompile>
+    <ClCompile Include="onetime-test.c" />
+    <ClCompile Include="rbtree-test.c" />
+    <ClCompile Include="rtsp-test.c" />
+    <ClCompile Include="sdp-test.c" />
+    <ClCompile Include="semaphore-test.c" />
+    <ClCompile Include="socket-test.c" />
+    <ClCompile Include="spinlock-test.c" />
+    <ClCompile Include="stack-test.c" />
+    <ClCompile Include="systimer-test.c" />
+    <ClCompile Include="task-queue-test.c" />
+    <ClCompile Include="thread-pool-test.c" />
+    <ClCompile Include="timer-test.c" />
+    <ClCompile Include="unicode-test.c" />
+    <ClCompile Include="uri-parse-test.c" />
+    <ClCompile Include="url-test.c" />
+    <ClCompile Include="utf8codec-test.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\uri-parse.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\libaio\libaio.vcxproj">
+      <Project>{24239ef8-56ac-4b79-81aa-5cb49b8b1178}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\libhttp\libhttp.vcxproj">
+      <Project>{b2ca3b5d-f7c6-4daf-8f32-f8a169427a7c}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

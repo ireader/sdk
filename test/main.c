@@ -12,6 +12,10 @@
 #define SDP_TEST
 #endif
 
+void heap_test(void);
+void rbtree_test(void);
+void timer_test(void);
+
 void socket_test(void);
 void locker_test(void);
 void atomic_test(void);
@@ -56,6 +60,10 @@ void sdp_test(void);
 
 int main(int argc, char* argv[])
 {
+	heap_test();
+	rbtree_test();
+	timer_test();
+
 	socket_test();
 	locker_test();
 	atomic_test();

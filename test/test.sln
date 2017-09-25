@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tcp-server", "tcp\tcp-serve
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libhttp", "..\libhttp\libhttp.vcxproj", "{B2CA3B5D-F7C6-4DAF-8F32-F8A169427A7C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libaio", "..\libaio\libaio.vcxproj", "{24239EF8-56AC-4B79-81AA-5CB49B8B1178}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -53,6 +55,14 @@ Global
 		{B2CA3B5D-F7C6-4DAF-8F32-F8A169427A7C}.Release|Win32.Build.0 = Release|Win32
 		{B2CA3B5D-F7C6-4DAF-8F32-F8A169427A7C}.Release|x64.ActiveCfg = Release|x64
 		{B2CA3B5D-F7C6-4DAF-8F32-F8A169427A7C}.Release|x64.Build.0 = Release|x64
+		{24239EF8-56AC-4B79-81AA-5CB49B8B1178}.Debug|Win32.ActiveCfg = Debug|Win32
+		{24239EF8-56AC-4B79-81AA-5CB49B8B1178}.Debug|Win32.Build.0 = Debug|Win32
+		{24239EF8-56AC-4B79-81AA-5CB49B8B1178}.Debug|x64.ActiveCfg = Debug|x64
+		{24239EF8-56AC-4B79-81AA-5CB49B8B1178}.Debug|x64.Build.0 = Debug|x64
+		{24239EF8-56AC-4B79-81AA-5CB49B8B1178}.Release|Win32.ActiveCfg = Release|Win32
+		{24239EF8-56AC-4B79-81AA-5CB49B8B1178}.Release|Win32.Build.0 = Release|Win32
+		{24239EF8-56AC-4B79-81AA-5CB49B8B1178}.Release|x64.ActiveCfg = Release|x64
+		{24239EF8-56AC-4B79-81AA-5CB49B8B1178}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
