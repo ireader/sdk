@@ -1,15 +1,34 @@
-#ifndef _platform_timer_h_
-#define _platform_timer_h_
+#ifndef _timer_h_
+#define _timer_h_
 
-typedef void*			timer_t;
-#define timer_invalid	NULL
+#include <stdint.h>
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
-typedef void (*fcbTimer)(timer_t id, void* param);
-int timer_create(timer_t* id, int period, fcbTimer callback, void* param);
-int timer_destroy(timer_t id);
+struct timer_t
+{
+	uint64_t expire; // expire clock time
 
-int timer_setperiod(timer_t id, int period);
-int timer_getperiod(timer_t id, int* period);
+	struct timer_t* next;
+	struct timer_t** pprev;
 
-#endif /* !_platform_timer_h_ */
+	void (*ontimeout)(void* param);
+	void* param;
+};
+
+int timer_init(uint64_t clock);
+int timer_clean(void);
+
+/// @return 0-ok, other-error
+int timer_start(struct timer_t* timer, uint64_t clock);
+void timer_stop(struct timer_t* timer);
+
+/// @return sleep time(ms)
+int timer_process(uint64_t clock);
+
+#if defined(__cplusplus)
+}
+#endif
+#endif /* !_timer_h_ */
