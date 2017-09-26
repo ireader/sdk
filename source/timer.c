@@ -120,7 +120,7 @@ void timer_stop(struct timer_t* timer)
 int timer_process(uint64_t clock)
 {
 	int index;
-	struct timer_t* timer, *next;
+	struct timer_t* timer;
 	struct time_bucket_t bucket;
 
 	spinlock_lock(&s_wheel.locker);
@@ -138,12 +138,17 @@ int timer_process(uint64_t clock)
 
 		// move bucket
 		bucket.first = s_wheel.tv1[index].first;
+		if (bucket.first)
+			bucket.first->pprev = &bucket.first;
 		s_wheel.tv1[index].first = NULL; // clear
 
 		// trigger timer
-		for (timer = bucket.first; timer; timer = next)
+		while (bucket.first)
 		{
-			next = timer->next;
+			timer = bucket.first;
+			bucket.first = timer->next;
+			if (timer->next)
+				timer->pprev = &bucket.first;
 			timer->next = NULL;
 			timer->pprev = NULL;
 			if (timer->ontimeout)
@@ -166,6 +171,8 @@ static int timer_cascade(uint64_t clock, struct time_bucket_t* tv, int index)
 	struct timer_t* timer, *next;
 	struct time_bucket_t bucket;
 	bucket.first = tv[index].first;
+	if (bucket.first)
+		bucket.first->pprev = &bucket.first;
 	tv[index].first = NULL; // clear
 
 	for (timer = bucket.first; timer; timer = next)
