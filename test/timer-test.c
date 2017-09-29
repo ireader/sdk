@@ -19,6 +19,7 @@ static void ontimer(void* param)
 void timer_test(void)
 {
 	int i;
+	time_wheel_t* wheel;
 	struct timer_t* timer;
 
 	timer = (struct timer_t*)calloc(N, sizeof(*timer));
@@ -26,25 +27,26 @@ void timer_test(void)
 
 	now = time(NULL);
 	srand((int)now);
-	timer_init(now);
+	wheel = time_wheel_create(now);
 
 	for(i = 0; i < N; i++)
 	{
 		timer[i].ontimeout = ontimer;
 		timer[i].param = &timer[i];
 		timer[i].expire = now + rand();
-		timer_start(&timer[i], now);
+		timer_start(wheel, &timer[i], now);
 
-		timer_process(now);
+		timer_process(wheel, now);
 		now += rand() % 256;
 	}
 
 	while (count > 0)
 	{
-		timer_process(now);
+		timer_process(wheel, now);
 		now += rand() % 256;
 	}
 
 	free(timer);
+	time_wheel_destroy(wheel);
 	printf("timer test ok.\n");
 }

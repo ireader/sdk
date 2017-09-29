@@ -36,64 +36,68 @@ struct time_wheel_t
 	struct time_bucket_t tv5[TVN_SIZE];
 };
 
-static struct time_wheel_t s_wheel;
+static int timer_cascade(struct time_wheel_t* tm, uint64_t clock, struct time_bucket_t* tv, int index);
 
-static int timer_cascade(uint64_t clock, struct time_bucket_t* tv, int index);
-
-int timer_init(uint64_t clock)
+struct time_wheel_t* time_wheel_create(uint64_t clock)
 {
-	s_wheel.clock = clock;
-	return spinlock_create(&s_wheel.locker);
+	struct time_wheel_t* tm;
+	tm = (struct time_wheel_t*)calloc(1, sizeof(*tm));
+	if (tm)
+	{
+		tm->clock = clock;
+		spinlock_create(&tm->locker);
+	}
+	return tm;
 }
 
-int timer_clean(void)
+int time_wheel_destroy(struct time_wheel_t* tm)
 {
-	return spinlock_destroy(&s_wheel.locker);
+	return spinlock_destroy(&tm->locker);
 }
 
-int timer_start(struct timer_t* timer, uint64_t clock)
+int timer_start(struct time_wheel_t* tm, struct timer_t* timer, uint64_t clock)
 {
 	int i;
 	uint64_t diff;
 	struct time_bucket_t* tv;
 
 	assert(timer->ontimeout);
-	spinlock_lock(&s_wheel.locker);
+	spinlock_lock(&tm->locker);
 	diff = TIME(timer->expire - clock); // per 64ms
 
 	if (timer->expire < clock)
 	{
-		i = TIME(s_wheel.clock) & TVR_MASK;
-		tv = s_wheel.tv1 + i;
+		i = TIME(tm->clock) & TVR_MASK;
+		tv = tm->tv1 + i;
 	}
 	else if (diff < (1 << TVR_BITS))
 	{
 		i = TIME(timer->expire) & TVR_MASK;
-		tv = s_wheel.tv1 + i;
+		tv = tm->tv1 + i;
 	}
 	else if (diff < (1 << (TVR_BITS + TVN_BITS)))
 	{
 		i = (TIME(timer->expire) >> TVR_BITS) & TVN_MASK;
-		tv = s_wheel.tv2 + i;
+		tv = tm->tv2 + i;
 	}
 	else if (diff < (1 << (TVR_BITS + 2 * TVN_BITS)))
 	{
 		i = (TIME(timer->expire) >> (TVR_BITS + TVN_BITS)) & TVN_MASK;
-		tv = s_wheel.tv3 + i;
+		tv = tm->tv3 + i;
 	}
 	else if (diff < (1 << (TVR_BITS + 3 * TVN_BITS)))
 	{
 		i = (TIME(timer->expire) >> (TVR_BITS + 2 * TVN_BITS)) & TVN_MASK;
-		tv = s_wheel.tv4 + i;
+		tv = tm->tv4 + i;
 	}
 	else if (diff < (1ULL << (TVR_BITS + 4 * TVN_BITS)))
 	{
 		i = (TIME(timer->expire) >> (TVR_BITS + 3 * TVN_BITS)) & TVN_MASK;
-		tv = s_wheel.tv5 + i;
+		tv = tm->tv5 + i;
 	}
 	else
 	{
-		spinlock_unlock(&s_wheel.locker);
+		spinlock_unlock(&tm->locker);
 		assert(0); // excede max timeout value
 		return -1;
 	}
@@ -104,43 +108,43 @@ int timer_start(struct timer_t* timer, uint64_t clock)
 	if (timer->next)
 		timer->next->pprev = &timer->next;
 	tv->first = timer;
-	spinlock_unlock(&s_wheel.locker);
+	spinlock_unlock(&tm->locker);
 	return 0;
 }
 
-void timer_stop(struct timer_t* timer)
+void timer_stop(struct time_wheel_t* tm, struct timer_t* timer)
 {
-	spinlock_lock(&s_wheel.locker);
+	spinlock_lock(&tm->locker);
 	*timer->pprev = timer->next;
 	if(timer->next)
 		timer->next->pprev = timer->pprev;
-	spinlock_unlock(&s_wheel.locker);
+	spinlock_unlock(&tm->locker);
 }
 
-int timer_process(uint64_t clock)
+int timer_process(struct time_wheel_t* tm, uint64_t clock)
 {
 	int index;
 	struct timer_t* timer;
 	struct time_bucket_t bucket;
 
-	spinlock_lock(&s_wheel.locker);
-	while(s_wheel.clock < clock)
+	spinlock_lock(&tm->locker);
+	while(tm->clock < clock)
 	{
-		index = (int)(TIME(s_wheel.clock) & TVR_MASK);
+		index = (int)(TIME(tm->clock) & TVR_MASK);
 
 		if (0 == index 
-			&& 0 == timer_cascade(clock, s_wheel.tv2, TVN_INDEX(clock, 0))
-			&& 0 == timer_cascade(clock, s_wheel.tv3, TVN_INDEX(clock, 1))
-			&& 0 == timer_cascade(clock, s_wheel.tv4, TVN_INDEX(clock, 2)))
+			&& 0 == timer_cascade(tm, clock, tm->tv2, TVN_INDEX(clock, 0))
+			&& 0 == timer_cascade(tm, clock, tm->tv3, TVN_INDEX(clock, 1))
+			&& 0 == timer_cascade(tm, clock, tm->tv4, TVN_INDEX(clock, 2)))
 		{
-			timer_cascade(clock, s_wheel.tv5, TVN_INDEX(clock, 3));
+			timer_cascade(tm, clock, tm->tv5, TVN_INDEX(clock, 3));
 		}
 
 		// move bucket
-		bucket.first = s_wheel.tv1[index].first;
+		bucket.first = tm->tv1[index].first;
 		if (bucket.first)
 			bucket.first->pprev = &bucket.first;
-		s_wheel.tv1[index].first = NULL; // clear
+		tm->tv1[index].first = NULL; // clear
 
 		// trigger timer
 		while (bucket.first)
@@ -153,20 +157,20 @@ int timer_process(uint64_t clock)
 			timer->pprev = NULL;
 			if (timer->ontimeout)
 			{
-				spinlock_unlock(&s_wheel.locker);
+				spinlock_unlock(&tm->locker);
 				timer->ontimeout(timer->param);
-				spinlock_lock(&s_wheel.locker);
+				spinlock_lock(&tm->locker);
 			}
 		}
 
-		s_wheel.clock += (1 << TIME_RESOLUTION);
+		tm->clock += (1 << TIME_RESOLUTION);
 	}
 
-	spinlock_unlock(&s_wheel.locker);
-	return (int)(s_wheel.clock - clock);
+	spinlock_unlock(&tm->locker);
+	return (int)(tm->clock - clock);
 }
 
-static int timer_cascade(uint64_t clock, struct time_bucket_t* tv, int index)
+static int timer_cascade(struct time_wheel_t* tm, uint64_t clock, struct time_bucket_t* tv, int index)
 {
 	struct timer_t* timer, *next;
 	struct time_bucket_t bucket;
@@ -178,7 +182,7 @@ static int timer_cascade(uint64_t clock, struct time_bucket_t* tv, int index)
 	for (timer = bucket.first; timer; timer = next)
 	{
 		next = timer->next;
-		timer_start(timer, clock);
+		timer_start(tm, timer, clock);
 	}
 
 	return index;

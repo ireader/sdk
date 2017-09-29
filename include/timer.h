@@ -18,15 +18,17 @@ struct timer_t
 	void* param;
 };
 
-int timer_init(uint64_t clock);
-int timer_clean(void);
-
-/// @return 0-ok, other-error
-int timer_start(struct timer_t* timer, uint64_t clock);
-void timer_stop(struct timer_t* timer);
+typedef struct time_wheel_t time_wheel_t;
+time_wheel_t* time_wheel_create(uint64_t clock);
+int time_wheel_destroy(time_wheel_t* tm);
 
 /// @return sleep time(ms)
-int timer_process(uint64_t clock);
+int timer_process(time_wheel_t* tm, uint64_t clock);
+
+/// one-shoot timeout timer
+/// @return 0-ok, other-error
+int timer_start(time_wheel_t* tm, struct timer_t* timer, uint64_t clock);
+void timer_stop(time_wheel_t* tm, struct timer_t* timer);
 
 #if defined(__cplusplus)
 }
