@@ -56,10 +56,11 @@ void http_request_destroy(void* p)
 	free(req);
 }
 
-const char* http_request_get(void* p)
+const char* http_request_get(void* p, int* bytes)
 {
 	struct http_request_t *req;
 	req = (struct http_request_t *)p;
+	if(bytes) *bytes = (int)req->len;
 	return req->ptr;
 }
 
@@ -166,19 +167,19 @@ void http_request_test(void)
 	req = http_request_create(HTTP_1_1);
 
 	http_request_set_uri(req, HTTP_GET, "/hello");
-	assert(0 == strcmp("GET /hello HTTP/1.1\r\n\r\n", http_request_get(req)));
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\n\r\n", http_request_get(req, NULL)));
 	http_request_set_host(req, "127.0.0.1", 80);
-	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\n\r\n", http_request_get(req)));
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\n\r\n", http_request_get(req, NULL)));
 	http_request_set_cookie(req, "name=value");
-	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\n\r\n", http_request_get(req)));
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\n\r\n", http_request_get(req, NULL)));
 	http_request_set_header(req, "Accept", "en-us");
-	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\nAccept: en-us\r\n\r\n", http_request_get(req)));
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\nAccept: en-us\r\n\r\n", http_request_get(req, NULL)));
 	http_request_set_header_int(req, "Keep-Alive", 100);
-	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\nAccept: en-us\r\nKeep-Alive: 100\r\n\r\n", http_request_get(req)));
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\nAccept: en-us\r\nKeep-Alive: 100\r\n\r\n", http_request_get(req, NULL)));
 	http_request_set_content_type(req, "application/json");
-	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\nAccept: en-us\r\nKeep-Alive: 100\r\nContent-Type: application/json\r\n\r\n", http_request_get(req)));
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\nAccept: en-us\r\nKeep-Alive: 100\r\nContent-Type: application/json\r\n\r\n", http_request_get(req, NULL)));
 	http_request_set_content_lenth(req, 100);
-	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\nAccept: en-us\r\nKeep-Alive: 100\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n", http_request_get(req)));
+	assert(0 == strcmp("GET /hello HTTP/1.1\r\nHost: 127.0.0.1:80\r\nCookie: name=value\r\nAccept: en-us\r\nKeep-Alive: 100\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n", http_request_get(req, NULL)));
 
 	// test max-length header
 	memset(msg, '-', sizeof(msg)-1);

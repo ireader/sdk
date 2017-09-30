@@ -8,7 +8,7 @@ enum { HTTP_GET = 0, HTTP_POST };
 
 void* http_request_create(int version);
 void http_request_destroy(void* req);
-const char* http_request_get(void* req);
+const char* http_request_get(void* req, int* bytes);
 
 int http_request_set_uri(void* req, int method, const char* uri);
 int http_request_set_host(void* req, const char* ip, int port);
