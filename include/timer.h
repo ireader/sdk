@@ -28,7 +28,8 @@ int timer_process(time_wheel_t* tm, uint64_t clock);
 /// one-shoot timeout timer
 /// @return 0-ok, other-error
 int timer_start(time_wheel_t* tm, struct timer_t* timer, uint64_t clock);
-void timer_stop(time_wheel_t* tm, struct timer_t* timer);
+/// @return  0-ok, other-timer can't be stop(timer have triggered or will be triggered)
+int timer_stop(time_wheel_t* tm, struct timer_t* timer);
 
 #if defined(__cplusplus)
 }

@@ -112,13 +112,17 @@ int timer_start(struct time_wheel_t* tm, struct timer_t* timer, uint64_t clock)
 	return 0;
 }
 
-void timer_stop(struct time_wheel_t* tm, struct timer_t* timer)
+int timer_stop(struct time_wheel_t* tm, struct timer_t* timer)
 {
+	struct timer_t** pprev;
 	spinlock_lock(&tm->locker);
-	*timer->pprev = timer->next;
-	if(timer->next)
+	pprev = timer->pprev;
+	if (timer->pprev)
+		*timer->pprev = timer->next;
+	if (timer->next)
 		timer->next->pprev = timer->pprev;
 	spinlock_unlock(&tm->locker);
+	return pprev ? 0 : -1;
 }
 
 int timer_process(struct time_wheel_t* tm, uint64_t clock)
