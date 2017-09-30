@@ -33,6 +33,15 @@
     <ClCompile Include="..\source\aio-socket-iocp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\aio-recv.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\aio-send.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\timer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\aio-accept.h">
@@ -51,6 +60,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\aio-socket.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\aio-recv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\aio-send.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -15,7 +15,7 @@ struct aio_tcp_transport_handler_t
 	void (*ondestroy)(void* param);
 
 	/// @param[in] param user-defined pointer return by onconnected
-	void (*onrecv)(void* param, const void* data, size_t bytes);
+	void (*onrecv)(void* param, int code, size_t bytes);
 
 	/// @param[in] param user-defined pointer return by onconnected
 	void (*onsend)(void* param, int code, size_t bytes);
@@ -29,10 +29,12 @@ struct aio_tcp_transport_handler_t
 aio_tcp_transport_t* aio_tcp_transport_create(socket_t socket, struct aio_tcp_transport_handler_t *handler, void* param);
 aio_tcp_transport_t* aio_tcp_transport_create2(aio_socket_t aio, struct aio_tcp_transport_handler_t *handler, void* param);
 
-/// start recv, call once only
-int aio_tcp_transport_start(aio_tcp_transport_t* transport);
 /// cancel tcp transport recv/send
-int aio_tcp_transport_stop(aio_tcp_transport_t* transport);
+int aio_tcp_transport_destroy(aio_tcp_transport_t* transport);
+
+/// start recv, call once only
+int aio_tcp_transport_recv(aio_tcp_transport_t* transport, void* data, size_t bytes);
+int aio_tcp_transport_recv_v(aio_tcp_transport_t* transport, socket_bufvec_t *vec, int n);
 
 /// Send data to peer
 /// @param[in] data use data send to peer, MUST BE VALID until onsend
@@ -44,11 +46,11 @@ int aio_tcp_transport_send(aio_tcp_transport_t* transport, const void* data, siz
 /// @param[in] vec data vector, MUST BE VALID until onsend
 /// @param[in] n vector count
 /// @return 0-ok, other-error
-int aio_tcp_transport_sendv(aio_tcp_transport_t* transport, socket_bufvec_t *vec, int n);
+int aio_tcp_transport_send_v(aio_tcp_transport_t* transport, socket_bufvec_t *vec, int n);
 
 /// @param[in] timeout recv/send timeout(millisecond), default 4min
-void aio_tcp_transport_set_timeout(aio_tcp_transport_t* transport, int timeout);
-int aio_tcp_transport_get_timeout(aio_tcp_transport_t* transport);
+void aio_tcp_transport_set_timeout(aio_tcp_transport_t* transport, int recvMS, int sendMS);
+void aio_tcp_transport_get_timeout(aio_tcp_transport_t* transport, int *recvMS, int* sendMS);
 
 #ifdef __cplusplus
 }

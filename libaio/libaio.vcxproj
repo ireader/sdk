@@ -147,17 +147,22 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\source\aio-socket-iocp.c" />
+    <ClCompile Include="..\source\timer.c" />
     <ClCompile Include="src\aio-accept.c" />
+    <ClCompile Include="src\aio-recv.c" />
     <ClCompile Include="src\aio-rwutil.c" />
     <ClCompile Include="src\aio-connect.c" />
+    <ClCompile Include="src\aio-send.c" />
     <ClCompile Include="src\aio-tcp-transport.c" />
     <ClCompile Include="src\aio-timeout.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\aio-socket.h" />
     <ClInclude Include="include\aio-accept.h" />
+    <ClInclude Include="include\aio-recv.h" />
     <ClInclude Include="include\aio-rwutil.h" />
     <ClInclude Include="include\aio-connect.h" />
+    <ClInclude Include="include\aio-send.h" />
     <ClInclude Include="include\aio-tcp-transport.h" />
     <ClInclude Include="include\aio-timeout.h" />
   </ItemGroup>

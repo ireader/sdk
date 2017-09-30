@@ -1,5 +1,6 @@
 #include "aio-tcp-transport.h"
-#include "aio-timeout.h"
+#include "aio-recv.h"
+#include "aio-send.h"
 #include "aio-rwutil.h"
 #include "sys/atomic.h"
 #include "sys/spinlock.h"
@@ -7,28 +8,26 @@
 #include <string.h>
 #include <assert.h>
 
-#define TIMEOUT (4 * 60 * 1000) // 4min
+#define TIMEOUT_RECV (4 * 60 * 1000) // 4min
+#define TIMEOUT_SEND (2 * 60 * 1000) // 2min
 
 struct aio_tcp_transport_t
 {
 	spinlock_t locker;
-	aio_socket_t* socket;
+	aio_socket_t socket;
 	
-	struct aio_timeout_t timer;
-	struct aio_socket_rw_t write;
-
-	char buffer[2*1024];
+	int rtimeout;
+	int wtimeout;
+	struct aio_recv_t recv;
+	struct aio_socket_rw_t send;
 
 	struct aio_tcp_transport_handler_t handler;
 	void* param;
 };
 
-static int aio_tcp_transport_recv(struct aio_tcp_transport_t* t);
+static void aio_tcp_transport_ondestroy(void* param);
 static void aio_tcp_transport_onrecv(void* param, int code, size_t bytes);
 static void aio_tcp_transport_onsend(void* param, int code, size_t bytes);
-static void aio_tcp_transport_ondestroy(void* param);
-static void aio_timer_onnotify(void* param);
-static void aio_timer_oncancel(void* param);
 
 struct aio_tcp_transport_t* aio_tcp_transport_create(socket_t socket, struct aio_tcp_transport_handler_t *handler, void* param)
 {
@@ -47,26 +46,18 @@ struct aio_tcp_transport_t* aio_tcp_transport_create2(aio_socket_t aio, struct a
 
 	t->socket = aio;
 	t->param = param;
+	t->rtimeout = TIMEOUT_RECV;
+	t->wtimeout = TIMEOUT_SEND;
 	spinlock_create(&t->locker);
 	memcpy(&t->handler, handler, sizeof(t->handler));
-	aio_timeout_add(&t->timer, TIMEOUT, aio_timer_onnotify, t);
 	return t;
 }
 
-int aio_tcp_transport_start(struct aio_tcp_transport_t* t)
-{
-	int r;
-	r = aio_tcp_transport_recv(t);
-	if (0 != r)
-		aio_tcp_transport_stop(t);
-	return r;
-}
-
-int aio_tcp_transport_stop(struct aio_tcp_transport_t* t)
+int aio_tcp_transport_destroy(struct aio_tcp_transport_t* t)
 {
 	aio_socket_t socket;
-	socket = t->socket;
 	spinlock_lock(&t->locker);
+	socket = t->socket;
 	t->socket = invalid_aio_socket;
 	spinlock_unlock(&t->locker);
 
@@ -80,70 +71,63 @@ int aio_tcp_transport_send(struct aio_tcp_transport_t* t, const void* data, size
 	int r = -1;
 	spinlock_lock(&t->locker);
 	if (invalid_aio_socket != t->socket)
-		r = aio_socket_send_all(&t->write, t->socket, data, bytes, aio_tcp_transport_onsend, t);
+		r = aio_socket_send_all(&t->send, t->wtimeout, t->socket, data, bytes, aio_tcp_transport_onsend, t);
 	spinlock_unlock(&t->locker);
-
-	if (0 == r) aio_timeout_start(&t->timer);
 	return r;
 }
 
-int aio_tcp_transport_sendv(struct aio_tcp_transport_t* t, socket_bufvec_t *vec, int n)
+int aio_tcp_transport_send_v(struct aio_tcp_transport_t* t, socket_bufvec_t *vec, int n)
 {
 	int r = -1;
 	spinlock_lock(&t->locker);
 	if (invalid_aio_socket != t->socket)
-		r = aio_socket_send_v_all(&t->write, t->socket, vec, n, aio_tcp_transport_onsend, t);
+		r = aio_socket_send_v_all(&t->send, t->wtimeout, t->socket, vec, n, aio_tcp_transport_onsend, t);
 	spinlock_unlock(&t->locker);
-
-	if(0 == r) aio_timeout_start(&t->timer);
 	return r;
 }
 
-static int aio_tcp_transport_recv(struct aio_tcp_transport_t* t)
+int aio_tcp_transport_recv(struct aio_tcp_transport_t* t, void* data, size_t bytes)
 {
 	int r = -1;
 	spinlock_lock(&t->locker);
 	if(invalid_aio_socket != t->socket)
-		r = aio_socket_recv(t->socket, t->buffer, sizeof(t->buffer), aio_tcp_transport_onrecv, t);
+		r = aio_recv(&t->recv, t->rtimeout, t->socket, data, bytes, aio_tcp_transport_onrecv, t);
 	spinlock_unlock(&t->locker);
-
-	if (0 == r) aio_timeout_start(&t->timer);
 	return r;
 }
 
-int aio_tcp_transport_get_timeout(struct aio_tcp_transport_t* t)
+int aio_tcp_transport_recv_v(struct aio_tcp_transport_t* t, socket_bufvec_t *vec, int n)
 {
-	return t->timer.timeout;
+	int r = -1;
+	spinlock_lock(&t->locker);
+	if (invalid_aio_socket != t->socket)
+		r = aio_recv_v(&t->recv, t->rtimeout, t->socket, vec, n, aio_tcp_transport_onrecv, t);
+	spinlock_unlock(&t->locker);
+	return r;
 }
 
-void aio_tcp_transport_set_timeout(struct aio_tcp_transport_t* t, int timeout)
+void aio_tcp_transport_get_timeout(struct aio_tcp_transport_t* t, int *recvMS, int *sendMS)
 {
-	timeout = timeout < 1000 ? 1000 : timeout;
-	aio_timeout_settimeout(&t->timer, timeout);
+	if(sendMS) *sendMS = t->wtimeout;
+	if(recvMS) *recvMS = t->rtimeout;
+}
+
+void aio_tcp_transport_set_timeout(struct aio_tcp_transport_t* t, int recvMS, int sendMS)
+{
+	recvMS = recvMS < 100 ? 100 : recvMS;
+	recvMS = recvMS > 2 * 3600 * 1000 ? 2 * 3600 * 1000 : recvMS;
+	sendMS = sendMS < 100 ? 100 : sendMS;
+	sendMS = sendMS > 2 * 3600 * 1000 ? 2 * 3600 * 1000 : sendMS;
+	t->rtimeout = recvMS;
+	t->wtimeout = sendMS;
 }
 
 static void aio_tcp_transport_onrecv(void* param, int code, size_t bytes)
 {
 	struct aio_tcp_transport_t* t;
 	t = (struct aio_tcp_transport_t*)param;
-
-	if (0 == code)
-	{
-		// enable bytes = 0 callback to notify socket close
-		t->handler.onrecv(t->param, t->buffer, bytes);
-	}
-
-	if (0 == code && 0 != bytes)
-	{
-		// read more data
-		code = aio_tcp_transport_recv(t);
-	}
-	
-	if(0 != code || 0 == bytes)
-	{
-		// close aio socket
-		aio_tcp_transport_stop(t);
-	}
+	// enable bytes = 0 callback to notify socket close
+	t->handler.onrecv(t->param, code, bytes);
 }
 
 static void aio_tcp_transport_onsend(void* param, int code, size_t bytes)
@@ -154,20 +138,6 @@ static void aio_tcp_transport_onsend(void* param, int code, size_t bytes)
 }
 
 static void aio_tcp_transport_ondestroy(void* param)
-{
-	struct aio_tcp_transport_t* t;
-	t = (struct aio_tcp_transport_t*)param;
-	aio_timeout_delete(&t->timer, aio_timer_oncancel, t);
-}
-
-static void aio_timer_onnotify(void* param)
-{
-	struct aio_tcp_transport_t* t;
-	t = (struct aio_tcp_transport_t*)param;
-	aio_tcp_transport_stop(t);
-}
-
-static void aio_timer_oncancel(void* param)
 {
 	struct aio_tcp_transport_t* t;
 	t = (struct aio_tcp_transport_t*)param;

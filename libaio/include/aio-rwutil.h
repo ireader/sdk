@@ -12,13 +12,13 @@ struct aio_socket_rw_t
 	unsigned char _reserved_[128];
 };
 
-int aio_socket_recv_all(struct aio_socket_rw_t* rw, aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv proc, void* param);
+int aio_socket_recv_all(struct aio_socket_rw_t* rw, int timeout, aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv proc, void* param);
 /// @param[in] vec vec value may be changed, and must be valid until proc callback
-int aio_socket_recv_v_all(struct aio_socket_rw_t* rw, aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecv proc, void* param);
+int aio_socket_recv_v_all(struct aio_socket_rw_t* rw, int timeout, aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecv proc, void* param);
 
-int aio_socket_send_all(struct aio_socket_rw_t* rw, aio_socket_t socket, const void* buffer, size_t bytes, aio_onsend proc, void* param);
+int aio_socket_send_all(struct aio_socket_rw_t* rw, int timeout, aio_socket_t socket, const void* buffer, size_t bytes, aio_onsend proc, void* param);
 /// @param[in] vec vec value may be changed, and must be valid until proc callback
-int aio_socket_send_v_all(struct aio_socket_rw_t* rw, aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onsend proc, void* param);
+int aio_socket_send_v_all(struct aio_socket_rw_t* rw, int timeout, aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onsend proc, void* param);
 
 #if defined(__cplusplus)
 }
