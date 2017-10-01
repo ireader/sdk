@@ -3,11 +3,11 @@
 #include <string.h>
 #include <errno.h>
 
-static void http_server_onreply(void* param, int code, size_t bytes)
+static int http_server_onreply(void* param, int code, size_t bytes)
 {
-	(void)code;
 	(void)bytes;
 	free(param);
+	return code;
 }
 
 int http_server_reply(http_session_t* session, int code, const void* data, size_t bytes)

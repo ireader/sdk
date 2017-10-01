@@ -16,8 +16,8 @@ struct http_vec_t
 	size_t bytes;
 };
 
-typedef void (*http_server_onsend)(void* param, int code, size_t bytes);
-
+/// @return 0-ok(continue read), other-close socket
+typedef int (*http_server_onsend)(void* param, int code, size_t bytes);
 
 http_server_t* http_server_create(const char* ip, int port);
 int http_server_destroy(http_server_t* http);

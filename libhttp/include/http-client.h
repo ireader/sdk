@@ -1,9 +1,13 @@
 #ifndef _http_client_h_
 #define _http_client_h_
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct http_client_t http_client_t;
 
 struct http_header_t
 {
@@ -11,22 +15,22 @@ struct http_header_t
 	const char* value;
 };
 
-int http_client_init(void);
-int http_client_cleanup(void);
+typedef void(*http_client_onreply)(void *param, int code);
 
 /// create HTTP client
 /// @param[in] ip HTTP service ip
 /// @param[in] port HTTP Service port
 /// @param[in] flags 0-aio, 1-block io
 /// @return http handler
-void *http_client_create(const char* ip, unsigned short port, int flags);
-void http_client_destroy(void* client);
+http_client_t *http_client_create(const char* ip, unsigned short port, int flags);
+void http_client_destroy(http_client_t* http);
 
-/// HTTP connection recycle
+/// HTTP socket timeout
 /// @param[in] client HTTP handler created by http_client_create
-void http_client_recycle(void* client);
-
-typedef void (*http_client_response)(void *param, void *http, int code);
+/// @param[in] conn socket connect timeout(MS)
+/// @param[in] recv socket read timeout(MS)
+/// @param[in] send socket write timeout(MS)
+void http_client_set_timeout(http_client_t* http, int conn, int recv, int send);
 
 /// HTTP GET Request
 /// r = http_client_get(handle, "/webservice/api/version", NULL, 0, OnVersion, param)
@@ -36,7 +40,7 @@ typedef void (*http_client_response)(void *param, void *http, int code);
 /// @param[in] n HTTP request header count
 /// @param[in] callback user-defined callback function(maybe callback in other thread if in aio mode)
 /// @param[in] param user-defined callback parameter
-int http_client_get(void* client, const char* uri, const struct http_header_t *headers, size_t n, http_client_response callback, void *param);
+int http_client_get(http_client_t* http, const char* uri, const struct http_header_t *headers, size_t n, http_client_onreply onreply, void* param);
 
 /// HTTP POST Request
 /// m = strdup("what's your name?");
@@ -49,7 +53,7 @@ int http_client_get(void* client, const char* uri, const struct http_header_t *h
 /// @param[in] bytes POST content size in byte
 /// @param[in] callback user-defined callback function(maybe callback in other thread if in aio mode)
 /// @param[in] param user-defined callback parameter
-int http_client_post(void* client, const char* uri, const struct http_header_t *headers, size_t n, const void* msg, size_t bytes, http_client_response callback, void *param);
+int http_client_post(http_client_t* http, const char* uri, const struct http_header_t *headers, size_t n, const void* msg, size_t bytes, http_client_onreply onreply, void* param);
 
 // Response
 
@@ -57,14 +61,14 @@ int http_client_post(void* client, const char* uri, const struct http_header_t *
 /// @param[in] http HTTP client handler
 /// @param[in] name request http header field name
 /// @return NULL-don't found field, other-header value
-const char* http_client_get_header(void* http, const char *name);
+const char* http_client_get_header(http_client_t* http, const char *name);
 
 /// Get server response data(raw data)
 /// @param[in] http HTTP client handle
 /// @param[out] content response body pointer(don't need free)
 /// @param[out] bytes response body size
 /// @return 0-ok, other-error
-int http_client_get_content(void* http, const void **content, size_t *bytes);
+int http_client_get_content(http_client_t* http, const void **content, size_t *bytes);
 
 #ifdef __cplusplus
 }

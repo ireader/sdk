@@ -15,15 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\http-client-connection-aio.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\http-client-connection.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\http-client.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\http-cookie.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -72,11 +63,17 @@
     <ClCompile Include="source\rfc822-datetime.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\http-client-connection-aio.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\http-client-connection.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\http-client.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\http-client-connect.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\http-client.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -118,6 +115,9 @@
     </ClInclude>
     <ClInclude Include="include\rfc822-datetime.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\http-client-internal.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

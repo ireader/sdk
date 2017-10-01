@@ -154,7 +154,6 @@
     <ClCompile Include="source\rfc822-datetime.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\http-client-connect.h" />
     <ClInclude Include="include\http-client.h" />
     <ClInclude Include="include\http-cookie.h" />
     <ClInclude Include="include\http-header-auth.h" />
@@ -168,6 +167,7 @@
     <ClInclude Include="include\http-server.h" />
     <ClInclude Include="include\http-upload.h" />
     <ClInclude Include="include\rfc822-datetime.h" />
+    <ClInclude Include="source\http-client-internal.h" />
     <ClInclude Include="source\http-server-internal.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -8,6 +8,7 @@
 #include "sys/thread.h"
 #include "http-client.h"
 #include "aio-socket.h"
+#include <assert.h>
 
 #define PORT 1234
 
@@ -22,7 +23,7 @@ static int STDCALL aio_worker_action(void* param)
 {
 	do
 	{
-		aio_socket_process(30*1000);
+		aio_socket_process(1000);
 	} while(*(int*)param);
 
 	return 0;
@@ -73,7 +74,7 @@ static int STDCALL http_server_thread(void* param)
 				r = socket_send_all_by_time(client, s_reply, strlen(s_reply), 0, 5000);
 				r = socket_shutdown(client, SHUT_RDWR);
 				r = socket_close(client);
-				printf("server side close socket\n");
+				//printf("server side close socket\n");
 			}
 		}
 	}
@@ -81,13 +82,9 @@ static int STDCALL http_server_thread(void* param)
 	return 0;
 }
 
-static void http_client_test_onreply(void* p, void *http, int code)
+static void http_client_test_onreply(void* param, int code)
 {
-	if(p)
-	{
-		atomic_increment32((int32_t*)p);
-	}
-
+	http_client_t* http = (http_client_t*)param;
 	if(0 == code)
 	{
 		const char* server = http_client_get_header(http, "Server");
@@ -100,7 +97,22 @@ static void http_client_test_onreply(void* p, void *http, int code)
 	}
 }
 
-void http_client_test2(void)
+static void http_client_test_onreply2(void* param, int code)
+{
+	static int i = 0;
+	http_client_t* http = (http_client_t*)param;
+
+	if (i++ < 1000)
+	{
+		assert(0 == http_client_get(http, "/", NULL, 0, http_client_test_onreply2, http));
+	}
+	else
+	{
+		http_client_destroy(http);
+	}
+}
+
+extern "C" void http_client_test2(void)
 {
 	aio_worker_init();
 
@@ -117,26 +129,22 @@ void http_client_test2(void)
 	headers[2].value = "keep-alive";
 
 	// block IO
-	void *http = http_client_create("127.0.0.1", PORT, 1);
-	assert(0 == http_client_get(http, "/", headers, sizeof(headers)/sizeof(headers[0]), http_client_test_onreply, NULL));
-	assert(0 == http_client_get(http, "/img/bdlogo.png", headers, sizeof(headers)/sizeof(headers[0]), http_client_test_onreply, NULL));
-	assert(0 == http_client_get(http, "/", NULL, 0, http_client_test_onreply, NULL));
+	http_client_t *http = http_client_create("127.0.0.1", PORT, 1);
+	assert(0 == http_client_get(http, "/", headers, sizeof(headers)/sizeof(headers[0]), http_client_test_onreply, http));
+	assert(0 == http_client_get(http, "/img/bdlogo.png", headers, sizeof(headers)/sizeof(headers[0]), http_client_test_onreply, http));
+	assert(0 == http_client_get(http, "/", NULL, 0, http_client_test_onreply, http));
 	http_client_destroy(http);
 
 	// AIO
-	int32_t ref = 0;
 	http = http_client_create("127.0.0.1", PORT, 0);
-	assert(0 == http_client_get(http, "/", headers, sizeof(headers)/sizeof(headers[0]), http_client_test_onreply, &ref));
-	while(1 != ref) system_sleep(1000);
-	assert(0 == http_client_get(http, "/img/bdlogo.png", headers, sizeof(headers)/sizeof(headers[0]), http_client_test_onreply, &ref));
-	while(2 != ref) system_sleep(1000);
-	assert(0 == http_client_get(http, "/", NULL, 0, http_client_test_onreply, &ref));
-	while(3 != ref) system_sleep(1000);
-	http_client_destroy(http);
+	assert(0 == http_client_get(http, "/", headers, sizeof(headers)/sizeof(headers[0]), http_client_test_onreply2, http));
+	system_sleep(10000);
 
 	running = false;
 	thread_destroy(thread);
 	aio_worker_cleanup();
+
+	printf("http client NIO test ok\n");
 }
 
 #endif

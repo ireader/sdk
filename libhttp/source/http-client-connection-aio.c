@@ -1,202 +1,174 @@
+#include "http-client-internal.h"
 #include "sockutil.h"
-#include "aio-socket.h"
+#include "aio-connect.h"
 #include "aio-rwutil.h"
-#include "http-parser.h"
-#include "http-client-connect.h"
+#include "aio-recv.h"
 #include <stdlib.h>
 
-struct http_client_aio_transport_t
+struct http_client_aio_t
 {
 	aio_socket_t socket;
-	void *parser;
-
-	http_client_response callback;
-	void* cbparam;
+	struct aio_recv_t recv;
+	struct aio_socket_rw_t send;
+	char buffer[2 * 1024];
 
 	int count;
 	socket_bufvec_t vec[2];
-	struct aio_socket_rw_t write;
-	char buffer[1024];
 
+	int error;
 	int retry;
-	struct http_pool_t *pool;
 };
 
-//////////////////////////////////////////////////////////////////////////
-/// HTTP Connection API
+static void http_onrecv(void* param, int code, size_t bytes);
+static void http_onsend(void* param, int code, size_t bytes);
+static void http_onconnect(void* param, aio_socket_t socket, int code);
 
-static void http_ondestroy(void* param)
+static void* http_aio_create(struct http_client_t *http)
 {
-	struct http_client_aio_transport_t *http;
-	http = (struct http_client_aio_transport_t *)param;
-
-	if (http->parser)
-	{
-		http_parser_destroy(http->parser);
-		http->parser = NULL;
-	}
-
-	http_pool_release(http->pool);
-
-#if defined(DEBUG) || defined(_DEBUG)
-	memset(http, 0xCC, sizeof(*http));
-#endif
-	free(http);
+	(void)http;
+	return calloc(1, sizeof(struct http_client_aio_t));
 }
 
-static void* http_create(struct http_pool_t *pool)
+static void http_aio_destroy(void *param)
 {
-	struct http_client_aio_transport_t *http;
-	http = (struct http_client_aio_transport_t *)calloc(1, sizeof(*http));
-	if(!http)
-		return NULL;
+	struct http_client_t* http;
+	struct http_client_aio_t* aio;
+	http = (struct http_client_t*)param;
+	aio = (struct http_client_aio_t*)http->connection;
 
-	atomic_increment32(&pool->ref);
-	http->pool = pool;
-	http->socket = invalid_aio_socket;
-	http->parser = http_parser_create(HTTP_PARSER_CLIENT);
-	if(!http->parser)
+	if (aio->socket)
 	{
-		http_ondestroy(http);
-		return NULL;
+		aio_socket_destroy(aio->socket, NULL, NULL);
+		aio->socket = invalid_aio_socket;
 	}
-	return http;
-}
-
-static void http_destroy(void *p)
-{
-	struct http_client_aio_transport_t *http;
-	http = (struct http_client_aio_transport_t *)p;
-	if (invalid_aio_socket != http->socket)
-		aio_socket_destroy(http->socket, http_ondestroy, http);
-	else
-		http_ondestroy(http);
+	free(aio);
+	http->connection = NULL;
 }
 
 static void http_onrecv(void* param, int code, size_t bytes)
 {
-	int r;
-	struct http_client_aio_transport_t *http;
-	http = (struct http_client_aio_transport_t *)param;
+	struct http_client_t* http;
+	struct http_client_aio_t *aio;
+	http = (struct http_client_t*)param;
+	aio = (struct http_client_aio_t *)http->connection;
 
-	if(0 == code)
+	if (0 == code)
 	{
-		r = http_parser_input(http->parser, http->buffer, &bytes);
-		if(1 == r)
+		size_t n = bytes;
+		code = http_parser_input(http->parser, aio->buffer, &n);
+		if (code <= 0)
 		{
-			// receive more data
-			code = aio_socket_recv(http->socket, http->buffer, sizeof(http->buffer), http_onrecv, http);
+			// Connection: close
+			if (code < 0 || 1 == http_get_connection(http->parser))
+			{
+				assert(invalid_aio_socket != aio->socket);
+				aio_socket_destroy(aio->socket, NULL, NULL);
+				aio->socket = invalid_aio_socket;
+			}
+			assert(0 == n);
+			http_client_handle(http, code);
+			return;
 		}
 		else
 		{
-			// receive done
-			http->callback(http->cbparam, http->parser, r);
+			// read more
+			code = aio_recv(&aio->recv, http->timeout.recv, aio->socket, aio->buffer, sizeof(aio->buffer), http_onrecv, http);
 		}
 	}
-		
+	
 	if(0 != code)
 	{
-		http->callback(http->cbparam, http->parser, code); // receive error
+		assert(invalid_aio_socket != aio->socket);
+		aio_socket_destroy(aio->socket, NULL, NULL);
+		aio->socket = invalid_aio_socket;
+		http_client_handle(http, code);
 	}
 }
 
 static void http_onsend(void* param, int code, size_t bytes)
 {
-	struct http_client_aio_transport_t *http;
-	http = (struct http_client_aio_transport_t *)param;
+	struct http_client_t* http;
+	struct http_client_aio_t* aio;
+	http = (struct http_client_t*)param;
+	aio = (struct http_client_aio_t*)http->connection;
 
-	(void)bytes;
-	if(0 == code)
-	{
-		// receive reply
-		code = aio_socket_recv(http->socket, http->buffer, sizeof(http->buffer), http_onrecv, http);
-	}
-
-	if(0 != code)
-	{
-		http->callback(http->cbparam, http->parser, code);
-	}
-}
-
-static void http_onconnect(void* param, int code)
-{
-	struct http_client_aio_transport_t *http;
-	http = (struct http_client_aio_transport_t *)param;
+	if (0 == code)
+		code = aio_recv(&aio->recv, http->timeout.recv, aio->socket, aio->buffer, sizeof(aio->buffer), http_onrecv, http);
 
 	if (0 != code)
 	{
-		http->callback(http->cbparam, http->parser, code);
+		// close socket and try again
+		assert(invalid_aio_socket != aio->socket);
+		aio_socket_destroy(aio->socket, NULL, NULL);
+		aio->socket = invalid_aio_socket;
+
+		if(1 == aio->retry)
+			code = aio_connect(http->host, http->port, http->timeout.conn, http_onconnect, http);
+	}
+
+	if (0 != code)
+	{
+		http_client_handle(http, code);
+	}
+
+	(void)bytes;
+}
+
+static void http_onconnect(void* param, aio_socket_t socket, int code)
+{
+	struct http_client_t* http;
+	struct http_client_aio_t* aio;
+	http = (struct http_client_t*)param;
+	aio = (struct http_client_aio_t*)http->connection;
+
+	if (0 != code)
+	{
+		assert(invalid_aio_socket == aio->socket);
+		http_client_handle(http, code);
 	}
 	else
 	{
-		code = aio_socket_send_v_all(&http->write, http->socket, http->vec, http->count, http_onsend, http);
+		aio->retry = 0;
+		aio->socket = socket;
+		code = aio_socket_send_v_all(&aio->send, http->timeout.send, aio->socket, aio->vec, aio->count, http_onsend, http);
 		if (0 != code)
 		{
-			http->callback(http->cbparam, http->parser, code);
+			aio_socket_destroy(aio->socket, NULL, NULL);
+			aio->socket = invalid_aio_socket;
+			http_client_handle(http, code);
 		}
 	}
 }
 
-static int http_connect(struct http_client_aio_transport_t *http, const char* ip, int port)
+static int http_aio_request(struct http_client_t* http, const char* req, size_t nreq, const void* msg, size_t bytes)
 {
 	int r = 0;
-	socket_t tcp;
-	socklen_t addrlen;
-	struct sockaddr_storage ss;
-
-	assert(invalid_aio_socket == http->socket);
-	r = socket_addr_from(&ss, &addrlen, ip, (u_short)port);
-	if (0 != r)
-		return r;
-
-	assert(ss.ss_family == AF_INET || ss.ss_family == AF_INET6);
-	tcp = socket(ss.ss_family, SOCK_STREAM, 0);
-#if defined(OS_WINDOWS)
-	r = socket_bind_any(tcp, 0);
-	if(0 != r)
-	{
-		socket_close(tcp);
-		return r;
-	}
-#endif
-
-	http->socket = aio_socket_create(tcp, 1);
-	if(!http->socket)
-	{
-		socket_close(tcp);
-		return -1;
-	}
-
-	return aio_socket_connect(http->socket, (struct sockaddr*)&ss, addrlen, http_onconnect, http);
-}
-
-static int http_request(void *conn, const char* req, size_t nreq, const void* msg, size_t bytes, http_client_response callback, void *param)
-{
-	int r;
-	struct http_client_aio_transport_t *http;
-	http = (struct http_client_aio_transport_t *)conn;
+	struct http_client_aio_t* aio;
+	aio = (struct http_client_aio_t*)http->connection;
 	http_parser_clear(http->parser); // clear http parser status
-	http->callback = callback;
-	http->cbparam = param;
-	http->retry = 0; // clear retry flag
 
-	http->count = bytes > 0 ? 2 : 1;
-	socket_setbufvec(http->vec, 0, (char*)req, nreq);
-	socket_setbufvec(http->vec, 1, (void*)msg, bytes);
+	socket_setbufvec(aio->vec, 0, (char*)req, nreq);
+	socket_setbufvec(aio->vec, 1, (void*)msg, bytes);
+	aio->count = bytes > 0 ? 2 : 1;
 
-	if(invalid_aio_socket == http->socket)
-		r = http_connect(http, http->pool->ip, http->pool->port);
+	if (invalid_aio_socket == aio->socket)
+	{
+		r = aio_connect(http->host, http->port, http->timeout.conn, http_onconnect, http);
+	}
 	else
-		r = aio_socket_send_v_all(&http->write, http->socket, http->vec, http->count, http_onsend, http);
+	{
+		aio->retry = 1; // try again if send failed
+		r = aio_socket_send_v_all(&aio->send, http->timeout.send, aio->socket, aio->vec, aio->count, http_onsend, http);
+	}
 	return r;
 }
 
 struct http_client_connection_t* http_client_connection_aio()
 {
 	static struct http_client_connection_t conn = {
-		http_create,
-		http_destroy,
-		http_request,
+		http_aio_create,
+		http_aio_destroy,
+		http_aio_request,
 	};
 	return &conn;
 }

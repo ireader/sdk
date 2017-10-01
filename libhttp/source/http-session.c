@@ -59,44 +59,60 @@ static void http_session_reset(struct http_session_t *session)
 	session->http_transfer_encoding_flag = 0;
 }
 
-static void http_session_onrecv(void* param, const void* data, size_t bytes)
+static void http_session_onrecv(void* param, int code, size_t bytes)
 {
-	int r;
 	size_t remain;
 	struct http_session_t *session;
 	session = (struct http_session_t *)param;
 
 	remain = bytes;
-	do
+	if (0 == code)
 	{
-		r = http_parser_input(session->parser, (char*)data + (bytes - remain), &remain);
-		if (0 == r)
+		do
 		{
-			// clear for save user-defined header
-			http_session_reset(session);
-
-			// call
-			// user must reply(send/send_vec/send_file) in handle
-			if (session->handler)
+			code = http_parser_input(session->parser, session->data + (bytes - remain), &remain);
+			if (0 == code)
 			{
-				const char* uri = http_get_request_uri(session->parser);
-				const char* method = http_get_request_method(session->parser);
-				session->handler(session->param, session, method, uri);
-			}
+				// clear for save user-defined header
+				http_session_reset(session);
 
-			http_parser_clear(session->parser); // reset parser
-		}
-	} while (remain > 0 && r >= 0);
+				// call
+				// user must reply(send/send_vec/send_file) in handle
+				if (session->handler)
+				{
+					const char* uri = http_get_request_uri(session->parser);
+					const char* method = http_get_request_method(session->parser);
+					session->handler(session->param, session, method, uri);
+				}
+
+				http_parser_clear(session->parser); // reset parser
+			}
+		} while (remain > 0 && code >= 0);
+
+		// recv more data
+		if(code >= 0)
+			code = aio_tcp_transport_recv(session->transport, session->data, session->bytes);
+	}
+	
+	// error or peer closed
+	if(0 != code || 0 == bytes)
+	{
+		code = aio_tcp_transport_destroy(session->transport);
+	}	
 }
 
 static void http_session_onsend(void* param, int code, size_t bytes)
 {
+	int r = 0;
 	struct http_session_t *session;
 	session = (struct http_session_t*)param;
 	session->vec_count = 0;
 	session->vec = NULL;
 	if (session->onsend)
-		session->onsend(session->onsendparam, code, bytes);
+		r = session->onsend(session->onsendparam, code, bytes);
+
+	if (0 != code || 0 != r)
+		code = aio_tcp_transport_destroy(session->transport);
 }
 
 int http_session_create(struct http_server_t *server, socket_t socket, const struct sockaddr* sa, socklen_t salen)
@@ -108,12 +124,14 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	handler.onrecv = http_session_onrecv;
 	handler.onsend = http_session_onsend;
 
-	session = (struct http_session_t *)malloc(sizeof(*session) + 2 * 1024);
+	session = (struct http_session_t *)malloc(sizeof(*session) + 4 * 1024);
 	if (!session) return -1;
 
 	memset(session, 0, sizeof(*session));
+	session->data = (char*)(session + 1);
+	session->bytes = 2 * 1024;
 	session->header_capacity = 2 * 1024;
-	session->header = (char*)(session + 1);
+	session->header = session->data + session->bytes;
 	session->parser = http_parser_create(HTTP_PARSER_SERVER);
 	assert(AF_INET == sa->sa_family || AF_INET6 == sa->sa_family);
 	assert(salen <= sizeof(session->addr));
@@ -123,7 +141,12 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	session->param = server->param;
 	session->handler = server->handler;
 	session->transport = aio_tcp_transport_create(socket, &handler, session);
-	return aio_tcp_transport_start(session->transport);
+	if (0 != aio_tcp_transport_recv(session->transport, session->data, session->bytes))
+	{
+		aio_tcp_transport_destroy(session->transport);
+		return -1;
+	}
+	return 0;
 }
 
 int http_server_send(struct http_session_t *session, int code, const void* data, size_t bytes, http_server_onsend onsend, void* param)
@@ -157,7 +180,7 @@ int http_server_send_vec(struct http_session_t *session, int code, const struct 
 
 	session->onsend = onsend;
 	session->onsendparam = param;
-	return aio_tcp_transport_sendv(session->transport, session->vec, session->vec_count);
+	return aio_tcp_transport_send_v(session->transport, session->vec, session->vec_count);
 }
 
 static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int count)
@@ -206,7 +229,7 @@ int http_session_add_header(struct http_session_t* session, const char* name, co
 	void* ptr;
 	size_t len;
 	len = strlen(name ? name : "");
-	if (len < 1 || bytes < 1)
+	if (!name || !value || len < 1 || bytes < 1)
 		return -EINVAL;
 
 	if (session->header_size + len + bytes + 4 > session->header_capacity)

@@ -117,7 +117,7 @@ static void http_file_read(struct http_sendfile_t* sendfile)
 	}
 }
 
-static void http_server_onsendfile(void* param, int code, size_t bytes)
+static int http_server_onsendfile(void* param, int code, size_t bytes)
 {
 	struct http_sendfile_t* sendfile;
 	sendfile = (struct http_sendfile_t*)param;
@@ -128,9 +128,9 @@ static void http_server_onsendfile(void* param, int code, size_t bytes)
 		if (sendfile->sent == sendfile->total)
 		{
 			if (sendfile->onsend)
-				sendfile->onsend(sendfile->param, 0, (size_t)sendfile->total);
+				code = sendfile->onsend(sendfile->param, 0, (size_t)sendfile->total);
 			http_file_close(sendfile);
-			return;
+			return code;
 		}
 		
 		http_file_read(sendfile);
@@ -143,6 +143,8 @@ static void http_server_onsendfile(void* param, int code, size_t bytes)
 			sendfile->onsend(sendfile->param, code, 0);
 		http_file_close(sendfile);
 	}
+
+	return code;
 }
 
 static int http_session_range(struct http_sendfile_t* sendfile)
