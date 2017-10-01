@@ -8,6 +8,8 @@
 
 #define PORT 23456
 #define ROUND 10
+#define TIMEOUT_RECV 2000
+#define TIMEOUT_SEND 5000
 
 struct aio_client_t
 {
@@ -55,7 +57,7 @@ static void aio_server_onsend_v(void* param, int code, size_t bytes)
 	if (++server->cc > ROUND) return; // exit
 
 	memset(server->msg, 0, sizeof(server->msg));
-	r = aio_socket_recv_all(&server->rw, server->socket, server->msg, strlen(s_cmsg1), aio_server_onrecv, param);
+	r = aio_socket_recv_all(&server->rw, TIMEOUT_RECV, server->socket, server->msg, strlen(s_cmsg1), aio_server_onrecv, param);
 	assert(0 == r);
 }
 
@@ -67,7 +69,7 @@ static void aio_server_onrecv_v(void* param, int code, size_t bytes)
 	assert(0 == strcmp(s_cmsg2, server->msg));
 	socket_setbufvec(server->vec, 0, (void*)s_smsg2, strlen(s_smsg2)/2);
 	socket_setbufvec(server->vec, 1, (void*)(s_smsg2+strlen(s_smsg2)/2), strlen(s_smsg2)/2);
-	r = aio_socket_send_v_all(&server->rw, server->socket, server->vec, 2, aio_server_onsend_v, param);
+	r = aio_socket_send_v_all(&server->rw, TIMEOUT_SEND, server->socket, server->vec, 2, aio_server_onsend_v, param);
 	assert(0 == r);
 }
 
@@ -80,7 +82,7 @@ static void aio_server_onsend(void* param, int code, size_t bytes)
 	memset(server->msg, 0, sizeof(server->msg));
 	socket_setbufvec(server->vec, 0, server->msg, strlen(s_cmsg2)/2);
 	socket_setbufvec(server->vec, 1, server->msg+ strlen(s_cmsg2)/2, strlen(s_cmsg2)/2);
-	r = aio_socket_recv_v_all(&server->rw, server->socket, server->vec, 2, aio_server_onrecv_v, param);
+	r = aio_socket_recv_v_all(&server->rw, TIMEOUT_RECV, server->socket, server->vec, 2, aio_server_onrecv_v, param);
 	assert(0 == r);
 }
 
@@ -90,7 +92,7 @@ static void aio_server_onrecv(void* param, int code, size_t bytes)
 	struct aio_server_t *server = (struct aio_server_t*)param;
 	assert(0 == code && bytes == strlen(s_cmsg1));
 	assert(0 == strcmp(s_cmsg1, server->msg));
-	r = aio_socket_send_all(&server->rw, server->socket, s_smsg1, strlen(s_smsg1), aio_server_onsend, param);
+	r = aio_socket_send_all(&server->rw, TIMEOUT_SEND, server->socket, s_smsg1, strlen(s_smsg1), aio_server_onsend, param);
 	assert(0 == r);
 }
 
@@ -107,7 +109,7 @@ static void aio_server_onaccept(void* param, int code, socket_t socket, const st
 
 	memset(server->msg, 0, sizeof(server->msg));
 	server->socket = aio_socket_create(socket, 1);
-	r = aio_socket_recv_all(&server->rw, server->socket, server->msg, strlen(s_cmsg1), aio_server_onrecv, param);
+	r = aio_socket_recv_all(&server->rw, TIMEOUT_RECV, server->socket, server->msg, strlen(s_cmsg1), aio_server_onrecv, param);
 	assert(0 == r);
 }
 
@@ -128,7 +130,7 @@ static void aio_client_onrecv_v(void* param, int code, size_t bytes)
 	printf("[AIO-TCP-RW] aio-client round: %d\n", client->cc);
 	if (++client->cc > ROUND) return; // exit
 
-	r = aio_socket_send_all(&client->rw, client->socket, s_cmsg1, strlen(s_cmsg1), aio_client_onsend, param);
+	r = aio_socket_send_all(&client->rw, TIMEOUT_SEND, client->socket, s_cmsg1, strlen(s_cmsg1), aio_client_onsend, param);
 	assert(0 == r);
 }
 
@@ -140,7 +142,7 @@ static void aio_client_onsend_v(void* param, int code, size_t bytes)
 	memset(client->msg, 0, sizeof(client->msg));
 	socket_setbufvec(client->vec, 0, client->msg, strlen(s_smsg2)/2);
 	socket_setbufvec(client->vec, 1, client->msg + strlen(s_smsg2)/2, strlen(s_smsg2)/2);
-	r = aio_socket_recv_v_all(&client->rw, client->socket, client->vec, 2, aio_client_onrecv_v, param);
+	r = aio_socket_recv_v_all(&client->rw, TIMEOUT_RECV, client->socket, client->vec, 2, aio_client_onrecv_v, param);
 	assert(0 == r);
 }
 
@@ -152,7 +154,7 @@ static void aio_client_onrecv(void* param, int code, size_t bytes)
 	assert(0 == strcmp(s_smsg1, client->msg));
 	socket_setbufvec(client->vec, 0, (void*)s_cmsg2, strlen(s_cmsg2)/2);
 	socket_setbufvec(client->vec, 1, (void*)(s_cmsg2+strlen(s_cmsg2)/2), strlen(s_cmsg2)/2);
-	r = aio_socket_send_v_all(&client->rw, client->socket, client->vec, 2, aio_client_onsend_v, param);
+	r = aio_socket_send_v_all(&client->rw, TIMEOUT_SEND, client->socket, client->vec, 2, aio_client_onsend_v, param);
 	assert(0 == r);
 }
 
@@ -162,7 +164,7 @@ static void aio_client_onsend(void* param, int code, size_t bytes)
 	struct aio_client_t *client = (struct aio_client_t*)param;
 	assert(0 == code && bytes == strlen(s_cmsg1));
 	memset(client->msg, 0, sizeof(client->msg));
-	r = aio_socket_recv_all(&client->rw, client->socket, client->msg, strlen(s_smsg1), aio_client_onrecv, param);
+	r = aio_socket_recv_all(&client->rw, TIMEOUT_RECV, client->socket, client->msg, strlen(s_smsg1), aio_client_onrecv, param);
 	assert(0 == r);
 }
 
@@ -172,7 +174,7 @@ static void aio_client_onconnect(void* param, int code)
 	struct aio_client_t *client = (struct aio_client_t*)param;
 	assert(0 == code);
 	printf("[AIO-TCP-RW] %s\n", __FUNCTION__);
-	r = aio_socket_send_all(&client->rw, client->socket, s_cmsg1, strlen(s_cmsg1), aio_client_onsend, param);
+	r = aio_socket_send_all(&client->rw, TIMEOUT_SEND, client->socket, s_cmsg1, strlen(s_cmsg1), aio_client_onsend, param);
 	assert(0 == r);
 }
 
