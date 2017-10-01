@@ -98,6 +98,11 @@
     <ClCompile Include="..\..\media-server\librtsp\source\sdp.c" />
     <ClCompile Include="..\algorithm\heap.c" />
     <ClCompile Include="..\algorithm\rbtree.c" />
+    <ClCompile Include="..\libhttp\test\benchmark.c" />
+    <ClCompile Include="..\libhttp\test\http-client-test.cpp" />
+    <ClCompile Include="..\libhttp\test\http-client-test2.cpp" />
+    <ClCompile Include="..\libhttp\test\http-list-dir.cpp" />
+    <ClCompile Include="..\libhttp\test\http-server-test.cpp" />
     <ClCompile Include="..\source\base64.c" />
     <ClCompile Include="..\source\bits.c" />
     <ClCompile Include="..\source\crc32.c" />

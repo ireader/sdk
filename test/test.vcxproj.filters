@@ -28,6 +28,9 @@
     <Filter Include="epoll">
       <UniqueIdentifier>{381b9c70-c68b-4cb7-a4df-76223c4c7e09}</UniqueIdentifier>
     </Filter>
+    <Filter Include="libhttp">
+      <UniqueIdentifier>{d924ccb8-ac94-4614-9d48-2d8ba368aa81}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="aio-socket-test.c">
@@ -236,6 +239,21 @@
     </ClCompile>
     <ClCompile Include="timer-test.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libhttp\test\benchmark.c">
+      <Filter>libhttp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libhttp\test\http-client-test.cpp">
+      <Filter>libhttp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libhttp\test\http-client-test2.cpp">
+      <Filter>libhttp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libhttp\test\http-list-dir.cpp">
+      <Filter>libhttp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libhttp\test\http-server-test.cpp">
+      <Filter>libhttp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
