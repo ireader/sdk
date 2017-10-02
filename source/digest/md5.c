@@ -23,6 +23,8 @@ These notices must be retained in any copies of any part of this
 documentation and/or software.
  */
 
+// http://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
+
 #include "md5.h"
 
 /* Constants for MD5Transform routine.
