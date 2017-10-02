@@ -1,4 +1,4 @@
-#include "../algorithm/rbtree.h"
+#include "rbtree.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
