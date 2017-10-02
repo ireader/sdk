@@ -113,6 +113,9 @@ static inline int socket_select_write(IN socket_t sock, IN int timeout); // time
 static inline int socket_readable(IN socket_t sock);
 static inline int socket_writeable(IN socket_t sock);
 
+/// @return 0-ok, other-error
+static inline int socket_select_connect(IN socket_t sock, IN int timeout); // timeout: >0-milliseconds, 0-immediately, <0-forever
+
 // socket options
 // @return 0-ok, <0-socket_error(by socket_geterror())
 static inline int socket_setkeepalive(IN socket_t sock, IN int enable); // keep alive
@@ -458,6 +461,61 @@ static inline int socket_select_write(IN socket_t sock, IN int timeout)
 	while(-1 == r && EINTR == errno)
 		r = poll(&fds, 1, timeout);
 	return r;
+#endif
+}
+
+static inline int socket_select_connect(IN socket_t sock, IN int timeout)
+{
+	int r;
+	int errcode;
+	int errlen = sizeof(errcode);
+
+#if defined(OS_WINDOWS)
+	fd_set wfds, efds;
+	struct timeval tv;
+
+	assert(socket_invalid != sock); // linux: FD_SET error
+
+	FD_ZERO(&wfds);
+	FD_ZERO(&efds);
+	FD_SET(sock, &wfds);
+	FD_SET(sock, &efds);
+
+	tv.tv_sec = timeout / 1000;
+	tv.tv_usec = (timeout % 1000) * 1000;
+
+	// MSDN > connect function > Remarks:
+	//	If the client uses the select function, success is reported in the writefds set 
+	//	and failure is reported in the exceptfds set.
+	// MSDN > select function > Remarks:
+	//	writefds: If processing a connect call (nonblocking), connection has succeeded.
+	//	exceptfds: If processing a connect call (nonblocking), connection attempt failed.
+	r = socket_select(sock + 1, NULL, &wfds, &efds, timeout < 0 ? NULL : &tv);
+	if (1 == r)
+	{
+		if (FD_ISSET(sock, &wfds))
+			return 0;
+		r = getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&errcode, &errlen);
+		return 0 == r ? errcode : WSAGetLastError();
+	}
+	return 0 == r ? WSAETIMEDOUT : WSAGetLastError();
+#else
+	// https://linux.die.net/man/2/connect
+	// The socket is nonblocking and the connection cannot be
+	// completed immediately.  It is possible to select(2) or poll(2)
+	// for completion by selecting the socket for writing.  After
+	// select(2) indicates writability, use getsockopt(2) to read the
+	// SO_ERROR option at level SOL_SOCKET to determine whether
+	// connect() completed successfully (SO_ERROR is zero) or
+	// unsuccessfully (SO_ERROR is one of the usual error codes
+	// listed here, explaining the reason for the failure).
+	r = socket_select_write(sock, timeout);
+	if (1 == r)
+	{
+		r = getsockopt(sock, SOL_SOCKET, SO_ERROR, (void*)&errcode, (socklen_t*)&errlen);
+		return 0 == r ? errcode : errno;
+	}
+	return 0 == r ? ETIMEDOUT : errno;
 #endif
 }
 

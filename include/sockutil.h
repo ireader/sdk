@@ -24,7 +24,7 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_
 
 /// @Notice: need restore block status
 /// @param[in] timeout: ms, <0-forever
-/// @return >=0-ok, <0-error(by socket_geterror())
+/// @return 0-ok, other-error code
 static inline int socket_connect_by_time(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen, IN int timeout);
 /// @return >=0-socket, <0-socket_invalid(by socket_geterror())
 static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int timeout); // timeout: ms, <0-forever
@@ -46,14 +46,10 @@ static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t
 
 /// @Notice: need restore block status
 /// @param[in] timeout: <0-forever
-/// @return >=0-ok, <0-error(by socket_geterror())
+/// @return 0-ok, other-error(by socket_geterror())
 static inline int socket_connect_by_time(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen, IN int timeout)
 {
 	int r;
-#if !defined(OS_WINDOWS)
-	int errcode = 0;
-	int errlen = sizeof(errcode);
-#endif
 	socket_setnonblock(sock, 1);
 	r = socket_connect(sock, addr, addrlen);
 	assert(r <= 0);
@@ -63,23 +59,7 @@ static inline int socket_connect_by_time(IN socket_t sock, IN const struct socka
 	if (0 != r && EINPROGRESS == errno)
 #endif
 	{
-		// check timeout
-		r = socket_select_write(sock, timeout);
-#if defined(OS_WINDOWS)
-		// r = socket_setnonblock(sock, 0);
-		return 1 == r ? 0 : SOCKET_TIMEDOUT;
-#else
-		if (1 == r)
-		{
-			r = getsockopt(sock, SOL_SOCKET, SO_ERROR, (void*)&errcode, (socklen_t*)&errlen);
-			if (0 == r)
-				r = -errcode;
-		}
-		else
-		{
-			r = SOCKET_TIMEDOUT;
-		}
-#endif
+		r = socket_select_connect(sock, timeout);
 	}
 
 	// r = socket_setnonblock(sock, 0);
