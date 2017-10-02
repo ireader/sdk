@@ -1,0 +1,9 @@
+LIBRARY libbt
+EXPORTS
+	bencode_read
+	bencode_write
+	bencode_free
+
+	torrent_read
+	torrent_write
+	torrent_free
