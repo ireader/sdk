@@ -10,6 +10,7 @@ void torrent_test(const char* file)
 {
 	size_t n;
 	FILE* fp;
+	uint8_t sha1[20];
 	struct torrent_t tor;
 
 	fp = fopen(file, "rb");
@@ -18,7 +19,8 @@ void torrent_test(const char* file)
 	fclose(fp);
 
 	torrent_read(s_buffer1, n, &tor);
-	assert(n == torrent_write(s_buffer2, sizeof(s_buffer2), &tor));
+	torrent_hash(&tor, sha1);
+	assert((int)n == torrent_write(&tor, s_buffer2, sizeof(s_buffer2)));
 	torrent_free(&tor);
 
 	assert(0 == memcmp(s_buffer1, s_buffer2, n));
