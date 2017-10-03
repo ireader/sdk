@@ -62,7 +62,7 @@ static int torrent_read_files(const struct bvalue_t* files, struct torrent_t* to
 		for (j = 0; j < 2 && 0 == r; j++)
 		{
 			if (0 == strcmp("length", file->v.dict.names[j].name))
-				r = bencode_get_int(file->v.dict.values + j, &tor->files[tor->file_count].bytes);
+				r = bencode_get_int64(file->v.dict.values + j, &tor->files[tor->file_count].bytes);
 			else if (0 == strcmp("path", file->v.dict.names[j].name))
 				r = bencode_get_string_ex(file->v.dict.values + j, &tor->files[tor->file_count].name);
 			else
@@ -116,7 +116,7 @@ static int torrent_read_info(const struct bvalue_t* info, struct torrent_t* tor)
 		}
 		else if (0 == strcmp("length", info->v.dict.names[i].name))
 		{
-			r = bencode_get_int(info->v.dict.values + i, &len);
+			r = bencode_get_int64(info->v.dict.values + i, &len);
 		}
 		else if (0 == strcmp("pieces", info->v.dict.names[i].name))
 		{
@@ -124,7 +124,7 @@ static int torrent_read_info(const struct bvalue_t* info, struct torrent_t* tor)
 		}
 		else if (0 == strcmp("piece length", info->v.dict.names[i].name))
 		{
-			r = bencode_get_int(info->v.dict.values + i, &tor->piece_bytes);
+			r = bencode_get_int64(info->v.dict.values + i, &tor->piece_bytes);
 		}
 		else
 		{
@@ -180,7 +180,7 @@ int torrent_read(const uint8_t* ptr, size_t bytes, struct torrent_t* tor)
 		}
 		else if (0 == strcmp("creation date", root.v.dict.names[i].name))
 		{
-			r = bencode_get_int(root.v.dict.values + i, &tor->create);
+			r = bencode_get_int64(root.v.dict.values + i, &tor->create);
 		}
 		else if (0 == strcmp("info", root.v.dict.names[i].name))
 		{
