@@ -13,12 +13,21 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="3rd">
+      <UniqueIdentifier>{e8d6c407-6181-4d45-8804-dafcad53190e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\bencode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\torrent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\peer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tracker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -31,6 +40,24 @@
     </ClCompile>
     <ClCompile Include="src\hash-sha1.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\peer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\uri-parse.c">
+      <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\urlcodec.c">
+      <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tracker-http.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tracker-udp.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\digest\sha1.c">
+      <Filter>3rd</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1,4 +1,4 @@
-LIBRARY libbt
+LIBRARY libtorrent
 EXPORTS
 	bencode_read
 	bencode_write
@@ -8,3 +8,6 @@ EXPORTS
 	torrent_write
 	torrent_free
 	torrent_hash
+
+	tracker_get
+	tracker_free

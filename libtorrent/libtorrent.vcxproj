@@ -87,7 +87,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBTORRENT_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBTORRENT_EXPORTS;OS_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>.;include;../include;../libaio/include;../libhttp/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -151,15 +151,31 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\bencode.h" />
+    <ClInclude Include="include\peer.h" />
     <ClInclude Include="include\torrent.h" />
+    <ClInclude Include="include\tracker.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\source\digest\sha1.c" />
+    <ClCompile Include="..\source\uri-parse.c" />
+    <ClCompile Include="..\source\urlcodec.c" />
     <ClCompile Include="src\bencode.c" />
     <ClCompile Include="src\hash-sha1.c" />
+    <ClCompile Include="src\peer.c" />
     <ClCompile Include="src\torrent.c" />
+    <ClCompile Include="src\tracker-http.c" />
+    <ClCompile Include="src\tracker-udp.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="libtorrent.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\libaio\libaio.vcxproj">
+      <Project>{24239ef8-56ac-4b79-81aa-5cb49b8b1178}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\libhttp\libhttp.vcxproj">
+      <Project>{b2ca3b5d-f7c6-4daf-8f32-f8a169427a7c}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
