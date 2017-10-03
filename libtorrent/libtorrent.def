@@ -7,3 +7,4 @@ EXPORTS
 	torrent_read
 	torrent_write
 	torrent_free
+	torrent_hash

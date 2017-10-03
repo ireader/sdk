@@ -29,8 +29,11 @@
     <ClCompile Include="src\torrent.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\hash-sha1.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="libbt.def" />
+    <None Include="libtorrent.def" />
   </ItemGroup>
 </Project>
