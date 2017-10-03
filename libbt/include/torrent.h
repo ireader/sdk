@@ -31,8 +31,11 @@ struct torrent_t
 };
 
 int torrent_read(const uint8_t* ptr, size_t bytes, struct torrent_t* tor);
-int torrent_write(uint8_t* ptr, size_t bytes, const struct torrent_t* tor);
+int torrent_write(const struct torrent_t* tor, uint8_t* ptr, size_t bytes);
 int torrent_free(struct torrent_t* tor);
+
+// info hash
+int torrent_hash(const struct torrent_t* tor, uint8_t sha1[20]);
 
 #if defined(__cplusplus)
 }

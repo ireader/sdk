@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdio.h>
 
+int hash_sha1(const uint8_t* data, size_t bytes, uint8_t sha1[20]);
+
 static int torrent_read_int(const struct bvalue_t* node, int64_t* s)
 {
 	if (BT_INT != node->type)
@@ -235,7 +237,50 @@ int torrent_read(const uint8_t* ptr, size_t bytes, struct torrent_t* tor)
 	return r;
 }
 
-int torrent_write(uint8_t* buffer, size_t bytes, const struct torrent_t* tor)
+static uint8_t* torrent_write_info(uint8_t* ptr, const uint8_t* end, const struct torrent_t* tor)
+{
+	size_t i;
+
+	if (ptr < end) *ptr++ = 'd';
+	if (1 == tor->file_count)
+	{
+		ptr = bencode_write_string(ptr, end, "name", 4);
+		ptr = bencode_write_string(ptr, end, tor->files[0].name, strlen(tor->files[0].name));
+		ptr = bencode_write_string(ptr, end, "length", 6);
+		ptr = bencode_write_int(ptr, end, tor->files[0].bytes);
+	}
+	else
+	{
+		ptr = bencode_write_string(ptr, end, "files", 5);
+		if (ptr < end) *ptr++ = 'l';
+		for (i = 0; i < tor->file_count; i++)
+		{
+			if (ptr < end) *ptr++ = 'd';
+			ptr = bencode_write_string(ptr, end, "length", 6);
+			ptr = bencode_write_int(ptr, end, tor->files[i].bytes);
+			ptr = bencode_write_string(ptr, end, "path", 4);
+			if (ptr < end) *ptr++ = 'l';
+			ptr = bencode_write_string(ptr, end, tor->files[i].name, strlen(tor->files[i].name));
+			if (ptr < end) *ptr++ = 'e';
+			if (ptr < end) *ptr++ = 'e';
+		}
+		if (ptr < end) *ptr++ = 'e';
+
+		ptr = bencode_write_string(ptr, end, "name", 4);
+		ptr = bencode_write_string(ptr, end, tor->file_path, strlen(tor->file_path));
+	}
+
+	ptr = bencode_write_string(ptr, end, "piece length", 12);
+	ptr = bencode_write_int(ptr, end, tor->piece_bytes);
+
+	ptr = bencode_write_string(ptr, end, "pieces", 6);
+	ptr = bencode_write_string(ptr, end, (const char*)tor->pieces, tor->piece_count * 20);
+	if (ptr < end) *ptr++ = 'e';
+
+	return ptr;
+}
+
+int torrent_write(const struct torrent_t* tor, uint8_t* buffer, size_t bytes)
 {
 	size_t i;
 	uint8_t *ptr, *end;
@@ -288,41 +333,7 @@ int torrent_write(uint8_t* buffer, size_t bytes, const struct torrent_t* tor)
 
 	// info
 	ptr = bencode_write_string(ptr, end, "info", 4);
-	if (ptr < end) *ptr++ = 'd';
-	if (1 == tor->file_count)
-	{
-		ptr = bencode_write_string(ptr, end, "name", 4);
-		ptr = bencode_write_string(ptr, end, tor->files[0].name, strlen(tor->files[0].name));
-		ptr = bencode_write_string(ptr, end, "length", 6);
-		ptr = bencode_write_int(ptr, end, tor->files[0].bytes);
-	}
-	else
-	{
-		ptr = bencode_write_string(ptr, end, "files", 5);
-		if (ptr < end) *ptr++ = 'l';
-		for (i = 0; i < tor->file_count; i++)
-		{
-			if (ptr < end) *ptr++ = 'd';
-			ptr = bencode_write_string(ptr, end, "length", 6);
-			ptr = bencode_write_int(ptr, end, tor->files[i].bytes);
-			ptr = bencode_write_string(ptr, end, "path", 4);
-			if (ptr < end) *ptr++ = 'l';
-			ptr = bencode_write_string(ptr, end, tor->files[i].name, strlen(tor->files[i].name));
-			if (ptr < end) *ptr++ = 'e';
-			if (ptr < end) *ptr++ = 'e';
-		}
-		if (ptr < end) *ptr++ = 'e';
-
-		ptr = bencode_write_string(ptr, end, "name", 4);
-		ptr = bencode_write_string(ptr, end, tor->file_path, strlen(tor->file_path));
-	}
-
-	ptr = bencode_write_string(ptr, end, "piece length", 12);
-	ptr = bencode_write_int(ptr, end, tor->piece_bytes);
-
-	ptr = bencode_write_string(ptr, end, "pieces", 6);
-	ptr = bencode_write_string(ptr, end, (const char*)tor->pieces, tor->piece_count * 20);
-	if (ptr < end) *ptr++ = 'e';
+	ptr = torrent_write_info(ptr, end, tor);
 
 	if (ptr < end) *ptr++ = 'e';
 	return ptr - buffer;
@@ -351,5 +362,23 @@ int torrent_free(struct torrent_t* tor)
 		free(tor->pieces);
 	if (tor->file_path)
 		free(tor->file_path);
+	return 0;
+}
+
+int torrent_hash(const struct torrent_t* tor, uint8_t sha1[20])
+{
+	uint8_t *info, *ptr;
+
+	if (tor->file_count < 1)
+		return -1;
+
+	info = (uint8_t*)malloc(2 * 1024 * 1024);
+	ptr = torrent_write_info(info, info + 2 * 1024 * 1024, tor);
+	if (ptr + 1 < info + 2 * 1024 * 1024)
+	{
+		hash_sha1(info, ptr - info, sha1);
+	}
+	free(info);
+
 	return 0;
 }
