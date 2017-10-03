@@ -7,47 +7,6 @@
 
 int hash_sha1(const uint8_t* data, size_t bytes, uint8_t sha1[20]);
 
-static int torrent_read_int(const struct bvalue_t* node, int64_t* s)
-{
-	if (BT_INT != node->type)
-	{
-		assert(0);
-		return -1;
-	}
-
-	*s = node->v.value;
-	return 0;
-}
-
-static int torrent_read_string(const struct bvalue_t* node, char** s)
-{
-	if (BT_STRING != node->type)
-	{
-		assert(0);
-		return -1;
-	}
-
-	*s = strdup(node->v.str.value);
-	return 0;
-}
-
-static int torrent_read_string_ex(const struct bvalue_t* node, char** s)
-{
-	if (BT_STRING == node->type)
-	{
-		return torrent_read_string(node, s);
-	}
-	else if (BT_LIST == node->type && 1 == node->v.list.count)
-	{
-		return torrent_read_string(node->v.list.values, s);
-	}
-	else
-	{
-		assert(0);
-		return -1;
-	}
-}
-
 static int torrent_read_trackers(const struct bvalue_t* anounces, struct torrent_t* tor)
 {
 	void* p;
@@ -67,7 +26,7 @@ static int torrent_read_trackers(const struct bvalue_t* anounces, struct torrent
 	tor->trackers = (char**)p;
 	for (i = 0; i < anounces->v.list.count; i++)
 	{
-		if (0 != torrent_read_string_ex(anounces->v.list.values + i, &tor->trackers[tor->tracker_count++]))
+		if (0 != bencode_get_string_ex(anounces->v.list.values + i, &tor->trackers[tor->tracker_count++]))
 			return -1;
 	}
 
@@ -103,9 +62,9 @@ static int torrent_read_files(const struct bvalue_t* files, struct torrent_t* to
 		for (j = 0; j < 2 && 0 == r; j++)
 		{
 			if (0 == strcmp("length", file->v.dict.names[j].name))
-				r = torrent_read_int(file->v.dict.values + j, &tor->files[tor->file_count].bytes);
+				r = bencode_get_int(file->v.dict.values + j, &tor->files[tor->file_count].bytes);
 			else if (0 == strcmp("path", file->v.dict.names[j].name))
-				r = torrent_read_string_ex(file->v.dict.values + j, &tor->files[tor->file_count].name);
+				r = bencode_get_string_ex(file->v.dict.values + j, &tor->files[tor->file_count].name);
 			else
 				r = -1;
 		}
@@ -153,11 +112,11 @@ static int torrent_read_info(const struct bvalue_t* info, struct torrent_t* tor)
 		}
 		else if (0 == strcmp("name", info->v.dict.names[i].name))
 		{
-			r = torrent_read_string(info->v.dict.values + i, &tor->file_path);
+			r = bencode_get_string(info->v.dict.values + i, &tor->file_path);
 		}
 		else if (0 == strcmp("length", info->v.dict.names[i].name))
 		{
-			r = torrent_read_int(info->v.dict.values + i, &len);
+			r = bencode_get_int(info->v.dict.values + i, &len);
 		}
 		else if (0 == strcmp("pieces", info->v.dict.names[i].name))
 		{
@@ -165,7 +124,7 @@ static int torrent_read_info(const struct bvalue_t* info, struct torrent_t* tor)
 		}
 		else if (0 == strcmp("piece length", info->v.dict.names[i].name))
 		{
-			r = torrent_read_int(info->v.dict.values + i, &tor->piece_bytes);
+			r = bencode_get_int(info->v.dict.values + i, &tor->piece_bytes);
 		}
 		else
 		{
@@ -205,7 +164,7 @@ int torrent_read(const uint8_t* ptr, size_t bytes, struct torrent_t* tor)
 	{
 		if (0 == strcmp("announce", root.v.dict.names[i].name))
 		{
-			r = torrent_read_string(root.v.dict.values + i, &tor->trackers[tor->tracker_count++]);
+			r = bencode_get_string(root.v.dict.values + i, &tor->trackers[tor->tracker_count++]);
 		}
 		else if (0 == strcmp("announce-list", root.v.dict.names[i].name))
 		{
@@ -213,15 +172,15 @@ int torrent_read(const uint8_t* ptr, size_t bytes, struct torrent_t* tor)
 		}
 		else if (0 == strcmp("comment", root.v.dict.names[i].name))
 		{
-			r = torrent_read_string(root.v.dict.values + i, &tor->comment);
+			r = bencode_get_string(root.v.dict.values + i, &tor->comment);
 		}
 		else if (0 == strcmp("created by", root.v.dict.names[i].name))
 		{
-			r = torrent_read_string(root.v.dict.values + i, &tor->author);
+			r = bencode_get_string(root.v.dict.values + i, &tor->author);
 		}
 		else if (0 == strcmp("creation date", root.v.dict.names[i].name))
 		{
-			r = torrent_read_int(root.v.dict.values + i, &tor->create);
+			r = bencode_get_int(root.v.dict.values + i, &tor->create);
 		}
 		else if (0 == strcmp("info", root.v.dict.names[i].name))
 		{

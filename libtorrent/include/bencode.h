@@ -57,6 +57,10 @@ int bencode_read(const uint8_t* ptr, size_t bytes, struct bvalue_t* value);
 int bencode_write(uint8_t* ptr, size_t bytes, const struct bvalue_t* value);
 int bencode_free(struct bvalue_t* value);
 
+int bencode_get_int(const struct bvalue_t* node, int64_t* value);
+int bencode_get_string(const struct bvalue_t* node, char** value);
+int bencode_get_string_ex(const struct bvalue_t* node, char** value);
+
 #if defined(__cplusplus)
 }
 #endif

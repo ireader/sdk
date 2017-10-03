@@ -380,3 +380,44 @@ int bencode_free(struct bvalue_t* value)
 
 	return 0;
 }
+
+int bencode_get_int(const struct bvalue_t* node, int64_t* value)
+{
+	if (BT_INT != node->type)
+	{
+		assert(0);
+		return -1;
+	}
+
+	*value = node->v.value;
+	return 0;
+}
+
+int bencode_get_string(const struct bvalue_t* node, char** value)
+{
+	if (BT_STRING != node->type)
+	{
+		assert(0);
+		return -1;
+	}
+
+	*value = strdup(node->v.str.value);
+	return 0;
+}
+
+int bencode_get_string_ex(const struct bvalue_t* node, char** value)
+{
+	if (BT_STRING == node->type)
+	{
+		return bencode_get_string(node, value);
+	}
+	else if (BT_LIST == node->type && 1 == node->v.list.count)
+	{
+		return bencode_get_string(node->v.list.values, value);
+	}
+	else
+	{
+		assert(0);
+		return -1;
+	}
+}
