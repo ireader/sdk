@@ -30,9 +30,6 @@
     <ClCompile Include="src\aio-connect.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\aio-socket-iocp.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\aio-recv.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -40,6 +37,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\source\timer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\port\aio-socket-iocp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

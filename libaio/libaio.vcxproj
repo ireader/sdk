@@ -146,7 +146,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\source\aio-socket-iocp.c" />
+    <ClCompile Include="..\source\port\aio-socket-iocp.c" />
     <ClCompile Include="..\source\timer.c" />
     <ClCompile Include="src\aio-accept.c" />
     <ClCompile Include="src\aio-recv.c" />
