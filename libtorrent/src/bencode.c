@@ -381,7 +381,19 @@ int bencode_free(struct bvalue_t* value)
 	return 0;
 }
 
-int bencode_get_int(const struct bvalue_t* node, int64_t* value)
+int bencode_get_int(const struct bvalue_t* node, int32_t* value)
+{
+	if (BT_INT != node->type)
+	{
+		assert(0);
+		return -1;
+	}
+
+	*value = (int32_t)node->v.value;
+	return 0;
+}
+
+int bencode_get_int64(const struct bvalue_t* node, int64_t* value)
 {
 	if (BT_INT != node->type)
 	{
