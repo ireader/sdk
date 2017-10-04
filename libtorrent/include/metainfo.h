@@ -1,5 +1,5 @@
-#ifndef _torrent_reader_h_
-#define _torrent_reader_h_
+#ifndef _metainfo_h_
+#define _metainfo_h_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-struct torrent_t
+struct metainfo_t
 {
 	char** trackers;
 	size_t tracker_count;
@@ -30,14 +30,14 @@ struct torrent_t
 	char* file_path;
 };
 
-int torrent_read(const uint8_t* ptr, size_t bytes, struct torrent_t* tor);
-int torrent_write(const struct torrent_t* tor, uint8_t* ptr, size_t bytes);
-int torrent_free(struct torrent_t* tor);
+int metainfo_read(const uint8_t* ptr, size_t bytes, struct metainfo_t* tor);
+int metainfo_write(const struct metainfo_t* tor, uint8_t* ptr, size_t bytes);
+int metainfo_free(struct metainfo_t* tor);
 
 // info hash
-int torrent_hash(const struct torrent_t* tor, uint8_t sha1[20]);
+int metainfo_hash(const struct metainfo_t* tor, uint8_t sha1[20]);
 
 #if defined(__cplusplus)
 }
 #endif
-#endif /* !_torrent_reader_h_ */
+#endif /* !_metainfo_h_ */

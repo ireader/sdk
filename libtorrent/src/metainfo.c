@@ -1,5 +1,5 @@
 #include "bencode.h"
-#include "torrent.h"
+#include "metainfo.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +7,7 @@
 
 int hash_sha1(const uint8_t* data, size_t bytes, uint8_t sha1[20]);
 
-static int torrent_read_trackers(const struct bvalue_t* anounces, struct torrent_t* tor)
+static int metainfo_read_trackers(const struct bvalue_t* anounces, struct metainfo_t* tor)
 {
 	void* p;
 	size_t i;
@@ -33,7 +33,7 @@ static int torrent_read_trackers(const struct bvalue_t* anounces, struct torrent
 	return 0;
 }
 
-static int torrent_read_files(const struct bvalue_t* files, struct torrent_t* tor)
+static int metainfo_read_files(const struct bvalue_t* files, struct metainfo_t* tor)
 {
 	int r;
 	size_t i, j;
@@ -74,7 +74,7 @@ static int torrent_read_files(const struct bvalue_t* files, struct torrent_t* to
 	return r;
 }
 
-static int torrent_read_pieces(const struct bvalue_t* pieces, struct torrent_t* tor)
+static int metainfo_read_pieces(const struct bvalue_t* pieces, struct metainfo_t* tor)
 {
 	if (BT_STRING != pieces->type || 0 != pieces->v.str.bytes % 20 || 0 == pieces->v.str.bytes)
 	{
@@ -92,7 +92,7 @@ static int torrent_read_pieces(const struct bvalue_t* pieces, struct torrent_t* 
 	return 0;
 }
 
-static int torrent_read_info(const struct bvalue_t* info, struct torrent_t* tor)
+static int metainfo_read_info(const struct bvalue_t* info, struct metainfo_t* tor)
 {
 	int r;
 	size_t i;
@@ -108,7 +108,7 @@ static int torrent_read_info(const struct bvalue_t* info, struct torrent_t* tor)
 	{
 		if (0 == strcmp("files", info->v.dict.names[i].name))
 		{
-			r = torrent_read_files(info->v.dict.values + i, tor);
+			r = metainfo_read_files(info->v.dict.values + i, tor);
 		}
 		else if (0 == strcmp("name", info->v.dict.names[i].name))
 		{
@@ -120,7 +120,7 @@ static int torrent_read_info(const struct bvalue_t* info, struct torrent_t* tor)
 		}
 		else if (0 == strcmp("pieces", info->v.dict.names[i].name))
 		{
-			r = torrent_read_pieces(info->v.dict.values + i, tor);
+			r = metainfo_read_pieces(info->v.dict.values + i, tor);
 		}
 		else if (0 == strcmp("piece length", info->v.dict.names[i].name))
 		{
@@ -146,7 +146,7 @@ static int torrent_read_info(const struct bvalue_t* info, struct torrent_t* tor)
 	return 0;
 }
 
-int torrent_read(const uint8_t* ptr, size_t bytes, struct torrent_t* tor)
+int metainfo_read(const uint8_t* ptr, size_t bytes, struct metainfo_t* tor)
 {
 	int r;
 	size_t i;
@@ -168,7 +168,7 @@ int torrent_read(const uint8_t* ptr, size_t bytes, struct torrent_t* tor)
 		}
 		else if (0 == strcmp("announce-list", root.v.dict.names[i].name))
 		{
-			r = torrent_read_trackers(root.v.dict.values + i, tor);
+			r = metainfo_read_trackers(root.v.dict.values + i, tor);
 		}
 		else if (0 == strcmp("comment", root.v.dict.names[i].name))
 		{
@@ -184,7 +184,7 @@ int torrent_read(const uint8_t* ptr, size_t bytes, struct torrent_t* tor)
 		}
 		else if (0 == strcmp("info", root.v.dict.names[i].name))
 		{
-			r = torrent_read_info(root.v.dict.values + i, tor);
+			r = metainfo_read_info(root.v.dict.values + i, tor);
 		}
 		else
 		{
@@ -196,7 +196,7 @@ int torrent_read(const uint8_t* ptr, size_t bytes, struct torrent_t* tor)
 	return r;
 }
 
-static uint8_t* torrent_write_info(uint8_t* ptr, const uint8_t* end, const struct torrent_t* tor)
+static uint8_t* metainfo_write_info(uint8_t* ptr, const uint8_t* end, const struct metainfo_t* tor)
 {
 	size_t i;
 
@@ -239,7 +239,7 @@ static uint8_t* torrent_write_info(uint8_t* ptr, const uint8_t* end, const struc
 	return ptr;
 }
 
-int torrent_write(const struct torrent_t* tor, uint8_t* buffer, size_t bytes)
+int metainfo_write(const struct metainfo_t* tor, uint8_t* buffer, size_t bytes)
 {
 	size_t i;
 	uint8_t *ptr, *end;
@@ -292,13 +292,13 @@ int torrent_write(const struct torrent_t* tor, uint8_t* buffer, size_t bytes)
 
 	// info
 	ptr = bencode_write_string(ptr, end, "info", 4);
-	ptr = torrent_write_info(ptr, end, tor);
+	ptr = metainfo_write_info(ptr, end, tor);
 
 	if (ptr < end) *ptr++ = 'e';
 	return ptr - buffer;
 }
 
-int torrent_free(struct torrent_t* tor)
+int metainfo_free(struct metainfo_t* tor)
 {
 	size_t i;
 
@@ -324,7 +324,7 @@ int torrent_free(struct torrent_t* tor)
 	return 0;
 }
 
-int torrent_hash(const struct torrent_t* tor, uint8_t sha1[20])
+int metainfo_hash(const struct metainfo_t* tor, uint8_t sha1[20])
 {
 	uint8_t *info, *ptr;
 
@@ -332,7 +332,7 @@ int torrent_hash(const struct torrent_t* tor, uint8_t sha1[20])
 		return -1;
 
 	info = (uint8_t*)malloc(2 * 1024 * 1024);
-	ptr = torrent_write_info(info, info + 2 * 1024 * 1024, tor);
+	ptr = metainfo_write_info(info, info + 2 * 1024 * 1024, tor);
 	if (ptr + 1 < info + 2 * 1024 * 1024)
 	{
 		hash_sha1(info, ptr - info, sha1);
