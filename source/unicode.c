@@ -203,5 +203,5 @@ int unicode_from_gb18030(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt,
 }
 
 #if defined(OS_LINUX)
-#include "../i18n/nls_cp936.c"
+#include "i18n/nls_cp936.c"
 #endif
