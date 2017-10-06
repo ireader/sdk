@@ -13,6 +13,11 @@ int hweight16(uint16_t w);
 int hweight32(uint32_t w);
 int hweight64(uint64_t w);
 
+static inline int hweight_long(unsigned long w)
+{
+	return sizeof(w) == 8 ? hweight64(w) : hweight32(w);
+}
+
 #if defined(__cplusplus)
 }
 #endif
