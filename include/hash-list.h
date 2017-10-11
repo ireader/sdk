@@ -17,7 +17,7 @@ static inline int hash_list_empty(struct hash_head_t* head)
 	return !head->first;
 }
 
-static inline void hash_list_add(struct hash_head_t* head, struct hash_node_t* node)
+static inline void hash_list_link(struct hash_head_t* head, struct hash_node_t* node)
 {
 	if (head->first)
 		head->first->pnext = &node->next;
@@ -26,7 +26,7 @@ static inline void hash_list_add(struct hash_head_t* head, struct hash_node_t* n
 	head->first = node;
 }
 
-static inline void hash_list_del(struct hash_node_t* node)
+static inline void hash_list_unlink(struct hash_node_t* node)
 {
 	*node->pnext = node->next;
 	if (node->next)
@@ -34,7 +34,7 @@ static inline void hash_list_del(struct hash_node_t* node)
 }
 
 #define hash_list_entry(ptr, type, member)	\
-	((type*)( (char*)ptr - &(((type*)0)->member) ))
+	((type*)( (char*)ptr - (intptr_t)&(((type*)0)->member) ))
 
 #define hash_list_for_each(pos, head) \
 	for(pos = (head)->first; pos; pos = pos->next)
