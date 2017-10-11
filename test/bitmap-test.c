@@ -9,7 +9,7 @@
 void bitmap_test(void)
 {
 	unsigned int i, j, n;
-	unsigned long bitmap[(N + 7)/8];
+	uint8_t bitmap[(N + 7)/8];
 	
 	bitmap_zero(bitmap, N);
 	assert(N == bitmap_count_leading_zero(bitmap, N));
@@ -28,7 +28,7 @@ void bitmap_test(void)
 	srand(time(NULL));
 	//srand(31415926);
 	for (i = 0; i < sizeof(bitmap) / sizeof(bitmap[0]); i++)
-		bitmap[i] = rand() * 31415926UL;
+		bitmap[i] = (uint8_t)(rand() * 31415926UL);
 
 	n = bitmap_count_leading_zero(bitmap, N);
 	assert(n == bitmap_count_next_zero(bitmap, N, 0));

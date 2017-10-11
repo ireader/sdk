@@ -2,93 +2,94 @@
 #include "hweight.h"
 #include <string.h>
 
-#define BITS_PER_LONG			(sizeof(long) * 8)
-#define BITS_TO_LONGS(nbits)	(((nbits) + BITS_PER_LONG - 1) / BITS_PER_LONG)
-#define BITS_MASK_LONG(nbits)	(~((~0UL) >> nbits))
+#define BITS_PER_BYTE			(8)
+#define BITS_TO_BYTES(nbits)	(((nbits) + BITS_PER_BYTE - 1) / BITS_PER_BYTE)
+#define BITS_MASK_BYTE(nbits)	((uint8_t)~(((uint8_t)~0) >> nbits))
 
-void bitmap_zero(unsigned long* bitmap, unsigned int nbits)
+void bitmap_zero(uint8_t* bitmap, unsigned int nbits)
 {
-	unsigned int n = BITS_TO_LONGS(nbits);
-	memset(bitmap, 0x00, n * sizeof(unsigned long));
+	unsigned int n = BITS_TO_BYTES(nbits);
+	memset(bitmap, 0x00, n * sizeof(uint8_t));
 }
 
-void bitmap_fill(unsigned long* bitmap, unsigned int nbits)
+void bitmap_fill(uint8_t* bitmap, unsigned int nbits)
 {
-	unsigned int n = BITS_TO_LONGS(nbits);
-	memset(bitmap, 0xFF, n * sizeof(unsigned long));
+	unsigned int n = BITS_TO_BYTES(nbits);
+	memset(bitmap, 0xFF, n * sizeof(uint8_t));
 }
 
-void bitmap_set(unsigned long *bitmap, unsigned int start, unsigned int len)
+void bitmap_set(uint8_t *bitmap, unsigned int start, unsigned int len)
 {
 	unsigned int end = start + len;
-	unsigned int from = start / BITS_PER_LONG;
-	unsigned long mask = (~0UL) >> (start % BITS_PER_LONG);
-	while (from < end / BITS_PER_LONG)
+	unsigned int from = start / BITS_PER_BYTE;
+	uint8_t mask = ((uint8_t)~0) >> (start % BITS_PER_BYTE);
+	while (from < end / BITS_PER_BYTE)
 	{
 		bitmap[from++] |= mask;
-		mask = ~0UL;
+		mask = (uint8_t)~0;
 	}
 
-	if (end % BITS_PER_LONG)
+	if (end % BITS_PER_BYTE)
 	{
-		mask &= BITS_MASK_LONG(end % BITS_PER_LONG);
+		mask &= BITS_MASK_BYTE(end % BITS_PER_BYTE);
 		bitmap[from] |= mask;
 	}
 }
 
-void bitmap_clear(unsigned long *bitmap, unsigned int start, unsigned int len)
+void bitmap_clear(uint8_t *bitmap, unsigned int start, unsigned int len)
 {
 	unsigned int end = start + len;
-	unsigned int from = start / BITS_PER_LONG;
-	unsigned long mask = BITS_MASK_LONG(start % BITS_PER_LONG);
-	while (from < end / BITS_PER_LONG)
+	unsigned int from = start / BITS_PER_BYTE;
+	uint8_t mask = BITS_MASK_BYTE(start % BITS_PER_BYTE);
+	while (from < end / BITS_PER_BYTE)
 	{
 		bitmap[from++] &= mask;
 		mask = 0UL;
 	}
 
-	if (end % BITS_PER_LONG)
+	if (end % BITS_PER_BYTE)
 	{
-		mask |= (~0UL) >> (end % BITS_PER_LONG);
+		mask |= ((uint8_t)~0) >> (end % BITS_PER_BYTE);
 		bitmap[from] &= mask;
 	}
 }
 
-void bitmap_or(unsigned long* result, const unsigned long* src1, const unsigned long* src2, unsigned int nbits)
+void bitmap_or(uint8_t* result, const uint8_t* src1, const uint8_t* src2, unsigned int nbits)
 {
 	unsigned int i;
-	for (i = 0; i < BITS_TO_LONGS(nbits); i++)
+	for (i = 0; i < BITS_TO_BYTES(nbits); i++)
 		result[i] = src1[i] | src2[i];
 }
 
-void bitmap_and(unsigned long* result, const unsigned long* src1, const unsigned long* src2, unsigned int nbits)
+void bitmap_and(uint8_t* result, const uint8_t* src1, const uint8_t* src2, unsigned int nbits)
 {
 	unsigned int i;
-	for (i = 0; i < BITS_TO_LONGS(nbits); i++)
+	for (i = 0; i < BITS_TO_BYTES(nbits); i++)
 		result[i] = src1[i] & src2[i];
 }
 
-void bitmap_xor(unsigned long* result, const unsigned long* src1, const unsigned long* src2, unsigned int nbits)
+void bitmap_xor(uint8_t* result, const uint8_t* src1, const uint8_t* src2, unsigned int nbits)
 {
 	unsigned int i;
-	for (i = 0; i < BITS_TO_LONGS(nbits); i++)
+	for (i = 0; i < BITS_TO_BYTES(nbits); i++)
 		result[i] = src1[i] ^ src2[i];
 }
 
-unsigned int bitmap_weight(const unsigned long* bitmap, unsigned int nbits)
+unsigned int bitmap_weight(const uint8_t* bitmap, unsigned int nbits)
 {
 	int w;
 	unsigned int i;
 	
-	for (i = w = 0; i < nbits / sizeof(unsigned long); i++)
+	for (i = w = 0; i < nbits / sizeof(uint8_t); i++)
 		w += hweight_long(bitmap[i]);
 
-	if (nbits % BITS_PER_LONG)
-		w += hweight_long(bitmap[i] & BITS_MASK_LONG(nbits % BITS_PER_LONG));
+	if (nbits % BITS_PER_BYTE)
+		w += hweight_long(bitmap[i] & BITS_MASK_BYTE(nbits % BITS_PER_BYTE));
 	
 	return w;
 }
 
+#if 0
 // https://en.wikipedia.org/wiki/Find_first_set
 static inline unsigned int clz(unsigned long v)
 {
@@ -141,40 +142,64 @@ static inline unsigned int clz(unsigned long v)
 	return num;
 #endif
 }
+#endif
 
-unsigned int bitmap_count_leading_zero(const unsigned long* bitmap, unsigned int nbits)
+static inline unsigned int clz8(unsigned long v)
+{
+	unsigned int num = 8;
+	if (0xF0 & v)
+	{
+		num -= 4;
+		v >>= 4;
+	}
+	if (0xC & v)
+	{
+		num -= 2;
+		v >>= 2;
+	}
+	if (0x2 & v)
+	{
+		num -= 1;
+		v >>= 1;
+	}
+	if (0x1 & v)
+		num -= 1;
+
+	return num;
+}
+
+unsigned int bitmap_count_leading_zero(const uint8_t* bitmap, unsigned int nbits)
 {
 	unsigned int i, c = 0;
-	unsigned int n = BITS_TO_LONGS(nbits);
+	unsigned int n = BITS_TO_BYTES(nbits);
 
 	for (i = 0; i < n; i++)
 	{
-		c = clz(bitmap[i]);
-		if (c < BITS_PER_LONG)
+		c = clz8(bitmap[i]);
+		if (c < BITS_PER_BYTE)
 			break;
 	}
 
-	c += i * BITS_PER_LONG;
+	c += i * BITS_PER_BYTE;
 	return c > nbits ? nbits : c;
 }
 
-unsigned int bitmap_count_next_zero(const unsigned long* bitmap, unsigned int nbits, unsigned int start)
+unsigned int bitmap_count_next_zero(const uint8_t* bitmap, unsigned int nbits, unsigned int start)
 {
-	unsigned int c, i = start / BITS_PER_LONG;
-	unsigned int n = BITS_TO_LONGS(nbits);
-	unsigned long mask = (~0UL) >> (start % BITS_PER_LONG);
+	unsigned int c, i = start / BITS_PER_BYTE;
+	uint8_t mask = ((uint8_t)~0) >> (start % BITS_PER_BYTE);
 
-	c = clz(bitmap[i] & mask);
-	if (BITS_PER_LONG == c && i + 1 < BITS_TO_LONGS(nbits))
-		c += bitmap_count_leading_zero(bitmap + i + 1, nbits - (i + 1) * BITS_PER_LONG);
-	c += i * BITS_PER_LONG;
+	c = clz8(bitmap[i] & mask);
+	if (BITS_PER_BYTE == c && i + 1 < BITS_TO_BYTES(nbits))
+		c += bitmap_count_leading_zero(bitmap + i + 1, nbits - (i + 1) * BITS_PER_BYTE);
+	c += i * BITS_PER_BYTE;
 	c = c > nbits ? nbits : c;
 	c -= start;
 	return c;
 }
 
-int bitmap_test_bit(const unsigned long* bitmap, unsigned int bits)
+int bitmap_test_bit(const uint8_t* bitmap, unsigned int bits)
 {
-	unsigned int n = bits / BITS_PER_LONG;
-	return bitmap[n] & (1 << (BITS_PER_LONG - 1 - (bits % BITS_PER_LONG)));
+	unsigned int n = bits / BITS_PER_BYTE;
+	return bitmap[n] & (1 << (BITS_PER_BYTE - 1 - (bits % BITS_PER_BYTE)));
 }
