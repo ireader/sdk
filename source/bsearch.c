@@ -13,7 +13,7 @@ void* bsearch(const void* key, const void* arr, size_t num, size_t size,
 	while (start < end)
 	{
 		mid = (start + end) / 2;
-		ptr = (void*)((const char*)arr + mid * size);
+		ptr = (char*)arr + mid * size;
 
 		result = cmp(key, ptr);
 		if (result < 0)

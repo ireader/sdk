@@ -66,7 +66,7 @@ void hweight_test(void)
 	assert(0 == hweight64(0x0000000000000000ull));
 	assert(16 == hweight64(0x8421824181428124ull));
 	assert(16 == hweight64(0x1248128414281842ull));
-	assert(40 == hweight64(0xF8F4F2F1373E57E9ll));
+	assert(40 == hweight64(0xF8F4F2F1373E57E9ull));
 	assert(32 == hweight64(0x0F172E33CC3CC371ull));
 	assert(32 == hweight64(0x9CC993396CC66336ull));
 }
