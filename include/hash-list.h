@@ -39,7 +39,7 @@ static inline void hash_list_del(struct hash_node_t* node)
 #define hash_list_for_each(pos, head) \
 	for(pos = (head)->first; pos; pos = pos->next)
 
-#define list_for_each_safe(pos, n, head) \
+#define hash_list_for_each_safe(pos, n, head) \
 	for(pos = (head)->first; pos && (n = pos->next, 1); pos = n)
 
 #endif /* !_hash_table_h_ */
