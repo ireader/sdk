@@ -150,6 +150,8 @@ struct http_client_t* http_client_create(const char* ip, unsigned short port, in
 	http = (struct http_client_t *)calloc(1, sizeof(*http));
 	if(!http) return NULL;
 
+	r = snprintf(http->host, sizeof(http->host) - 1, "%s", ip);
+	http->port = port;
 	http->socket = socket_invalid;
 	http->conn = flags ? http_client_connection() : http_client_connection_aio();
 	locker_create(&http->locker);
@@ -157,17 +159,11 @@ struct http_client_t* http_client_create(const char* ip, unsigned short port, in
 	http->req = http_request_create(HTTP_1_1);
 	http->parser = http_parser_create(HTTP_PARSER_CLIENT);
 	http->connection = http->conn->create(http);
-	r = snprintf(http->host, sizeof(http->host) - 1, "%s", ip);
 	if (r <= 0 || r >= sizeof(http->host) || !http->parser || !http->req || !http->connection)
 	{
 		http_client_release(http);
 		return NULL;
 	}
-
-	http->port = port;
-	http->timeout.conn = 20000;
-	http->timeout.recv = 20000;
-	http->timeout.send = 20000;
 	return http;
 }
 
@@ -217,9 +213,7 @@ void http_client_release(struct http_client_t* http)
 void http_client_set_timeout(struct http_client_t* http, int conn, int recv, int send)
 {
 	assert(conn >= 0 && recv >= 0 && send >= 0);
-	http->timeout.conn = conn;
-	http->timeout.recv = recv;
-	http->timeout.send = send;
+	http->conn->timeout(http, conn, recv, send);
 }
 
 int http_client_get(struct http_client_t* http, const char* uri, const struct http_header_t *headers, size_t n, http_client_onreply onreply, void* param)

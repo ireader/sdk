@@ -39,7 +39,8 @@ struct http_client_connection_t
 {
 	void* (*create)(struct http_client_t *http);
 	void (*destroy)(struct http_client_t *http);
-
+	void (*timeout)(struct http_client_t *http, int conn, int recv, int send);
+	
 	int (*request)(struct http_client_t *http, const char* req, size_t nreq, const void* msg, size_t bytes);
 };
 

@@ -4,6 +4,9 @@
 
 static void* http_socket_create(http_client_t* http)
 {
+	http->timeout.conn = 20000;
+	http->timeout.recv = 20000;
+	http->timeout.send = 20000;
 	return http;
 }
 
@@ -108,11 +111,20 @@ RETRY_REQUEST:
 	return r;
 }
 
+static void http_socket_timeout(struct http_client_t* http, int conn, int recv, int send)
+{
+	assert(conn >= 0 && recv >= 0 && send >= 0);
+	http->timeout.conn = conn;
+	http->timeout.recv = recv;
+	http->timeout.send = send;
+}
+
 struct http_client_connection_t* http_client_connection()
 {
 	static struct http_client_connection_t conn = {
 		http_socket_create,
 		http_socket_destroy,
+		http_socket_timeout,
 		http_socket_request,
 	};
 	return &conn;
