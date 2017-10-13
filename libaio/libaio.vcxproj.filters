@@ -42,6 +42,9 @@
     <ClCompile Include="..\source\port\aio-socket-iocp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\aio-client.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\aio-accept.h">
@@ -66,6 +69,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\aio-send.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\aio-client.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

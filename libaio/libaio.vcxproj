@@ -149,6 +149,7 @@
     <ClCompile Include="..\source\port\aio-socket-iocp.c" />
     <ClCompile Include="..\source\timer.c" />
     <ClCompile Include="src\aio-accept.c" />
+    <ClCompile Include="src\aio-client.c" />
     <ClCompile Include="src\aio-recv.c" />
     <ClCompile Include="src\aio-rwutil.c" />
     <ClCompile Include="src\aio-connect.c" />
@@ -163,6 +164,7 @@
     <ClInclude Include="include\aio-rwutil.h" />
     <ClInclude Include="include\aio-connect.h" />
     <ClInclude Include="include\aio-send.h" />
+    <ClInclude Include="include\aio-client.h" />
     <ClInclude Include="include\aio-tcp-transport.h" />
     <ClInclude Include="include\aio-timeout.h" />
   </ItemGroup>

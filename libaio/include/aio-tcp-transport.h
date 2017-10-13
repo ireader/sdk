@@ -14,10 +14,10 @@ struct aio_tcp_transport_handler_t
 	/// aio transport destroy
 	void (*ondestroy)(void* param);
 
-	/// @param[in] param user-defined pointer return by onconnected
+	/// @param[in] param user-defined pointer
 	void (*onrecv)(void* param, int code, size_t bytes);
 
-	/// @param[in] param user-defined pointer return by onconnected
+	/// @param[in] param user-defined pointer
 	void (*onsend)(void* param, int code, size_t bytes);
 };
 
@@ -32,7 +32,7 @@ aio_tcp_transport_t* aio_tcp_transport_create2(aio_socket_t aio, struct aio_tcp_
 /// cancel tcp transport recv/send
 int aio_tcp_transport_destroy(aio_tcp_transport_t* transport);
 
-/// start recv, call once only
+/// recv data
 int aio_tcp_transport_recv(aio_tcp_transport_t* transport, void* data, size_t bytes);
 int aio_tcp_transport_recv_v(aio_tcp_transport_t* transport, socket_bufvec_t *vec, int n);
 
