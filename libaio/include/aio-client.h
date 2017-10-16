@@ -10,17 +10,21 @@ extern "C" {
 struct aio_client_handler_t
 {
 	/// aio client destroy
-	void(*ondestroy)(void* param);
+	void (*ondestroy)(void* param);
+
+	/// connect notify(maybe call mutil-times)
+	/// @param[in] param user-defined pointer
+	void (*onconn)(void* param);
 
 	/// @param[in] param user-defined pointer
 	/// @param[in] code 0-ok, other-error
 	/// @param[in] bytes recv data length, valid if code is 0
-	void(*onrecv)(void* param, int code, size_t bytes);
+	void (*onrecv)(void* param, int code, size_t bytes);
 
 	/// @param[in] param user-defined pointer
 	/// @param[in] code 0-ok, other-error
 	/// @param[in] bytes sent data length, valid if code is 0
-	void(*onsend)(void* param, int code, size_t bytes);
+	void (*onsend)(void* param, int code, size_t bytes);
 };
 
 typedef struct aio_client_t aio_client_t;

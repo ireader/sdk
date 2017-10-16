@@ -249,6 +249,9 @@ static void aio_client_onconn(void* param, int code, aio_socket_t aio)
 	int send = 0, recv = 0;
 	struct aio_client_t* client;
 	client = (struct aio_client_t*)param;
+	if(client->handler.onconn)
+		client->handler.onconn(client->param);
+
 	spinlock_lock(&client->locker);
 	if (0 == code)
 	{
