@@ -44,8 +44,22 @@ global:
 	aio_tcp_transport_recv;
 	aio_tcp_transport_recv_v;
 	aio_tcp_transport_send;
-	aio_tcp_transport_sendv;
+	aio_tcp_transport_send_v;
 	aio_tcp_transport_set_timeout;
 	aio_tcp_transport_get_timeout;
+	
+	aio_client_create;
+	aio_client_destroy;
+	aio_client_connect;
+	aio_client_disconnect;
+	aio_client_recv;
+	aio_client_recv_v;
+	aio_client_send;
+	aio_client_send_v;
+	aio_client_gettimeout;
+	aio_client_settimeout;
+
+	aio_worker_init;
+	aio_worker_clean;
 local: *;  
 };

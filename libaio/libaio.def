@@ -58,3 +58,6 @@ EXPORTS
 	aio_client_send_v
 	aio_client_gettimeout
 	aio_client_settimeout
+
+	aio_worker_init
+	aio_worker_clean

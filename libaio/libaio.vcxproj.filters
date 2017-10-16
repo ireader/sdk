@@ -45,6 +45,9 @@
     <ClCompile Include="src\aio-client.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\aio-worker.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\aio-accept.h">
@@ -72,6 +75,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\aio-client.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\aio-worker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
