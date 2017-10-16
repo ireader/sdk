@@ -27,6 +27,7 @@ static void* http_aio_create(struct http_client_t *http)
 	if (aio)
 	{
 		struct aio_client_handler_t handler;
+		memset(&handler, 0, sizeof(handler));
 		handler.ondestroy = http_ondestroy;
 		handler.onrecv = http_onrecv;
 		handler.onsend = http_onsend;
