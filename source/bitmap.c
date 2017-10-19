@@ -79,12 +79,14 @@ unsigned int bitmap_weight(const uint8_t* bitmap, unsigned int nbits)
 {
 	int w;
 	unsigned int i;
+	unsigned long *p;
 	
-	for (i = w = 0; i < nbits / sizeof(uint8_t); i++)
-		w += hweight_long(bitmap[i]);
+	p = (unsigned long *)bitmap;
+	for (i = w = 0; i < nbits / sizeof(unsigned long); i++)
+		w += hweight_long(*(p + i));
 
-	if (nbits % BITS_PER_BYTE)
-		w += hweight_long(bitmap[i] & BITS_MASK_BYTE(nbits % BITS_PER_BYTE));
+	if (nbits % (BITS_PER_BYTE * sizeof(unsigned long)))
+		w += hweight_long(*(p + i) & ((unsigned long)~(((unsigned long)~0) >> nbits)));
 	
 	return w;
 }
