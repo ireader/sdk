@@ -1,13 +1,16 @@
 #include "peer.h"
 #include "peer-parser.h"
 #include "peer-message.h"
+#include "aio-tcp-transport.h"
 #include "sys/locker.h"
 #include "sys/system.h"
-#include "aio-client.h"
 #include "byte-order.h"
 #include "bitmap.h"
 #include "list.h"
 #include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 
 struct peer_msg_t
 {
@@ -19,13 +22,13 @@ struct peer_msg_t
 
 struct peer_t
 {
-	struct peer_base_t base;
+	struct peer_info_t base;
 	struct peer_parser_t parser;
 	struct peer_handler_t handler;
 	void* param;
 
 	locker_t locker;
-	aio_client_t* aio;
+	aio_tcp_transport_t* aio;
 	uint8_t rbuffer[N_PIECE_SLICE + 128];
 	struct peer_msg_t* msg; // sending msg
 	struct list_head messages;
@@ -85,7 +88,7 @@ static void peer_aio_onrecv(void* param, int code, size_t bytes)
 		peer->recv_timeout = 0;
 		code = peer_input(&peer->parser, peer->rbuffer, bytes, peer_handler, peer);
 		if (0 == code)
-			code = aio_client_recv(peer->aio, peer->rbuffer, sizeof(peer->rbuffer));
+			code = aio_tcp_transport_recv(peer->aio, peer->rbuffer, sizeof(peer->rbuffer));
 	}
 	else if (ETIMEDOUT == code)
 	{
@@ -129,12 +132,10 @@ static void peer_aio_onsend(void* param, int code, size_t bytes)
 	}
 }
 
-peer_t* peer_create(const struct sockaddr_storage* addr, struct peer_handler_t* handler, void* param)
+peer_t* peer_create(aio_socket_t aio, const struct sockaddr_storage* addr, struct peer_handler_t* handler, void* param)
 {
-	char ip[SOCKET_ADDRLEN];
-	u_short port;
 	peer_t* peer;
-	struct aio_client_handler_t aiohandler;
+	struct aio_tcp_transport_handler_t aiohandler;
 	peer = (peer_t*)calloc(1, sizeof(*peer));
 	if (!peer) return NULL;
 
@@ -142,10 +143,9 @@ peer_t* peer_create(const struct sockaddr_storage* addr, struct peer_handler_t* 
 	aiohandler.ondestroy = peer_aio_ondestroy;
 	aiohandler.onrecv = peer_aio_onrecv;
 	aiohandler.onsend = peer_aio_onsend;
-	socket_addr_to((struct sockaddr*)&peer->base.addr, AF_INET6 == peer->base.addr.ss_family ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in), ip, &port);
-	peer->aio = aio_client_create(ip, port, &aiohandler, peer);
+	peer->aio = aio_tcp_transport_create2(aio, &aiohandler, peer);
 	// NOTICE: init recv timeout 5s, after bitfield will set to 90s
-	aio_client_settimeout(peer->aio, 10 * 1000, 5 * 1000, 5 * 1000);
+	aio_tcp_transport_set_timeout(peer->aio, 5 * 1000, 5 * 1000);
 
 	locker_create(&peer->locker);
 	memcpy(&peer->handler, handler, sizeof(peer->handler));
@@ -164,14 +164,7 @@ peer_t* peer_create(const struct sockaddr_storage* addr, struct peer_handler_t* 
 
 void peer_destroy(peer_t* peer)
 {
-	if (peer->aio)
-	{
-		aio_client_destroy(peer->aio);
-	}
-	else
-	{
-		peer_aio_ondestroy(peer);
-	}
+	aio_tcp_transport_destroy(peer->aio);
 }
 
 int peer_start(peer_t* peer, const uint8_t info_hash[20], const uint8_t id[20], uint16_t port, const char* version, const uint8_t* bitfield, uint32_t bits)
@@ -181,12 +174,7 @@ int peer_start(peer_t* peer, const uint8_t info_hash[20], const uint8_t id[20], 
 	r = peer_handshake(peer, info_hash, id);
 	r = r ? r : peer_extended(peer, port, version);
 	r = r ? r : peer_bitfield(peer, bitfield, bits);
-	return r ? r : aio_client_recv(peer->aio, peer->rbuffer, sizeof(peer->rbuffer));
-}
-
-int peer_stop(peer_t* peer)
-{
-	return aio_client_disconnect(peer->aio);
+	return r ? r : aio_tcp_transport_recv(peer->aio, peer->rbuffer, sizeof(peer->rbuffer));
 }
 
 int peer_choke(peer_t* peer, int choke)
@@ -306,7 +294,7 @@ int peer_send_slices(peer_t* peer, uint32_t piece, uint32_t begin, uint32_t leng
 	return r;
 }
 
-int peer_send_meta(peer_t* peer, const uint8_t* meta, uint32_t bytes)
+int peer_send_meta(peer_t* peer, const void* meta, uint32_t bytes)
 {
 	int r;
 	struct peer_msg_t* msg;
@@ -323,12 +311,12 @@ int peer_send_meta(peer_t* peer, const uint8_t* meta, uint32_t bytes)
 	return r;
 }
 
-int peer_get_host(peer_t* peer, char ip[SOCKET_ADDRLEN], uint16_t* port)
+int peer_empty(const peer_t* peer)
 {
-	return socket_addr_to((struct sockaddr*)&peer->base.addr, AF_INET6 == peer->base.addr.ss_family ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in), ip, port);
+	return list_empty(&peer->messages) ? 1 : 0;
 }
 
-struct peer_base_t* peer_get_base(peer_t* peer)
+const struct peer_info_t* peer_get_info(const peer_t* peer)
 {
 	return &peer->base;
 }
@@ -412,7 +400,7 @@ static int peer_dispatch(peer_t* peer)
 	if (!peer->msg && !list_empty(&peer->messages))
 	{
 		msg = list_entry(peer->messages.next, struct peer_msg_t, link);
-		r = aio_client_send(peer->aio, msg->msg, msg->bytes);
+		r = aio_tcp_transport_send(peer->aio, msg->msg, msg->bytes);
 		if (0 == r)
 		{
 			list_remove(&msg->link);
@@ -499,7 +487,7 @@ static int peer_onbitfield(struct peer_t* peer, uint8_t* bitfield, uint32_t coun
 {
 	// Keepalives are generally sent once every two minutes
 	// set recv timeout 90s
-	aio_client_settimeout(peer->aio, 10 * 1000, 90 * 1000, 5 * 1000);
+	aio_tcp_transport_set_timeout(peer->aio, 90 * 1000, 5 * 1000);
 
 	assert(peer->base.bits <= count * 8);
 	if (peer->base.bitfield)
