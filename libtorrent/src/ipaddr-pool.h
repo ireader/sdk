@@ -3,6 +3,10 @@
 
 #include "sys/sock.h"
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 typedef struct ipaddr_pool_t ipaddr_pool_t;
 
 ipaddr_pool_t* ipaddr_pool_create();
@@ -16,4 +20,7 @@ size_t ipaddr_pool_size(ipaddr_pool_t* pool);
 int ipaddr_pool_push(ipaddr_pool_t* pool, const struct sockaddr_storage* addr);
 int ipaddr_pool_pop(ipaddr_pool_t* pool, struct sockaddr_storage* addr);
 
+#if defined(__cplusplus)
+}
+#endif
 #endif /* !_peer_pool_h_ */

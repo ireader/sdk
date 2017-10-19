@@ -109,6 +109,7 @@ int ipaddr_pool_pop(struct ipaddr_pool_t* pool, struct sockaddr_storage* addr)
 			if (0 == memcmp(&node->addr, addr, sizeof(node->addr)))
 			{
 				hash_list_unlink(pos);
+				free(node);
 				return 0;
 			}
 		}
