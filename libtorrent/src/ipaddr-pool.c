@@ -84,7 +84,7 @@ int ipaddr_pool_push(struct ipaddr_pool_t* pool, const struct sockaddr_storage* 
 	
 	key = jhash(&addr, sizeof(*addr), ((struct sockaddr_in*)addr)->sin_addr.s_addr);
 	key = hash_int32(key, N_IPADDR_BITS);
-	if (!ipaddr_pool_find(pool, key, addr))
+	if (ipaddr_pool_find(pool, key, addr))
 		return EEXIST;
 
 	node = (struct ipaddr_node_t*)malloc(sizeof(*node));
@@ -98,21 +98,18 @@ int ipaddr_pool_push(struct ipaddr_pool_t* pool, const struct sockaddr_storage* 
 int ipaddr_pool_pop(struct ipaddr_pool_t* pool, struct sockaddr_storage* addr)
 {
 	size_t i, sz = 1UL << N_IPADDR_BITS;
-	struct hash_node_t *pos;
 	struct ipaddr_node_t* node;
 
 	for (i = 0; i < sz; i++)
 	{
-		hash_list_for_each(pos, pool->head + i)
-		{
-			node = hash_list_entry(pos, struct ipaddr_node_t, link);
-			if (0 == memcmp(&node->addr, addr, sizeof(node->addr)))
-			{
-				hash_list_unlink(pos);
-				free(node);
-				return 0;
-			}
-		}
+		if(!pool->head[i].first)
+			continue;
+		
+		node = hash_list_entry(pool->head[i].first, struct ipaddr_node_t, link);
+		memcpy(addr, &node->addr, sizeof(*addr));
+		hash_list_unlink(&node->link);
+		free(node);
+		return 0;
 	}
 
 	return ENOENT; // emtpy
