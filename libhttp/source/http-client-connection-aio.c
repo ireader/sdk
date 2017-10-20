@@ -89,8 +89,15 @@ static void http_onrecv(void* param, int code, size_t bytes)
 		}
 		else
 		{
-			// read more
-			code = aio_client_recv(aio->client, aio->buffer, sizeof(aio->buffer));
+			if (0 != bytes)
+			{
+				// read more
+				code = aio_client_recv(aio->client, aio->buffer, sizeof(aio->buffer));
+			}
+			else
+			{
+				code = ECONNRESET; // peer close
+			}
 		}
 	}
 	
