@@ -166,14 +166,14 @@ int peer_piece_read(const uint8_t* buffer, int bytes, uint32_t* piece, uint32_t 
 
 int peer_piece_write(uint8_t* buffer, int bytes, uint32_t piece, uint32_t begin, uint32_t length, const uint8_t* data)
 {
-	if (bytes < 17 + length)
+	if (bytes < 13 + length)
 		return -1;
-	nbo_w32(buffer, 13 + length);
+	nbo_w32(buffer, 9 + length);
 	buffer[4] = BT_PIECE;
 	nbo_w32(buffer + 5, piece);
 	nbo_w32(buffer + 9, begin);
 	memcpy(buffer + 13, data, length);
-	return 17 + length;
+	return 13 + length;
 }
 
 int peer_cancel_read(const uint8_t* buffer, int bytes, uint32_t* piece, uint32_t *begin, uint32_t *length)
@@ -216,16 +216,19 @@ int peer_extended_read(const uint8_t* buffer, int bytes)
 {
 	int r;
 	struct bvalue_t root;
-	assert(bytes >= 1 && 0 == buffer[0]);
-	r = bencode_read(buffer + 1, bytes - 1, &root);
-	if (0 != r)
-		return r;
-
-	if (root.type == BT_DICT)
+	assert(bytes >= 1);
+	if (0 == buffer[0])
 	{
-	}
+		r = bencode_read(buffer + 1, bytes - 1, &root);
+		if (0 != r)
+			return r;
 
-	bencode_free(&root);
+		if (root.type == BT_DICT)
+		{
+		}
+
+		bencode_free(&root);
+	}
 	return 0;
 }
 
