@@ -6,12 +6,13 @@
 
 #define VMIN(a, b)	((a) < (b) ? (a) : (b))
 
+static int s_running;
 static pthread_t s_thread[1000];
 
 static int STDCALL aio_worker(void* param)
 {
 	int idx = (int)(intptr_t)param;
-	while (aio_socket_process(2000) >= 0 || errno == EINTR) // ignore epoll EINTR
+	while (s_running && aio_socket_process(2000) >= 0 || errno == EINTR) // ignore epoll EINTR
 	{
 	}
 
@@ -21,6 +22,7 @@ static int STDCALL aio_worker(void* param)
 
 void aio_worker_init(int num)
 {
+	s_running = 1;
 	num = VMIN(num, sizeof(s_thread) / sizeof(s_thread[0]));
 	aio_socket_init(num);
 
@@ -32,6 +34,7 @@ void aio_worker_init(int num)
 
 void aio_worker_clean(int num)
 {
+	s_running = 0;
 	num = VMIN(num, sizeof(s_thread) / sizeof(s_thread[0]));
 	while (num-- > 0)
 	{
