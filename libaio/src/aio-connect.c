@@ -8,7 +8,6 @@
 
 struct aio_connect_t
 {
-	int code;
 	u_short port;
 	socket_t socket;
 	aio_socket_t aio;
@@ -20,12 +19,12 @@ struct aio_connect_t
 	void* param;
 };
 
-static void aio_connect_ontimeout(void* param);
-static void aio_connect_destroy(struct aio_connect_t* conn, int code);
-static void aio_connect_addr(struct aio_connect_t* conn);
+static void aio_connect_addr(struct aio_connect_t* conn, int code);
+static void aio_connect_finish(struct aio_connect_t* conn, int code);
 static void aio_connect_onconnect(void* param, int code);
+static void aio_connect_ontimeout(void* param);
 
-static void aio_connect_destroy(struct aio_connect_t* conn, int code)
+static void aio_connect_finish(struct aio_connect_t* conn, int code)
 {
 	conn->onconnect(conn->param, code, conn->aio);
 
@@ -38,7 +37,7 @@ static void aio_connect_ondestroy(void* param)
 {
 	struct aio_connect_t* conn;
 	conn = (struct aio_connect_t*)param;
-	aio_connect_addr(conn); // try next addr
+	aio_connect_addr(conn, ETIMEDOUT); // try next addr
 }
 
 static void aio_connect_ontimeout(void* param)
@@ -46,7 +45,6 @@ static void aio_connect_ontimeout(void* param)
 	struct aio_connect_t* conn;
 	conn = (struct aio_connect_t*)param;
 	aio_socket_destroy(conn->aio, aio_connect_ondestroy, conn); // cancel
-	conn->aio = NULL;
 }
 
 static void aio_connect_onconnect(void* param, int code)
@@ -56,16 +54,21 @@ static void aio_connect_onconnect(void* param, int code)
 	if (0 != aio_timeout_stop(&conn->timer))
 		return;
 
-	conn->code = code;
-	aio_connect_destroy(conn, 0);
+	if (0 == code)
+	{
+		aio_connect_finish(conn, code);
+	}
+	else
+	{
+		aio_socket_destroy(conn->aio, NULL, NULL);
+		aio_connect_addr(conn, code);
+	}
 }
 
-static void aio_connect_addr(struct aio_connect_t* conn)
+static void aio_connect_addr(struct aio_connect_t* conn, int code)
 {
-	int r;
 	struct addrinfo *addr;
 
-	r = conn->code;
 	for(addr = conn->ptr; NULL != addr; addr = conn->ptr)
 	{
 		conn->ptr = conn->ptr->ai_next;
@@ -84,15 +87,15 @@ static void aio_connect_addr(struct aio_connect_t* conn)
 		conn->aio = aio_socket_create(conn->socket, 1);
 
 		// TODO: lock
-		r = aio_timeout_start(&conn->timer, conn->timeout, aio_connect_ontimeout, conn);
-		r = aio_socket_connect(conn->aio, addr->ai_addr, addr->ai_addrlen, aio_connect_onconnect, conn);
-		if (0 == r)
+		code = aio_timeout_start(&conn->timer, conn->timeout, aio_connect_ontimeout, conn);
+		code = aio_socket_connect(conn->aio, addr->ai_addr, addr->ai_addrlen, aio_connect_onconnect, conn);
+		if (0 == code)
 			return;
 
 		aio_socket_destroy(conn->aio, NULL, NULL); // try next addr
 	}
 
-	aio_connect_destroy(conn, r);
+	aio_connect_finish(conn, code);
 }
 
 int aio_connect(const char* host, int port, int timeout, void (*onconnect)(void* param, int code, aio_socket_t aio), void* param)
@@ -117,8 +120,7 @@ int aio_connect(const char* host, int port, int timeout, void (*onconnect)(void*
 	conn->addr = addr;
 	conn->ptr = addr;
 	conn->port = (u_short)port;
-	conn->code = -1;
 	conn->timeout = timeout;
-	aio_connect_addr(conn);
+	aio_connect_addr(conn, -1);
 	return 0;
 }
