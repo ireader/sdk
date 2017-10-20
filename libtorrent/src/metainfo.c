@@ -24,6 +24,13 @@ static int metainfo_read_trackers(const struct bvalue_t* anounces, struct metain
 		return -1;
 
 	meta->trackers = (char**)p;
+	if (1 == meta->tracker_count)
+	{
+		// if announce-list exist, then ignore announce
+		meta->tracker_count = 0;
+		free(meta->trackers[0]);
+	}
+
 	for (i = 0; i < anounces->v.list.count; i++)
 	{
 		if (0 != bencode_get_string_ex(anounces->v.list.values + i, &meta->trackers[meta->tracker_count++]))
@@ -35,7 +42,7 @@ static int metainfo_read_trackers(const struct bvalue_t* anounces, struct metain
 
 static int metainfo_read_files(const struct bvalue_t* files, struct metainfo_t* meta)
 {
-	int r;
+	int r = 0;
 	size_t i, j;
 	int64_t offset = 0;
 
@@ -50,7 +57,7 @@ static int metainfo_read_files(const struct bvalue_t* files, struct metainfo_t* 
 	if (!meta->files)
 		return -1;
 
-	for (r = i = 0; i < files->v.list.count && 0 == r; i++)
+	for (i = 0; i < files->v.list.count && 0 == r; i++)
 	{
 		struct bvalue_t* file;
 		file = files->v.list.values + i;
@@ -98,8 +105,8 @@ static int metainfo_read_pieces(const struct bvalue_t* pieces, struct metainfo_t
 
 static int metainfo_read_info(const struct bvalue_t* info, struct metainfo_t* meta)
 {
-	int r;
-	size_t i;
+	int r = 0;
+	size_t i = 0;
 	int64_t len = 0;
 
 	if (BT_DICT != info->type)
@@ -108,7 +115,7 @@ static int metainfo_read_info(const struct bvalue_t* info, struct metainfo_t* me
 		return -1;
 	}
 
-	for (r = i = 0; i < info->v.dict.count && 0 == r; i++)
+	for (i = 0; i < info->v.dict.count && 0 == r; i++)
 	{
 		if (0 == strcmp("files", info->v.dict.names[i].name))
 		{
@@ -153,7 +160,7 @@ static int metainfo_read_info(const struct bvalue_t* info, struct metainfo_t* me
 
 int metainfo_read(const uint8_t* ptr, size_t bytes, struct metainfo_t* meta)
 {
-	int r;
+	int r = 0;
 	size_t i;
 	struct bvalue_t root;
 	bencode_read(ptr, bytes, &root);
@@ -165,7 +172,7 @@ int metainfo_read(const uint8_t* ptr, size_t bytes, struct metainfo_t* meta)
 	if (!meta->trackers)
 		return -1;
 
-	for (r = i = 0; i < root.v.dict.count && 0 == r; i++)
+	for (i = 0; i < root.v.dict.count && 0 == r; i++)
 	{
 		if (0 == strcmp("announce", root.v.dict.names[i].name))
 		{

@@ -25,17 +25,18 @@ struct metainfo_t
 	{
 		char* name; // concat with file_path
 		int64_t bytes; // file size
+		int64_t offset; // file offet (byte)
 	} *files;
 	size_t file_count; // files count
 	char* file_path;
 };
 
-int metainfo_read(const uint8_t* ptr, size_t bytes, struct metainfo_t* tor);
-int metainfo_write(const struct metainfo_t* tor, uint8_t* ptr, size_t bytes);
-int metainfo_free(struct metainfo_t* tor);
+int metainfo_read(const uint8_t* ptr, size_t bytes, struct metainfo_t* meta);
+int metainfo_write(const struct metainfo_t* meta, uint8_t* ptr, size_t bytes);
+int metainfo_free(struct metainfo_t* meta);
 
 // info hash
-int metainfo_hash(const struct metainfo_t* tor, uint8_t sha1[20]);
+int metainfo_hash(const struct metainfo_t* meta, uint8_t sha1[20]);
 
 #if defined(__cplusplus)
 }
