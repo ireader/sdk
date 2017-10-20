@@ -241,7 +241,7 @@ int peer_extended_write(uint8_t* buffer, int bytes, uint16_t port, const char* v
 	// p : port
 	// reqq : 255
 	// v : version
-	n = snprintf((char*)buffer + 6, bytes - 6, "d1:ei0e1:md11ut_metadatai2e6ut_pexi1ee1:pi%hue4:reqqi255e1:v%u:%se", port, (unsigned int)strlen(version), version);
+	n = snprintf((char*)buffer + 6, bytes - 6, "d1:ei0e1:md11:ut_metadatai2e6:ut_pexi1ee1:pi%hue4:reqqi255e1:v%u:%se", port, (unsigned int)strlen(version), version);
 	if (n < 0 || n >= bytes - 6)
 		return -1;
 
