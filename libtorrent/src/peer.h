@@ -10,22 +10,6 @@ extern "C" {
 
 #define N_PIECE_SLICE (1 << 14) // 16k
 
-struct peer_info_t
-{
-	uint8_t flags[8];
-	uint8_t id[20];
-
-	unsigned int choke : 1; // don't send data to peer
-	unsigned int interested : 1; // need something from peer
-	unsigned int peer_choke : 1; // peer block me
-	unsigned int peer_interested : 1; // peer request data
-
-	uint8_t* bitfield;
-	uint32_t bits;
-
-	struct sockaddr_storage addr;
-};
-
 struct peer_handler_t
 {
 	int (*choke)(void* param, int choke);
@@ -57,8 +41,6 @@ int peer_cancel(peer_t* peer, uint32_t piece, uint32_t begin, uint32_t length);
 int peer_send_slices(peer_t* peer, uint32_t piece, uint32_t begin, uint32_t length, const uint8_t* slices);
 int peer_send_meta(peer_t* peer, const void* meta, uint32_t bytes);
 int peer_empty(const peer_t* peer);
-
-const struct peer_info_t* peer_get_info(const peer_t* peer);
 
 #if defined(__cplusplus)
 }

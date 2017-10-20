@@ -20,6 +20,22 @@ struct peer_msg_t
 	uint32_t bytes;
 };
 
+struct peer_info_t
+{
+	uint8_t flags[8];
+	uint8_t id[20];
+
+	unsigned int choke : 1; // don't send data to peer
+	unsigned int interested : 1; // need something from peer
+	unsigned int peer_choke : 1; // peer block me
+	unsigned int peer_interested : 1; // peer request data
+
+	uint8_t* bitfield;
+	uint32_t bits;
+
+	struct sockaddr_storage addr;
+};
+
 struct peer_t
 {
 	struct peer_info_t base;
@@ -314,11 +330,6 @@ int peer_send_meta(peer_t* peer, const void* meta, uint32_t bytes)
 int peer_empty(const peer_t* peer)
 {
 	return list_empty(&peer->messages) ? 1 : 0;
-}
-
-const struct peer_info_t* peer_get_info(const peer_t* peer)
-{
-	return &peer->base;
 }
 
 static int peer_handshake(peer_t* peer, const uint8_t info_hash[20], const uint8_t id[20])
