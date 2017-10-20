@@ -32,7 +32,7 @@ int peer_handshake_write(uint8_t buffer[68], const uint8_t info_hash[20], const 
 	memset(buffer + 20, 0, 8);
 	memcpy(buffer + 28, info_hash, 20);
 	memcpy(buffer + 48, peer_id, 20);
-	buffer[6] = 0x10; // extended
+	buffer[25] = 0x10; // extended
 	return 68;
 }
 
@@ -241,7 +241,7 @@ int peer_extended_write(uint8_t* buffer, int bytes, uint16_t port, const char* v
 	// p : port
 	// reqq : 255
 	// v : version
-	n = snprintf((char*)buffer, bytes - 6, "d1:ei0e1:md11ut_metadatai2e6ut_pexi1ee1:pi%hue4:reqqi255e1:v%u:%se", port, (unsigned int)strlen(version), version);
+	n = snprintf((char*)buffer + 6, bytes - 6, "d1:ei0e1:md11ut_metadatai2e6ut_pexi1ee1:pi%hue4:reqqi255e1:v%u:%se", port, (unsigned int)strlen(version), version);
 	if (n < 0 || n >= bytes - 6)
 		return -1;
 
