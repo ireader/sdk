@@ -216,7 +216,7 @@ int aio_client_send_v(aio_client_t* client, socket_bufvec_t *vec, int n)
 		return -1; // previous recv don't finish
 	}
 
-	client->data[SEND].state = RW_DATA;
+	client->data[SEND].state = RW_VECTOR;
 	client->data[SEND].u.vec = vec;
 	client->data[SEND].count = n;
 	if (invalid_aio_socket != client->socket)
