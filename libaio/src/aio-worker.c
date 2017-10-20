@@ -1,5 +1,6 @@
 #include "aio-worker.h"
 #include "aio-socket.h"
+#include "aio-timeout.h"
 #include "sys/thread.h"
 #include <stdio.h>
 #include <errno.h>
@@ -11,9 +12,16 @@ static pthread_t s_thread[1000];
 
 static int STDCALL aio_worker(void* param)
 {
+	int i = 0, r = 0;
 	int idx = (int)(intptr_t)param;
-	while (s_running && aio_socket_process(2000) >= 0 || errno == EINTR) // ignore epoll EINTR
+	while (s_running && (r >= 0 || errno == EINTR)) // ignore epoll EINTR
 	{
+		r = aio_socket_process(idx ? 2000 : 64);
+		if (0 == idx && (0 == r || i++ > 100))
+		{
+			i = 0;
+			aio_timeout_process();
+		}
 	}
 
 	printf("%s[%d] exit => %d.\n", __FUNCTION__, idx, errno);
