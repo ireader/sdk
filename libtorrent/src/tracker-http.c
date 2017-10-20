@@ -1,12 +1,9 @@
-// http://www.bittorrent.org/beps/bep_0003.html
-// http://www.bittorrent.org/beps/bep_0023.html
-// http://www.bittorrent.org/beps/bep_0015.html
-// http://www.bittorrent.org/beps/bep_0041.html
+// http://www.bittorrent.org/beps/bep_0003.html (The BitTorrent Protocol Specification)
+// http://www.bittorrent.org/beps/bep_0023.html (Tracker Returns Compact Peer Lists)
 
 #include "tracker.h"
 #include "bencode.h"
-#include "uri-parse.h"
-#include "http-client.h"
+#include "tracker-internal.h"
 #include "urlcodec.h"
 #include <inttypes.h>
 #include <string.h>
@@ -16,15 +13,7 @@
 #define strcasecmp _stricmp
 #endif
 
-struct tracker_contex_t
-{
-	http_client_t* http;
-	struct tracker_t* tracker;
-};
-
-int hash_sha1(const uint8_t* data, size_t bytes, uint8_t sha1[20]);
-
-static int tracker_read_peer(struct tracker_t* tracker, const struct bvalue_t* peers)
+static int tracker_read_peer(struct tracker_reply_t* tracker, const struct bvalue_t* peers)
 {
 	int r;
 	size_t i, j;
@@ -160,7 +149,7 @@ static int tracker_read_peer(struct tracker_t* tracker, const struct bvalue_t* p
 	return 0;
 }
 
-static int tracker_read(struct tracker_t* tracker, const struct bvalue_t* root)
+static int tracker_read(struct tracker_reply_t* tracker, const struct bvalue_t* root)
 {
 	int r;
 	size_t i;
@@ -177,7 +166,7 @@ static int tracker_read(struct tracker_t* tracker, const struct bvalue_t* root)
 
 		if (0 == strcmp("complete", name))
 		{
-			r = bencode_get_int(node, &tracker->seeders);
+			r = bencode_get_int(node, &tracker->senders);
 		}
 		else if (0 == strcmp("incomplete", name))
 		{
@@ -202,14 +191,6 @@ static int tracker_read(struct tracker_t* tracker, const struct bvalue_t* root)
 	}
 
 	return r;
-}
-
-static int tracker_user(const char* usr, uint8_t id[20])
-{
-	static const char* s_agent = "-XL0012-";
-	hash_sha1((const uint8_t*)usr, strlen(usr), id);
-	memcpy(id, s_agent, strlen(s_agent));
-	return 0;
 }
 
 // /announce?info_hash=O.%FD%D1%05%C3%D9%7C%B6%3F%3B%B9%EC%E9i%5E%C3~e%E4
@@ -252,41 +233,36 @@ static void http_onget(void *param, int code)
 	void* reply;
 	size_t bytes;
 	struct bvalue_t root;
-	struct tracker_contex_t* t;
-	t = (struct tracker_contex_t*)param;
+	struct tracker_t* tracker;
+	struct tracker_reply_t peers;
 
-	if (0 == code && 0 == http_client_get_content(t->http, &reply, &bytes))
+	memset(&peers, 0, sizeof(peers));
+	tracker = (struct tracker_t*)param;
+
+	if (0 == code && 0 == http_client_get_content(tracker->http, &reply, &bytes))
 	{
 		code = bencode_read((const uint8_t*)reply, bytes, &root);
 		if (0 == code)
 		{
-			code = tracker_read(t->tracker, &root);
+			memset(&peers, 0, sizeof(peers));
+			code = tracker_read(&peers, &root);
 			bencode_free(&root);
 		}
 	}
 
-	if(0 != code)
+	tracker->onquery(tracker->param, code, &peers);
+	if (peers.peers)
 	{
-		char errmsg[64];
-		snprintf(errmsg, sizeof(errmsg) - 1, "HTTP error: %d", code);
-		t->tracker->errmsg = strdup(errmsg);
+		free(peers.peers);
+		peers.peers = NULL;
+		peers.peer_count = 0;
 	}
 }
 
-static int tracker_http(const struct uri_t* uri, 
-	const uint8_t info_hash[20],
-	const uint8_t peer_id[20],
-	int port,
-	uint64_t downloaded,
-	uint64_t left,
-	uint64_t uploaded,
-	enum tracker_event_t event,
-	struct tracker_t* tracker)
+static int tracker_http(tracker_t* tracker)
 {
 	int r;
 	char path[256];
-	
-	struct tracker_contex_t t;
 	struct http_header_t headers[4];
 	
 	headers[0].name = "User-Agent";
@@ -298,74 +274,87 @@ static int tracker_http(const struct uri_t* uri,
 	headers[3].name = "Connection";
 	headers[3].value = "Close";
 
-	r = tracker_uri(path, sizeof(path), uri->path, info_hash, peer_id, port, uploaded, downloaded, left, 200, event);
-
-	t.tracker = tracker;
-	t.http = http_client_create(uri->host, (unsigned short)(uri->port ? uri->port : 80), 1);
-	r = http_client_get(t.http, path, headers, sizeof(headers) / sizeof(headers[0]), http_onget, &t);
-	http_client_destroy(t.http);
+	r = tracker_uri(path, sizeof(path), tracker->path, tracker->info_hash, tracker->peer_id, tracker->port, tracker->uploaded, tracker->downloaded, tracker->left, 100, tracker->event);
+	r = http_client_get(tracker->http, path, headers, sizeof(headers) / sizeof(headers[0]), http_onget, tracker);
+	//
 
 	return r;
 }
 
-
-int tracker_udp(const struct uri_t* uri,
-	const uint8_t info_hash[20],
-	const uint8_t peer_id[20],
-	int port,
-	uint64_t downloaded,
-	uint64_t left,
-	uint64_t uploaded,
-	enum tracker_event_t event,
-	struct tracker_t* tracker);
-
-int tracker_get(const char* url,
-	const uint8_t info_hash[20],
-	const char* usr,
-	int port,
-	uint64_t downloaded,
-	uint64_t left,
-	uint64_t uploaded,
-	enum tracker_event_t event,
-	struct tracker_t* tracker)
+tracker_t* tracker_create(const char* url, const uint8_t info_hash[20], const uint8_t peer_id[20], uint16_t port)
 {
-	int r;
 	struct uri_t* uri;
-	uint8_t peer_id[20];
+	tracker_t* tracker;
 
 	uri = uri_parse(url, strlen(url));
 	if (!uri)
-		return -1;
+		return NULL;
 
-	tracker_user(usr, peer_id);
+	tracker = (tracker_t*)calloc(1, sizeof(*tracker));
+	if (tracker)
+	{
+		memcpy(tracker->peer_id, peer_id, sizeof(tracker->peer_id));
+		memcpy(tracker->info_hash, info_hash, sizeof(tracker->info_hash));
+		tracker->port = port;
+		tracker->timeout = 5000;
 
-	if (uri->scheme && 0 == strcasecmp("udp", uri->scheme))
-	{
-		r = tracker_udp(uri, info_hash, peer_id, port, downloaded, left, uploaded, event, tracker);
-	}
-	else
-	{
-		r = tracker_http(uri, info_hash, peer_id, port, downloaded, left, uploaded, event, tracker);
+		if (uri->scheme && 0 == strcasecmp("udp", uri->scheme))
+		{
+			if (uri->query)
+				snprintf(tracker->path, sizeof(tracker->path) - 1, "%s?%s%s%s", uri->path, uri->query ? uri->query : "", uri->fragment ? "#" : "", uri->fragment ? uri->fragment : "");
+			socket_addr_from(&tracker->addr, &tracker->addrlen, uri->host, (u_short)uri->port);
+			tracker->udp = socket_udp();
+			tracker->aio = aio_socket_create(tracker->udp, 1);
+		}
+		else
+		{
+			snprintf(tracker->path, sizeof(tracker->path) - 1, "%s", uri->path);
+			tracker->http = http_client_create(uri->host, (unsigned short)(uri->port ? uri->port : 80), 0);
+			http_client_set_timeout(tracker->http, tracker->timeout, tracker->timeout, tracker->timeout);
+		}
 	}
 
 	uri_free(uri);
-	return r;
+	return tracker;
 }
 
-int tracker_free(struct tracker_t* tracker)
+void tracker_destroy(tracker_t* tracker)
 {
-	if (tracker->errmsg)
+	if (tracker->http)
 	{
-		free(tracker->errmsg);
-		tracker->errmsg = NULL;
+		http_client_destroy(tracker->http);
+		tracker->http = NULL;
 	}
 
-	if (tracker->peers)
+	// TODO: add locker
+	if (tracker->aio)
 	{
-		free(tracker->peers);
-		tracker->peers = NULL;
-		tracker->peer_count = 0;
+		aio_socket_destroy(tracker->aio, NULL, NULL);
+		tracker->aio = NULL;
 	}
 
-	return 0;
+	free(tracker);
+}
+
+int tracker_query(tracker_t* tracker, uint64_t downloaded, uint64_t left, uint64_t uploaded, enum tracker_event_t event, tracker_onquery onquery, void* param)
+{
+	int r;
+
+	tracker->downloaded = downloaded;
+	tracker->uploaded = uploaded;
+	tracker->left = left;
+	tracker->event = event;
+	tracker->onquery = onquery;
+	tracker->param = param;
+
+	if (tracker->http)
+	{
+		r = tracker_http(tracker);
+	}
+	else
+	{
+		r = tracker_udp(tracker);
+	}
+
+	return r;
 }

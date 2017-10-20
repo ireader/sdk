@@ -1,8 +1,9 @@
-// http://www.bittorrent.org/beps/bep_0015.html
-// http://www.bittorrent.org/beps/bep_0041.html
+// http://www.bittorrent.org/beps/bep_0015.html (UDP Tracker Protocol for BitTorrent)
+// http://www.bittorrent.org/beps/bep_0041.html (UDP Tracker Protocol Extensions)
 
 #include "tracker.h"
-#include "uri-parse.h"
+#include "tracker-internal.h"
+#include "aio-recv.h"
 #include "byte-order.h"
 #include "sys/system.h"
 
@@ -393,111 +394,83 @@ static int tracker_udp_scrape_reply_read(const uint8_t* buffer, size_t bytes, ui
 	return n;
 }
 
-static int tracker_udp_connect(socket_t udp, 
-	const struct sockaddr* addr, socklen_t addrlen, int timeout, 
-	uint32_t transaction_id, uint64_t* connection_id)
+static void tracker_udp_onannounce(void* param, int code, size_t bytes, const struct sockaddr* addr, socklen_t addrlen)
 {
-	int r;
-	uint8_t buffer[128];
-	struct sockaddr_storage ss;
-	socklen_t sslen;
-	uint64_t clock;
+	int n;
+	struct tracker_t* tracker;
+	struct tracker_reply_t reply;
+	tracker = (struct tracker_t*)param;
 
-	// build connect request
-	r = tracker_udp_connect_write(buffer, transaction_id);
-	assert(r > 0 && r < sizeof(buffer));
-
-	if (r != socket_sendto(udp, buffer, r, 0, addr, addrlen))
-		return r;
-	
-	clock = system_clock();
-	while (clock + timeout > system_clock() && 1 == socket_select_read(udp, timeout))
+	memset(&reply, 0, sizeof(reply));
+	if (0 == code)
 	{
-		sslen = sizeof(ss);
-		r = socket_recvfrom(udp, buffer, sizeof(buffer), 0, (struct sockaddr*)&ss, &sslen);
-		if (sslen == addrlen && 0 == memcmp(&ss, addr, sslen))
-		{
-			// parse reply
-			return tracker_udp_connect_reply_read(buffer, r, &transaction_id, connection_id);
-		}
+		assert(addrlen == tracker->addrlen && 0 == memcmp(&tracker->addr, addr, addrlen));
+		n = tracker_udp_announce_reply_read(tracker->buffer, bytes, tracker->addr.ss_family==AF_INET6 ? 1 : 0, &tracker->transaction_id, &reply.interval, &reply.leechers, &reply.senders, &reply.peers);
+		if (n < 0)
+			code = n;
+		else
+			reply.peer_count = n;
 	}
-
-	return -1;
+	
+	tracker->onquery(tracker->param, code, &reply);
+	if (reply.peers)
+	{
+		free(reply.peers);
+		reply.peers = NULL;
+		reply.peer_count = 0;
+	}
 }
 
-static int tracker_udp_announce(socket_t udp, 
-	const struct sockaddr* addr, socklen_t addrlen, int timeout, 
-	uint64_t connection_id, uint32_t transaction_id, const uint8_t info_hash[20], const uint8_t peer_id[20], uint64_t downloaded, uint64_t left, uint64_t uploaded, int event, uint16_t port, const char* path,
-	uint32_t *interval, uint32_t *leechers, uint32_t *senders, struct sockaddr_storage** peers)
+static int tracker_udp_announce(struct tracker_t* tracker)
 {
 	int r;
-	uint8_t buffer[1024];
-	struct sockaddr_storage ss;
-	socklen_t sslen;
-	uint64_t clock;
-
 	// build announce request
-	r = tracker_udp_announce_write(buffer, sizeof(buffer), connection_id, transaction_id, info_hash, peer_id, downloaded, left, uploaded, event, port, path);
-	assert(r > 0 && r < sizeof(buffer));
+	r = tracker_udp_announce_write(tracker->buffer, sizeof(tracker->buffer), tracker->connection_id, tracker->transaction_id, tracker->info_hash, tracker->peer_id, tracker->downloaded, tracker->left, tracker->uploaded, tracker->event, tracker->port, tracker->path);
+	assert(r > 0 && r < sizeof(tracker->buffer));
 
-	if (r != socket_sendto(udp, buffer, r, 0, addr, addrlen))
+	if (r != socket_sendto(tracker->udp, tracker->buffer, r, 0, (struct sockaddr*)&tracker->addr, tracker->addrlen))
 		return -1;
 
-	clock = system_clock();
-	while (clock + timeout > system_clock() && 1 == socket_select_read(udp, timeout))
-	{
-		sslen = sizeof(ss);
-		r = socket_recvfrom(udp, buffer, sizeof(buffer), 0, (struct sockaddr*)&ss, &sslen);
-		if (sslen == addrlen && 0 == memcmp(&ss, addr, sslen))
-		{
-			// parse reply
-			return tracker_udp_announce_reply_read(buffer, r, addr->sa_family==AF_INET6 ? 1 : 0, &transaction_id, interval, leechers, senders, peers);
-		}
-	}
-
-	return -1;
+	return aio_recvfrom(&tracker->recv, tracker->timeout, tracker->aio, tracker->buffer, sizeof(tracker->buffer), tracker_udp_onannounce, tracker);
 }
 
-int tracker_udp(const struct uri_t* uri,
-	const uint8_t info_hash[20],
-	const uint8_t peer_id[20],
-	int port,
-	uint64_t downloaded,
-	uint64_t left,
-	uint64_t uploaded,
-	enum tracker_event_t event,
-	struct tracker_t* tracker)
+static void tracker_udp_onconnect(void* param, int code, size_t bytes, const struct sockaddr* addr, socklen_t addrlen)
+{
+	struct tracker_t* tracker;
+	tracker = (struct tracker_t*)param;
+
+	if (0 == code)
+	{
+		assert(addrlen == tracker->addrlen && 0 == memcmp(&tracker->addr, addr, addrlen));
+		code = tracker_udp_connect_reply_read(tracker->buffer, bytes, &tracker->transaction_id, &tracker->connection_id);
+	}
+
+	if (0 == code)
+	{
+		code = tracker_udp_announce(tracker);
+	}
+
+	if (0 != code)
+		tracker->onquery(tracker->param, code, NULL);
+}
+
+static int tracker_udp_connect(struct tracker_t* tracker)
 {
 	int r;
-	char path[256];
-	uint64_t connection_id;
-	uint32_t transaction_id;
+	// build connect request
+	r = tracker_udp_connect_write(tracker->buffer, tracker->transaction_id);
+	assert(r > 0 && r < sizeof(tracker->buffer));
 
-	socket_t udp;
-	socklen_t addrlen;
-	struct sockaddr_storage addr;
-	
-	if (uri->query)
-		snprintf(path, sizeof(path) - 1, "%s?%s%s%s", uri->path, uri->query ? uri->query : "", uri->fragment ? "#" : "", uri->fragment ? uri->fragment : "");
-	else
-		path[0] = 0;
+	if (r != socket_sendto(tracker->udp, tracker->buffer, r, 0, (struct sockaddr*)&tracker->addr, tracker->addrlen))
+		return r;
 
-	udp = socket_udp();
+	return aio_recvfrom(&tracker->recv, tracker->timeout, tracker->aio, tracker->buffer, sizeof(tracker->buffer), tracker_udp_onconnect, tracker);
+}
 
-	r = socket_addr_from(&addr, &addrlen, uri->host, (u_short)uri->port);
-	if (0 != r)
+int tracker_udp(tracker_t* tracker)
+{
+	if (AF_INET != tracker->addr.ss_family && AF_INET6 != tracker->addr.ss_family)
 		return -1;
 
-	transaction_id = 0;
-	r = tracker_udp_connect(udp, (const struct sockaddr*)&addr, addrlen, TIMEOUT, transaction_id++, &connection_id);
-	if (0 == r)
-	{
-		r = tracker_udp_announce(udp, (const struct sockaddr*)&addr, addrlen, TIMEOUT, connection_id, transaction_id, info_hash, peer_id, downloaded, left, uploaded, event, (uint16_t)port, path, &tracker->interval, &tracker->leechers, &tracker->seeders, &tracker->peers);
-		if (r > 0)
-		{
-			tracker->peer_count = r;
-			return 0;
-		}
-	}
-	return r;
+	return tracker_udp_connect(tracker);
 }
