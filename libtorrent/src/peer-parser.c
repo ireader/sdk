@@ -83,7 +83,7 @@ int peer_input(struct peer_parser_t* parser, const uint8_t* data, size_t bytes, 
 			parser->len = (parser->len << 8) | *p++;
 			bytes--;
 			
-			if (parser->len > 0)
+			if (0 == parser->len)
 			{
 				parser->state = peer_message_length1;
 				parser->type = BT_KEEPALIVE;
@@ -97,10 +97,10 @@ int peer_input(struct peer_parser_t* parser, const uint8_t* data, size_t bytes, 
 			break;
 
 		case peer_message_type:
-			assert(0 == parser->bytes);
 			parser->state = peer_message_payload;
 			parser->bytes = 0;
 			parser->type = *p++;
+			parser->len--; // type byte
 			bytes--;
 
 			if (0 != peer_alloc(parser, parser->len))
