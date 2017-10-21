@@ -146,9 +146,10 @@ static inline unsigned int clz(unsigned long v)
 }
 #endif
 
-static inline unsigned int clz8(unsigned long v)
+// Count Leading Zeros
+static inline unsigned int clz8(uint8_t v)
 {
-	unsigned int num = 8;
+	unsigned int num = BITS_PER_BYTE;
 	if (0xF0 & v)
 	{
 		num -= 4;
@@ -168,6 +169,12 @@ static inline unsigned int clz8(unsigned long v)
 		num -= 1;
 
 	return num;
+}
+
+/// Find First Zero
+static inline unsigned int ffz8(uint8_t v)
+{
+	return clz8((uint8_t)~v);
 }
 
 unsigned int bitmap_count_leading_zero(const uint8_t* bitmap, unsigned int nbits)
@@ -194,6 +201,36 @@ unsigned int bitmap_count_next_zero(const uint8_t* bitmap, unsigned int nbits, u
 	c = clz8(bitmap[i] & mask);
 	if (BITS_PER_BYTE == c && i + 1 < BITS_TO_BYTES(nbits))
 		c += bitmap_count_leading_zero(bitmap + i + 1, nbits - (i + 1) * BITS_PER_BYTE);
+	c += i * BITS_PER_BYTE;
+	c = c > nbits ? nbits : c;
+	c -= start;
+	return c;
+}
+
+unsigned int bitmap_find_first_zero(const uint8_t* bitmap, unsigned int nbits)
+{
+	unsigned int i, c = 0;
+	unsigned int n = BITS_TO_BYTES(nbits);
+
+	for (i = 0; i < n; i++)
+	{
+		c = ffz8(bitmap[i]);
+		if (c < BITS_PER_BYTE)
+			break;
+	}
+
+	c += i * BITS_PER_BYTE;
+	return c > nbits ? nbits : c;
+}
+
+unsigned int bitmap_find_next_zero(const uint8_t* bitmap, unsigned int nbits, unsigned int start)
+{
+	unsigned int c, i = start / BITS_PER_BYTE;
+	uint8_t mask = BITS_MASK_BYTE(start % BITS_PER_BYTE);
+
+	c = ffz8(bitmap[i] | mask);
+	if (BITS_PER_BYTE == c && i + 1 < BITS_TO_BYTES(nbits))
+		c += bitmap_find_first_zero(bitmap + i + 1, nbits - (i + 1) * BITS_PER_BYTE);
 	c += i * BITS_PER_BYTE;
 	c = c > nbits ? nbits : c;
 	c -= start;

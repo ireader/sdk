@@ -19,6 +19,8 @@ void bitmap_xor(uint8_t* result, const uint8_t* src1, const uint8_t* src2, unsig
 
 unsigned int bitmap_count_leading_zero(const uint8_t* bitmap, unsigned int nbits);
 unsigned int bitmap_count_next_zero(const uint8_t* bitmap, unsigned int nbits, unsigned int start);
+unsigned int bitmap_find_first_zero(const uint8_t* bitmap, unsigned int nbits);
+unsigned int bitmap_find_next_zero(const uint8_t* bitmap, unsigned int nbits, unsigned int start);
 unsigned int bitmap_weight(const uint8_t* bitmap, unsigned int nbits);
 
 /// @return 0-not set, other-set to 1
