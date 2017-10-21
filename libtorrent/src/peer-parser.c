@@ -105,7 +105,7 @@ int peer_input(struct peer_parser_t* parser, const uint8_t* data, size_t bytes, 
 
 			if (0 != peer_alloc(parser, parser->len))
 				return -1;
-			break;
+			//break; // choke/unchoke/..., don't have payload
 
 		case peer_message_payload:
 			assert(parser->bytes <= parser->len);
