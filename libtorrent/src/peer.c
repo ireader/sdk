@@ -55,11 +55,8 @@ struct peer_t
 static int peer_onbitfield(struct peer_t* peer, uint8_t* bitfield, uint32_t count);
 static int peer_oncancel(void* param, uint32_t piece, uint32_t begin, uint32_t length);
 static int peer_handler(void* param, struct peer_parser_t* parser);
-static int peer_handshake(peer_t* peer, const uint8_t info_hash[20], const uint8_t id[20]);
-static int peer_extended(peer_t* peer, uint16_t port, const char* version);
-static int peer_bitfield(peer_t* peer, const uint8_t* bitfield, uint32_t bits);
-static int peer_keepalive(peer_t* peer);
 static int peer_dispatch(peer_t* peer);
+static int peer_keepalive(peer_t* peer);
 
 static void peer_aio_ondestroy(void* param)
 {
@@ -101,23 +98,31 @@ static void peer_aio_onrecv(void* param, int code, size_t bytes)
 	peer_t* peer = (peer_t*)param;
 	if (0 == code)
 	{
-		peer->recv_timeout = 0;
-		code = peer_input(&peer->parser, peer->rbuffer, bytes, peer_handler, peer);
-		if (0 == code)
-			code = aio_tcp_transport_recv(peer->aio, peer->rbuffer, sizeof(peer->rbuffer));
+		if (0 == bytes)
+		{
+			code = ECONNRESET;
+		}
+		else
+		{
+			peer->recv_timeout = 0;
+			code = peer_input(&peer->parser, peer->rbuffer, bytes, peer_handler, peer);
+			if (0 == code)
+				code = aio_tcp_transport_recv(peer->aio, peer->rbuffer, sizeof(peer->rbuffer));
+		}
 	}
 	else if (ETIMEDOUT == code)
 	{
 		if (1 == ++peer->recv_timeout)
 		{
 			// send keep alive
-			code = peer_keepalive(peer);
+			peer_keepalive(peer);
+
+			code = aio_tcp_transport_recv(peer->aio, peer->rbuffer, sizeof(peer->rbuffer));
 		}
 	}
 
 	if (0 != code)
 	{
-		assert(0);
 		peer->handler.error(peer->param, code);
 	}
 }
@@ -164,6 +169,7 @@ peer_t* peer_create(aio_socket_t aio, const struct sockaddr_storage* addr, struc
 	aio_tcp_transport_set_timeout(peer->aio, 5 * 1000, 5 * 1000);
 
 	locker_create(&peer->locker);
+	LIST_INIT_HEAD(&peer->messages);
 	memcpy(&peer->handler, handler, sizeof(peer->handler));
 	peer->param = param;
 	peer->recv_timeout = 0;
@@ -175,22 +181,17 @@ peer_t* peer_create(aio_socket_t aio, const struct sockaddr_storage* addr, struc
 	peer->base.peer_interested = 0;
 
 	//memset(&peer->parser, 0, sizeof(peer->parser));
+	if (0 != aio_tcp_transport_recv(peer->aio, peer->rbuffer, sizeof(peer->rbuffer)))
+	{
+		peer_destroy(peer);
+		return NULL;
+	}
 	return peer;
 }
 
 void peer_destroy(peer_t* peer)
 {
 	aio_tcp_transport_destroy(peer->aio);
-}
-
-int peer_start(peer_t* peer, const uint8_t info_hash[20], const uint8_t id[20], uint16_t port, const char* version, const uint8_t* bitfield, uint32_t bits)
-{
-	int r;
-	peer->base.bits = bits;
-	r = peer_handshake(peer, info_hash, id);
-	r = r ? r : peer_extended(peer, port, version);
-	r = r ? r : peer_bitfield(peer, bitfield, bits);
-	return r ? r : aio_tcp_transport_recv(peer->aio, peer->rbuffer, sizeof(peer->rbuffer));
 }
 
 int peer_choke(peer_t* peer, int choke)
@@ -332,7 +333,7 @@ int peer_empty(const peer_t* peer)
 	return list_empty(&peer->messages) ? 1 : 0;
 }
 
-static int peer_handshake(peer_t* peer, const uint8_t info_hash[20], const uint8_t id[20])
+int peer_handshake(peer_t* peer, const uint8_t info_hash[20], const uint8_t id[20])
 {
 	int r;
 	struct peer_msg_t* msg;
@@ -349,7 +350,7 @@ static int peer_handshake(peer_t* peer, const uint8_t info_hash[20], const uint8
 	return r;
 }
 
-static int peer_extended(peer_t* peer, uint16_t port, const char* version)
+int peer_extended(peer_t* peer, uint16_t port, const char* version)
 {
 	int r;
 	struct peer_msg_t* msg;
@@ -365,7 +366,7 @@ static int peer_extended(peer_t* peer, uint16_t port, const char* version)
 	return r;
 }
 
-static int peer_bitfield(peer_t* peer, const uint8_t* bitfield, uint32_t bits)
+int peer_bitfield(peer_t* peer, const uint8_t* bitfield, uint32_t bits)
 {
 	int r;
 	struct peer_msg_t* msg;
@@ -437,7 +438,7 @@ static int peer_handler(void* param, struct peer_parser_t* parser)
 
 	case BT_HANDSHAKE:
 		r = peer_handshake_read(parser->buffer, parser->len, peer->base.flags, info_hash, peer->base.id);
-		return r < 0 ? r : 0;
+		return r < 0 ? r : peer->handler.handshake(peer->param, peer->base.flags, info_hash, peer->base.id);
 
 	case BT_CHOKE:
 	case BT_UNCHOKE:
@@ -500,7 +501,7 @@ static int peer_onbitfield(struct peer_t* peer, uint8_t* bitfield, uint32_t coun
 	// set recv timeout 90s
 	aio_tcp_transport_set_timeout(peer->aio, 90 * 1000, 5 * 1000);
 
-	assert(peer->base.bits <= count * 8);
+	peer->base.bits = count * 8;
 	if (peer->base.bitfield)
 		free(peer->base.bitfield);
 	peer->base.bitfield = bitfield;
