@@ -43,14 +43,12 @@ int piece_write(struct piece_t* piece, uint32_t begin, uint32_t length, const ui
 {
 	unsigned int bits;
 
+	assert(0 == length % N_PIECE_SLICE);
+	assert(begin + length <= piece->bytes);
 	if (begin + length <= piece->bytes)
 	{
 		memcpy(piece->data + begin, data, length);
-		while (length > 0)
-		{
-			bitmap_set(piece->bitfield, begin / N_PIECE_SLICE, 1);
-			length -= N_PIECE_SLICE;
-		}
+		bitmap_set(piece->bitfield, begin / N_PIECE_SLICE, length / N_PIECE_SLICE);
 	}
 
 	bits = PIECE_BYTES_TO_SLICES(piece->bytes);
