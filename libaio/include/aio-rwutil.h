@@ -9,7 +9,7 @@ extern "C" {
 
 struct aio_socket_rw_t
 {
-	unsigned char _reserved_[128];
+	unsigned char _reserved_[256];
 };
 
 int aio_socket_recv_all(struct aio_socket_rw_t* rw, int timeout, aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv proc, void* param);
