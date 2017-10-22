@@ -119,6 +119,7 @@ extern "C" void http_client_test2(void)
 	pthread_t thread;
 	bool running = true;
 	thread_create(&thread, http_server_thread, &running);
+	system_sleep(1000); // switch to http_server_thread
 
 	struct http_header_t headers[3];
 	headers[0].name = "User-Agent";
