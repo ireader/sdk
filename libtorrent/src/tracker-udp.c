@@ -6,6 +6,7 @@
 #include "aio-recv.h"
 #include "byte-order.h"
 #include "sys/system.h"
+#include <stdlib.h>
 
 #define TIMEOUT 5000
 

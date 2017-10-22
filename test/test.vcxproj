@@ -54,7 +54,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../include;../libhttp/include;../libaio/include;../../media-server/librtsp/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;../libhttp/include;../libaio/include;../libtorrent/include;../../media-server/librtsp/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;OS_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -66,6 +66,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -96,30 +98,51 @@
     <ClCompile Include="..\..\media-server\librtsp\source\sdp-a-fmtp.c" />
     <ClCompile Include="..\..\media-server\librtsp\source\sdp-a-rtpmap.c" />
     <ClCompile Include="..\..\media-server\librtsp\source\sdp.c" />
-    <ClCompile Include="..\algorithm\heap.c" />
-    <ClCompile Include="..\algorithm\rbtree.c" />
     <ClCompile Include="..\libhttp\test\benchmark.c" />
     <ClCompile Include="..\libhttp\test\http-client-test.cpp" />
     <ClCompile Include="..\libhttp\test\http-client-test2.cpp" />
+    <ClCompile Include="..\libhttp\test\http-download.c" />
     <ClCompile Include="..\libhttp\test\http-list-dir.cpp" />
     <ClCompile Include="..\libhttp\test\http-server-test.cpp" />
+    <ClCompile Include="..\libtorrent\test\bencode-test.c" />
+    <ClCompile Include="..\libtorrent\test\metainfo-test.c" />
+    <ClCompile Include="..\libtorrent\test\torrent-test.c" />
+    <ClCompile Include="..\libtorrent\test\tracker-test.c" />
+    <ClCompile Include="..\source\app-log.c" />
     <ClCompile Include="..\source\base64.c" />
+    <ClCompile Include="..\source\bitmap.c" />
     <ClCompile Include="..\source\bits.c" />
-    <ClCompile Include="..\source\crc32.c" />
+    <ClCompile Include="..\source\bsearch.c" />
+    <ClCompile Include="..\source\digest\crc32.c" />
+    <ClCompile Include="..\source\digest\hkdf.c" />
+    <ClCompile Include="..\source\digest\hmac.c" />
+    <ClCompile Include="..\source\digest\md5.c" />
+    <ClCompile Include="..\source\digest\sha.c" />
+    <ClCompile Include="..\source\digest\sha1.c" />
+    <ClCompile Include="..\source\digest\sha224-256.c" />
+    <ClCompile Include="..\source\digest\sha384-512.c" />
+    <ClCompile Include="..\source\heap.c" />
     <ClCompile Include="..\source\html-entities.c" />
-    <ClCompile Include="..\source\ip-route.c" />
-    <ClCompile Include="..\source\md5.c" />
+    <ClCompile Include="..\source\hweight.c" />
     <ClCompile Include="..\source\memory-dump.c" />
     <ClCompile Include="..\source\ntp-time.c" />
+    <ClCompile Include="..\source\port\ip-route.c" />
+    <ClCompile Include="..\source\port\serial-port-win32.c" />
+    <ClCompile Include="..\source\port\sysnetconfig.c" />
+    <ClCompile Include="..\source\port\sysntpconfig.c" />
+    <ClCompile Include="..\source\port\sysprocess.c" />
+    <ClCompile Include="..\source\port\sysreboot.c" />
+    <ClCompile Include="..\source\port\systimeconfig.c" />
+    <ClCompile Include="..\source\port\systimer.c" />
+    <ClCompile Include="..\source\port\sysvolume.cpp" />
+    <ClCompile Include="..\source\port\win32-async-pipe.c" />
+    <ClCompile Include="..\source\rbtree.c" />
     <ClCompile Include="..\source\ring-buffer.c" />
-    <ClCompile Include="..\source\serial-port-win32.c" />
-    <ClCompile Include="..\source\sysnetconfig.c" />
-    <ClCompile Include="..\source\sysntpconfig.c" />
-    <ClCompile Include="..\source\sysprocess.c" />
-    <ClCompile Include="..\source\sysreboot.c" />
-    <ClCompile Include="..\source\systimeconfig.c" />
-    <ClCompile Include="..\source\systimer.c" />
-    <ClCompile Include="..\source\sysvolume.cpp" />
+    <ClCompile Include="..\source\string\snprintf.c" />
+    <ClCompile Include="..\source\string\strlcat.c" />
+    <ClCompile Include="..\source\string\strlcpy.c" />
+    <ClCompile Include="..\source\string\strndup.c" />
+    <ClCompile Include="..\source\string\strtoken.c" />
     <ClCompile Include="..\source\task-queue.c" />
     <ClCompile Include="..\source\thread-pool.c" />
     <ClCompile Include="..\source\time64.c" />
@@ -129,12 +152,6 @@
     <ClCompile Include="..\source\uri-parse.c" />
     <ClCompile Include="..\source\url.c" />
     <ClCompile Include="..\source\urlcodec.c" />
-    <ClCompile Include="..\source\win32-async-pipe.c" />
-    <ClCompile Include="..\string\snprintf.c" />
-    <ClCompile Include="..\string\strlcat.c" />
-    <ClCompile Include="..\string\strlcpy.c" />
-    <ClCompile Include="..\string\strndup.c" />
-    <ClCompile Include="..\string\strtoken.c" />
     <ClCompile Include="aio-socket-test-cancel.c" />
     <ClCompile Include="aio-socket-test.c" />
     <ClCompile Include="aio-socket-test2.c" />
@@ -142,6 +159,7 @@
     <ClCompile Include="aio-socket-test4.c" />
     <ClCompile Include="atomic-test.c" />
     <ClCompile Include="atomic-test2.c" />
+    <ClCompile Include="bitmap-test.c" />
     <ClCompile Include="event-test.c" />
     <ClCompile Include="http-test.c" />
     <ClCompile Include="ip-route-test.c" />
@@ -154,6 +172,7 @@
     <ClCompile Include="rtsp-test.c" />
     <ClCompile Include="sdp-test.c" />
     <ClCompile Include="semaphore-test.c" />
+    <ClCompile Include="sha-test.c" />
     <ClCompile Include="socket-test.c" />
     <ClCompile Include="spinlock-test.c" />
     <ClCompile Include="stack-test.c" />
@@ -167,15 +186,28 @@
     <ClCompile Include="utf8codec-test.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\uri-parse.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\libaio\libaio.vcxproj">
       <Project>{24239ef8-56ac-4b79-81aa-5cb49b8b1178}</Project>
     </ProjectReference>
     <ProjectReference Include="..\libhttp\libhttp.vcxproj">
       <Project>{b2ca3b5d-f7c6-4daf-8f32-f8a169427a7c}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\libtorrent\libtorrent.vcxproj">
+      <Project>{29842b79-f362-4277-b0cb-d15cc397c2fe}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\bitmap.h" />
+    <ClInclude Include="..\include\bsearch.h" />
+    <ClInclude Include="..\include\hash-list.h" />
+    <ClInclude Include="..\include\hash.h" />
+    <ClInclude Include="..\include\heap.h" />
+    <ClInclude Include="..\include\hweight.h" />
+    <ClInclude Include="..\include\jhash.h" />
+    <ClInclude Include="..\include\list.h" />
+    <ClInclude Include="..\include\rbtree.h" />
+    <ClInclude Include="..\include\ring-buffer.h" />
+    <ClInclude Include="..\include\stack.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

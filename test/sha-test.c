@@ -861,9 +861,9 @@ void printResult(uint8_t *Message_Digest, int hashsize,
 				if (i + 2 < hashsize) b |= Message_Digest[i + 2] >> 6;
 				putchar(sm[b]);
 			}
-			else putchar(' = ');
+			else putchar('=');
 			if (i + 2 < hashsize) putchar(sm[Message_Digest[i + 2] & 0x3f]);
-			else putchar(' = ');
+			else putchar('=');
 		}
 		putchar('\n');
 	}
@@ -1283,7 +1283,7 @@ int unhexStr(char *hexstr)
 
 int sha_test(int argc, char **argv)
 {
-	int i, err;
+	int err;
 	int loopno, loopnohigh = 1;
 	int hashno, hashnolow = 0, hashnohigh = HASHCOUNT - 1;
 	int testno, testnolow = 0, testnohigh;

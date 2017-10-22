@@ -45,7 +45,7 @@ static int STDCALL worker1(IN void* aiosocket)
 
 static void OnSend(void* aiosocket, int code, size_t bytes)
 {
-	printf("onsend: %d, code: %d, errno: %d\n", bytes, code, errno);
+	printf("onsend: %u, code: %d, errno: %d\n", (unsigned int)bytes, code, errno);
 
 	system_sleep(2000);
 	if(0 == code)

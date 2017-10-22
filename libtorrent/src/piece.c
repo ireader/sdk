@@ -5,7 +5,7 @@
 #include <string.h>
 #include <assert.h>
 
-int hash_sha1(const uint8_t* data, size_t bytes, uint8_t sha1[20]);
+int hash_sha1(const uint8_t* data, unsigned int bytes, uint8_t sha1[20]);
 
 #define PIECE_BYTES_TO_SLICES(bytes) ( (bytes + N_PIECE_SLICE - 1) / N_PIECE_SLICE )
 

@@ -3,7 +3,7 @@
 #include <string.h>
 #include "torrent-internal.h"
 
-int hash_sha1(const uint8_t* data, size_t bytes, uint8_t sha1[20]);
+int hash_sha1(const uint8_t* data, unsigned int bytes, uint8_t sha1[20]);
 
 int torrent_peer_id(const char* usr, uint8_t id[20])
 {

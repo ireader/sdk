@@ -22,14 +22,26 @@
     <Filter Include="libsdp">
       <UniqueIdentifier>{8ae1eff4-245b-474d-8ef8-4102d5ecac28}</UniqueIdentifier>
     </Filter>
-    <Filter Include="string">
-      <UniqueIdentifier>{49e52bf1-5c3d-4982-b26e-b10c7b8f7525}</UniqueIdentifier>
-    </Filter>
     <Filter Include="epoll">
       <UniqueIdentifier>{381b9c70-c68b-4cb7-a4df-76223c4c7e09}</UniqueIdentifier>
     </Filter>
     <Filter Include="libhttp">
       <UniqueIdentifier>{d924ccb8-ac94-4614-9d48-2d8ba368aa81}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\digest">
+      <UniqueIdentifier>{b7229661-82b9-4bd6-9662-53d7f5d4d76c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\algorithm">
+      <UniqueIdentifier>{d01d05db-700f-4de3-b178-3d8d510c1206}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\string">
+      <UniqueIdentifier>{49e52bf1-5c3d-4982-b26e-b10c7b8f7525}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\port">
+      <UniqueIdentifier>{cff0c749-34e1-4619-a1f1-570c2977f48a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libtorrent">
+      <UniqueIdentifier>{c4c1f6c9-76b0-4588-94ee-6799abc7b385}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -105,37 +117,10 @@
     <ClCompile Include="..\source\base64.c">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\crc32.c">
-      <Filter>lib</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\html-entities.c">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\ip-route.c">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\md5.c">
-      <Filter>lib</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\memory-dump.c">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\serial-port-win32.c">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\sysnetconfig.c">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\sysprocess.c">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\systimeconfig.c">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\systimer.c">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\sysvolume.cpp">
       <Filter>lib</Filter>
     </ClCompile>
     <ClCompile Include="..\source\task-queue.c">
@@ -159,9 +144,6 @@
     <ClCompile Include="..\source\urlcodec.c">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\win32-async-pipe.c">
-      <Filter>lib</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\media-server\librtsp\source\rtsp-header-range.c">
       <Filter>librtsp</Filter>
     </ClCompile>
@@ -183,18 +165,6 @@
     <ClCompile Include="..\..\media-server\librtsp\source\sdp.c">
       <Filter>libsdp</Filter>
     </ClCompile>
-    <ClCompile Include="..\string\snprintf.c">
-      <Filter>string</Filter>
-    </ClCompile>
-    <ClCompile Include="..\string\strlcat.c">
-      <Filter>string</Filter>
-    </ClCompile>
-    <ClCompile Include="..\string\strlcpy.c">
-      <Filter>string</Filter>
-    </ClCompile>
-    <ClCompile Include="..\string\strndup.c">
-      <Filter>string</Filter>
-    </ClCompile>
     <ClCompile Include="onetime-test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -202,18 +172,6 @@
       <Filter>lib</Filter>
     </ClCompile>
     <ClCompile Include="..\source\ntp-time.c">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\sysreboot.c">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\sysntpconfig.c">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\string\strtoken.c">
-      <Filter>string</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\ring-buffer.c">
       <Filter>lib</Filter>
     </ClCompile>
     <ClCompile Include="..\source\uri-parse.c">
@@ -224,12 +182,6 @@
     </ClCompile>
     <ClCompile Include="aio-socket-test-cancel.c">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\algorithm\rbtree.c">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\algorithm\heap.c">
-      <Filter>lib</Filter>
     </ClCompile>
     <ClCompile Include="rbtree-test.c">
       <Filter>Source Files</Filter>
@@ -255,10 +207,151 @@
     <ClCompile Include="..\libhttp\test\http-server-test.cpp">
       <Filter>libhttp</Filter>
     </ClCompile>
+    <ClCompile Include="..\libhttp\test\http-download.c">
+      <Filter>libhttp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\digest\hkdf.c">
+      <Filter>lib\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\digest\hmac.c">
+      <Filter>lib\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\digest\sha.c">
+      <Filter>lib\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\digest\sha1.c">
+      <Filter>lib\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\digest\sha224-256.c">
+      <Filter>lib\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\digest\sha384-512.c">
+      <Filter>lib\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\digest\md5.c">
+      <Filter>lib\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="sha-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\heap.c">
+      <Filter>lib\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\rbtree.c">
+      <Filter>lib\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\ring-buffer.c">
+      <Filter>lib\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\digest\crc32.c">
+      <Filter>lib\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\string\snprintf.c">
+      <Filter>lib\string</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\string\strlcat.c">
+      <Filter>lib\string</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\string\strlcpy.c">
+      <Filter>lib\string</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\string\strndup.c">
+      <Filter>lib\string</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\string\strtoken.c">
+      <Filter>lib\string</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\port\ip-route.c">
+      <Filter>lib\port</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\port\serial-port-win32.c">
+      <Filter>lib\port</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\port\sysnetconfig.c">
+      <Filter>lib\port</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\port\sysntpconfig.c">
+      <Filter>lib\port</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\port\sysprocess.c">
+      <Filter>lib\port</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\port\sysreboot.c">
+      <Filter>lib\port</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\port\systimeconfig.c">
+      <Filter>lib\port</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\port\systimer.c">
+      <Filter>lib\port</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\port\sysvolume.cpp">
+      <Filter>lib\port</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\port\win32-async-pipe.c">
+      <Filter>lib\port</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\app-log.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\bsearch.c">
+      <Filter>lib\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\hweight.c">
+      <Filter>lib\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\bitmap.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="bitmap-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libtorrent\test\bencode-test.c">
+      <Filter>libtorrent</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libtorrent\test\metainfo-test.c">
+      <Filter>libtorrent</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libtorrent\test\torrent-test.c">
+      <Filter>libtorrent</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libtorrent\test\tracker-test.c">
+      <Filter>libtorrent</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\uri-parse.h">
-      <Filter>lib</Filter>
+    <ClInclude Include="..\include\list.h">
+      <Filter>lib\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\stack.h">
+      <Filter>lib\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\heap.h">
+      <Filter>lib\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\rbtree.h">
+      <Filter>lib\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ring-buffer.h">
+      <Filter>lib\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\hweight.h">
+      <Filter>lib\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\bsearch.h">
+      <Filter>lib\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\bitmap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\hash.h">
+      <Filter>lib\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\jhash.h">
+      <Filter>lib\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\hash-list.h">
+      <Filter>lib\algorithm</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

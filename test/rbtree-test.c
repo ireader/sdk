@@ -1,4 +1,5 @@
 #include "rbtree.h"
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -8,6 +9,10 @@
 #include <time.h>
 
 #define N 1000
+
+#if defined(OS_LINUX)
+static char *_strrev(char *str);
+#endif
 
 struct rbtree_value_t
 {
@@ -179,3 +184,20 @@ void rbtree_test(void)
 	}
 	printf("rb-tree test ok\n");
 }
+
+#if defined(OS_LINUX)
+static char *_strrev(char *str)
+{
+	char *p1, *p2;
+
+	if (!str || !*str)
+		return str;
+	for (p1 = str, p2 = str + strlen(str) - 1; p2 > p1; ++p1, --p2)
+	{
+		*p1 ^= *p2;
+		*p2 ^= *p1;
+		*p1 ^= *p2;
+	}
+	return str;
+}
+#endif

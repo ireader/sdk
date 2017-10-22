@@ -1,4 +1,5 @@
 #include "aio-recv.h"
+#include <errno.h>
 
 static void aio_timeout_tcp(void* param)
 {
@@ -15,7 +16,7 @@ static void aio_timeout_udp(void* param)
 	recv = (struct aio_recv_t*)param;
 
 	if (recv->u.onrecvfrom)
-		recv->u.onrecvfrom(recv->param, ETIMEDOUT, 0, NULL, 0);
+		recv->u.onrecvfrom(recv->param, ETIMEDOUT, 0, 0, 0);
 }
 
 static void aio_handler_tcp(void* param, int code, size_t bytes)

@@ -18,7 +18,7 @@ static void ontimer(void* param)
 
 void timer_test(void)
 {
-	int i;
+	int i, v;
 	time_wheel_t* wheel;
 	struct timer_t* timer;
 
@@ -33,7 +33,7 @@ void timer_test(void)
 	{
 		timer[i].ontimeout = ontimer;
 		timer[i].param = &timer[i];
-		timer[i].expire = now + rand();
+		timer[i].expire = now + rand() % 4096;
 		timer_start(wheel, &timer[i], now);
 
 		timer_process(wheel, now);

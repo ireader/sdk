@@ -15,6 +15,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libhttp", "..\libhttp\libht
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libaio", "..\libaio\libaio.vcxproj", "{24239EF8-56AC-4B79-81AA-5CB49B8B1178}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libtorrent", "..\libtorrent\libtorrent.vcxproj", "{29842B79-F362-4277-B0CB-D15CC397C2FE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -63,6 +65,14 @@ Global
 		{24239EF8-56AC-4B79-81AA-5CB49B8B1178}.Release|Win32.Build.0 = Release|Win32
 		{24239EF8-56AC-4B79-81AA-5CB49B8B1178}.Release|x64.ActiveCfg = Release|x64
 		{24239EF8-56AC-4B79-81AA-5CB49B8B1178}.Release|x64.Build.0 = Release|x64
+		{29842B79-F362-4277-B0CB-D15CC397C2FE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{29842B79-F362-4277-B0CB-D15CC397C2FE}.Debug|Win32.Build.0 = Debug|Win32
+		{29842B79-F362-4277-B0CB-D15CC397C2FE}.Debug|x64.ActiveCfg = Debug|x64
+		{29842B79-F362-4277-B0CB-D15CC397C2FE}.Debug|x64.Build.0 = Debug|x64
+		{29842B79-F362-4277-B0CB-D15CC397C2FE}.Release|Win32.ActiveCfg = Release|Win32
+		{29842B79-F362-4277-B0CB-D15CC397C2FE}.Release|Win32.Build.0 = Release|Win32
+		{29842B79-F362-4277-B0CB-D15CC397C2FE}.Release|x64.ActiveCfg = Release|x64
+		{29842B79-F362-4277-B0CB-D15CC397C2FE}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

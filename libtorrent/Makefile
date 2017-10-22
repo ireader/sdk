@@ -12,8 +12,8 @@ OUTFILE = libtorrent.so
 #--------------------------------------------------------------------
 INCLUDES = . \
 					./include \
-					$(ROOT)/libhttp/include
-					$(ROOT)/libaio/include
+					$(ROOT)/libhttp/include \
+					$(ROOT)/libaio/include \
 					$(ROOT)/include
 
 #-------------------------------Source-------------------------------
@@ -55,4 +55,5 @@ DEFINES =
 include $(ROOT)/gcc.mk
 
 CFLAGS += -fvisibility=default
-LDFLAGS += -Wl,--version-script=libaio.map
+CXXFLAGS += -std=c++0x
+LDFLAGS += -Wl,--version-script=libtorrent.map

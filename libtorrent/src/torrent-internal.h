@@ -6,6 +6,7 @@
 #include "list.h"
 #include <stdint.h>
 
+#define __STDC_FORMAT_MACROS
 #define VERSION "-XL0012-"
 
 struct torrent_sched_t;

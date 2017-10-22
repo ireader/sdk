@@ -1,4 +1,5 @@
 #include "aio-send.h"
+#include <errno.h>
 
 static void aio_send_timeout(void* param)
 {
@@ -36,7 +37,7 @@ int aio_send_v(struct aio_send_t* send, int timeout, aio_socket_t aio, socket_bu
 	return aio_socket_send_v(aio, vec, n, aio_send_handler, send);
 }
 
-int aio_sendto(struct aio_send_t* send, int timeout, aio_socket_t aio, const struct sockaddr *addr, socklen_t addrlen, void* buffer, size_t bytes, aio_onsend onsend, void* param)
+int aio_sendto(struct aio_send_t* send, int timeout, aio_socket_t aio, const struct sockaddr *addr, socklen_t addrlen, const void* buffer, size_t bytes, aio_onsend onsend, void* param)
 {
 	send->param = param;
 	send->onsend = onsend;

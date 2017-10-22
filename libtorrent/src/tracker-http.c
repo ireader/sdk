@@ -6,6 +6,7 @@
 #include "tracker-internal.h"
 #include "urlcodec.h"
 #include <inttypes.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -228,7 +229,7 @@ static int tracker_uri(char* url, size_t bytes,
 
 static void http_onget(void *param, int code)
 {
-	void* reply;
+	const void* reply;
 	size_t bytes;
 	struct bvalue_t root;
 	struct tracker_t* tracker;

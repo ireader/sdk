@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#if defined(OS_LINUX)
+#include <signal.h>
+#endif
 
 // base library
 // gcc -I../include -DOS_LINUX main.c atomic-test.c semaphore-test.c spinlock-test.c event-test.c locker-test.c -o test -lpthread -ldl -lrt
@@ -29,6 +32,8 @@ void bits_test(void);
 void stack_test(void);
 void time64_test(void);
 void base64_test(void);
+void bitmap_test(void);
+void hweight_test(void);
 void ring_buffer_test(void);
 
 void url_test(void);
@@ -60,6 +65,13 @@ void sdp_test(void);
 
 int main(int argc, char* argv[])
 {
+#if defined(OS_LINUX)
+	struct sigaction sa;
+	sa.sa_handler = SIG_IGN;
+	sigaction(SIGCHLD, &sa, 0);
+	sigaction(SIGPIPE, &sa, 0);
+#endif
+
 	heap_test();
 	rbtree_test();
 	timer_test();
@@ -81,6 +93,8 @@ int main(int argc, char* argv[])
 	stack_test();
 	time64_test();
 	base64_test();
+	bitmap_test();
+	hweight_test();
 	ring_buffer_test();
 
     url_test();

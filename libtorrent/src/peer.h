@@ -3,6 +3,7 @@
 
 #include "aio-socket.h"
 #include <stdint.h>
+#include <stddef.h>
 
 #if defined(__cplusplus)
 extern "C" {

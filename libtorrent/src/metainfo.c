@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdio.h>
 
-int hash_sha1(const uint8_t* data, size_t bytes, uint8_t sha1[20]);
+int hash_sha1(const uint8_t* data, unsigned int bytes, uint8_t sha1[20]);
 
 static int metainfo_read_trackers(const struct bvalue_t* anounces, struct metainfo_t* meta)
 {

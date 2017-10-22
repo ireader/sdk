@@ -20,7 +20,7 @@ global:
 	torrent_input_peers;
 	torrent_get_piece;
 	torrent_set_piece;
-	torrent_peer_id
+	torrent_peer_id;
 
 	peer_server_start;
 	peer_server_stop;

@@ -401,14 +401,14 @@ static void rbtree_unlink(struct rbtree_root_t* root, struct rbtree_node_t* node
 	if (node->parent)
 	{
 		if (node->parent->left == node)
-			node->parent->left = NULL;
+			node->parent->left = 0;
 		else
-			node->parent->right = NULL;
+			node->parent->right = 0;
 	}
 	else
 	{
 		// root node
-		root->node = NULL;
+		root->node = 0;
 	}
 }
 
