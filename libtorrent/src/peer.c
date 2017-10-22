@@ -165,8 +165,6 @@ peer_t* peer_create(aio_socket_t aio, const struct sockaddr_storage* addr, struc
 	aiohandler.onrecv = peer_aio_onrecv;
 	aiohandler.onsend = peer_aio_onsend;
 	peer->aio = aio_tcp_transport_create2(aio, &aiohandler, peer);
-	// NOTICE: init recv timeout 5s, after bitfield will set to 90s
-	aio_tcp_transport_set_timeout(peer->aio, 5 * 1000, 5 * 1000);
 
 	locker_create(&peer->locker);
 	LIST_INIT_HEAD(&peer->messages);
@@ -179,8 +177,12 @@ peer_t* peer_create(aio_socket_t aio, const struct sockaddr_storage* addr, struc
 	peer->base.interested = 0;
 	peer->base.peer_choke = 1;
 	peer->base.peer_interested = 0;
-
 	//memset(&peer->parser, 0, sizeof(peer->parser));
+
+	// Keepalives are generally sent once every two minutes
+	// set recv timeout 90s
+	aio_tcp_transport_set_timeout(peer->aio, 90 * 1000, 5 * 1000);
+
 	if (0 != aio_tcp_transport_recv(peer->aio, peer->rbuffer, sizeof(peer->rbuffer)))
 	{
 		peer_destroy(peer);
@@ -497,10 +499,6 @@ static int peer_handler(void* param, struct peer_parser_t* parser)
 
 static int peer_onbitfield(struct peer_t* peer, uint8_t* bitfield, uint32_t count)
 {
-	// Keepalives are generally sent once every two minutes
-	// set recv timeout 90s
-	aio_tcp_transport_set_timeout(peer->aio, 90 * 1000, 5 * 1000);
-
 	peer->base.bits = count * 8;
 	if (peer->base.bitfield)
 		free(peer->base.bitfield);

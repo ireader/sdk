@@ -15,10 +15,12 @@
 
 namespace peer
 {
-	enum { INIT = 0, IDLE, WORKING };
 	struct CPeer
 	{
 		enum { BITFILED = 32 };
+		enum { TIMEOUT_CONNECT = 5000 };
+		enum { TIMEOUT_HANDSHAKE = 5000 };
+		enum { CONNECT = 0, HANDSHAKE, IDLE, WORKING };
 
 		struct peer_t* m_peer;
 		struct torrent_sched_t* m_disp;
@@ -43,11 +45,6 @@ namespace peer
 		CPeer(struct torrent_sched_t* disp, const struct sockaddr_storage* addr);
 		~CPeer();
 	};
-
-	static bool compare(const std::shared_ptr<CPeer>& l, const std::shared_ptr<CPeer>& r)
-	{
-		return l->begin < r->begin;
-	}
 
 	class CPiece
 	{
@@ -85,7 +82,7 @@ namespace peer
 			AutoThreadLocker guard(m_locker);
 			for (auto it = m_peers.begin(); it != m_peers.end(); ++it)
 			{
-				(*it)->status = peer::IDLE;
+				(*it)->status = CPeer::IDLE;
 			}
 
 			m_peers.clear();
@@ -94,7 +91,7 @@ namespace peer
 		bool Add(std::shared_ptr<CPeer>& peer, uint32_t begin, uint32_t length)
 		{
 			assert(begin + length <= PIECE_BYTES_TO_SLICES(m_piece->bytes));
-			peer->status = peer::WORKING;
+			peer->status = CPeer::WORKING;
 			peer->clock = system_clock();
 			peer->total = 0;
 			peer->piece = m_piece->piece;
@@ -114,9 +111,9 @@ namespace peer
 			{
 				if (0 == memcmp(&(*it)->addr, &peer->addr, sizeof(peer->addr)))
 				{
-					assert(peer::WORKING == peer->status);
+					assert(CPeer::WORKING == peer->status);
 					assert(m_piece->piece == peer->piece);
-					peer->status = peer::IDLE;
+					peer->status = CPeer::IDLE;
 					m_peers.erase(it);
 					return true;
 				}
@@ -143,7 +140,7 @@ namespace peer
 			begin = bitmap_find_first_zero(m_bitfield, bits);
 			if (begin >= bits)
 			{
-				assert(bits = bitmap_weight(m_bitfield, bits));
+				assert(bits == bitmap_weight(m_bitfield, bits));
 				return false;
 			}
 

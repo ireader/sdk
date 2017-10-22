@@ -125,16 +125,20 @@ int torrent_sched_send_piece(torrent_sched_t* disp, void* param, uint32_t piece,
 static int torrent_sched_piece(torrent_sched_t* disp, peer::CPiece* piece)
 {
 	size_t slices = (size_t)((disp->tor->meta->piece_bytes + N_PIECE_SLICE - 1) / N_PIECE_SLICE);
-	size_t num = slices / (peer::BITFILED * 8);
+	size_t num = DIV_ROUND_UP(slices, peer::CPeer::BITFILED);
 	num = MIN(num, N_PEER_PER_PIECE);
 
 	while (piece->Size() < num)
 	{
+		uint32_t begin, length;
+		if (!piece->GetRegin(begin, length))
+			return 0; // all done
+
 		auto peer = torrent_peer_bits(disp, piece->GetPiece()->piece);
 		if (!peer.get())
 			break;
 
-		piece->Add(peer);
+		piece->Add(peer, begin, length);
 		// don't check peer_recv return value
 		// timer will check peer bitrate and download bytes
 		peer_recv(peer->m_peer, peer->piece, peer->begin, peer->bytes);
@@ -164,7 +168,7 @@ static int torrent_sched_action(torrent_sched_t* disp)
 		AutoThreadLocker locker(disp->locker);
 		for (auto it = disp->peers.begin(); it != disp->peers.end(); ++it)
 		{
-			if (peer::INIT == (*it)->status)
+			if (peer::CPeer::HANDSHAKE >= (*it)->status)
 				++init;
 		}
 	}
@@ -192,12 +196,12 @@ static int torrent_sched_timeout(torrent_sched_t* disp)
 			auto peer = *it;
 			switch (peer->status)
 			{
-			case peer::INIT:
-				if (peer->clock + 10 * 1000 < clock)
+			case peer::CPeer::HANDSHAKE:
+				if (peer->clock + peer::CPeer::TIMEOUT_HANDSHAKE < clock)
 					peers.push_back(peer); // handshake + bitfield take too much times
 				break;
 
-			case peer::WORKING:
+			case peer::CPeer::WORKING:
 				app_log(LOG_INFO, "peer(%s:%hu) piece: %u, total: %" PRIu64 ", bitrate: %f\n", peer->ip, peer->port, peer->piece, peer->total, peer->bitrate);
 
 				assert(!peer->choke);
@@ -227,13 +231,14 @@ static int torrent_sched_timeout(torrent_sched_t* disp)
 	// check piece working peer
 	{
 		size_t slices = (size_t)((disp->tor->meta->piece_bytes + N_PIECE_SLICE - 1) / N_PIECE_SLICE);
-		size_t num = slices / (peer::BITFILED * 8);
+		size_t num = DIV_ROUND_UP(slices, peer::CPeer::BITFILED);
 		num = MIN(num, N_PEER_PER_PIECE);
 
+		uint32_t begin, length;
 		AutoThreadLocker locker(disp->locker);
 		for (auto it = disp->pieces.begin(); it != disp->pieces.end(); ++it)
 		{
-			if ((*it)->Size() < num)
+			if ((*it)->Size() < num && (*it)->GetRegin(begin, length))
 			{
 				event_signal(&disp->event);
 				break;
@@ -251,7 +256,7 @@ static int STDCALL torrent_sched_thread(void* param)
 	{
 		if (WAIT_TIMEOUT == event_timewait(&disp->event, 3000))
 		{
-			//torrent_sched_timeout(disp);
+			torrent_sched_timeout(disp);
 		}
 		else
 		{
@@ -266,6 +271,7 @@ static int torrent_peer_create(torrent_sched_t* disp)
 	struct sockaddr_storage addr;
 	if (0 != ipaddr_pool_pop(disp->addrs, &addr))
 	{
+		app_log(LOG_INFO, "NOITFY: need more peer\n");
 		disp->handler.notify(disp->tor->param, NOTIFY_NEED_MORE_PEER);
 		return -1;
 	}
@@ -318,7 +324,7 @@ static std::shared_ptr<peer::CPeer> torrent_peer_bits(torrent_sched_t* disp, uin
 {
 	for (auto it = disp->peers.begin(); it != disp->peers.end(); ++it)
 	{
-		if (peer::IDLE != (*it)->status || (*it)->choke)
+		if (peer::CPeer::IDLE != (*it)->status || (*it)->choke)
 			continue;
 
 		if ((*it)->bits > piece && bitmap_test_bit((*it)->bitmap, piece))
@@ -365,7 +371,7 @@ static void torrent_piece_broadcast(torrent_sched_t* disp, uint32_t piece)
 	for (auto it = disp->peers.begin(); it != disp->peers.end(); ++it)
 	{
 		auto peer = *it;
-		if (peer::INIT == peer->status)
+		if (peer::CPeer::HANDSHAKE >= peer->status)
 			continue;
 		peer_have(peer->m_peer, piece);
 	}
@@ -434,27 +440,29 @@ namespace peer
 	static int onbitfield(void* param, const uint8_t* bitfield, uint32_t bits)
 	{
 		peer::CPeer* peer = (peer::CPeer*)param;
-		assert(bits >= peer->m_disp->tor->meta->piece_count);
-		bits = peer->m_disp->tor->meta->piece_count;
+		torrent_sched_t* disp = peer->m_disp;
+		assert(bits >= disp->tor->meta->piece_count);
+		bits = disp->tor->meta->piece_count;
 		uint32_t weight = bitmap_weight(bitfield, bits);
 		app_log(LOG_DEBUG, "peer(%s:%hu) bitfield bits: %u/%u\n", peer->ip, peer->port, weight, bits);
 
-		bitmap_or((uint8_t*)bitfield, peer->m_disp->tor->bitfield, bitfield, bits);
-		if (bitmap_weight(bitfield, bits) > bitmap_weight(peer->m_disp->tor->bitfield, bits))
+		bitmap_or((uint8_t*)bitfield, disp->tor->bitfield, bitfield, bits);
+		if (bitmap_weight(bitfield, bits) > bitmap_weight(disp->tor->bitfield, bits))
 		{
 			peer_choke(peer->m_peer, 0);
 			peer_interested(peer->m_peer, 1);
 
 			peer->bits = bits;
 			peer->bitmap = bitfield;
-			peer->status = peer::IDLE;
-			event_signal(&peer->m_disp->event); // re-dispatch
+			peer->status = CPeer::IDLE;
 		}
 		else
 		{
 			app_log(LOG_INFO, "peer(%s:%hu) not interested\n", peer->ip, peer->port);
 			torrent_peer_destroy(peer);
 		}
+
+		event_signal(&disp->event); // re-dispatch
 		return 0;
 	}
 
@@ -543,6 +551,7 @@ namespace peer
 	{
 		peer::CPeer* peer = (peer::CPeer*)param;
 		torrent_sched_t* disp = peer->m_disp;
+		assert(CPeer::CONNECT == peer->status);
 		app_log(LOG_DEBUG, "peer(%s:%hu) OnConnected: %d\n", peer->ip, peer->port, code);
 		if (0 == code)
 		{
@@ -559,28 +568,28 @@ namespace peer
 			handler.metadata = peer::metadata;
 			handler.error = peer::onerror;
 
+			peer->status = CPeer::HANDSHAKE;
 			peer->m_peer = peer_create(aio, &peer->addr, &handler, peer);
 			peer->clock = system_clock();
-			assert(peer::INIT == peer->status);
 			peer_handshake(peer->m_peer, disp->sha1, disp->tor->id);
 		}
 		else
 		{
 			torrent_peer_destroy(peer);
+			event_signal(&disp->event);
 		}
-		event_signal(&disp->event);
 	}
 
 	CPeer::CPeer(struct torrent_sched_t* disp, const struct sockaddr_storage* addr)
-		:status(peer::INIT), bitrate(0.0), choke(true), bitmap(NULL), bits(0)
+		:status(CPeer::CONNECT), bitrate(0.0), choke(true), bitmap(NULL), bits(0)
 	{
 		m_peer = NULL;
 		m_disp = disp;
 
 		clock = system_clock();
-		memcpy(&this->addr, addr, sizeof(addr));
+		memcpy(&this->addr, addr, sizeof(struct sockaddr_storage));
 		socket_addr_to((const struct sockaddr*)addr, AF_INET6 == addr->ss_family ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in), ip, &port);
-		aio_connect(ip, port, 5000, OnConnected, this);
+		aio_connect(ip, port, CPeer::TIMEOUT_CONNECT, OnConnected, this);
 	}
 
 	CPeer::~CPeer()
