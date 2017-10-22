@@ -25,7 +25,7 @@ static int tracker_read_peer(struct tracker_reply_t* tracker, const struct bvalu
 		const char* name;
 
 		assert(!tracker->peers && !tracker->peer_count);
-		tracker->peers = malloc(sizeof(struct sockaddr_storage) * peers->v.list.count);
+		tracker->peers = calloc(peers->v.list.count, sizeof(struct sockaddr_storage));
 		if (!tracker->peers)
 			return -1;
 		tracker->peer_count = 0;
@@ -78,7 +78,7 @@ static int tracker_read_peer(struct tracker_reply_t* tracker, const struct bvalu
 			{
 				socklen_t addrlen;
 				addrlen = sizeof(struct sockaddr_storage);
-				if (0 == socket_addr_from(&tracker->peers[tracker->peer_count], &addrlen, ip, (u_short)port))
+				if (0 == socket_addr_from(tracker->peers + tracker->peer_count, &addrlen, ip, (u_short)port))
 					++tracker->peer_count;
 			}
 
@@ -99,7 +99,7 @@ static int tracker_read_peer(struct tracker_reply_t* tracker, const struct bvalu
 		{
 			// IPv4
 			assert(!tracker->peers && !tracker->peer_count);
-			tracker->peers = malloc(sizeof(struct sockaddr_storage) * (peers->v.str.bytes / 6));
+			tracker->peers = calloc(peers->v.str.bytes / 6, sizeof(struct sockaddr_storage));
 			if (!tracker->peers)
 				return -1;
 			tracker->peer_count = peers->v.str.bytes / 6;
@@ -107,7 +107,6 @@ static int tracker_read_peer(struct tracker_reply_t* tracker, const struct bvalu
 			{
 				struct sockaddr_in* addr;
 				addr = (struct sockaddr_in*)&tracker->peers[i];
-				memset(addr, 0, sizeof(*addr));
 				addr->sin_family = AF_INET;
 				memcpy(&addr->sin_addr.s_addr, p, 4);
 				memcpy(&addr->sin_port, p + 4, 2);
@@ -119,7 +118,7 @@ static int tracker_read_peer(struct tracker_reply_t* tracker, const struct bvalu
 		{
 			// IPv6
 			assert(!tracker->peers && !tracker->peer_count);
-			tracker->peers = malloc(sizeof(struct sockaddr_storage) * (peers->v.str.bytes / 18));
+			tracker->peers = calloc(peers->v.str.bytes / 18, sizeof(struct sockaddr_storage));
 			if (!tracker->peers)
 				return -1;
 			tracker->peer_count = peers->v.str.bytes / 18;
@@ -127,7 +126,6 @@ static int tracker_read_peer(struct tracker_reply_t* tracker, const struct bvalu
 			{
 				struct sockaddr_in6* addr;
 				addr = (struct sockaddr_in6*)&tracker->peers[i];
-				memset(addr, 0, sizeof(*addr));
 				addr->sin6_family = AF_INET6;
 				memcpy(&addr->sin6_addr.s6_addr, p, 16);
 				memcpy(&addr->sin6_port, p + 16, 2);

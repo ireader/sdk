@@ -4,10 +4,23 @@ EXPORTS
 	bencode_write
 	bencode_free
 
-	torrent_read
-	torrent_write
-	torrent_free
-	torrent_hash
+	metainfo_read
+	metainfo_write
+	metainfo_free
+	metainfo_hash
 
-	tracker_get
-	tracker_free
+	tracker_create
+	tracker_destroy
+	tracker_query
+
+	torrent_create
+	torrent_destroy
+	torrent_set_bitfield
+	torrent_get_bitfield
+	torrent_input_peers
+	torrent_get_piece
+	torrent_set_piece
+	torrent_peer_id
+
+	peer_server_start
+	peer_server_stop

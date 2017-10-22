@@ -264,7 +264,7 @@ static int tracker_udp_announce_reply_read(const uint8_t* buffer, size_t bytes, 
 	nbo_r32(buffer + 16, senders);
 
 	n = (bytes - 20) / (ipv6 ? 18 : 6);
-	*peers = malloc(sizeof(struct sockaddr_storage) * n);
+	*peers = calloc(n, sizeof(struct sockaddr_storage));
 	if (!*peers)
 		return -1;
 
@@ -275,7 +275,6 @@ static int tracker_udp_announce_reply_read(const uint8_t* buffer, size_t bytes, 
 		{
 			struct sockaddr_in6* addr;
 			addr = (struct sockaddr_in6*)((*peers) + i);
-			memset(addr, 0, sizeof(*addr));
 			addr->sin6_family = AF_INET6;
 			memcpy(&addr->sin6_addr.s6_addr, buffer, 16);
 			memcpy(&addr->sin6_port, buffer + 16, 2);
@@ -285,7 +284,6 @@ static int tracker_udp_announce_reply_read(const uint8_t* buffer, size_t bytes, 
 		{
 			struct sockaddr_in* addr;
 			addr = (struct sockaddr_in*)((*peers) + i);
-			memset(addr, 0, sizeof(*addr));
 			addr->sin_family = AF_INET;
 			memcpy(&addr->sin_addr.s_addr, buffer, 4);
 			memcpy(&addr->sin_port, buffer + 4, 2);

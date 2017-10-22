@@ -21,13 +21,40 @@
     <ClInclude Include="include\bencode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\tracker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\metainfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="include\torrent.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\peer.h">
+    <ClInclude Include="src\piece.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\tracker.h">
+    <ClInclude Include="src\torrent-internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ipaddr-pool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tracker-internal.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\peer-message.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\peer-parser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\peer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sched-piece.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\torrent-sched.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -35,13 +62,7 @@
     <ClCompile Include="src\bencode.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\torrent.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\hash-sha1.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\peer.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\source\uri-parse.c">
@@ -58,6 +79,45 @@
     </ClCompile>
     <ClCompile Include="..\source\digest\sha1.c">
       <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="src\metainfo.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\peer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\piece.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ipaddr-pool.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\bitmap.c">
+      <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\hweight.c">
+      <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="src\peer-message.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\peer-parser.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\peer-server.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\app-log.c">
+      <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="src\torrent.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\torrent-sched.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\torrent-peer-id.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
