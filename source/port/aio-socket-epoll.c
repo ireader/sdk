@@ -398,25 +398,23 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 
 static int epoll_connect(struct epoll_context* ctx, int flags, int error)
 {
-	int r = 0;
-	socklen_t addrlen = sizeof(ctx->out.connect.addr);
+	socklen_t len;
 
     // call in epoll_wait thread
     assert(1 == flags);
 
     if(0 != error)
 	{
-		assert(1 == flags); // only in epoll_wait thread
 		ctx->out.connect.proc(ctx->out.connect.param, error);
 		return error;
 	}
     else
     {
         // man connect to see more (EINPROGRESS)
-        addrlen = sizeof(r);
-        getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&r, &addrlen);
-        ctx->out.connect.proc(ctx->out.connect.param, r);
-        return r;
+		len = sizeof(error);
+        getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&error, &len);
+        ctx->out.connect.proc(ctx->out.connect.param, error);
+        return error;
     }
 }
 
@@ -433,20 +431,11 @@ int aio_socket_connect(aio_socket_t socket, const struct sockaddr *addr, socklen
 	ctx->out.connect.proc = proc;
 	ctx->out.connect.param = param;
 
-    //	r = epoll_connect(ctx, 0, 0);
-    //	if(EINPROGRESS != r) return r;
+//	r = epoll_connect(ctx, 0, 0);
+//	if(EINPROGRESS != r) return r;
 
     r = connect(ctx->socket, (const struct sockaddr*)&ctx->out.connect.addr, ctx->out.connect.addrlen);
-    if(0 == r)
-    {
-        // man 2 connect to see more(ERRORS: EINPROGRESS)
-        addrlen = sizeof(r);
-        if(0 == getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&r, &addrlen) && 0 == r)
-            ctx->out.connect.proc(ctx->out.connect.param, r);
-        return r;
-    }
-
-    if(EINPROGRESS == errno)
+    if(0 == r || EINPROGRESS == errno)
     {
         EPollOut(ctx, epoll_connect);
     }
@@ -456,12 +445,14 @@ int aio_socket_connect(aio_socket_t socket, const struct sockaddr *addr, socklen
 static int epoll_recv(struct epoll_context* ctx, int flags, int error)
 {
 	ssize_t r;
-	if(0 != error)
-	{
-		assert(1 == flags); // only in epoll_wait thread
-		ctx->in.recv.proc(ctx->in.recv.param, error, 0);
-		return error;
-	}
+
+	// recv socket buffer data
+	//if(0 != error)
+	//{
+	//	assert(1 == flags); // only in epoll_wait thread
+	//	ctx->in.recv.proc(ctx->in.recv.param, error, 0);
+	//	return error;
+	//}
 
 	r = recv(ctx->socket, ctx->in.recv.buffer, ctx->in.recv.bytes, 0);
 	if(r >= 0)
@@ -550,12 +541,13 @@ static int epoll_recv_v(struct epoll_context* ctx, int flags, int error)
 	ssize_t r;
 	struct msghdr msg;
 
-	if(0 != error)
-	{
-		assert(1 == flags); // only in epoll_wait thread
-		ctx->in.recv_v.proc(ctx->in.recv_v.param, error, 0);
-		return error;
-	}
+	// recv socket buffer data
+	//if(0 != error)
+	//{
+	//	assert(1 == flags); // only in epoll_wait thread
+	//	ctx->in.recv_v.proc(ctx->in.recv_v.param, error, 0);
+	//	return error;
+	//}
 
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = (struct iovec*)ctx->in.recv_v.vec;
