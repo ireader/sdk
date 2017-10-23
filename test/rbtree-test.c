@@ -7,12 +7,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include "cstringext.h"
 
 #define N 1000
-
-#if defined(OS_LINUX)
-static char *_strrev(char *str);
-#endif
 
 struct rbtree_value_t
 {
@@ -88,7 +85,7 @@ static void rbtree_print_node(struct rbtree_node_t* node)
 		p = g;
 		g = p->parent;
 	}
-	_strrev(s_tree);
+	strrev(s_tree);
 
 	v = rbtree_entry(node, struct rbtree_value_t, node);
 
@@ -184,20 +181,3 @@ void rbtree_test(void)
 	}
 	printf("rb-tree test ok\n");
 }
-
-#if defined(OS_LINUX)
-static char *_strrev(char *str)
-{
-	char *p1, *p2;
-
-	if (!str || !*str)
-		return str;
-	for (p1 = str, p2 = str + strlen(str) - 1; p2 > p1; ++p1, --p2)
-	{
-		*p1 ^= *p2;
-		*p2 ^= *p1;
-		*p1 ^= *p2;
-	}
-	return str;
-}
-#endif

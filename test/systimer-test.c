@@ -1,8 +1,8 @@
-#include "systimer.h"
 #include "cstringext.h"
+#include "port/systimer.h"
+#include "port/system.h"
 #include "sys/thread.h"
 #include "sys/system.h"
-#include "systimeconfig.h"
 #include "time64.h"
 #include <stdio.h>
 #include <time.h>

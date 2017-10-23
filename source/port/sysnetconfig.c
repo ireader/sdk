@@ -1,4 +1,4 @@
-#include "sysnetconfig.h"
+#include "port/network.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
@@ -30,11 +30,11 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "tools.h"
+#include "../deprecated/tools.h"
 
 
 #if defined(_WIN32) || defined(_WIN64)
-//int system_netadaptors_count()
+//int network_netadaptors_count()
 //{
 //	// MSDN:
 //	// The GetNumberOfInterfaces function returns the number of interfaces on the local computer, including the loopback interface. 
@@ -47,7 +47,7 @@
 //	return -1;
 //}
 
-int system_getip(system_getip_fcb fcb, void* param)
+int network_getip(network_getip_fcb fcb, void* param)
 {
 	UINT i = 0;
 	ULONG ulOutBufLen;
@@ -97,7 +97,7 @@ int system_getip(system_getip_fcb fcb, void* param)
 
 typedef int (CALLBACK* DNSFLUSHPROC)();
 typedef int (CALLBACK* DHCPNOTIFYPROC)(LPWSTR, LPWSTR, BOOL, DWORD, DWORD, DWORD, int);
-static int system_notify_ipchanged(const char* name, const char* ip, const char* netmask, int dhcp)
+static int network_notify_ipchanged(const char* name, const char* ip, const char* netmask, int dhcp)
 {
 	// Nofity ip change
 
@@ -124,7 +124,7 @@ static int system_notify_ipchanged(const char* name, const char* ip, const char*
 	return 0;
 }
 
-static int system_notify_dnsflush()
+static int network_notify_dnsflush()
 {
 	DNSFLUSHPROC pDnsFlushProc;
 	HINSTANCE handle = LoadLibraryA("dnsapi");
@@ -141,7 +141,7 @@ static int system_notify_dnsflush()
 
 #define VALIDATE_IPADDR(ip) (ip && *ip && inet_addr(ip))
 
-int system_setip(const char* name, int enableDHCP, const char* ipaddr, const char* netmask, const char* gateway)
+int network_setip(const char* name, int enableDHCP, const char* ipaddr, const char* netmask, const char* gateway)
 {
 	HKEY hKey;
 	char key[MAX_PATH];
@@ -168,11 +168,11 @@ int system_setip(const char* name, int enableDHCP, const char* ipaddr, const cha
 	RegCloseKey(hKey);
 
 	// Nofity ip change
-	system_notify_ipchanged(name, ipaddr, netmask, enableDHCP);
+	network_notify_ipchanged(name, ipaddr, netmask, enableDHCP);
 	return 0;
 }
 
-int system_getdns(const char* name, char primary[40], char secondary[40])
+int network_getdns(const char* name, char primary[40], char secondary[40])
 {
 	ULONG idx = 0;
 	DWORD dwRetVal = 0;
@@ -204,7 +204,7 @@ int system_getdns(const char* name, char primary[40], char secondary[40])
 	return dwRetVal==ERROR_SUCCESS?0:-(int)dwRetVal;
 }
 
-int system_setdns(const char* name, const char* primary, const char *secondary)
+int network_setdns(const char* name, const char* primary, const char *secondary)
 {
 	HKEY hKey;
 	char key[MAX_PATH];
@@ -231,17 +231,17 @@ int system_setdns(const char* name, const char* primary, const char *secondary)
 	RegCloseKey(hKey);
 
 	// flush dns
-	system_notify_dnsflush();
+	network_notify_dnsflush();
 	return 0;
 }
 
-int system_getgateway(char* gateway, int len)
+int network_getgateway(char* gateway, int len)
 {
 	// http://msdn.microsoft.com/en-us/library/aa373798%28v=VS.85%29.aspx
 	return -1;
 }
 
-int system_setgateway(const char* gateway)
+int network_setgateway(const char* gateway)
 {
 	// http://msdn.microsoft.com/en-us/library/aa373798%28v=VS.85%29.aspx
 	return -1;
@@ -249,7 +249,7 @@ int system_setgateway(const char* gateway)
 
 #else
 
-int system_getgateway(char* gateway, int len)
+int network_getgateway(char* gateway, int len)
 {
 	FILE* fp;
 	char buffer[512];
@@ -272,7 +272,7 @@ int system_getgateway(char* gateway, int len)
 	return 0;
 }
 
-int system_setgateway(const char* gateway)
+int network_setgateway(const char* gateway)
 {
 	int r;
 	char buffer[128];
@@ -280,7 +280,7 @@ int system_setgateway(const char* gateway)
 	strcpy(buffer, "route del default gw ");
 	r = strlen(buffer);
 
-	r = system_getgateway(buffer+r, sizeof(buffer)-r);
+	r = network_getgateway(buffer+r, sizeof(buffer)-r);
 	if(0 == r)
 	{
 		system(buffer);
@@ -301,7 +301,7 @@ static void ipaddr2str(char s[16], struct sockaddr_in* addr)
 }
 
 #if 0
-int system_getip(system_getip_fcb fcb, void* param)
+int network_getip(network_getip_fcb fcb, void* param)
 {
 	int i, fd;
 	struct ifconf ifc;
@@ -348,7 +348,7 @@ int system_getip(system_getip_fcb fcb, void* param)
 		ipaddr2str(netmask, (struct sockaddr_in*)&req[i].ifr_netmask);
 
 		memset(gateway, 0, sizeof(gateway));
-		system_getgateway(gateway, sizeof(gateway));
+		network_getgateway(gateway, sizeof(gateway));
 		fcb(param, hwaddr, req[i].ifr_name, 0, ipaddr, netmask, gateway);
 	}
 
@@ -357,7 +357,7 @@ int system_getip(system_getip_fcb fcb, void* param)
 }
 
 #else
-static int system_getmac(const struct ifaddrs *ifaddr, const char* ifname, char hwaddr[20])
+static int network_getmac(const struct ifaddrs *ifaddr, const char* ifname, char hwaddr[20])
 {
 	const struct ifaddrs *ifa = NULL;
 	struct sockaddr_ll *macaddr = NULL;
@@ -382,14 +382,14 @@ static int system_getmac(const struct ifaddrs *ifaddr, const char* ifname, char 
 	return -1;
 }
 
-int system_getip(system_getip_fcb fcb, void* param)
+int network_getip(network_getip_fcb fcb, void* param)
 {
 	char hwaddr[20];	
 	char ipaddr[32] ,netmask[32], gateway[32];
 	struct ifaddrs *ifaddr, *ifa;
 
 	memset(gateway, 0, sizeof(gateway));
-	system_getgateway(gateway, sizeof(gateway));
+	network_getgateway(gateway, sizeof(gateway));
 
 	if(0 != getifaddrs(&ifaddr))
 		return errno;
@@ -408,7 +408,7 @@ int system_getip(system_getip_fcb fcb, void* param)
 		ipaddr2str(netmask, (struct sockaddr_in*)ifa->ifa_netmask);
 
 		memset(hwaddr, 0, sizeof(hwaddr));
-		system_getmac(ifaddr, ifa->ifa_name, hwaddr);
+		network_getmac(ifaddr, ifa->ifa_name, hwaddr);
 
 		fcb(param, hwaddr, ifa->ifa_name, 0, ipaddr, netmask, gateway);
 	}
@@ -419,7 +419,7 @@ int system_getip(system_getip_fcb fcb, void* param)
 #endif
 
 #if 0
-int system_setip(const char* name, int enableDHCP, const char* ip, const char* netmask, const char* gateway)
+int network_setip(const char* name, int enableDHCP, const char* ip, const char* netmask, const char* gateway)
 {
 	int fd;
 	struct ifreq req;
@@ -456,12 +456,12 @@ int system_setip(const char* name, int enableDHCP, const char* ip, const char* n
 	close(fd);
 
 	if(gateway && *gateway)
-		system_setgateway(gateway);
+		network_setgateway(gateway);
 	return 0;
 }
 
 #else
-static int system_setip_handle(const char* str, int len, va_list val)
+static int network_setip_handle(const char* str, int len, va_list val)
 {
 	FILE* fp;
 	
@@ -480,7 +480,7 @@ static int system_setip_handle(const char* str, int len, va_list val)
 	return 0;
 }
 
-int system_setip(const char* name, int dhcp, const char* ip, const char* netmask, const char* gateway)
+int network_setip(const char* name, int dhcp, const char* ip, const char* netmask, const char* gateway)
 {
 	int r;
 	char filename[512] = {0};
@@ -495,7 +495,7 @@ int system_setip(const char* name, int dhcp, const char* ip, const char* netmask
 	if(!fp)
 		return -(int)errno;
 
-	r = tools_tokenline(content, system_setip_handle, fp);
+	r = tools_tokenline(content, network_setip_handle, fp);
 
 	if(dhcp)
 		sprintf(content, "BOOTPROTO=dhcp\n");
@@ -506,12 +506,12 @@ int system_setip(const char* name, int dhcp, const char* ip, const char* netmask
 	fclose(fp);
 
 	if(gateway && *gateway)
-		r = system_setgateway(gateway);
+		r = network_setgateway(gateway);
 	return r;
 }
 #endif
 
-static int system_getdns_handle(const char* str, int strLen, va_list val)
+static int network_getdns_handle(const char* str, int strLen, va_list val)
 {
 	char *dns;
 	int v[4];
@@ -532,17 +532,17 @@ static int system_getdns_handle(const char* str, int strLen, va_list val)
 	return 0;
 }
 
-int system_getdns(const char* name, char primary[40], char secondary[40])
+int network_getdns(const char* name, char primary[40], char secondary[40])
 {
 	int r;
 	char content[1024*2] = {0};
 
 	r = tools_cat("/etc/resolv.conf", content, sizeof(content)-1);
-	r = tools_tokenline(content, system_getdns_handle, primary, secondary, NULL);
+	r = tools_tokenline(content, network_getdns_handle, primary, secondary, NULL);
 	return r;
 }
 
-static int system_setdns_handle(const char* str, int len, va_list val)
+static int network_setdns_handle(const char* str, int len, va_list val)
 {
 	FILE* fp;
 
@@ -558,7 +558,7 @@ static int system_setdns_handle(const char* str, int len, va_list val)
 	return 0;
 }
 
-int system_setdns(const char* name, const char* primary, const char *secondary)
+int network_setdns(const char* name, const char* primary, const char *secondary)
 {
 	int r;
 	FILE* fp;
@@ -572,7 +572,7 @@ int system_setdns(const char* name, const char* primary, const char *secondary)
 		return -(int)errno;
 
 	// update
-	r = tools_tokenline(content, system_setdns_handle, fp);
+	r = tools_tokenline(content, network_setdns_handle, fp);
 
 	if(primary && *primary)
 	{

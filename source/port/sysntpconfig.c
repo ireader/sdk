@@ -1,4 +1,4 @@
-#include "sysntpconfig.h"
+#include "port/system.h"
 
 #if defined(OS_LINUX)
 #include <errno.h>

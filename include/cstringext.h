@@ -24,20 +24,14 @@
 	#if !defined(atoll)
 		#define atoll	_atoi64
 	#endif
+
+	#if !defined(strrev)
+		#define strrev _strrev
+	#endif
 #endif
 
-//#define char_isnum(c)				('0'<=(c) && '9'>=(c))
-//#define char_isalpha(c)				(('a'<=(c) && 'z'>=(c)) || ('A'<=(c) && 'Z'>=(c)))
-//#define char_isalnum(c)				(char_isnum(c) || char_isalpha(c))
-
-#define strempty(s)					((!s || 0==*s) ? 1 : 0)
-#define streq(s, t)					(strcmp(s, t) ? 0 : 1)
-#define strieq(s, t)				(strcasecmp(s, t) ? 0 : 1)
-#define strneq(s, t, n)				(strncmp(s, t, n) ? 0 : 1)
-#define strnieq(s, t, n)			(strncasecmp(s, t, n) ? 0 : 1)
 #define strstartswith(p, prefix)	(strncmp(p, prefix, strlen(prefix))? 0 : 1)
 #define strendswith(p, suffix)		(strncmp(p+strlen(p)-strlen(suffix), suffix, strlen(suffix))? 0 : 1)
-
 
 #if defined(__cplusplus)
 extern "C" {
@@ -58,15 +52,14 @@ char* strndup(const char* p, size_t n);
 int snprintf(char *str, size_t size, const char *format, ...);
 #endif
 
+#else
+char* strrev(char *str);
 #endif
 
 #if !defined(OS_MAC)
-
 size_t strlcpy(char *dst, const char *src, size_t siz);
 size_t strlcat(char *dst, const char *src, size_t siz);
-
 #endif
-
 
 #if defined(__cplusplus)
 }

@@ -1,4 +1,4 @@
-#include "sysreboot.h"
+#include "port/system.h"
 
 #if defined(OS_WINDOWS)
 #include <Windows.h>

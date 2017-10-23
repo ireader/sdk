@@ -13,7 +13,7 @@
 #include <alsa/asoundlib.h>
 #endif
 
-#include "sysvolume.h"
+#include "port/sysvolume.h"
 
 #if defined(WIN32)
 

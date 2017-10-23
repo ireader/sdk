@@ -36,7 +36,6 @@ void bitmap_test(void);
 void hweight_test(void);
 void ring_buffer_test(void);
 
-void url_test(void);
 void unicode_test(void);
 void uri_parse_test(void);
 void utf8codec_test(void);
@@ -97,7 +96,6 @@ int main(int argc, char* argv[])
 	hweight_test();
 	ring_buffer_test();
 
-    url_test();
 	uri_parse_test();
 
 #if defined(HTTP_TEST)

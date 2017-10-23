@@ -11,14 +11,6 @@ static semaphore_t s_sema;
 
 static void tasktest(void* param)
 {
-	char* p = (char*)param;
-#if defined(OS_WINDOWS)
-	printf("[%d]: %s\n", thread_getid(thread_self()), p);
-#else
-	printf("[%p]: %s\n", thread_getid(thread_self()), p);
-#endif
-	free(p);
-
 	semaphore_post(&s_sema);
 }
 
@@ -33,10 +25,7 @@ void task_queue_test(void)
 	taskQ = task_queue_create(pool, 8);
 	for (i=0; i < N_TASK; ++i)
 	{
-		char* par = (char*)malloc(32);
-		memset(par,0,12);
-		sprintf(par,"task_test %d",i);
-		task_queue_post(taskQ, tasktest, (void*)par);
+		task_queue_post(taskQ, tasktest, NULL);
 	}
 
 	for(i = 0; i < N_TASK; ++i)
@@ -45,4 +34,6 @@ void task_queue_test(void)
 	task_queue_destroy(taskQ);
 	thread_pool_destroy(pool);
 	semaphore_destroy(&s_sema);
+
+	printf("task-queue test ok\n");
 }

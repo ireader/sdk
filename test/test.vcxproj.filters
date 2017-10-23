@@ -108,9 +108,6 @@
     <ClCompile Include="unicode-test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="url-test.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="utf8codec-test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -132,13 +129,7 @@
     <ClCompile Include="..\source\time64.c">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\tools.c">
-      <Filter>lib</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\unicode.c">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\url.c">
       <Filter>lib</Filter>
     </ClCompile>
     <ClCompile Include="..\source\urlcodec.c">
@@ -317,6 +308,9 @@
     </ClCompile>
     <ClCompile Include="..\libtorrent\test\tracker-test.c">
       <Filter>libtorrent</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\string\strrev.c">
+      <Filter>lib\string</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

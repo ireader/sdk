@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#define N 1000
+#define N 1001
 
 void bitmap_test(void)
 {

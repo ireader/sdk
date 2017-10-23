@@ -37,7 +37,7 @@ SOURCE_FILES := $(filter-out $(_SOURCE_FILES),$(SOURCE_FILES))
 #
 # LIBPATHS = $(addprefix -L,$(LIBPATHS)) # add -L prefix
 #--------------------------------------------------------------------
-LIBPATHS = $(ROOT)/libaio/$(BUILD).$(PLATFORM) $(ROOT)/libhttp/$(BUILD).$(PLATFORM)
+LIBPATHS = $(ROOT)/libaio/$(BUILD).$(PLATFORM)
 ifdef RELEASE
 # relase library path
 LIBPATHS +=
@@ -45,9 +45,9 @@ else
 LIBPATHS +=
 endif
 
-LIBS = rt pthread dl bsd aio http
+LIBS = rt pthread dl bsd aio
 
-STATIC_LIBS =
+STATIC_LIBS = $(ROOT)/libhttp/$(BUILD).$(PLATFORM)/libhttp.a
 
 #-----------------------------DEFINES--------------------------------
 #

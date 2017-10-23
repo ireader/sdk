@@ -1,4 +1,4 @@
-#include "serial-port.h"
+#include "port/serial-port.h"
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>

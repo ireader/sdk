@@ -1,5 +1,5 @@
-#ifndef _sysprocess_h_
-#define _sysprocess_h_
+#ifndef _port_process_h_
+#define _port_process_h_
 
 #include "time64.h"
 #include "sys/process.h"
@@ -29,4 +29,4 @@ int process_getcommandline(pid_t pid, char* cmdline, int len);
 }
 #endif
 
-#endif /* !_sysprocess_h_ */
+#endif /* !_port_process_h_ */

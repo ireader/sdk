@@ -1,4 +1,4 @@
-#include "systimeconfig.h"
+#include "port/system.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
@@ -12,7 +12,7 @@
 
 #include <stdio.h>
 #include <assert.h>
-#include "tools.h"
+#include "../deprecated/tools.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 int system_gettime(char time[24])

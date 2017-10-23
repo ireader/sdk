@@ -142,15 +142,14 @@
     <ClCompile Include="..\source\string\strlcat.c" />
     <ClCompile Include="..\source\string\strlcpy.c" />
     <ClCompile Include="..\source\string\strndup.c" />
+    <ClCompile Include="..\source\string\strrev.c" />
     <ClCompile Include="..\source\string\strtoken.c" />
     <ClCompile Include="..\source\task-queue.c" />
     <ClCompile Include="..\source\thread-pool.c" />
     <ClCompile Include="..\source\time64.c" />
     <ClCompile Include="..\source\timer.c" />
-    <ClCompile Include="..\source\tools.c" />
     <ClCompile Include="..\source\unicode.c" />
     <ClCompile Include="..\source\uri-parse.c" />
-    <ClCompile Include="..\source\url.c" />
     <ClCompile Include="..\source\urlcodec.c" />
     <ClCompile Include="aio-socket-test-cancel.c" />
     <ClCompile Include="aio-socket-test.c" />
@@ -182,7 +181,6 @@
     <ClCompile Include="timer-test.c" />
     <ClCompile Include="unicode-test.c" />
     <ClCompile Include="uri-parse-test.c" />
-    <ClCompile Include="url-test.c" />
     <ClCompile Include="utf8codec-test.cpp" />
   </ItemGroup>
   <ItemGroup>

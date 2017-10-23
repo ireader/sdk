@@ -1,7 +1,7 @@
-#include "sysprocess.h"
+#include "port/process.h"
 #include "sys/system.h"
 #include "sys/path.h"
-#include "tools.h"
+#include "../deprecated/tools.h"
 
 #include <stdio.h>
 #include <stdlib.h>
