@@ -16,7 +16,7 @@ static char s_base64_url[64] = {
 	'n','o','p','q','r','s','t','u','v','w','x','y','z',
 	'0','1','2','3','4','5','6','7','8','9','-','_'
 };
-static const uint8_t s_base64_dec[128] = {
+static const uint8_t s_base64_dec[256] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,62, 0,62, 0,63,  /* +/-/ */
@@ -73,11 +73,12 @@ size_t base64_encode_url(char* target, const void *source, size_t bytes)
 	return base64_encode_table(target, source, bytes, s_base64_url);
 }
 
-size_t base64_decode(void* target, const char *source, size_t bytes)
+size_t base64_decode(void* target, const char *src, size_t bytes)
 {
 	size_t i, j;
 	uint8_t* p = (uint8_t*)target;
-	const char* end;
+	const uint8_t* source = (const uint8_t*)src;
+	const uint8_t* end;
 
 	assert(0 == bytes % 4);
 	
