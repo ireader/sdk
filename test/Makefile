@@ -19,6 +19,7 @@ INCLUDES = . $(ROOT)/include $(ROOT)/libaio/include
 SOURCE_PATHS = . $(ROOT)/source $(ROOT)/source/string $(ROOT)/source/digest $(ROOT)/source/port
 SOURCE_FILES = $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.cpp))
 SOURCE_FILES += $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.c))
+SOURCE_FILES += $(ROOT)/deprecated/tools.c
 
 _SOURCE_FILES += $(ROOT)/source/port/aio-socket-iocp.c
 _SOURCE_FILES += $(ROOT)/source/port/aio-socket-epoll.c
