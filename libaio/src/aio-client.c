@@ -199,9 +199,22 @@ int aio_client_send(aio_client_t* client, const void* data, size_t bytes)
 	client->data[SEND].u.data = (void*)data;
 	client->data[SEND].count = bytes;
 	if (invalid_aio_socket != client->socket)
+	{
 		r = aio_socket_send_all(&client->send, client->wtimeout, client->socket, data, bytes, aio_client_onsend, client);
+		if (0 == r)
+		{
+			spinlock_unlock(&client->locker);
+			return 0;
+		}
+
+		client->data[SEND].state = RW_NONE;
+		aio_client_disconnect_internal(client);
+	}
 	else
+	{
 		r = aio_client_connect_internal(client);
+	}
+
 	spinlock_unlock(&client->locker);
 	return r;
 }
@@ -220,9 +233,22 @@ int aio_client_send_v(aio_client_t* client, socket_bufvec_t *vec, int n)
 	client->data[SEND].u.vec = vec;
 	client->data[SEND].count = n;
 	if (invalid_aio_socket != client->socket)
+	{
 		r = aio_socket_send_v_all(&client->send, client->wtimeout, client->socket, vec, n, aio_client_onsend, client);
+		if (0 == r)
+		{
+			spinlock_unlock(&client->locker);
+			return 0;
+		}
+
+		client->data[SEND].state = RW_NONE;
+		aio_client_disconnect_internal(client);
+	}
 	else
+	{
 		r = aio_client_connect_internal(client);
+	}
+
 	spinlock_unlock(&client->locker);
 	return r;
 }
@@ -328,7 +354,7 @@ static void aio_client_onrecv(void* param, int code, size_t bytes)
 	
 	spinlock_lock(&client->locker);
 	client->data[RECV].state = RW_NONE; // clear recv state
-	if (0 != code) aio_client_disconnect_internal(client);
+	if (0 != code || 0 == bytes) aio_client_disconnect_internal(client);
 	spinlock_unlock(&client->locker);
 
 	// enable bytes = 0 callback to notify socket close
