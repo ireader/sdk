@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <error.h>
+#include <errno.h>
 
 #define RECV 0
 #define SEND 1
