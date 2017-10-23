@@ -128,10 +128,10 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	if (!session) return -1;
 
 	memset(session, 0, sizeof(*session));
-	session->data = (char*)(session + 1);
-	session->bytes = 2 * 1024;
+	session->header = (char*)(session + 1);
 	session->header_capacity = 2 * 1024;
-	session->header = session->data + session->bytes;
+	session->data = session->header + session->header_capacity;
+	session->bytes = 2 * 1024;
 	session->parser = http_parser_create(HTTP_PARSER_SERVER);
 	assert(AF_INET == sa->sa_family || AF_INET6 == sa->sa_family);
 	assert(salen <= sizeof(session->addr));
