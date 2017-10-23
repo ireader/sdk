@@ -96,7 +96,16 @@ static void http_onrecv(void* param, int code, size_t bytes)
 			}
 			else
 			{
-				code = ECONNRESET; // peer close
+				if (1 == aio->retry)
+				{
+					// try resend
+					aio->retry = 0;
+					code = aio_client_send_v(aio->client, aio->vec, aio->count);
+				}
+				else
+				{
+					code = ECONNRESET; // peer close
+				}
 			}
 		}
 	}
@@ -144,7 +153,13 @@ static int http_aio_request(struct http_client_t* http, const char* req, size_t 
 	aio->count = bytes > 0 ? 2 : 1;
 
 	aio->retry = 1; // try again if send failed
-	return aio_client_send_v(aio->client, aio->vec, aio->count);
+	if (0 != aio_client_send_v(aio->client, aio->vec, aio->count))
+	{
+		// connection reset ???
+		aio->retry = 0;
+		return aio_client_send_v(aio->client, aio->vec, aio->count);
+	}
+	return 0;
 }
 
 struct http_client_connection_t* http_client_connection_aio()
