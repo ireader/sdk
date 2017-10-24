@@ -121,6 +121,12 @@ static inline uint64_t system_time(void)
 	GetSystemTimeAsFileTime(&ft);
 	t = (uint64_t)ft.dwHighDateTime << 32 | ft.dwLowDateTime;
 	return t / 10 - 11644473600000000; /* Jan 1, 1601 */
+#elif defined(OS_MAC)
+	uint64_t tick;
+	mach_timebase_info_data_t timebase;
+	tick = mach_absolute_time();
+	mach_timebase_info(timebase);
+	return tick * timebase.numer / timebase.denom / 1000000;
 #else
 #if defined(CLOCK_REALTIME)
 	struct timespec tp;
@@ -163,23 +169,6 @@ static inline uint64_t system_clock(void)
 #endif
 #endif
 }
-
-#if defined(OS_MAC)
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <mach/mach_time.h>
-static inline int mac_gettime(struct timespec *t){
-	mach_timebase_info_data_t timebase;
-	mach_timebase_info(&timebase);
-	uint64_t time;
-	time = mach_absolute_time();
-	double nseconds = ((double)time * (double)timebase.numer)/((double)timebase.denom);
-	double seconds = ((double)time * (double)timebase.numer)/((double)timebase.denom * 1e9);
-	t->tv_sec = seconds;
-	t->tv_nsec = nseconds;
-	return 0;
-}
-#endif
 
 #if defined(_MSC_VER)
 #pragma warning(push)
