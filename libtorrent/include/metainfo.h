@@ -13,6 +13,12 @@ struct metainfo_t
 	char** trackers;
 	size_t tracker_count;
 
+	// BEP 5 => Torrent File Extensions
+	// trackerless torrent
+	int* node_port;
+	char** nodes;
+	size_t node_count;
+
 	int64_t create;
 	char* comment;
 	char* author;

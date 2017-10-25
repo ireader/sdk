@@ -40,6 +40,41 @@ static int metainfo_read_trackers(const struct bvalue_t* anounces, struct metain
 	return 0;
 }
 
+static int metainfo_read_nodes(const struct bvalue_t* nodes, struct metainfo_t* meta)
+{
+	void* p;
+	size_t i;
+	const struct bvalue_t* node;
+
+	if (BT_LIST != nodes->type)
+	{
+		assert(0);
+		return -1;
+	}
+
+	assert(0 == meta->node_count);
+	p = realloc(meta->nodes, sizeof(char*) * (1 + nodes->v.list.count));
+	if (!p)
+		return -1;
+
+	meta->nodes = (char**)p;
+	meta->node_port = (int*)realloc(meta->node_port, sizeof(meta->node_port[0]) * (1 + nodes->v.list.count));
+
+	for (i = 0; i < nodes->v.list.count; i++)
+	{
+		node = nodes->v.list.values + i;
+		if (BT_LIST == node->type && 2 == node->v.list.count)
+		{
+			if (0 != bencode_get_string_ex(node->v.list.values, &meta->nodes[meta->node_count])
+				|| 0 != bencode_get_int(node->v.list.values + 1, &meta->node_port[meta->node_count]))
+				return -1;
+			++meta->node_count;
+		}
+	}
+
+	return 0;
+}
+
 static int metainfo_read_files(const struct bvalue_t* files, struct metainfo_t* meta)
 {
 	int r = 0;
@@ -163,8 +198,8 @@ int metainfo_read(const uint8_t* ptr, size_t bytes, struct metainfo_t* meta)
 	int r = 0;
 	size_t i;
 	struct bvalue_t root;
-	bencode_read(ptr, bytes, &root);
-	if (BT_DICT != root.type)
+	r = bencode_read(ptr, bytes, &root);
+	if (r <= 0 || BT_DICT != root.type)
 		return -1;
 
 	memset(meta, 0, sizeof(*meta));
@@ -197,6 +232,10 @@ int metainfo_read(const uint8_t* ptr, size_t bytes, struct metainfo_t* meta)
 		else if (0 == strcmp("info", root.v.dict.names[i].name))
 		{
 			r = metainfo_read_info(root.v.dict.values + i, meta);
+		}
+		else if (0 == strcmp("nodes", root.v.dict.names[i].name))
+		{
+			r = metainfo_read_nodes(root.v.dict.values + i, meta);
 		}
 		else
 		{
@@ -320,6 +359,16 @@ int metainfo_free(struct metainfo_t* meta)
 			free(meta->trackers[i]);
 		free(meta->trackers);
 	}
+
+	if (meta->nodes)
+	{
+		for (i = 0; i < meta->node_count; i++)
+			free(meta->nodes[i]);
+		free(meta->nodes);
+	}
+
+	if (meta->node_port)
+		free(meta->node_port);
 
 	for (i = 0; i < meta->file_count; i++)
 		free(meta->files[i].name);
