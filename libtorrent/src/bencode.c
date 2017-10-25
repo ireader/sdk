@@ -15,58 +15,61 @@ There are no restrictions on what kind of values may be stored in lists and dict
 #include <assert.h>
 #include <inttypes.h>
 
-static const uint8_t* bencode_read_int2(const uint8_t* str, const uint8_t* end, struct bvalue_t* value)
+static int bencode_read_int2(const uint8_t* str, const uint8_t* end, struct bvalue_t* value)
 {
 	value->type = BT_INT;
 	return bencode_read_int(str, end, &value->v.value);
 }
 
-static const uint8_t* bencode_read_string2(const uint8_t* str, const uint8_t* end, struct bvalue_t* value)
+static int bencode_read_string2(const uint8_t* str, const uint8_t* end, struct bvalue_t* value)
 {
 	value->type = BT_STRING;
 	return bencode_read_string(str, end, &value->v.str.value, &value->v.str.bytes);
 }
 
-const uint8_t* bencode_read_int(const uint8_t* str, const uint8_t* end, int64_t* value)
+int bencode_read_int(const uint8_t* str, const uint8_t* end, int64_t* value)
 {
+	const uint8_t* p = str;
 	if (str >= end || *str++ != 'i')
-		return end;
+		return 0;
 
 	*value = strtoll((const char*)str, (char**)&str, 10);
 
 	if (str < end && *str == 'e')
-		return str + 1;
-	return end;
+		return str + 1 - p;
+	return 0;
 }
 
-const uint8_t* bencode_read_string(const uint8_t* str, const uint8_t* end, char** value, size_t* bytes)
+int bencode_read_string(const uint8_t* str, const uint8_t* end, char** value, size_t* bytes)
 {
 	long len;
 	char* ptr;
+	const uint8_t* p = str;
 
 	len = strtol((const char*)str, (char**)&str, 10);
 	if (str >= end || *str++ != ':' || len < 0)
-		return end;
+		return 0;
 
 	if (str + len > end)
-		return end;
+		return 0;
 
 	ptr = (char*)malloc(len + 1);
 	if (!ptr)
-		return end;
+		return 0;
 
 	memcpy(ptr, str, len);
 	ptr[len] = 0;
 	*value = ptr;
 	*bytes = len;
-	return str + len;
+	return str + len - p;
 }
 
-const uint8_t* bencode_read_list(const uint8_t* str, const uint8_t* end, struct bvalue_t* value)
+int bencode_read_list(const uint8_t* str, const uint8_t* end, struct bvalue_t* value)
 {
-	size_t capacity = 0;
+	size_t n, capacity = 0;
+	const uint8_t* p = str;
 	if (str >= end || *str++ != 'l')
-		return end;
+		return 0;
 
 	value->type = BT_LIST;
 	value->v.list.count = 0;
@@ -80,28 +83,29 @@ const uint8_t* bencode_read_list(const uint8_t* str, const uint8_t* end, struct 
 			capacity += 32;
 			ptr = realloc(value->v.list.values, capacity * sizeof(struct bvalue_t));
 			if (!ptr)
-				return end;
+				break;
 			value->v.list.values = (struct bvalue_t*)ptr;
 		}
 
+		n = 0;
 		switch (*str)
 		{
 		case 'i':
-			str = bencode_read_int2(str, end, value->v.list.values + value->v.list.count++);
+			n = bencode_read_int2(str, end, value->v.list.values + value->v.list.count++);
 			break;
 
 		case 'l':
-			str = bencode_read_list(str, end, value->v.list.values + value->v.list.count++);
+			n = bencode_read_list(str, end, value->v.list.values + value->v.list.count++);
 			break;
 
 		case 'd':
-			str = bencode_read_dict(str, end, value->v.list.values + value->v.list.count++);
+			n = bencode_read_dict(str, end, value->v.list.values + value->v.list.count++);
 			break;
 
 		default:
 			if (*str >= '0' && *str <= '9')
 			{
-				str = bencode_read_string2(str, end, value->v.list.values + value->v.list.count++);
+				n = bencode_read_string2(str, end, value->v.list.values + value->v.list.count++);
 			}
 			else
 			{
@@ -109,18 +113,26 @@ const uint8_t* bencode_read_list(const uint8_t* str, const uint8_t* end, struct 
 				break;
 			}
 		}
+
+		if (0 == n)
+			break;
+		str += n;
 	}
 
 	if (str < end && *str == 'e')
-		return str + 1;
-	return end;
+		return str + 1 - p;
+
+	if (value->v.list.values) 
+		free(value->v.list.values);
+	return 0;
 }
 
-const uint8_t* bencode_read_dict(const uint8_t* str, const uint8_t* end, struct bvalue_t* value)
+int bencode_read_dict(const uint8_t* str, const uint8_t* end, struct bvalue_t* value)
 {
-	size_t capacity = 0;
+	size_t n, capacity = 0;
+	const uint8_t* p = str;
 	if (str >= end || *str++ != 'd')
-		return end;
+		return 0;
 
 	value->type = BT_DICT;
 	value->v.dict.count = 0;
@@ -136,33 +148,35 @@ const uint8_t* bencode_read_dict(const uint8_t* str, const uint8_t* end, struct 
 			names = realloc(value->v.dict.names, capacity * sizeof(value->v.dict.names[0]));
 			values = realloc(value->v.dict.values, capacity * sizeof(value->v.dict.values[0]));
 			if (!names || !values)
-				return end;
+				break;
 			value->v.dict.names = names;
 			value->v.dict.values = values;
 		}
 
-		str = bencode_read_string(str, end, &value->v.dict.names[value->v.dict.count].name, &value->v.dict.names[value->v.dict.count].bytes);
-		if (str >= end)
+		n = bencode_read_string(str, end, &value->v.dict.names[value->v.dict.count].name, &value->v.dict.names[value->v.dict.count].bytes);
+		if (0 == n || str + n >= end)
 			break;
 
+		str += n;
+		n = 0;
 		switch (*str)
 		{
 		case 'i':
-			str = bencode_read_int2(str, end, value->v.dict.values + value->v.dict.count++);
+			n = bencode_read_int2(str, end, value->v.dict.values + value->v.dict.count++);
 			break;
 
 		case 'l':
-			str = bencode_read_list(str, end, value->v.dict.values + value->v.dict.count++);
+			n = bencode_read_list(str, end, value->v.dict.values + value->v.dict.count++);
 			break;
 
 		case 'd':
-			str = bencode_read_dict(str, end, value->v.dict.values + value->v.dict.count++);
+			n = bencode_read_dict(str, end, value->v.dict.values + value->v.dict.count++);
 			break;
 
 		default:
 			if (*str >= '0' && *str <= '9')
 			{
-				str = bencode_read_string2(str, end, value->v.dict.values + value->v.dict.count++);
+				n = bencode_read_string2(str, end, value->v.dict.values + value->v.dict.count++);
 			}
 			else
 			{
@@ -170,11 +184,18 @@ const uint8_t* bencode_read_dict(const uint8_t* str, const uint8_t* end, struct 
 				break;
 			}
 		}
+
+		if (0 == n)
+			break;
+		str += n;
 	}
 
 	if (str < end && *str == 'e')
-		return str + 1;
-	return end;
+		return str + 1 - p;
+
+	if (value->v.dict.names) free(value->v.dict.names);
+	if (value->v.dict.values) free(value->v.dict.values);
+	return 0;
 }
 
 uint8_t* bencode_write_int(uint8_t* buffer, const uint8_t* end, int64_t value)
@@ -281,7 +302,7 @@ uint8_t* bencode_write_dict(uint8_t* buffer, const uint8_t* end, const struct bv
 
 int bencode_read(const uint8_t* ptr, size_t bytes, struct bvalue_t* value)
 {
-	const uint8_t* p;
+	int n;
 	if (bytes < 1)
 		return -1;
 
@@ -289,21 +310,21 @@ int bencode_read(const uint8_t* ptr, size_t bytes, struct bvalue_t* value)
 	switch (*ptr)
 	{
 	case 'i':
-		p = bencode_read_int2(ptr, ptr + bytes, value);
+		n = bencode_read_int2(ptr, ptr + bytes, value);
 		break;
 
 	case 'l':
-		p = bencode_read_list(ptr, ptr + bytes, value);
+		n = bencode_read_list(ptr, ptr + bytes, value);
 		break;
 
 	case 'd':
-		p = bencode_read_dict(ptr, ptr + bytes, value);
+		n = bencode_read_dict(ptr, ptr + bytes, value);
 		break;
 
 	default:
 		if (*ptr >= '0' && *ptr <= '9')
 		{
-			p = bencode_read_string2(ptr, ptr + bytes, value);
+			n = bencode_read_string2(ptr, ptr + bytes, value);
 		}
 		else
 		{
@@ -312,7 +333,7 @@ int bencode_read(const uint8_t* ptr, size_t bytes, struct bvalue_t* value)
 		}
 	}
 
-	return BT_NONE == value->type ? -1 : 0;
+	return n > 0 ? n : -1;
 }
 
 int bencode_write(uint8_t* ptr, size_t bytes, const struct bvalue_t* value)
@@ -341,7 +362,7 @@ int bencode_write(uint8_t* ptr, size_t bytes, const struct bvalue_t* value)
 		return -1;
 	}
 
-	return 0;
+	return p - ptr;
 }
 
 int bencode_free(struct bvalue_t* value)
@@ -379,6 +400,22 @@ int bencode_free(struct bvalue_t* value)
 	}
 
 	return 0;
+}
+
+const struct bvalue_t* bencode_find(const struct bvalue_t* node, const char* name)
+{
+	size_t i;
+	assert(BT_DICT == node->type);
+	if (BT_DICT != node->type)
+		return NULL;
+
+	for (i = 0; i < node->v.dict.count; i++)
+	{
+		if (0 == strcmp(name, node->v.dict.names[i].name))
+			return node->v.dict.values + i;
+	}
+
+	return NULL;
 }
 
 int bencode_get_int(const struct bvalue_t* node, int32_t* value)
