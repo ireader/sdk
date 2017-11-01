@@ -35,6 +35,11 @@ void rbtree_insert(struct rbtree_root_t* root, struct rbtree_node_t* parent, str
 /// @param[in] node rbtree new node
 void rbtree_delete(struct rbtree_root_t* root, struct rbtree_node_t* node);
 
+const struct rbtree_node_t* rbtree_first(const struct rbtree_root_t* root);
+const struct rbtree_node_t* rbtree_last(const struct rbtree_root_t* root);
+const struct rbtree_node_t* rbtree_prev(const struct rbtree_node_t* node);
+const struct rbtree_node_t* rbtree_next(const struct rbtree_node_t* node);
+
 #if defined(__cplusplus)
 }
 #endif

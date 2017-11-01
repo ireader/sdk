@@ -456,3 +456,61 @@ void rbtree_delete(struct rbtree_root_t* root, struct rbtree_node_t* node)
 		rbtree_unlink(root, node);
 	}
 }
+
+const struct rbtree_node_t* rbtree_first(const struct rbtree_root_t* root)
+{
+	struct rbtree_node_t* node;
+	node = root->node;
+	if (!node)
+		return NULL;
+
+	while (node->left)
+		node = node->left;
+	return node;
+}
+
+const struct rbtree_node_t* rbtree_last(const struct rbtree_root_t* root)
+{
+	struct rbtree_node_t* node;
+	node = root->node;
+	if (!node)
+		return NULL;
+
+	while (node->right)
+		node = node->right;
+	return node;
+}
+
+const struct rbtree_node_t* rbtree_prev(const struct rbtree_node_t* node)
+{
+	if (node->left)
+	{
+		node = node->left;
+		while (node->right)
+			node = node->right;
+		return node;
+	}
+	else
+	{
+		while (node->parent && node == node->parent->left)
+			node = node->parent;
+		return node->parent;
+	}
+}
+
+const struct rbtree_node_t* rbtree_next(const struct rbtree_node_t* node)
+{
+	if (node->right)
+	{
+		node = node->right;
+		while (node->left)
+			node = node->left;
+		return node;
+	}
+	else
+	{
+		while (node->parent && node == node->parent->right)
+			node = node->parent;
+		return node->parent;
+	}
+}
