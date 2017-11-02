@@ -103,28 +103,65 @@ static void rbtree_print(struct rbtree_root_t* root)
 	rbtree_print_node(root->node);
 }
 
-static struct rbtree_node_t* rbtree_find(struct rbtree_node_t* node, int v)
+static int rbtree_find(struct rbtree_root_t* root, int v, struct rbtree_node_t** node)
 {
+	int r;
+	struct rbtree_node_t* link;
 	struct rbtree_value_t* value;
 
-	while (node)
+	r = -1;
+	*node = NULL;
+	link = root->node;
+	while (link)
 	{
-		value = rbtree_entry(node, struct rbtree_value_t, node);
-		if (value->value == v)
-		{
-			return node;
-		}
-		else if (value->value > v)
-		{
-			node = node->left;
-		}
-		else
-		{
-			node = node->right;
-		}
+		*node = link;
+		value = rbtree_entry(link, struct rbtree_value_t, node);
+		r = value->value - v;
+		if (0 == r)
+			break;
+
+		link = r > 0 ? link->left : link->right;
 	}
 
-	return NULL;
+	return r;
+}
+
+static void rbtree_iter_test(void)
+{
+	int r, i;
+	struct rbtree_root_t root;
+	struct rbtree_node_t **link;
+	struct rbtree_node_t *parent;
+	const struct rbtree_node_t *node;
+	struct rbtree_value_t* value;
+
+	root.node = NULL;
+	for (i = 0; i < 100000; i++)
+	{
+		r = rbtree_find(&root, i, &parent);
+		assert(0 != r);
+		link = parent ? (r > 0 ? &parent->left : &parent->right) : NULL;
+
+		value = (struct rbtree_value_t*)malloc(sizeof(*value));
+		value->value = i;
+		rbtree_insert(&root, parent, link, &value->node);
+	}
+
+	node = rbtree_first(&root);
+	for (i = 0; i < 100000; i++)
+	{
+		value = rbtree_entry(node, struct rbtree_value_t, node);
+		assert(i == value->value);
+		node = rbtree_next(node);
+	}
+
+	node = rbtree_last(&root);
+	for (i = 0; i < 100000; i++)
+	{
+		value = rbtree_entry(node, struct rbtree_value_t, node);
+		assert(100000 - 1 - i == value->value);
+		node = rbtree_prev(node);
+	}
 }
 
 void rbtree_test(void)
@@ -172,12 +209,13 @@ void rbtree_test(void)
 
 	for (i = 0; i < N; i++)
 	{
-		parent = rbtree_find(root.node, v[i]);
-		assert(parent);
+		assert(0 == rbtree_find(&root, v[i], &parent));
 		value = rbtree_entry(parent, struct rbtree_value_t, node);
 		assert(value->value == v[i]);
 		rbtree_delete(&root, parent);
 		rbtree_validate(&root);
 	}
+
+	rbtree_iter_test();
 	printf("rb-tree test ok\n");
 }
