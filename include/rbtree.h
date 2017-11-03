@@ -21,7 +21,7 @@ struct rbtree_root_t
 };
 
 #define rbtree_entry(ptr, type, member) \
-	(type*)((char*)(ptr) - (ptrdiff_t)&(((type*)0)->node))
+	(type*)((char*)(ptr) - (ptrdiff_t)&(((type*)0)->member))
 
 /// re-banlance rb-tree(rbtree_link node before)
 /// @param[in] root rbtree root node
