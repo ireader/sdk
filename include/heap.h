@@ -9,11 +9,11 @@ typedef struct heap_t heap_t;
 
 /// heap compare callback
 /// @return 1 if ptr1 < ptr2, 0-other
-typedef int (*heap_less)(void* ptr1, void* ptr2);
+typedef int (*heap_less)(void* param, const void* ptr1, const void* ptr2);
 
 /// create heap
 /// default min-heap, change heap_less behavor to create max-heap
-heap_t* heap_create(heap_less compare);
+heap_t* heap_create(heap_less compare, void* param);
 void heap_destroy(heap_t* heap);
 
 /// reserve heap capacity

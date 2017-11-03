@@ -14,18 +14,20 @@ struct heap_t
 	int capacity;
 
 	heap_less less;
+	void* param;
 };
 
 static void heap_percolate_up(struct heap_t* heap);
 static void heap_percolate_down(struct heap_t* heap);
 
-struct heap_t* heap_create(heap_less compare)
+struct heap_t* heap_create(heap_less compare, void* param)
 {
 	struct heap_t* heap;
 	heap = (struct heap_t*)calloc(1, sizeof(*heap));
 	if (heap)
 	{
 		heap->less = compare;
+		heap->param = param;
 	}
 	return heap;
 }
@@ -103,6 +105,11 @@ static inline void heap_swap(struct heap_t* heap, int l, int r)
 	heap->elts[r] = elt;
 }
 
+/*
+1. Add the element to the bottom level of the heap.
+2. Compare the added element with its parent; if they are in the correct order, stop.
+3. If not, swap the element with its parent and return to the previous step.
+*/
 static void heap_percolate_up(struct heap_t* heap)
 {
 	int n, p;
@@ -111,35 +118,41 @@ static void heap_percolate_up(struct heap_t* heap)
 	for (n = heap->size - 1; n > 0; n = p)
 	{
 		p = (n - 1) / 2; // parent
-		if (heap->less(heap->elts[p], heap->elts[n]))
+		if (heap->less(heap->param, heap->elts[p], heap->elts[n]))
 			break;
 
 		heap_swap(heap, p, n);
 	}
 }
 
+/*
+1. Replace the root of the heap with the last element on the last level.
+2. Compare the new root with its children; if they are in the correct order, stop.
+3. If not, swap the element with one of its children and return to the previous step. (Swap with its smaller child in a min-heap and its larger child in a max-heap.)
+*/
 static void heap_percolate_down(struct heap_t* heap)
 {
-	int n, c;
+	int n, c, min;
 	assert(heap->size > 0);
 
 	// replace first with last
 	heap->elts[0] = heap->elts[heap->size - 1];
 
-	for (n = 0; n < heap->size - 1; n = c)
+	for (n = 0; n < heap->size - 1; n = min)
 	{
+		min = n;
+
 		// left/right child
 		for (c = n * 2 + 1; c < heap->size - 1 && c < n * 2 + 3; c++)
 		{
-			if (heap->less(heap->elts[c], heap->elts[n]))
-			{
-				heap_swap(heap, c, n);
-				break;
-			}
+			if (heap->less(heap->param, heap->elts[c], heap->elts[min]))
+				min = c;
 		}
 
-		if(c == n * 2 + 3)
+		if (n == min)
 			break;
+
+		heap_swap(heap, min, n);
 	}
 }
 
@@ -147,8 +160,9 @@ static void heap_percolate_down(struct heap_t* heap)
 #include <stdio.h>
 #include <time.h>
 #define N 10000
-static int heap_test_compare(void* p1, void* p2)
+static int heap_test_compare(void* param, const void* p1, const void* p2)
 {
+	(void)param;
 	return *(int*)p1 < *(int*)p2;
 }
 
@@ -161,7 +175,7 @@ void heap_test(void)
 	v = malloc(sizeof(int) * N);
 	srand((unsigned int)time(NULL));
 
-	heap = heap_create(heap_test_compare);
+	heap = heap_create(heap_test_compare, NULL);
 	for (i = 0; i < N; i++)
 	{
 		v[i] = rand();
@@ -174,6 +188,7 @@ void heap_test(void)
 	for (i = 1; i < N; i++)
 	{
 		assert(*n <= *(int*)heap_top(heap));
+		*n = *(int*)heap_top(heap);
 		heap_pop(heap);
 	}
 	assert(heap_empty(heap));
