@@ -2,6 +2,7 @@
 #include "sys/system.h"
 #include "aio-recv.h"
 #include "aio-send.h"
+#include <errno.h>
 
 #if defined(OS_WINDOWS)
 #define iov_base buf  
