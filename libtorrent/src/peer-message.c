@@ -2,11 +2,9 @@
 // http://www.bittorrent.org/beps/bep_0052.html (The BitTorrent Protocol Specification v2)
 // http://www.bittorrent.org/beps/bep_0029.html (uTorrent transport protocol)
 // http://www.bittorrent.org/beps/bep_0005.html (DHT Protocol)
-// http://www.bittorrent.org/beps/bep_0010.html (Extension Protocol)
 
 #include "peer-message.h"
 #include "byte-order.h"
-#include "bencode.h"
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -32,7 +30,9 @@ int peer_handshake_write(uint8_t buffer[68], const uint8_t info_hash[20], const 
 	memset(buffer + 20, 0, 8);
 	memcpy(buffer + 28, info_hash, 20);
 	memcpy(buffer + 48, peer_id, 20);
-	buffer[25] = 0x10; // extended
+	buffer[25] |= 0x10; // extended
+	buffer[27] |= 0x01; // port, BEP5 => BitTorrent Protocol Extension
+	buffer[27] |= 0x04; // BEP6 => Fast Extension
 	return 68;
 }
 
@@ -210,44 +210,4 @@ int peer_port_write(uint8_t buffer[7], uint16_t port)
 	buffer[4] = BT_PORT;
 	nbo_w16(buffer + 5, port);
 	return 7;
-}
-
-int peer_extended_read(const uint8_t* buffer, int bytes)
-{
-	int r;
-	struct bvalue_t root;
-	assert(bytes >= 1);
-	if (0 == buffer[0])
-	{
-		r = bencode_read(buffer + 1, bytes - 1, &root);
-		if (0 != r)
-			return r;
-
-		if (root.type == BT_DICT)
-		{
-		}
-
-		bencode_free(&root);
-	}
-	return 0;
-}
-
-int peer_extended_write(uint8_t* buffer, int bytes, uint16_t port, const char* version)
-{
-	int n;
-	buffer[4] = BT_EXTENDED;
-	buffer[5] = 0; // extended message ID. 0 = handshake
-
-	// e : 0
-	// m : ut_metadata : 2
-	// m : ut_pex : 1
-	// p : port
-	// reqq : 255
-	// v : version
-	n = snprintf((char*)buffer + 6, bytes - 6, "d1:ei0e1:md11:ut_metadatai2e6:ut_pexi1ee1:pi%hue4:reqqi255e1:v%u:%se", port, (unsigned int)strlen(version), version);
-	if (n < 0 || n >= bytes - 6)
-		return -1;
-
-	nbo_w32(buffer, 2 + n);
-	return 6 + n;
 }

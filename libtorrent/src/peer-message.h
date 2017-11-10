@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-enum peer_message_t
+enum peer_message_id_t
 {
 	BT_CHOKE = 0,
 	BT_UNCHOKE,
@@ -19,7 +19,11 @@ enum peer_message_t
 	BT_PIECE,
 	BT_CANCEL,
 	BT_PORT,
-	BT_REJECT = 16,
+	BT_SUGGEST_PIECE = 13, // BEP6
+	BT_HAVE_ALL = 14, // BEP6
+	BT_HAVE_NONE = 15, // BEP6
+	BT_REJECT = 16,  // BEP6
+	BT_ALLOWD_FAST = 17, // BEP6
 	BT_EXTENDED = 20,
 	BT_HASH_REQUEST = 21,
 	BT_HASHES,
@@ -62,9 +66,6 @@ int peer_cancel_write(uint8_t buffer[17], uint32_t piece, uint32_t begin, uint32
 
 int peer_port_read(const uint8_t* buffer, int bytes, uint16_t* port);
 int peer_port_write(uint8_t buffer[7], uint16_t port);
-
-int peer_extended_read(const uint8_t* buffer, int bytes);
-int peer_extended_write(uint8_t* buffer, int bytes, uint16_t port, const char* version);
 
 #if defined(__cplusplus)
 }
