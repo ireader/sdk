@@ -10,6 +10,10 @@
 
 #define N_SENDFILE (2 * 1024 * 1024)
 
+#if defined(OS_WINDOWS)
+#define fseek _fseeki64
+#endif
+
 struct http_sendfile_t
 {
 	struct http_session_t* session;
