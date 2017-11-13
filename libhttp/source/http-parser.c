@@ -115,12 +115,6 @@ static int http_rawdata(struct http_parser_t *http, const void* data, size_t byt
 {
 	void *p;
 	size_t capacity;
-	static FILE* fp = NULL;
-	if(NULL == fp)
-		fp = fopen("baidu.com.http", "wb");
-	fwrite(data, 1, bytes, fp);
-	fflush(fp);
-
 	if(http->raw_capacity - http->raw_size < bytes + 1)
 	{
 		capacity = (http->raw_capacity > 4*MB) ? 50*MB : (http->raw_capacity > 16*KB ? 2*MB : 8*KB);
