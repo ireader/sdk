@@ -776,7 +776,7 @@ static inline int socket_isip(IN const char* ip)
 #else
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_flags = AI_NUMERICHOST | AI_V4MAPPED | AI_ADDRCONFIG;
+	hints.ai_flags = AI_NUMERICHOST /*| AI_V4MAPPED | AI_ADDRCONFIG*/;
 	if (0 != getaddrinfo(ip, NULL, &hints, &addr))
 		return -1;
 	freeaddrinfo(&addr);
@@ -790,7 +790,7 @@ static inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADD
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
-//	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
+//	hints.ai_flags = AI_ADDRCONFIG;
 	r = getaddrinfo(ipv4_or_dns, NULL, &hints, &addr);
 	if (0 != r)
 		return r;
@@ -807,7 +807,7 @@ static inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADD
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET6;
-//	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
+	hints.ai_flags = /*AI_ADDRCONFIG |*/ AI_V4MAPPED; // map ipv4 address to ipv6
 	r = getaddrinfo(ipv6_or_dns, NULL, &hints, &addr);
 	if (0 != r)
 		return r;
@@ -825,13 +825,14 @@ static inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const 
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
-	//hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
+//	hints.ai_flags = AI_ADDRCONFIG;
 	snprintf(portstr, sizeof(portstr), "%hu", port);
 	r = getaddrinfo(ipv4_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return r;
 
-	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port); // fixed ios getaddrinfo don't set port if node is ipv4 address
+	// fixed ios getaddrinfo don't set port if node is ipv4 address
+	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port);
 	assert(sizeof(struct sockaddr_in) == addr->ai_addrlen);
 	memcpy(addr4, addr->ai_addr, addr->ai_addrlen);
 	freeaddrinfo(addr);
@@ -845,13 +846,14 @@ static inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET6;
-	//hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG; // AI_ADDRCONFIG linux "ff00::" return -2
+	hints.ai_flags = AI_V4MAPPED /*| AI_ADDRCONFIG*/; // AI_ADDRCONFIG linux "ff00::" return -2
 	snprintf(portstr, sizeof(portstr), "%hu", port);
 	r = getaddrinfo(ipv6_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return r;
 
-	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port); // fixed ios getaddrinfo don't set port if node is ipv4 address
+	// fixed ios getaddrinfo don't set port if node is ipv4 address
+	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port);
 	assert(sizeof(struct sockaddr_in6) == addr->ai_addrlen);
 	memcpy(addr6, addr->ai_addr, addr->ai_addrlen);
 	freeaddrinfo(addr);
@@ -868,7 +870,8 @@ static inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_
 	if (0 != r)
 		return r;
 
-	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port); // fixed ios getaddrinfo don't set port if node is ipv4 address
+	// fixed ios getaddrinfo don't set port if node is ipv4 address
+	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port);
 	assert(addr->ai_addrlen <= sizeof(struct sockaddr_storage));
 	memcpy(ss, addr->ai_addr, addr->ai_addrlen);
 	*len = addr->ai_addrlen;

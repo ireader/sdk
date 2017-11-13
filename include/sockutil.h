@@ -75,9 +75,9 @@ static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, I
 	struct addrinfo hints, *addr, *ptr;
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = PF_UNSPEC;
+//	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	//	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
+//	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
 	snprintf(portstr, sizeof(portstr), "%hu", port);
 	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
 	if (0 != r)
@@ -170,10 +170,6 @@ static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN 
 	r = -1; // not found
 	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
-#if !defined(IPV6)
-		if (AF_INET6 == ptr->ai_family)
-			continue;
-#endif
 		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
 		if (socket_invalid == sock)
 			continue;
@@ -181,9 +177,13 @@ static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN 
 		// reuse addr
 		socket_setreuseaddr(sock, 1);
 
+		// disable Dual-Stack Socket
 		// restrict IPv6 only
-#if defined(OS_LINUX)
-		if (AF_INET6 == ptr->ai_addr->sa_family)
+#if defined(OS_WINDOWS)
+		// https://msdn.microsoft.com/en-us/library/windows/desktop/bb513665(v=vs.85).aspx
+		// By default, an IPv6 socket created on Windows Vista and later only operates over the IPv6 protocol.
+#else		
+		if (PF_INET6 == ptr->ai_addr->sa_family)
 			socket_setipv6only(sock, 1);
 #endif
 
@@ -220,20 +220,20 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_
 	r = -1; // not found
 	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
-#if !defined(IPV6)
-		if (AF_INET6 == ptr->ai_family)
-			continue;
-#endif
 		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
 		if (socket_invalid == sock)
 			continue;
 
 		// reuse addr
-		//		socket_setreuseaddr(sock, 1);
+		socket_setreuseaddr(sock, 1);
 
+		// disable Dual-Stack Socket
 		// restrict IPv6 only
-#if defined(OS_LINUX)
-		if (AF_INET6 == ptr->ai_addr->sa_family)
+#if defined(OS_WINDOWS)
+		// https://msdn.microsoft.com/en-us/library/windows/desktop/bb513665(v=vs.85).aspx
+		// By default, an IPv6 socket created on Windows Vista and later only operates over the IPv6 protocol.
+#else		
+		if (PF_INET6 == ptr->ai_addr->sa_family)
 			socket_setipv6only(sock, 1);
 #endif
 
