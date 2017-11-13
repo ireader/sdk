@@ -57,6 +57,21 @@
     <ClInclude Include="src\torrent-sched.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\peer-extended.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dht-message.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\router.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\node.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\magnet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\bencode.c">
@@ -118,6 +133,39 @@
     </ClCompile>
     <ClCompile Include="src\torrent-peer-id.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pex.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\extended.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dht-message.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\metadata.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dht.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\router.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\rbtree.c">
+      <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\heap.c">
+      <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="src\node.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\magnet.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\base64.c">
+      <Filter>3rd</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

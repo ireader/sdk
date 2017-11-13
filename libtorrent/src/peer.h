@@ -22,6 +22,7 @@ struct peer_handler_t
 	int (*piece)(void* param, uint32_t piece, uint32_t begin, uint32_t length, const void* data);
 //	int (*cancel)(void* param, uint32_t piece, uint32_t begin, uint32_t length);
 	int (*metadata)(void* param, const uint8_t info_hash[20]);
+	int (*pex)(void* param, const uint8_t* flags, const struct sockaddr_storage* added, size_t n_added, const struct sockaddr_storage* dropped, size_t n_dropped);
 
 	int (*error)(void* param, int code);
 };
@@ -32,7 +33,7 @@ peer_t* peer_create(aio_socket_t aio, const struct sockaddr_storage* addr, struc
 void peer_destroy(peer_t* peer);
 
 int peer_handshake(peer_t* peer, const uint8_t info_hash[20], const uint8_t id[20]);
-int peer_extended(peer_t* peer, uint16_t port, const char* version);
+int peer_extended(peer_t* peer, uint16_t port, const char* version, uint32_t info_size);
 int peer_bitfield(peer_t* peer, const uint8_t* bitfield, uint32_t bits);
 int peer_choke(peer_t* peer, int choke);
 int peer_interested(peer_t* peer, int interested);

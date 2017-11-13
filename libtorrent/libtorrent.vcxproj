@@ -151,10 +151,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\bencode.h" />
+    <ClInclude Include="include\magnet.h" />
     <ClInclude Include="include\metainfo.h" />
     <ClInclude Include="include\torrent.h" />
     <ClInclude Include="include\tracker.h" />
+    <ClInclude Include="src\dht-message.h" />
+    <ClInclude Include="src\node.h" />
+    <ClInclude Include="src\peer-extended.h" />
     <ClInclude Include="src\ipaddr-pool.h" />
+    <ClInclude Include="src\router.h" />
     <ClInclude Include="src\sched-piece.h" />
     <ClInclude Include="src\torrent-sched.h" />
     <ClInclude Include="src\peer-message.h" />
@@ -166,15 +171,26 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\app-log.c" />
+    <ClCompile Include="..\source\base64.c" />
     <ClCompile Include="..\source\bitmap.c" />
     <ClCompile Include="..\source\digest\sha1.c" />
+    <ClCompile Include="..\source\heap.c" />
     <ClCompile Include="..\source\hweight.c" />
+    <ClCompile Include="..\source\rbtree.c" />
     <ClCompile Include="..\source\uri-parse.c" />
     <ClCompile Include="..\source\urlcodec.c" />
     <ClCompile Include="src\bencode.c" />
+    <ClCompile Include="src\dht-message.c" />
+    <ClCompile Include="src\dht.c" />
+    <ClCompile Include="src\extended.c" />
     <ClCompile Include="src\hash-sha1.c" />
     <ClCompile Include="src\ipaddr-pool.c" />
+    <ClCompile Include="src\magnet.c" />
+    <ClCompile Include="src\metadata.c" />
     <ClCompile Include="src\metainfo.c" />
+    <ClCompile Include="src\node.c" />
+    <ClCompile Include="src\pex.c" />
+    <ClCompile Include="src\router.c" />
     <ClCompile Include="src\torrent-peer-id.c" />
     <ClCompile Include="src\torrent-sched.cpp" />
     <ClCompile Include="src\peer-parser.c" />

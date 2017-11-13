@@ -8,7 +8,8 @@ EXPORTS
 	metainfo_write
 	metainfo_free
 	metainfo_hash
-
+	metainfo_info
+	
 	tracker_create
 	tracker_destroy
 	tracker_query
@@ -24,3 +25,16 @@ EXPORTS
 
 	peer_server_start
 	peer_server_stop
+
+	dht_create
+	dht_destroy
+	dht_add_node
+	dht_list_node
+	dht_ping
+	dht_find_node
+	dht_get_peers
+	dht_announce
+
+	magnet_parse
+	magnet_free
+

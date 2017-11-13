@@ -44,6 +44,9 @@ int metainfo_free(struct metainfo_t* meta);
 // info hash
 int metainfo_hash(const struct metainfo_t* meta, uint8_t sha1[20]);
 
+/// @return >0-info size, <=0-error
+int metainfo_info(const struct metainfo_t* meta, uint8_t* ptr, size_t bytes);
+
 #if defined(__cplusplus)
 }
 #endif

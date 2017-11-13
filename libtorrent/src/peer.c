@@ -1,6 +1,7 @@
 #include "peer.h"
 #include "peer-parser.h"
 #include "peer-message.h"
+#include "peer-extended.h"
 #include "aio-tcp-transport.h"
 #include "sys/locker.h"
 #include "sys/system.h"
@@ -33,6 +34,7 @@ struct peer_info_t
 	uint8_t* bitfield;
 	uint32_t bits;
 
+	struct peer_extended_t ext;
 	struct sockaddr_storage addr;
 };
 
@@ -54,6 +56,9 @@ struct peer_t
 
 static int peer_onbitfield(struct peer_t* peer, uint8_t* bitfield, uint32_t count);
 static int peer_oncancel(void* param, uint32_t piece, uint32_t begin, uint32_t length);
+static int peer_metadata_onrequest(void* param, uint32_t piece);
+static int peer_metadata_onreject(void* param, uint32_t piece);
+static int peer_metadata_ondata(void* param, uint32_t piece, const uint8_t* data, uint32_t size);
 static int peer_handler(void* param, struct peer_parser_t* parser);
 static int peer_dispatch(peer_t* peer);
 static int peer_keepalive(peer_t* peer);
@@ -352,14 +357,14 @@ int peer_handshake(peer_t* peer, const uint8_t info_hash[20], const uint8_t id[2
 	return r;
 }
 
-int peer_extended(peer_t* peer, uint16_t port, const char* version)
+int peer_extended(peer_t* peer, uint16_t port, const char* version, uint32_t info_size)
 {
 	int r;
 	struct peer_msg_t* msg;
 	msg = malloc(sizeof(*msg) + 128);
 	msg->type = BT_EXTENDED;
 	msg->msg = (uint8_t*)(msg + 1);
-	msg->bytes = peer_extended_write(msg->msg, 128, port, version);
+	msg->bytes = peer_extended_write(msg->msg, 128, port, version, info_size);
 
 	locker_lock(&peer->locker);
 	list_insert_after(&msg->link, peer->messages.prev);
@@ -424,6 +429,47 @@ static int peer_dispatch(peer_t* peer)
 	return r;
 }
 
+static int peer_extended_handler(peer_t* peer, const uint8_t* ptr, uint32_t len)
+{
+	if (len < 2)
+		return -1;
+
+	if (BT_EXTENDED_HANDSHAKE == ptr[0])
+	{
+		return peer_extended_read(ptr + 1, len - 1, &peer->base.ext);
+	}
+	else if (ptr[0] == peer->base.ext.m.pex)
+	{
+		int r;
+		struct peer_pex_t pex;
+		r = peer_pex_read(ptr + 1, len - 1, &pex);
+		if (0 == r)
+		{
+			if(pex.n_flags == pex.n_added)
+				r = peer->handler.pex(peer->param, pex.flags, pex.added, pex.n_added, pex.droped, pex.n_dropped);
+
+			if (pex.added) free(pex.added);
+			if (pex.flags) free(pex.flags);
+			if (pex.droped) free(pex.droped);
+		}
+		return r;
+	}
+	else if (ptr[0] == peer->base.ext.m.metadata)
+	{
+		struct peer_metadata_handler_t handler;
+		memset(&handler, 0, sizeof(handler));
+		handler.request = peer_metadata_onrequest;
+		handler.reject = peer_metadata_onreject;
+		handler.data = peer_metadata_ondata;
+		return peer_metadata_read(ptr + 1, len - 1, &handler, peer);
+	}
+	else
+	{
+		assert(0);
+		return 0;
+	}
+}
+
 static int peer_handler(void* param, struct peer_parser_t* parser)
 {
 	int r;
@@ -475,12 +521,12 @@ static int peer_handler(void* param, struct peer_parser_t* parser)
 		r = peer_cancel_read(parser->buffer, parser->len, &piece, &begin, &length);
 		return r < 0 ? r : peer_oncancel(peer, piece, begin, length);
 
-	case BT_EXTENDED:
-		r = peer_extended_read(parser->buffer, parser->len);
-		return r < 0 ? r : 0;
-
 	case BT_PORT:
 		r = peer_port_read(parser->buffer, parser->len, &port);
+		return r < 0 ? r : 0;
+
+	case BT_EXTENDED:
+		r = peer_extended_handler(peer, parser->buffer, parser->len);
 		return r < 0 ? r : 0;
 
 	case BT_REJECT:
@@ -533,4 +579,19 @@ static int peer_oncancel(void* param, uint32_t piece, uint32_t begin, uint32_t l
 	}
 	locker_unlock(&peer->locker);
 	return 0;
+}
+
+static int peer_metadata_onrequest(void* param, uint32_t piece)
+{
+	return -1;
+}
+
+static int peer_metadata_onreject(void* param, uint32_t piece)
+{
+	return -1;
+}
+
+static int peer_metadata_ondata(void* param, uint32_t piece, const uint8_t* data, uint32_t size)
+{
+	return -1;
 }

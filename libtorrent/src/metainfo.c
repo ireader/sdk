@@ -247,9 +247,12 @@ int metainfo_read(const uint8_t* ptr, size_t bytes, struct metainfo_t* meta)
 	return r;
 }
 
-static uint8_t* metainfo_write_info(uint8_t* ptr, const uint8_t* end, const struct metainfo_t* meta)
+int metainfo_info(const struct metainfo_t* meta, uint8_t* ptr, size_t bytes)
 {
 	size_t i;
+	const uint8_t* end, *p;
+	p = ptr;
+	end = ptr + bytes;
 
 	if (ptr < end) *ptr++ = 'd';
 	if (1 == meta->file_count)
@@ -287,7 +290,7 @@ static uint8_t* metainfo_write_info(uint8_t* ptr, const uint8_t* end, const stru
 	ptr = bencode_write_string(ptr, end, (const char*)meta->pieces, meta->piece_count * 20);
 	if (ptr < end) *ptr++ = 'e';
 
-	return ptr;
+	return ptr - p;
 }
 
 int metainfo_write(const struct metainfo_t* meta, uint8_t* buffer, size_t bytes)
@@ -343,7 +346,7 @@ int metainfo_write(const struct metainfo_t* meta, uint8_t* buffer, size_t bytes)
 
 	// info
 	ptr = bencode_write_string(ptr, end, "info", 4);
-	ptr = metainfo_write_info(ptr, end, meta);
+	ptr += metainfo_info(meta, ptr, end - ptr);
 
 	if (ptr < end) *ptr++ = 'e';
 	return ptr - buffer;
@@ -387,16 +390,17 @@ int metainfo_free(struct metainfo_t* meta)
 
 int metainfo_hash(const struct metainfo_t* meta, uint8_t sha1[20])
 {
-	uint8_t *info, *ptr;
+	int len;
+	uint8_t *info;
 
 	if (meta->file_count < 1)
 		return -1;
 
 	info = (uint8_t*)malloc(2 * 1024 * 1024);
-	ptr = metainfo_write_info(info, info + 2 * 1024 * 1024, meta);
-	if (ptr + 1 < info + 2 * 1024 * 1024)
+	len = metainfo_info(meta, info, 2 * 1024 * 1024);
+	if (len < 2 * 1024 * 1024)
 	{
-		hash_sha1(info, ptr - info, sha1);
+		hash_sha1(info, len, sha1);
 	}
 	free(info);
 

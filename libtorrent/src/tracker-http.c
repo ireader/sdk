@@ -241,7 +241,7 @@ static void http_onget(void *param, int code)
 	if (0 == code && 0 == http_client_get_content(tracker->http, &reply, &bytes))
 	{
 		code = bencode_read((const uint8_t*)reply, bytes, &root);
-		if (0 == code)
+		if (code > 0)
 		{
 			memset(&peers, 0, sizeof(peers));
 			code = tracker_read(&peers, &root);

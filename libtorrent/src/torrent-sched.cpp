@@ -25,6 +25,8 @@
 #define N_PEER_INIT 10 // maximum 10-peer connection
 #define N_PEER_TOTAL 50 // maximum peers
 
+extern "C" int hash_sha1(const uint8_t* data, unsigned int bytes, uint8_t sha1[20]);
+
 static int STDCALL torrent_sched_thread(void* param);
 
 static int torrent_peer_create(torrent_sched_t* disp);
@@ -47,7 +49,9 @@ struct torrent_sched_t
 	event_t event;
 	pthread_t thread;
 
-	uint8_t sha1[20];
+	uint8_t infohash[20];
+	uint8_t metainfo[512 * 1024];
+	uint32_t metasize;
 	struct torrent_t* tor;
 	struct torrent_handler_t handler;
 };
@@ -56,7 +60,8 @@ struct torrent_sched_t* torrent_sched_create(struct torrent_t* tor, struct torre
 {
 	torrent_sched_t* disp = new torrent_sched_t;
 	memcpy(&disp->handler, handler, sizeof(disp->handler));
-	metainfo_hash(tor->meta, disp->sha1);
+	disp->metasize = metainfo_info(tor->meta, disp->metainfo, sizeof(disp->metainfo));
+	hash_sha1(disp->metainfo, disp->metasize, disp->infohash);
 	disp->addrs = ipaddr_pool_create();
 	disp->tor = tor;
 
@@ -397,8 +402,8 @@ namespace peer
 		torrent_sched_t* disp = peer->m_disp;
 		app_log(LOG_DEBUG, "peer(%s:%hu) handshake flags: 0x%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX\n", peer->ip, peer->port, flags[0], flags[1], flags[2], flags[3], flags[4], flags[5], flags[6], flags[7]);
 
-		assert(0 == memcmp(info_hash, peer->m_disp->sha1, sizeof(peer->m_disp->sha1)));
-		int r = peer_extended(peer->m_peer, peer->m_disp->tor->port, VERSION);
+		assert(0 == memcmp(info_hash, peer->m_disp->infohash, sizeof(peer->m_disp->infohash)));
+		int r = peer_extended(peer->m_peer, peer->m_disp->tor->port, VERSION, peer->m_disp->metasize);
 		if (0 == r && 0 != bitmap_weight(disp->tor->bitfield, disp->tor->meta->piece_count))
 			r = peer_bitfield(peer->m_peer, disp->tor->bitfield, disp->tor->meta->piece_count);
 		return r;
@@ -571,7 +576,7 @@ namespace peer
 			peer->status = CPeer::HANDSHAKE;
 			peer->m_peer = peer_create(aio, &peer->addr, &handler, peer);
 			peer->clock = system_clock();
-			peer_handshake(peer->m_peer, disp->sha1, disp->tor->id);
+			peer_handshake(peer->m_peer, disp->infohash, disp->tor->id);
 		}
 		else
 		{
