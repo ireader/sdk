@@ -2,6 +2,7 @@
 #include "rbtree.h"
 #include "bitmap.h"
 #include "heap.h"
+#include "sys/locker.h"
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -17,6 +18,7 @@ struct rbitem_t
 struct router_t
 {
 	uint8_t id[N_NODEID];
+	locker_t locker;
 
 	size_t count;
 	struct rbtree_root_t rbtree;
@@ -31,6 +33,7 @@ struct router_t* router_create(const uint8_t id[N_NODEID])
 	router = (struct router_t*)calloc(1, sizeof(*router));
 	if (!router) return NULL;
 
+	locker_create(&router->locker);
 	memcpy(router->id, id, sizeof(router->id));
 	router->rbtree.node = NULL;
 	return router;
@@ -40,30 +43,55 @@ void router_destroy(struct router_t* router)
 {
 	if (router->rbtree.node)
 		rbtree_destroy(router->rbtree.node);
+	locker_destroy(&router->locker);
 	free(router);
 }
 
-int router_add(struct router_t* router, struct node_t* node)
+int router_add(struct router_t* router, const uint8_t id[N_NODEID], const struct sockaddr_storage* addr, struct node_t** node)
 {
 	int r;
 	struct rbitem_t* item;
 	struct rbtree_node_t **link;
 	struct rbtree_node_t *parent;
 
-	r = rbtree_find(&router->rbtree, node->id, &parent);
-	if (0 == r)
-		return EEXIST;
-	link = parent ? (r > 0 ? &parent->left : &parent->right) : NULL;
-	assert(!link || !*link);
+	if (node) *node = NULL;
 
 	item = calloc(1, sizeof(*item));
 	if (!item)
 		return ENOMEM;
-	
-	node_addref(node);
-	item->node = node;
+	item->node = node_create2(id, addr);
+	if (!item->node)
+	{
+		free(item->node);
+		return ENOMEM;
+	}
+
+	locker_lock(&router->locker);
+	r = rbtree_find(&router->rbtree, id, &parent);
+	if (0 == r)
+	{
+		if (node)
+		{
+			*node = (rbtree_entry(parent, struct rbitem_t, link))->node;
+			node_addref(*node);
+		}
+		locker_unlock(&router->locker);
+		node_release(item->node);
+		free(item);
+		return EEXIST;
+	}
+	link = parent ? (r > 0 ? &parent->left : &parent->right) : NULL;
+	assert(!link || !*link);
+
 	rbtree_insert(&router->rbtree, parent, link, &item->link);
 	router->count += 1;
+	
+	if (node)
+	{
+		node_addref(item->node);
+		*node = item->node;
+	}
+	locker_unlock(&router->locker);
 	return 0;
 }
 
@@ -73,13 +101,18 @@ int router_remove(struct router_t* router, const uint8_t id[N_NODEID])
 	struct rbitem_t* item;
 	struct rbtree_node_t* node;
 
+	locker_lock(&router->locker);
 	r = rbtree_find(&router->rbtree, id, &node);
 	if (0 != r)
+	{
+		locker_unlock(&router->locker);
 		return ENOENT;
+	}
 	
 	router->count -= 1;
 	item = rbtree_entry(node, struct rbitem_t, link);
 	rbtree_delete(&router->rbtree, node);
+	locker_unlock(&router->locker);
 	node_release(item->node);
 	free(item);
 	return 0;
@@ -88,14 +121,6 @@ int router_remove(struct router_t* router, const uint8_t id[N_NODEID])
 size_t router_size(struct router_t* router)
 {
 	return router->count;
-}
-
-static int heap_compare(void* param, const void* l, const void* r)
-{
-	uint8_t xor1[N_NODEID], xor2[N_NODEID];
-	bitmap_xor(xor1, (const uint8_t*)param, ((const struct node_t*)l)->id, N_BITS);
-	bitmap_xor(xor2, (const uint8_t*)param, ((const struct node_t*)r)->id, N_BITS);
-	return memcmp(xor1, xor2, N_NODEID) > 0 ? 1 : 0;
 }
 
 int router_nearest(struct router_t* router, const uint8_t id[N_NODEID], struct node_t* nodes[], size_t count)
@@ -108,13 +133,17 @@ int router_nearest(struct router_t* router, const uint8_t id[N_NODEID], struct n
 	const struct rbtree_node_t* prev;
 	const struct rbtree_node_t* next;
 
-	heap = heap_create(heap_compare, (void*)id);
+	heap = heap_create(node_compare_less, (void*)id);
 	heap_reserve(heap, count + 1);
 
 	min = N_BITS;
+	locker_lock(&router->locker);
 	rbtree_find(&router->rbtree, id, &node);
 	if (NULL == node)
+	{
+		locker_unlock(&router->locker);
 		return 0;
+	}
 
 	item = rbtree_entry(node, struct rbitem_t, link);
 	bitmap_xor(xor, id, item->node->id, N_BITS);
@@ -159,15 +188,36 @@ int router_nearest(struct router_t* router, const uint8_t id[N_NODEID], struct n
 				break; // try left
 			}
 		}
-	} while (heap_size(heap) < (int)count);
+	} while (heap_size(heap) < (int)count && (prev || next));
 
 	for (i = 0; i < (int)count && !heap_empty(heap); i++)
 	{
 		nodes[i] = heap_top(heap);
+		node_addref(nodes[i]);
 		heap_pop(heap);
 	}
+
+	locker_unlock(&router->locker);
 	heap_destroy(heap);
 	return i;
+}
+
+int router_list(struct router_t* router, int (*func)(void* param, struct node_t* node), void* param)
+{
+	int r = 0;
+	struct rbitem_t* item;
+	const struct rbtree_node_t* node;
+	
+	locker_lock(&router->locker);
+	node = rbtree_first(&router->rbtree);
+	while (node && 0 == r)
+	{
+		item = rbtree_entry(node, struct rbitem_t, link);
+		r = func(param, item->node);
+		node = rbtree_next(node);
+	}
+	locker_unlock(&router->locker);
+	return r;
 }
 
 static void rbtree_destroy(struct rbtree_node_t* node)
@@ -210,18 +260,17 @@ static int rbtree_find(struct rbtree_root_t* root, const uint8_t id[N_NODEID], s
 #if defined(_DEBUG) || defined(DEBUG)
 static void router_test2(void)
 {
-	int i, j;
+	int i;
+	struct node_t* node;
 	struct node_t* result[8];
-	struct node_t* result2[8];
 	static struct node_t s_nodes[100000];
 	uint8_t id[N_NODEID] = { 0xAB, 0xCD, 0xEF, 0x89, };
-	uint8_t xor[N_NODEID];
 
 	heap_t* heap, *heap2;
 	struct router_t* router;
 	router = router_create(id);
 
-	heap = heap_create(heap_compare, (void*)id);
+	heap = heap_create(node_compare_less, (void*)id);
 	heap_reserve(heap, 8 + 1);
 
 	for (i = 0; i < sizeof(s_nodes) / sizeof(s_nodes[0]); i++)
@@ -232,18 +281,21 @@ static void router_test2(void)
 		memcpy(s_nodes[i].id, &v, sizeof(v));
 		s_nodes[i].ref = 1;
 
-		if (0 == router_add(router, &s_nodes[i]))
+		if (0 == router_add(router, s_nodes[i].id, &s_nodes[i].addr, &node))
 		{
-			heap_push(heap, &s_nodes[i]);
+			heap_push(heap, node);
 			if (heap_size(heap) > 8)
+			{
+				node_release((struct node_t*)heap_top(heap));
 				heap_pop(heap);
+			}
 		}
 	}
 
 	assert(8 == heap_size(heap));
 	assert(8 == router_nearest(router, id, result, 8));
 
-	heap2 = heap_create(heap_compare, (void*)id);
+	heap2 = heap_create(node_compare_less, (void*)id);
 	heap_reserve(heap2, 8);
 
 	for (i = 0; i < 8; i++)
@@ -292,7 +344,7 @@ void router_test(void)
 	router = router_create(id);
 	for (i = 0; i < sizeof(nodes) / sizeof(nodes[0]); i++)
 	{
-		router_add(router, nodes + i);
+		router_add(router, nodes[i].id, &nodes[i].addr, NULL);
 	}
 	router_nearest(router, id, nodes2, 6);
 	router_destroy(router);
