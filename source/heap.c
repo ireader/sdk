@@ -97,6 +97,13 @@ void* heap_top(struct heap_t* heap)
 	return heap->elts[0];
 }
 
+void* heap_get(heap_t* heap, int index)
+{
+	if (index < 0 || index >= heap->size)
+		return NULL;
+	return heap->elts[index];
+}
+
 static inline void heap_swap(struct heap_t* heap, int l, int r)
 {
 	void* elt;

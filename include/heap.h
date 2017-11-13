@@ -27,6 +27,8 @@ int heap_push(heap_t* heap, void* ptr);
 void heap_pop(heap_t* heap);
 void* heap_top(heap_t* heap);
 
+void* heap_get(heap_t* heap, int index);
+
 #if defined(__cplusplus)
 }
 #endif
