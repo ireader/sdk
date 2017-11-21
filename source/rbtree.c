@@ -462,7 +462,7 @@ const struct rbtree_node_t* rbtree_first(const struct rbtree_root_t* root)
 	struct rbtree_node_t* node;
 	node = root->node;
 	if (!node)
-		return NULL;
+		return RBT_SENTINEL;
 
 	while (node->left)
 		node = node->left;
@@ -474,7 +474,7 @@ const struct rbtree_node_t* rbtree_last(const struct rbtree_root_t* root)
 	struct rbtree_node_t* node;
 	node = root->node;
 	if (!node)
-		return NULL;
+		return RBT_SENTINEL;
 
 	while (node->right)
 		node = node->right;

@@ -14,7 +14,7 @@ extern "C" {
 /// @param[in] num Number of elements in the array pointed to by arr
 /// @param[in] size Size in bytes of each element in the array.
 /// @return 0-find, other-not found, pos is insert position
-int bsearch2(const void* key, const void* arr, void** pos, size_t num, size_t size,
+int bsearch2(const void* key, const void* arr, const void** pos, size_t num, size_t size,
 	int(*cmp)(const void* key, const void* elt));
 
 #if defined(__cplusplus)

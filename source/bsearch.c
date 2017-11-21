@@ -67,9 +67,9 @@ int bsearch2(const void* key, const void* arr, const void** pos, size_t num, siz
 #include <assert.h>
 #include <stdio.h>
 #include <time.h>
-static int bsearch_int_compare(const int* key, const int* elt)
+static int bsearch_int_compare(const void* key, const void* elt)
 {
-	return *key - *elt;
+	return *(const int*)key - *(const int*)elt;
 }
 
 void bsearch_test(void)
@@ -81,7 +81,7 @@ void bsearch_test(void)
 	for (num = i = 0; i < sizeof(arr)/sizeof(arr[0]); i++)
 	{
 		v = rand();
-		if (0 == bsearch2(&v, arr, &p, num, sizeof(int), bsearch_int_compare))
+		if (0 == bsearch2(&v, arr, (void**)&p, num, sizeof(int), bsearch_int_compare))
 		{
 			assert(v == *p);
 		}
