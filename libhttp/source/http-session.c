@@ -119,7 +119,7 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 {
 	struct http_session_t *session;
 	struct aio_tcp_transport_handler_t handler;
-
+	memset(&handler, 0, sizeof(handler));
 	handler.ondestroy = http_session_ondestroy;
 	handler.onrecv = http_session_onrecv;
 	handler.onsend = http_session_onsend;

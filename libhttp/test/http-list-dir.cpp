@@ -1,5 +1,9 @@
 #include "http-server.h"
 #include "http-route.h"
+#include "sys/path.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 #include <string>
 #if defined(OS_WINDOWS)
 #include <Windows.h>
@@ -29,7 +33,7 @@ int path_list(const char* path, path_onfile onfile, void* param)
 	DIR* dir;
 	struct dirent* p;
 
-	dir = opendir("/proc");
+	dir = opendir(path);
 	if (!dir)
 		return -1;
 
@@ -37,7 +41,7 @@ int path_list(const char* path, path_onfile onfile, void* param)
 	{
 		if (0 == strcmp(p->d_name, ".") || 0 == strcmp(p->d_name, ".."))
 			continue;
-		onfile(path, p->d_name, p->d_type == DT_DIR ? 1 : 0);
+		onfile(param, p->d_name, p->d_type == DT_DIR ? 1 : 0);
 	}
 
 	closedir(dir);
@@ -47,7 +51,7 @@ int path_list(const char* path, path_onfile onfile, void* param)
 
 static void http_onlist(void* param, const char* name, int dir)
 {
-	char item[MAX_PATH];
+	char item[PATH_MAX];
 	std::string* reply = (std::string*)param;
 	snprintf(item, sizeof(item), "<li><a href = \"%s\">%s</a></li>", name, name);
 	*reply += item;

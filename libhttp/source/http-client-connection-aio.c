@@ -1,6 +1,7 @@
 #include "http-client-internal.h"
 #include "aio-client.h"
 #include <stdlib.h>
+#include <errno.h>
 
 #define http_entry(ptr, type, member) ((type*)((char*)ptr-(ptrdiff_t)(&((type*)0)->member)))
 
