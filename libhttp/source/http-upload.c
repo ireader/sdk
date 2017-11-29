@@ -20,12 +20,12 @@ static const char* http_header_attr_token(const char* source, const char* token,
 	if(0 != strncasecmp(source, token, n))
 		return NULL;
 
-	source += strspn(source+n, WHITESPACE);
+	source += n + strspn(source + n, WHITESPACE);
 
 	if(sep != *source)
 		return NULL;
 
-	return source + strspn(source + 1, WHITESPACE);
+	return source + 1 + strspn(source + 1, WHITESPACE);
 }
 
 static int http_header_attr_value(const char* source, char* value, size_t bytes)
@@ -56,9 +56,9 @@ int http_get_upload_boundary(const char* contentType, char boundary[128])
 	if(0 != strncasecmp(pn, "multipart/form-data;", 20))
 		return -1;
 
-	for(pn = strchr(contentType, ';'); pn; pn = strchr(pn, ';'))
+	for(pn = strchr(contentType, ';'); pn++; pn = strchr(pn, ';'))
 	{
-		pn += strspn(pn+1, WHITESPACE);
+		pn += strspn(pn, WHITESPACE);
 		pv = http_header_attr_token(pn, "boundary", '=');
 		if(!pv)
 			continue;
@@ -87,9 +87,9 @@ static int http_get_req_upload_file(const char* contentDisposition,
 	// disposition-type [must]
 	http_header_attr_value(pn, dispositionType, 0);
 	
-	for(pn = strchr(contentDisposition, ';'); pn; pn = strchr(pn, ';'))
+	for(pn = strchr(contentDisposition, ';'); pn++; pn = strchr(pn, ';'))
 	{
-		pn += strspn(pn+1, WHITESPACE);
+		pn += strspn(pn, WHITESPACE);
 		pv = http_header_attr_token(pn, "name", '=');
 		if(pv)
 		{
