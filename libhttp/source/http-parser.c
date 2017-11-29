@@ -1044,7 +1044,12 @@ int http_parser_input(struct http_parser_t* http, const void* data, size_t *byte
 	if(r < 0)
 		return r;
 
-	*bytes = http->raw_size - http->offset - ((http->content_length >= 0) ? http->content_length : 0);
+	*bytes = 0;
+	if (SM_DONE == http->stateM)
+	{
+		assert(http->content_length < 0 || http->raw_size - http->offset >= (size_t)http->content_length);
+		*bytes = http->raw_size - http->offset - ((http->content_length >= 0) ? http->content_length : 0);
+	}
 	return http->stateM == SM_DONE ? INPUT_DONE : INPUT_NEEDMORE;
 }
 
