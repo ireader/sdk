@@ -982,7 +982,7 @@ void http_parser_clear(struct http_parser_t* http)
 
 int http_parser_input(struct http_parser_t* http, const void* data, size_t *bytes)
 {
-	enum { INPUT_NEEDMORE = 1, INPUT_DONE = 0, };
+	enum { INPUT_NEEDMORE = 1, INPUT_DONE = 0, INPUT_HEADER = 2, };
 
 	int r;
 
@@ -1050,7 +1050,7 @@ int http_parser_input(struct http_parser_t* http, const void* data, size_t *byte
 		assert(http->content_length < 0 || http->raw_size - http->offset >= (size_t)http->content_length);
 		*bytes = http->raw_size - http->offset - ((http->content_length >= 0) ? http->content_length : 0);
 	}
-	return http->stateM == SM_DONE ? INPUT_DONE : INPUT_NEEDMORE;
+	return http->stateM == SM_DONE ? INPUT_DONE : (SM_BODY == http->stateM ? INPUT_HEADER : INPUT_NEEDMORE);
 }
 
 int http_get_max_size()
