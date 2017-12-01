@@ -35,8 +35,13 @@ int bits_read(struct bits_t* bits);
 
 /// read n-bit(n <= 32) from bit stream(offset position)
 /// @param[in] stream bit stream
-/// @return -1-error, 1-value, 0-value
+/// @return -1-error, other-value
 int bits_read2(struct bits_t* bits, int n);
+
+/// Exp-Golomb codes
+int bits_read_ue(struct bits_t* bits);
+int bits_read_se(struct bits_t* bits);
+int bits_read_te(struct bits_t* bits);
 
 #ifdef __cplusplus
 }
