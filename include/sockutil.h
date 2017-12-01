@@ -18,9 +18,12 @@
 #endif
 
 /// @param[in] backlog Maximum queue length specifiable by listen, use SOMAXCONN if you don't known how to choose value
+/// @param[in] ipv4 0-ipv6 only, 1-ipv6 dual stack
 /// @return >=0-socket, <0-socket_error(by socket_geterror())
-static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int backlog);
-static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_short port);
+static inline socket_t socket_tcp_listen(IN const char* ipv4_or_dns, IN u_short port, IN int backlog);
+static inline socket_t socket_tcp_listen_ipv6(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int backlog, IN int ipv4);
+static inline socket_t socket_udp_bind(IN const char* ipv4_or_dns, IN u_short port);
+static inline socket_t socket_udp_bind_ipv6(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int ipv4);
 
 /// @Notice: need restore block status
 /// @param[in] timeout: ms, <0-forever
@@ -152,7 +155,7 @@ static inline int socket_bind_any(IN socket_t sock, IN u_short port)
 /// @param[in] port bind local port
 /// @param[in] backlog the maximum length to which the queue of pending connections for socket may grow
 /// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
-static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int backlog)
+static inline socket_t socket_tcp_listen(IN const char* ipv4_or_dns, IN u_short port, IN int backlog)
 {
 	int r;
 	socket_t sock;
@@ -160,32 +163,24 @@ static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN 
 	struct addrinfo hints, *addr, *ptr;
 
 	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET; // IPv4 only
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 	snprintf(portstr, sizeof(portstr), "%hu", port);
-	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
+	r = getaddrinfo(ipv4_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return socket_invalid;
 
 	r = -1; // not found
 	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
+		assert(AF_INET == ptr->ai_family);
 		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
 		if (socket_invalid == sock)
 			continue;
 
 		// reuse addr
 		socket_setreuseaddr(sock, 1);
-
-		// disable Dual-Stack Socket
-		// restrict IPv6 only
-#if defined(OS_WINDOWS)
-		// https://msdn.microsoft.com/en-us/library/windows/desktop/bb513665(v=vs.85).aspx
-		// By default, an IPv6 socket created on Windows Vista and later only operates over the IPv6 protocol.
-#else		
-		if (PF_INET6 == ptr->ai_addr->sa_family)
-			socket_setipv6only(sock, 1);
-#endif
 
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
 		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
@@ -202,6 +197,63 @@ static inline socket_t socket_tcp_listen(IN const char* ipv4_or_ipv6_or_dns, IN 
 	return 0 == r ? sock : socket_invalid;
 }
 
+/// create a new TCP socket, bind, and listen
+/// @param[in] ip socket bind local address, NULL-bind any address
+/// @param[in] port bind local port
+/// @param[in] backlog the maximum length to which the queue of pending connections for socket may grow
+/// @param[in] ipv4 0-ipv6 only, 1-ipv6 dual stack
+/// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
+static inline socket_t socket_tcp_listen_ipv6(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int backlog, IN int ipv4)
+{
+	int r;
+	socket_t sock;
+	char portstr[22];
+	struct addrinfo hints, *addr, *ptr;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET6;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV | AI_V4MAPPED;
+	snprintf(portstr, sizeof(portstr), "%hu", port);
+	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
+	if (0 != r)
+		return socket_invalid;
+
+	r = -1; // not found
+	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
+	{
+		assert(AF_INET6 == ptr->ai_family);
+		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+		if (socket_invalid == sock)
+			continue;
+
+		// reuse addr
+		socket_setreuseaddr(sock, 1);
+
+		// Dual-Stack Socket Option
+		// https://msdn.microsoft.com/en-us/library/windows/desktop/bb513665(v=vs.85).aspx
+		// By default, an IPv6 socket created on Windows Vista and later only operates over the IPv6 protocol.
+		socket_setipv6only(sock, ipv4 ? 0 : 1);
+
+		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
+		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
+
+		r = socket_bind(sock, ptr->ai_addr, ptr->ai_addrlen);
+		if (0 == r)
+			r = socket_listen(sock, backlog);
+
+		if (0 != r)
+			socket_close(sock);
+	}
+
+	freeaddrinfo(addr);
+	return 0 == r ? sock : socket_invalid;
+}
+
+/// create a new UDP socket and bind with ip/port
+/// @param[in] ip socket bind local address, NULL-bind any address
+/// @param[in] port bind local port
+/// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
 static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_short port)
 {
 	int r;
@@ -210,6 +262,7 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_
 	struct addrinfo hints, *addr, *ptr;
 
 	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET; // IPv4 only
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 	snprintf(portstr, sizeof(portstr), "%hu", port);
@@ -220,6 +273,7 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_
 	r = -1; // not found
 	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
+		assert(AF_INET == ptr->ai_family);
 		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
 		if (socket_invalid == sock)
 			continue;
@@ -227,15 +281,54 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_
 		// reuse addr
 		socket_setreuseaddr(sock, 1);
 
-		// disable Dual-Stack Socket
-		// restrict IPv6 only
-#if defined(OS_WINDOWS)
+		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
+		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
+
+		r = socket_bind(sock, ptr->ai_addr, ptr->ai_addrlen);
+		if (0 != r)
+			socket_close(sock);
+	}
+
+	freeaddrinfo(addr);
+	return 0 == r ? sock : socket_invalid;
+}
+
+/// create a new UDP socket and bind with ip/port
+/// @param[in] ip socket bind local address, NULL-bind any address
+/// @param[in] port bind local port
+/// @param[in] ipv4 0-ipv6 only, 1-ipv6 dual stack
+/// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
+static inline socket_t socket_udp_bind_ipv6(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int ipv4)
+{
+	int r;
+	socket_t sock;
+	char portstr[16];
+	struct addrinfo hints, *addr, *ptr;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET6;
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
+	snprintf(portstr, sizeof(portstr), "%hu", port);
+	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
+	if (0 != r)
+		return socket_invalid;
+
+	r = -1; // not found
+	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
+	{
+		assert(AF_INET6 == ptr->ai_family);
+		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+		if (socket_invalid == sock)
+			continue;
+
+		// reuse addr
+		socket_setreuseaddr(sock, 1);
+
+		// Dual-Stack Socket option
 		// https://msdn.microsoft.com/en-us/library/windows/desktop/bb513665(v=vs.85).aspx
 		// By default, an IPv6 socket created on Windows Vista and later only operates over the IPv6 protocol.
-#else		
-		if (PF_INET6 == ptr->ai_addr->sa_family)
-			socket_setipv6only(sock, 1);
-#endif
+		socket_setipv6only(sock, ipv4 ? 0 : 1);
 
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
 		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
