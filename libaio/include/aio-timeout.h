@@ -2,7 +2,6 @@
 #define _aio_timeout_h_
 
 #include <stdint.h>
-#include "timer.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,7 +9,7 @@ extern "C" {
 
 struct aio_timeout_t
 {
-	struct timer_t timeout; // internal use only
+	uint8_t reserved[64]; // internal use only
 };
 
 void aio_timeout_process(void);

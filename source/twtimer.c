@@ -2,7 +2,7 @@
 // 64ms per bucket
 // http://www.cs.columbia.edu/~nahum/w6998/papers/sosp87-timing-wheels.pdf
 
-#include "timer.h"
+#include "twtimer.h"
 #include "sys/spinlock.h"
 #include <stdlib.h>
 #include <stdint.h>
@@ -22,7 +22,7 @@
 
 struct time_bucket_t
 {
-	struct timer_t* first;
+	struct twtimer_t* first;
 };
 
 struct time_wheel_t
@@ -37,7 +37,7 @@ struct time_wheel_t
 	struct time_bucket_t tv5[TVN_SIZE];
 };
 
-static int timer_cascade(struct time_wheel_t* tm, uint64_t clock, struct time_bucket_t* tv, int index);
+static int twtimer_cascade(struct time_wheel_t* tm, uint64_t clock, struct time_bucket_t* tv, int index);
 
 struct time_wheel_t* time_wheel_create(uint64_t clock)
 {
@@ -56,7 +56,7 @@ int time_wheel_destroy(struct time_wheel_t* tm)
 	return spinlock_destroy(&tm->locker);
 }
 
-int timer_start(struct time_wheel_t* tm, struct timer_t* timer, uint64_t clock)
+int twtimer_start(struct time_wheel_t* tm, struct twtimer_t* timer, uint64_t clock)
 {
 	int i;
 	uint64_t diff;
@@ -113,9 +113,9 @@ int timer_start(struct time_wheel_t* tm, struct timer_t* timer, uint64_t clock)
 	return 0;
 }
 
-int timer_stop(struct time_wheel_t* tm, struct timer_t* timer)
+int twtimer_stop(struct time_wheel_t* tm, struct twtimer_t* timer)
 {
-	struct timer_t** pprev;
+	struct twtimer_t** pprev;
 	spinlock_lock(&tm->locker);
 	pprev = timer->pprev;
 	if (timer->pprev)
@@ -126,10 +126,10 @@ int timer_stop(struct time_wheel_t* tm, struct timer_t* timer)
 	return pprev ? 0 : -1;
 }
 
-int timer_process(struct time_wheel_t* tm, uint64_t clock)
+int twtimer_process(struct time_wheel_t* tm, uint64_t clock)
 {
 	int index;
-	struct timer_t* timer;
+	struct twtimer_t* timer;
 	struct time_bucket_t bucket;
 
 	spinlock_lock(&tm->locker);
@@ -138,11 +138,11 @@ int timer_process(struct time_wheel_t* tm, uint64_t clock)
 		index = (int)(TIME(tm->clock) & TVR_MASK);
 
 		if (0 == index 
-			&& 0 == timer_cascade(tm, clock, tm->tv2, TVN_INDEX(clock, 0))
-			&& 0 == timer_cascade(tm, clock, tm->tv3, TVN_INDEX(clock, 1))
-			&& 0 == timer_cascade(tm, clock, tm->tv4, TVN_INDEX(clock, 2)))
+			&& 0 == twtimer_cascade(tm, clock, tm->tv2, TVN_INDEX(clock, 0))
+			&& 0 == twtimer_cascade(tm, clock, tm->tv3, TVN_INDEX(clock, 1))
+			&& 0 == twtimer_cascade(tm, clock, tm->tv4, TVN_INDEX(clock, 2)))
 		{
-			timer_cascade(tm, clock, tm->tv5, TVN_INDEX(clock, 3));
+			twtimer_cascade(tm, clock, tm->tv5, TVN_INDEX(clock, 3));
 		}
 
 		// move bucket
@@ -175,9 +175,10 @@ int timer_process(struct time_wheel_t* tm, uint64_t clock)
 	return (int)(tm->clock - clock);
 }
 
-static int timer_cascade(struct time_wheel_t* tm, uint64_t clock, struct time_bucket_t* tv, int index)
+static int twtimer_cascade(struct time_wheel_t* tm, uint64_t clock, struct time_bucket_t* tv, int index)
 {
-	struct timer_t* timer, *next;
+	struct twtimer_t* timer;
+	struct twtimer_t* next;
 	struct time_bucket_t bucket;
 	bucket.first = tv[index].first;
 	if (bucket.first)
@@ -187,7 +188,7 @@ static int timer_cascade(struct time_wheel_t* tm, uint64_t clock, struct time_bu
 	for (timer = bucket.first; timer; timer = next)
 	{
 		next = timer->next;
-		timer_start(tm, timer, clock);
+		twtimer_start(tm, timer, clock);
 	}
 
 	return index;
