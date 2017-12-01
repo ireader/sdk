@@ -227,13 +227,14 @@ static inline socket_t socket_tcp_listen_ipv6(IN const char* ipv4_or_ipv6_or_dns
 		if (socket_invalid == sock)
 			continue;
 
-		// reuse addr
-		socket_setreuseaddr(sock, 1);
-
 		// Dual-Stack Socket Option
 		// https://msdn.microsoft.com/en-us/library/windows/desktop/bb513665(v=vs.85).aspx
 		// By default, an IPv6 socket created on Windows Vista and later only operates over the IPv6 protocol.
-		socket_setipv6only(sock, ipv4 ? 0 : 1);
+		if (0 != socket_setreuseaddr(sock, 1) || 0 != socket_setipv6only(sock, ipv4 ? 0 : 1))
+		{
+			socket_close(sock);
+			continue;
+		}
 
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
 		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
@@ -322,13 +323,14 @@ static inline socket_t socket_udp_bind_ipv6(IN const char* ipv4_or_ipv6_or_dns, 
 		if (socket_invalid == sock)
 			continue;
 
-		// reuse addr
-		socket_setreuseaddr(sock, 1);
-
 		// Dual-Stack Socket option
 		// https://msdn.microsoft.com/en-us/library/windows/desktop/bb513665(v=vs.85).aspx
 		// By default, an IPv6 socket created on Windows Vista and later only operates over the IPv6 protocol.
-		socket_setipv6only(sock, ipv4 ? 0 : 1);
+		if (0 != socket_setreuseaddr(sock, 1) || 0 != socket_setipv6only(sock, ipv4 ? 0 : 1))
+		{
+			socket_close(sock);
+			continue;
+		}
 
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
 		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
