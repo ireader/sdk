@@ -25,7 +25,9 @@ int aio_send(struct aio_send_t* send, int timeout, aio_socket_t aio, const void*
 {
 	send->param = param;
 	send->onsend = onsend;
-	aio_timeout_start(&send->timeout, timeout, aio_send_timeout, send);
+	memset(&send->timeout, 0, sizeof(send->timeout));
+	if (timeout > 0)
+		aio_timeout_start(&send->timeout, timeout, aio_send_timeout, send);
 	return aio_socket_send(aio, buffer, bytes, aio_send_handler, send);
 }
 
@@ -33,7 +35,9 @@ int aio_send_v(struct aio_send_t* send, int timeout, aio_socket_t aio, socket_bu
 {
 	send->param = param;
 	send->onsend = onsend;
-	aio_timeout_start(&send->timeout, timeout, aio_send_timeout, send);
+	memset(&send->timeout, 0, sizeof(send->timeout));
+	if (timeout > 0)
+		aio_timeout_start(&send->timeout, timeout, aio_send_timeout, send);
 	return aio_socket_send_v(aio, vec, n, aio_send_handler, send);
 }
 
@@ -41,7 +45,9 @@ int aio_sendto(struct aio_send_t* send, int timeout, aio_socket_t aio, const str
 {
 	send->param = param;
 	send->onsend = onsend;
-	aio_timeout_start(&send->timeout, timeout, aio_send_timeout, send);
+	memset(&send->timeout, 0, sizeof(send->timeout));
+	if (timeout > 0)
+		aio_timeout_start(&send->timeout, timeout, aio_send_timeout, send);
 	return aio_socket_sendto(aio, addr, addrlen, buffer, bytes, aio_send_handler, send);
 }
 
@@ -49,6 +55,8 @@ int aio_sendto_v(struct aio_send_t* send, int timeout, aio_socket_t aio, const s
 {
 	send->param = param;
 	send->onsend = onsend;
-	aio_timeout_start(&send->timeout, timeout, aio_send_timeout, send);
+	memset(&send->timeout, 0, sizeof(send->timeout));
+	if (timeout > 0)
+		aio_timeout_start(&send->timeout, timeout, aio_send_timeout, send);
 	return aio_socket_sendto_v(aio, addr, addrlen, vec, n, aio_send_handler, send);
 }

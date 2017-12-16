@@ -114,9 +114,9 @@ void aio_tcp_transport_get_timeout(struct aio_tcp_transport_t* t, int *recvMS, i
 
 void aio_tcp_transport_set_timeout(struct aio_tcp_transport_t* t, int recvMS, int sendMS)
 {
-	recvMS = recvMS < 100 ? 100 : recvMS;
+	recvMS = recvMS > 0 ? (recvMS < 100 ? 100 : recvMS) : 0;
 	recvMS = recvMS > 2 * 3600 * 1000 ? 2 * 3600 * 1000 : recvMS;
-	sendMS = sendMS < 100 ? 100 : sendMS;
+	sendMS = sendMS > 0 ? (sendMS < 100 ? 100 : sendMS) : 0;
 	sendMS = sendMS > 2 * 3600 * 1000 ? 2 * 3600 * 1000 : sendMS;
 	t->rtimeout = recvMS;
 	t->wtimeout = sendMS;

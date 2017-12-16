@@ -45,7 +45,9 @@ int aio_recv(struct aio_recv_t* recv, int timeout, aio_socket_t aio, void* buffe
 {
 	recv->param = param;
 	recv->u.onrecv = onrecv;
-	aio_timeout_start(&recv->timeout, timeout, aio_timeout_tcp, recv);
+	memset(&recv->timeout, 0, sizeof(recv->timeout));
+	if(timeout > 0)
+		aio_timeout_start(&recv->timeout, timeout, aio_timeout_tcp, recv);
 	return aio_socket_recv(aio, buffer, bytes, aio_handler_tcp, recv);
 }
 
@@ -53,7 +55,9 @@ int aio_recv_v(struct aio_recv_t* recv, int timeout, aio_socket_t aio, socket_bu
 {
 	recv->param = param;
 	recv->u.onrecv = onrecv;
-	aio_timeout_start(&recv->timeout, timeout, aio_timeout_tcp, recv);
+	memset(&recv->timeout, 0, sizeof(recv->timeout));
+	if (timeout > 0)
+		aio_timeout_start(&recv->timeout, timeout, aio_timeout_tcp, recv);
 	return aio_socket_recv_v(aio, vec, n, aio_handler_tcp, recv);
 }
 
@@ -61,7 +65,9 @@ int aio_recvfrom(struct aio_recv_t* recv, int timeout, aio_socket_t aio, void* b
 {
 	recv->param = param;
 	recv->u.onrecvfrom = onrecv;
-	aio_timeout_start(&recv->timeout, timeout, aio_timeout_udp, recv);
+	memset(&recv->timeout, 0, sizeof(recv->timeout));
+	if (timeout > 0)
+		aio_timeout_start(&recv->timeout, timeout, aio_timeout_udp, recv);
 	return aio_socket_recvfrom(aio, buffer, bytes, aio_handler_udp, recv);
 }
 
@@ -69,6 +75,8 @@ int aio_recvfrom_v(struct aio_recv_t* recv, int timeout, aio_socket_t aio, socke
 {
 	recv->param = param;
 	recv->u.onrecvfrom = onrecv;
-	aio_timeout_start(&recv->timeout, timeout, aio_timeout_tcp, recv);
+	memset(&recv->timeout, 0, sizeof(recv->timeout));
+	if (timeout > 0)
+		aio_timeout_start(&recv->timeout, timeout, aio_timeout_tcp, recv);
 	return aio_socket_recvfrom_v(aio, vec, n, aio_handler_udp, recv);
 }

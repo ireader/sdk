@@ -255,9 +255,9 @@ int aio_client_send_v(aio_client_t* client, socket_bufvec_t *vec, int n)
 
 void aio_client_settimeout(aio_client_t* client, int conn, int recv, int send)
 {
-	conn = MIN(2 * 3600 * 1000, MAX(conn, 100));
-	recv = MIN(2 * 3600 * 1000, MAX(recv, 100));
-	send = MIN(2 * 3600 * 1000, MAX(send, 100));
+	conn = conn > 0 ? MIN(2 * 3600 * 1000, MAX(conn, 100)) : 0;
+	recv = recv > 0 ? MIN(2 * 3600 * 1000, MAX(recv, 100)) : 0;
+	send = send > 0 ? MIN(2 * 3600 * 1000, MAX(send, 100)) : 0;
 	client->ctimeout = conn;
 	client->rtimeout = recv;
 	client->wtimeout = send;

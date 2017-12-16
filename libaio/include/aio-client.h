@@ -58,7 +58,7 @@ int aio_client_send(aio_client_t* client, const void* data, size_t bytes);
 /// @return 0-ok, other-error
 int aio_client_send_v(aio_client_t* client, socket_bufvec_t *vec, int n);
 
-/// @param[in] timeout connect/recv/send timeout(millisecond), default 2min
+/// @param[in] timeout connect/recv/send timeout(millisecond), default 2min, 0-infinite
 void aio_client_settimeout(aio_client_t* client, int conn, int recv, int send);
 void aio_client_gettimeout(aio_client_t* client, int* conn, int* recv, int* send);
 
