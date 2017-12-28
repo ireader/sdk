@@ -15,7 +15,7 @@ struct http_session_t
 	struct sockaddr_storage addr;
 
 	char* data; // recv buffer
-	size_t bytes; // recv buffer size
+	size_t remain; // remain size
 
 	char status_line[64];
 	char* header;
