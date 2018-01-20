@@ -30,6 +30,12 @@ static int manget_parse_xt(struct magnet_t* magnet, const char* url)
 
 		base16_decode(magnet->info_hash, p + 5, 40);
 	}
+	else if (0 == strncmp("btmh:", p, 5))
+	{
+		// http://www.bittorrent.org/beps/bep_0009.html
+		// v1: magnet:?xt=urn:btih:<info-hash>&dn=<name>&tr=<tracker-url>&x.pe=<peer-address>
+		// v2: magnet:?xt=urn:btmh:<tagged-info-hash>&dn=<name>&tr=<tracker-url>&x.pe=<peer-address>
+	}
 	else if (0 == strncmp("ed2k:", p, 5))
 	{
 		magnet->protocol = MAGNET_HASH_ED2K;

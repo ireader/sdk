@@ -47,6 +47,10 @@ static int peer_extend_m_read(const struct bvalue_t* m, struct peer_extended_t* 
 		{
 			bencode_get_int(m->v.dict.values + i, &ext->m.holepunch);
 		}
+		else if (0 == strcmp("tex", p + 1))
+		{
+			bencode_get_int(m->v.dict.values + i, &ext->m.tex);
+		}
 	}
 
 	return 0;

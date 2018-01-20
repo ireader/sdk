@@ -72,6 +72,18 @@
     <ClInclude Include="include\magnet.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\utp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\utp-header.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utp-internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\udp-socket.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\bencode.c">
@@ -166,6 +178,21 @@
     </ClCompile>
     <ClCompile Include="..\source\base64.c">
       <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tex.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utp-header.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\udp-socket.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utp.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utp-socket.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

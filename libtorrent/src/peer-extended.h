@@ -26,6 +26,7 @@ struct peer_extended_t
 		int32_t pex;
 		int32_t metadata;
 		int32_t holepunch;
+		int32_t tex;
 	} m;
 
 	int32_t metasize;
@@ -64,6 +65,8 @@ int peer_extended_write(uint8_t* buffer, int bytes, uint16_t port, const char* v
 
 int peer_pex_read(const uint8_t* buffer, int bytes, struct peer_pex_t* pex);
 int peer_pex_write(uint8_t* buffer, int bytes, const struct peer_pex_t* pex);
+
+int peer_tex_read(const uint8_t* buffer, int bytes);
 
 int peer_metadata_read(const uint8_t* buffer, uint32_t bytes, struct peer_metadata_handler_t* handler, void* param);
 int peer_metadata_request_write(uint8_t* buffer, uint32_t bytes, uint32_t piece);

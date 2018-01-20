@@ -2,6 +2,7 @@
 
 #include "dht.h"
 #include "dht-message.h"
+#include "udp-socket.h"
 #include "sys/locker.h"
 #include "sys/thread.h"
 #include "sys/atomic.h"
@@ -24,14 +25,27 @@
 
 #define ADDR_LEN(addr) (AF_INET6 == (addr)->ss_family ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))
 
+struct dht_bootstrap_t
+{
+	const char* id;
+	const char* host;
+	uint16_t port;	
+};
+
+static const struct dht_bootstrap_t s_bootstrap[] = {
+	{ "dec8ae697351ff4aec29cdbaabf2fbe3467cc267", "dht.libtorrent.org", 25401 },
+	{ "3c00727348b3b8ed70baa1e1411b3869d8481321", "dht.transmissionbt.com", 6881 },
+	{ "ebff36697351ff4aec29cdbaabf2fbe3467cc267", "router.bittorrent.com", 6881 },
+};
+
 struct dht_t
 {
 	uint8_t id[20];
 	int32_t transaction_id;
 	uint64_t clock;
 
-	uint16_t port;
-	socket_t udp[3]; // 0-IPv4, 1-IPv6, 2-NOTIFY
+	socket_t notify;
+	struct udp_socket_t udp;
 	socklen_t addrlen;
 	struct sockaddr_storage addr;
 
@@ -174,84 +188,41 @@ static void dht_find_task_free(struct dht_find_task_t* task)
 
 static int dht_bind(dht_t* dht, uint16_t port)
 {
-	dht->port = port;
-
-	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb513665(v=vs.85).aspx
-	// IP Addresses with a Dual-Stack Socket
-	dht->udp[0] = socket(AF_INET, SOCK_DGRAM, 0);
-	dht->udp[1] = socket(AF_INET6, SOCK_DGRAM, 0);
-
-	if (socket_invalid != dht->udp[0])
-	{
-		if (0 != socket_bind_any(dht->udp[0], port))
-		{
-			socket_close(dht->udp[0]);
-			dht->udp[0] = socket_invalid;
-		}
-	}
-
-	if (socket_invalid != dht->udp[1])
-	{
-		socket_setipv6only(dht->udp[1], 1); // disable Dual-Stack Socket
-		if (0 != socket_bind_any(dht->udp[1], port))
-		{
-			socket_close(dht->udp[1]);
-			dht->udp[1] = socket_invalid;
-		}
-	}
-
-	dht->udp[2] = socket_invalid;
-	dht->addrlen = sizeof(dht->addr);
-	if (socket_invalid != dht->udp[0])
-	{
-		dht->udp[2] = socket(AF_INET, SOCK_DGRAM, 0);
-		dht->addrlen = sizeof(struct sockaddr_in);
-		socket_addr_from_ipv4((struct sockaddr_in*)&dht->addr, "localhost", dht->port);		
-	}
-	else if(socket_invalid != dht->udp[1])
-	{
-		dht->udp[2] = socket(AF_INET6, SOCK_DGRAM, 0);
-		dht->addrlen = sizeof(struct sockaddr_in6);
-		socket_addr_from_ipv6((struct sockaddr_in6*)&dht->addr, "localhost", dht->port);		
-	}
-
-	if ((socket_invalid == dht->udp[0] && socket_invalid == dht->udp[1]) || dht->udp[2] == socket_invalid)
-	{
-		dht_unbind(dht);
+	if (0 != udp_socket_create(port, &dht->udp))
 		return -1;
+
+	dht->notify = socket_invalid;
+	dht->addrlen = sizeof(dht->addr);
+	if (socket_invalid != dht->udp.udp)
+	{
+		dht->notify = socket(AF_INET, SOCK_DGRAM, 0);
+		dht->addrlen = sizeof(struct sockaddr_in);
+		socket_addr_from_ipv4((struct sockaddr_in*)&dht->addr, "localhost", dht->udp.port);		
 	}
+	else if(socket_invalid != dht->udp.udp6)
+	{
+		dht->notify = socket(AF_INET6, SOCK_DGRAM, 0);
+		dht->addrlen = sizeof(struct sockaddr_in6);
+		socket_addr_from_ipv6((struct sockaddr_in6*)&dht->addr, "localhost", dht->udp.port);		
+	}
+	else
+	{
+		assert(0); // impossible
+	}
+
 	return 0;
 }
 
 static int dht_unbind(dht_t* dht)
 {
-	int i;
-	for (i = 0; i < 3; i++)
+	udp_socket_destroy(&dht->udp);
+
+	if (socket_invalid != dht->notify)
 	{
-		if (socket_invalid != dht->udp[i])
-		{
-			socket_close(dht->udp[i]);
-			dht->udp[i] = socket_invalid;
-		}
+		socket_close(dht->notify);
+		dht->notify = socket_invalid;
 	}
 	return 0;
-}
-
-static int dht_sendto(dht_t* dht, const void* buffer, size_t bytes, const struct sockaddr_storage* addr)
-{
-	if (AF_INET == addr->ss_family && socket_invalid != dht->udp[0])
-	{
-		return socket_sendto(dht->udp[0], buffer, bytes, 0, (const struct sockaddr*)addr, sizeof(struct sockaddr_in));
-	}
-	else if (AF_INET6 == addr->ss_family && socket_invalid != dht->udp[1])
-	{
-		return socket_sendto(dht->udp[1], buffer, bytes, 0, (const struct sockaddr*)addr, sizeof(struct sockaddr_in6));
-	}
-	else
-	{
-		assert(0);
-		return -1;
-	}
 }
 
 static int dht_notify(dht_t* dht)
@@ -259,7 +230,7 @@ static int dht_notify(dht_t* dht)
 	int r;
 	const uint8_t buf[N_NOTIFY] = { 0xAB, 0xCD, 0xEF };
 	assert(dht->addrlen == sizeof(struct sockaddr_in) || dht->addrlen == sizeof(struct sockaddr_in6));
-	r = socket_sendto(dht->udp[2], buf, sizeof(buf), 0, (const struct sockaddr*)&dht->addr, dht->addrlen);
+	r = socket_sendto(dht->notify, buf, sizeof(buf), 0, (const struct sockaddr*)&dht->addr, dht->addrlen);
 	assert(N_NOTIFY == r);
 	return r > 0 ? 0 : -1;
 }
@@ -384,7 +355,7 @@ int dht_announce(dht_t* dht, const struct sockaddr_storage* addr, const uint8_t 
 	int r;
 	uint8_t buffer[256];
 	r = dht_announce_peer_write(buffer, sizeof(buffer), 0, dht->id, info_hash, port, token, token_bytes);
-	return dht_sendto(dht, buffer, r, addr);
+	return udp_socket_sendto(&dht->udp, buffer, r, addr);
 }
 
 static void dht_active(struct dht_t* dht, const uint8_t id[20], const struct sockaddr_storage* addr)
@@ -427,7 +398,7 @@ static int dht_handle_ping(void* param, const uint8_t* transaction, uint32_t byt
 	dht_active(dht, id, &io->addr);
 
 	n = dht_pong_write(buffer, sizeof(buffer), transaction, bytes, dht->id);
-	return dht_sendto(dht, buffer, n, &io->addr);
+	return udp_socket_sendto(&dht->udp, buffer, n, &io->addr);
 }
 
 static int dht_handle_pong(void* param, int code, uint16_t transaction, const uint8_t id[20])
@@ -472,7 +443,7 @@ static int dht_handle_find_node(void* param, const uint8_t* transaction, uint32_
 
 	n = router_nearest(dht->router, target, nodes, sizeof(nodes)/sizeof(nodes[0]));
 	n = dht_find_node_reply_write(buffer, sizeof(buffer), transaction, bytes, dht->id, nodes, n);
-	return dht_sendto(dht, buffer, n, &io->addr);
+	return udp_socket_sendto(&dht->udp, buffer, n, &io->addr);
 }
 
 static int dht_handle_find_reply(struct dht_io_t* io, struct dht_find_task_t* task, int code, const uint8_t id[20], const struct node_t* nodes, uint32_t count, const uint8_t* token, uint32_t bytes)
@@ -600,7 +571,7 @@ static int dht_handle_get_peers(void* param, const uint8_t* transaction, uint32_
 	// get router nearest nodes
 	n = router_nearest(dht->router, info_hash, nodes, sizeof(nodes) / sizeof(nodes[0]));
 	n = dht_get_peers_reply_write(buffer, sizeof(buffer), transaction, bytes, dht->id, token, sizeof(token), nodes, n, addrs, peernum);
-	return dht_sendto(dht, buffer, n, &io->addr);
+	return udp_socket_sendto(&dht->udp, buffer, n, &io->addr);
 }
 
 static int dht_handle_get_peers_reply(void* param, int code, uint16_t transaction, const uint8_t id[20], const uint8_t* token, uint32_t bytes, const struct node_t* nodes, uint32_t count, const struct sockaddr_storage* peers, uint32_t peernum)
@@ -656,7 +627,7 @@ static int dht_handle_announce_peer(void* param, const uint8_t* transaction, uin
 
 	// reply
 	n = dht_announce_peer_reply_write(buffer, sizeof(buffer), transaction, bytes, dht->id);
-	return dht_sendto(dht, buffer, n, &io->addr);
+	return udp_socket_sendto(&dht->udp, buffer, n, &io->addr);
 }
 
 static int dht_handle_announce_peer_reply(void* param, int code, uint16_t transaction, const uint8_t id[20])
@@ -686,7 +657,7 @@ static int dht_schedule_ping(struct dht_t* dht, struct dht_ping_task_t* task)
 		if (task->retry++ < 4)
 		{
 			r = dht_ping_write(buffer, sizeof(buffer), task->task.transaction, dht->id);
-			r = dht_sendto(dht, buffer, r, &task->addr);
+			r = udp_socket_sendto(&dht->udp, buffer, r, &task->addr);
 			if (r > 0)
 			{
 				task->clock = dht->clock;
@@ -726,7 +697,7 @@ static int dht_schedule_find_node(struct dht_t* dht, struct dht_find_task_t* tas
 			if (node->retry++ < 4)
 			{
 				r = dht_find_node_write(buffer, sizeof(buffer), task->task.transaction, dht->id, task->id);
-				r = dht_sendto(dht, buffer, r, &node->addr);
+				r = udp_socket_sendto(&dht->udp, buffer, r, &node->addr);
 				if (r > 0)
 					node->clock = dht->clock;
 			}
@@ -775,7 +746,7 @@ static int dht_schedule_get_peers(struct dht_t* dht, struct dht_find_task_t* tas
 			if (node->retry++ < 4)
 			{
 				r = dht_get_peers_write(buffer, sizeof(buffer), task->task.transaction, dht->id, task->id);
-				r = dht_sendto(dht, buffer, r, &node->addr);
+				r = udp_socket_sendto(&dht->udp, buffer, r, &node->addr);
 				if (r > 0)
 					node->clock = dht->clock;
 			}
@@ -884,19 +855,22 @@ static int dht_select_read(struct dht_t* dht, struct dht_message_handler_t* hand
 {
 	int i, r;
 	fd_set fds;
+	socket_t udp[2];
 	struct timeval tv;
 	struct dht_io_t io;
 
 	FD_ZERO(&fds);
+	udp[0] = dht->udp.udp;
+	udp[1] = dht->udp.udp6;
 	for (i = 0; i < 2; i++)
 	{
-		if (socket_invalid != dht->udp[i])
-			FD_SET(dht->udp[i], &fds);
+		if (socket_invalid != udp[i])
+			FD_SET(udp[i], &fds);
 	}
 
 	tv.tv_sec = timeout / 1000;
 	tv.tv_usec = (timeout % 1000) * 1000;
-	r = socket_select_readfds((dht->udp[0] > dht->udp[1] ? dht->udp[0] : dht->udp[1]) + 1, &fds, timeout < 0 ? NULL : &tv);
+	r = socket_select_readfds((dht->udp.udp > dht->udp.udp6 ? dht->udp.udp: dht->udp.udp6) + 1, &fds, timeout < 0 ? NULL : &tv);
 	dht->clock = system_clock();
 
 	if (r <= 0) return r;
@@ -904,12 +878,12 @@ static int dht_select_read(struct dht_t* dht, struct dht_message_handler_t* hand
 	io.dht = dht;
 	for (i = 0; i < 2; i++)
 	{
-		if (!FD_ISSET(dht->udp[i], &fds))
+		if (!FD_ISSET(udp[i], &fds))
 			continue;
 
 		io.addrlen = sizeof(io.addr);
 		memset(&io.addr, 0, sizeof(io.addr));
-		r = socket_recvfrom(dht->udp[i], dht->buffer, sizeof(dht->buffer), 0, (struct sockaddr*)&io.addr, &io.addrlen);
+		r = socket_recvfrom(udp[i], dht->buffer, sizeof(dht->buffer), 0, (struct sockaddr*)&io.addr, &io.addrlen);
 		if (r <= 0)
 		{
 			app_log(LOG_ERROR, "%s socket_recvfrom ret: %d\n", 0==i ? "IPv4" : "IPv6", r);

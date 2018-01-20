@@ -463,6 +463,10 @@ static int peer_extended_handler(peer_t* peer, const uint8_t* ptr, uint32_t len)
 		handler.data = peer_metadata_ondata;
 		return peer_metadata_read(ptr + 1, len - 1, &handler, peer);
 	}
+	else if (ptr[0] == peer->base.ext.m.tex)
+	{
+		return peer_tex_read(ptr + 1, len - 1);
+	}
 	else
 	{
 		assert(0);
