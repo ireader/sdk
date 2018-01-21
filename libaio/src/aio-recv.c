@@ -43,40 +43,56 @@ static void aio_handler_udp(void* param, int code, size_t bytes, const struct so
 
 int aio_recv(struct aio_recv_t* recv, int timeout, aio_socket_t aio, void* buffer, size_t bytes, aio_onrecv onrecv, void* param)
 {
+	int r;
 	recv->param = param;
 	recv->u.onrecv = onrecv;
 	memset(&recv->timeout, 0, sizeof(recv->timeout));
 	if(timeout > 0)
 		aio_timeout_start(&recv->timeout, timeout, aio_timeout_tcp, recv);
-	return aio_socket_recv(aio, buffer, bytes, aio_handler_tcp, recv);
+	r = aio_socket_recv(aio, buffer, bytes, aio_handler_tcp, recv);
+	if (0 != r && timeout > 0)
+		aio_timeout_stop(&recv->timeout);
+	return r;
 }
 
 int aio_recv_v(struct aio_recv_t* recv, int timeout, aio_socket_t aio, socket_bufvec_t* vec, int n, aio_onrecv onrecv, void* param)
 {
+	int r;
 	recv->param = param;
 	recv->u.onrecv = onrecv;
 	memset(&recv->timeout, 0, sizeof(recv->timeout));
 	if (timeout > 0)
 		aio_timeout_start(&recv->timeout, timeout, aio_timeout_tcp, recv);
-	return aio_socket_recv_v(aio, vec, n, aio_handler_tcp, recv);
+	r = aio_socket_recv_v(aio, vec, n, aio_handler_tcp, recv);
+	if (0 != r && timeout > 0)
+		aio_timeout_stop(&recv->timeout);
+	return r;
 }
 
 int aio_recvfrom(struct aio_recv_t* recv, int timeout, aio_socket_t aio, void* buffer, size_t bytes, aio_onrecvfrom onrecv, void* param)
 {
+	int r;
 	recv->param = param;
 	recv->u.onrecvfrom = onrecv;
 	memset(&recv->timeout, 0, sizeof(recv->timeout));
 	if (timeout > 0)
 		aio_timeout_start(&recv->timeout, timeout, aio_timeout_udp, recv);
-	return aio_socket_recvfrom(aio, buffer, bytes, aio_handler_udp, recv);
+	r = aio_socket_recvfrom(aio, buffer, bytes, aio_handler_udp, recv);
+	if (0 != r && timeout > 0)
+		aio_timeout_stop(&recv->timeout);
+	return r;
 }
 
 int aio_recvfrom_v(struct aio_recv_t* recv, int timeout, aio_socket_t aio, socket_bufvec_t* vec, int n, aio_onrecvfrom onrecv, void* param)
 {
+	int r;
 	recv->param = param;
 	recv->u.onrecvfrom = onrecv;
 	memset(&recv->timeout, 0, sizeof(recv->timeout));
 	if (timeout > 0)
 		aio_timeout_start(&recv->timeout, timeout, aio_timeout_tcp, recv);
-	return aio_socket_recvfrom_v(aio, vec, n, aio_handler_udp, recv);
+	r = aio_socket_recvfrom_v(aio, vec, n, aio_handler_udp, recv);
+	if (0 != r && timeout > 0)
+		aio_timeout_stop(&recv->timeout);
+	return r;
 }
