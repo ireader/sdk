@@ -112,16 +112,15 @@ static void http_session_onsend(void* param, int code, size_t bytes)
 	session->vec_count = 0;
 	session->vec = NULL;
 	if (session->onsend)
-	{
 		r = session->onsend(session->onsendparam, code, bytes);
-		if (0 == r && 0 == code)
-		{
-			http_parser_clear(session->parser); // reset parser
-			if (session->remain > 0)
-				http_session_onrecv(session, 0, session->remain); // next round
-			else
-				r = aio_tcp_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER);
-		}
+
+	if (0 == r && 0 == code)
+	{
+		http_parser_clear(session->parser); // reset parser
+		if (session->remain > 0)
+			http_session_onrecv(session, 0, session->remain); // next round
+		else
+			r = aio_tcp_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER);
 	}
 
 	if (0 != code || 0 != r)
