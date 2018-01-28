@@ -1,6 +1,7 @@
 #include "http-server.h"
 #include "http-route.h"
 #include "sys/path.h"
+#include "utf8codec.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -53,14 +54,17 @@ static void http_onlist(void* param, const char* name, int dir)
 {
 	char item[PATH_MAX];
 	std::string* reply = (std::string*)param;
-	snprintf(item, sizeof(item), "<li><a href = \"%s\">%s</a></li>", name, name);
+
+	UTF8Encode utf8(name);
+
+	snprintf(item, sizeof(item), "<li><a href = \"%s%s\">%s</a></li>", (const char*)utf8, dir ? "/" : "", (const char*)utf8);
 	*reply += item;
 }
 
 extern "C" int http_list_dir(http_session_t* session, const char* path)
 {
 	std::string reply;
-	reply = "<html><head><title></title></head><body>";
+	reply = "<html><head><title></title><meta content=\"text/html; charset=utf-8\" http-equiv=\"content-type\"/></head><body>";
 	reply += "<ul>";
 	path_list(path, http_onlist, &reply);
 	reply += "</ul>";
