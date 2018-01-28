@@ -3,8 +3,11 @@
 
 #include <assert.h>
 #include <string.h>
-#include "cstringext.h"
 #include "unicode.h"
+
+#if defined(OS_WINDOWS)
+#define strcasecmp _stricmp
+#endif
 
 class UTF8Encode
 {
