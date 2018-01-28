@@ -9,14 +9,14 @@
 class UTF8Encode
 {
 public:
-	// from gb18030
-	UTF8Encode(const char* gb18030) : m_p(NULL)
+	// from mbcs
+	UTF8Encode(const char* mbcs) : m_p(NULL)
 	{
-		assert(gb18030);
+		assert(mbcs);
 		m_null[0] = 0;
-		int n = strlen(gb18030) + 1;
+		int n = strlen(mbcs) + 1;
 		wchar_t* wbuf = new wchar_t[n];
-		n = unicode_from_gb18030(gb18030, n, wbuf, sizeof(wchar_t)*n);
+		n = unicode_from_mbcs(mbcs, n, wbuf, sizeof(wchar_t)*n);
 		if(n > 0)
 		{
 			m_p = new char[(n + 1) * 4];
@@ -101,6 +101,18 @@ public:
 			delete m_pw;
 	}
 
+	const char* ToMBCS()
+	{
+		if (!m_pc && m_pw)
+		{
+			size_t n = wcslen(m_pw) + 1;
+			m_pc = new char[n * 4];
+			memset(m_pc, 0, n * 4);
+			unicode_to_mbcs(m_pw, n, m_pc, n * 4);
+		}
+		return m_pc;
+	}
+
 	const char* ToGB18030()
 	{
 		if(!m_pc && m_pw)
@@ -113,10 +125,10 @@ public:
 		return m_pc;
 	}
 
-	// to gb18030
+	// to mbcs
 	operator const char* ()
 	{
-		return ToGB18030();
+		return ToMBCS();
 	}
 
 	// to unicode
