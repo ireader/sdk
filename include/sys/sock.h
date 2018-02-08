@@ -137,6 +137,7 @@ static inline int socket_getdomain(IN socket_t sock, OUT int* domain); // get so
 
 // socket status
 // @return 0-ok, <0-socket_error(by socket_geterror())
+static inline int socket_setcork(IN socket_t sock, IN int cork); // 1-cork, 0-uncork
 static inline int socket_setnonblock(IN socket_t sock, IN int noblock); // non-block io, 0-block, 1-nonblock
 static inline int socket_setnondelay(IN socket_t sock, IN int nodelay); // non-delay io(Nagle Algorithm), 0-delay, 1-nodelay
 static inline int socket_getunread(IN socket_t sock, OUT size_t* size); // MSDN: Use to determine the amount of data pending in the network's input buffer that can be read from socket s
@@ -685,6 +686,18 @@ static inline int socket_setreuseaddr(IN socket_t sock, IN int enable)
 static inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable)
 {
 	return socket_getopt_bool(sock, SO_REUSEADDR, enable);
+}
+
+
+// 1-cork, 0-uncork
+static inline int socket_setcork(IN socket_t sock, IN int cork)
+{
+#if defined(OS_WINDOWS)
+	return -1;
+#else
+	//return setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &cork, sizeof(cork));
+	return setsockopt(sock, IPPROTO_TCP, TCP_CORK, &cork, sizeof(cork));
+#endif
 }
 
 static inline int socket_setnonblock(IN socket_t sock, IN int noblock)
