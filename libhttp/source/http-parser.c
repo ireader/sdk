@@ -345,7 +345,7 @@ static int http_parse_request_line(struct http_parser_t *http)
 				break;
 
 			default:
-				http->stateM = SM_REQUEST_VERSION;
+				http->stateM = SM_REQUEST_URI;
 				break;
 			}
 			break;
