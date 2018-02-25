@@ -1,6 +1,7 @@
 #include "http-server.h"
 #include "http-route.h"
 #include "sys/path.h"
+#include "urlcodec.h"
 #include "utf8codec.h"
 #include <stdlib.h>
 #include <string.h>
@@ -52,12 +53,14 @@ int path_list(const char* path, path_onfile onfile, void* param)
 
 static void http_onlist(void* param, const char* name, int dir)
 {
+	char link[PATH_MAX];
 	char item[PATH_MAX];
 	std::string* reply = (std::string*)param;
 
 	UTF8Encode utf8(name);
+	url_encode((const char*)utf8, -1, link, sizeof(link));
 
-	snprintf(item, sizeof(item), "<li><a href = \"%s%s\">%s</a></li>", (const char*)utf8, dir ? "/" : "", (const char*)utf8);
+	snprintf(item, sizeof(item), "<li><a href = \"%s%s\">%s</a></li>", link, dir ? "/" : "", (const char*)utf8);
 	*reply += item;
 }
 
