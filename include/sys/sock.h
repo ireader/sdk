@@ -157,6 +157,7 @@ static inline int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t sale
 static inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN size_t hostlen);
 static inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen, u_short port);
 static inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t salen);
+static inline int socket_addr_compare(const struct sockaddr* first, const struct sockaddr* second); // 0-equal, other-don't equal
 
 static inline void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len);
 static inline void socket_getbufvec(IN const socket_bufvec_t* vec, IN int idx, OUT void** ptr, OUT size_t* len);
@@ -693,6 +694,7 @@ static inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable)
 static inline int socket_setcork(IN socket_t sock, IN int cork)
 {
 #if defined(OS_WINDOWS)
+	(void)sock, (void)cork;
 	return -1;
 #else
 	//return setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &cork, sizeof(cork));
@@ -964,6 +966,25 @@ static inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN sock
 	}
 
 	return 0;
+}
+
+/// RECOMMAND: compare with struct sockaddr_storage
+/// @return 0-equal, other-don't equal
+static inline int socket_addr_compare(const struct sockaddr* sa, const struct sockaddr* sb)
+{
+	if(sa->sa_family != sb->sa_family)
+		return sa->sa_family - sb->sa_family;
+
+	switch (sa->sa_family)
+	{
+	case AF_INET:	return memcmp(sa, sb, sizeof(struct sockaddr_in));
+	case AF_INET6:	return memcmp(sa, sb, sizeof(struct sockaddr_in6));
+#if defined(OS_LINUX) // Windows build 17061
+	// https://blogs.msdn.microsoft.com/commandline/2017/12/19/af_unix-comes-to-windows/
+	case AF_UNIX:	return memcmp(sa, sb, sizeof(struct sockaddr_un));
+#endif
+	default:		return -1;
+	}
 }
 
 static inline void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN void* ptr, IN size_t len)
