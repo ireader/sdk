@@ -1,6 +1,16 @@
 #include "aio-send.h"
 #include <errno.h>
 
+#define AIO_START_TIMEOUT(aio, timeout, callback)	\
+	if (timeout > 0) {								\
+		aio_timeout_start(&aio->timeout, timeout, callback, aio); \
+	} else {}
+
+#define AIO_STOP_TIMEOUT_ON_FAILED(aio, r, timeout)	\
+	if (0 != r && timeout > 0) {					\
+		aio_timeout_stop(&aio->timeout);			\
+	} else {}
+
 static void aio_send_timeout(void* param)
 {
 	struct aio_send_t* send;
@@ -27,11 +37,9 @@ int aio_send(struct aio_send_t* send, int timeout, aio_socket_t aio, const void*
 	send->param = param;
 	send->onsend = onsend;
 	memset(&send->timeout, 0, sizeof(send->timeout));
-	if (timeout > 0)
-		aio_timeout_start(&send->timeout, timeout, aio_send_timeout, send);
+	AIO_START_TIMEOUT(send, timeout, aio_send_timeout);
 	r = aio_socket_send(aio, buffer, bytes, aio_send_handler, send);
-	if (0 != r && timeout > 0)
-		aio_timeout_stop(&send->timeout);
+	AIO_STOP_TIMEOUT_ON_FAILED(send, r, timeout);
 	return r;
 }
 
@@ -41,11 +49,9 @@ int aio_send_v(struct aio_send_t* send, int timeout, aio_socket_t aio, socket_bu
 	send->param = param;
 	send->onsend = onsend;
 	memset(&send->timeout, 0, sizeof(send->timeout));
-	if (timeout > 0)
-		aio_timeout_start(&send->timeout, timeout, aio_send_timeout, send);
+	AIO_START_TIMEOUT(send, timeout, aio_send_timeout);
 	r = aio_socket_send_v(aio, vec, n, aio_send_handler, send);
-	if (0 != r && timeout > 0)
-		aio_timeout_stop(&send->timeout);
+	AIO_STOP_TIMEOUT_ON_FAILED(send, r, timeout);
 	return r;
 }
 
@@ -55,11 +61,9 @@ int aio_sendto(struct aio_send_t* send, int timeout, aio_socket_t aio, const str
 	send->param = param;
 	send->onsend = onsend;
 	memset(&send->timeout, 0, sizeof(send->timeout));
-	if (timeout > 0)
-		aio_timeout_start(&send->timeout, timeout, aio_send_timeout, send);
+	AIO_START_TIMEOUT(send, timeout, aio_send_timeout);
 	r = aio_socket_sendto(aio, addr, addrlen, buffer, bytes, aio_send_handler, send);
-	if (0 != r && timeout > 0)
-		aio_timeout_stop(&send->timeout);
+	AIO_STOP_TIMEOUT_ON_FAILED(send, r, timeout);
 	return r;
 }
 
@@ -69,10 +73,8 @@ int aio_sendto_v(struct aio_send_t* send, int timeout, aio_socket_t aio, const s
 	send->param = param;
 	send->onsend = onsend;
 	memset(&send->timeout, 0, sizeof(send->timeout));
-	if (timeout > 0)
-		aio_timeout_start(&send->timeout, timeout, aio_send_timeout, send);
+	AIO_START_TIMEOUT(send, timeout, aio_send_timeout);
 	r = aio_socket_sendto_v(aio, addr, addrlen, vec, n, aio_send_handler, send);
-	if (0 != r && timeout > 0)
-		aio_timeout_stop(&send->timeout);
+	AIO_STOP_TIMEOUT_ON_FAILED(send, r, timeout);
 	return r;
 }
