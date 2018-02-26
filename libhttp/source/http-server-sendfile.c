@@ -24,7 +24,7 @@ struct http_sendfile_t
 	FILE* fp;
 	size_t capacity;
 	size_t bytes;
-	size_t sent;
+	int64_t sent;
 	int64_t total;
 	uint8_t* ptr;
 };
@@ -138,6 +138,7 @@ static int http_server_onsendfile(void* param, int code, size_t bytes)
 		}
 		
 		http_file_read(sendfile);
+		sendfile->session->vec = sendfile->session->vec5; // hack for send remain data
 		code = aio_tcp_transport_send(sendfile->session->transport, sendfile->ptr, sendfile->bytes);
 	}
 
@@ -160,7 +161,7 @@ static int http_session_range(struct http_sendfile_t* sendfile)
 	prange = http_server_get_header(sendfile->session, "Range");
 	if (prange)
 	{
-		n = http_header_range(prange, range, 3);
+		n = http_header_range(prange, range, sizeof(range)/sizeof(range[0]));
 		if (1 != n || 0 == sendfile->total)
 			return -1;
 

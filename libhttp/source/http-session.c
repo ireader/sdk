@@ -114,7 +114,8 @@ static void http_session_onsend(void* param, int code, size_t bytes)
 	if (session->onsend)
 		r = session->onsend(session->onsendparam, code, bytes);
 
-	if (0 == r && 0 == code)
+	// hack session->vec value for send multi-data
+	if (0 == r && 0 == code && NULL == session->vec)
 	{
 		http_parser_clear(session->parser); // reset parser
 		if (session->remain > 0)
