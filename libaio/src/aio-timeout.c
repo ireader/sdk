@@ -37,7 +37,7 @@ int aio_timeout_start(struct aio_timeout_t* timeout, int timeoutMS, void (*notif
 	timer->param = param;
 	timer->ontimeout = notify;
 	timer->expire = system_clock() + timeoutMS;
-	return twtimer_start(s_timer, timer, timer->expire - timeoutMS);
+	return twtimer_start(s_timer, timer);
 }
 
 int aio_timeout_stop(struct aio_timeout_t* timeout)

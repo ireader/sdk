@@ -27,7 +27,7 @@ int twtimer_process(time_wheel_t* tm, uint64_t clock);
 
 /// one-shoot timeout timer
 /// @return 0-ok, other-error
-int twtimer_start(time_wheel_t* tm, struct twtimer_t* timer, uint64_t clock);
+int twtimer_start(time_wheel_t* tm, struct twtimer_t* timer);
 /// @return  0-ok, other-timer can't be stop(timer have triggered or will be triggered)
 int twtimer_stop(time_wheel_t* tm, struct twtimer_t* timer);
 

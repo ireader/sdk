@@ -4,50 +4,70 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#define N 100000
+#define TIMER 1000
+#define TOTAL 10000000
+#define TIMER_RESOLUTION 64
 
 static uint64_t now;
-static int count = N;
+static time_wheel_t* wheel;
+static struct twtimer_t* s_timer;
+static int s_started = 0;
+static int s_stoped = 0;
+static int s_cancel = 0;
 
 static void ontimer(void* param)
 {
-	//struct timer_t* timer = (struct timer_t*)param;
-	//printf("[%d] expire: %llu, clock: %llu\n", N-count, timer->expire, now);
-	--count;
-	(void)param;
+	struct twtimer_t* timer = (struct twtimer_t*)param;
+	assert(timer->expire / TIMER_RESOLUTION <= now / TIMER_RESOLUTION);
+	timer->param = NULL;
+	++s_stoped;
+}
+
+static void timer_delete(void)
+{
+	struct twtimer_t* t;
+	t = &s_timer[now % TIMER];
+	if (t->param)
+	{
+		twtimer_stop(wheel, t);
+		t->param = NULL;
+		++s_stoped;
+		++s_cancel;
+	}
 }
 
 void timer_test(void)
 {
 	int i;
-	time_wheel_t* wheel;
-	struct twtimer_t* timer;
 
-	timer = (struct twtimer_t*)calloc(N, sizeof(*timer));
-	assert(timer);
+	s_timer = (struct twtimer_t*)calloc(TIMER, sizeof(*s_timer));
+	assert(s_timer);
 
 	now = time(NULL);
 	srand((int)now);
 	wheel = time_wheel_create(now);
 
-	for(i = 0; i < N; i++)
+	while (s_stoped < TOTAL)
 	{
-		timer[i].ontimeout = ontimer;
-		timer[i].param = &timer[i];
-		timer[i].expire = now + rand() % 4096;
-		twtimer_start(wheel, &timer[i], now);
+		for(i = 0; i < TIMER && s_started < TOTAL; i++)
+		{
+			if (s_timer[i].param)
+				continue;
+			
+			++s_started;
+			s_timer[i].ontimeout = ontimer;
+			s_timer[i].param = &s_timer[i];
+			s_timer[i].expire = now + rand() % 4096;
+			twtimer_start(wheel, &s_timer[i]);
+		}
 
 		twtimer_process(wheel, now);
 		now += rand() % 256;
+
+		timer_delete();
 	}
 
-	while (count > 0)
-	{
-		twtimer_process(wheel, now);
-		now += rand() % 256;
-	}
-
-	free(timer);
+	free(s_timer);
 	time_wheel_destroy(wheel);
-	printf("timer test ok.\n");
+	printf("timer(total: %d, cancel: %d) test ok.\n", TOTAL, s_cancel);
 }
