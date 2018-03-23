@@ -1,31 +1,41 @@
+#include "sys/poll.h"
 #include "utp.h"
 #include "utp-header.h"
 #include "utp-internal.h"
+#include "udp-buffer.h"
 #include "bsearch.h"
 
 #define UTP_WINDOW_SIZE 50000
+#define UTP_SOCKET_BUFFER (8*1024*1024)
 
 struct utp_t* utp_create(const uint16_t port, utp_onconnected onconnected, void* param)
 {
-	struct utp_t* utp;
-	utp = (struct utp_t*)calloc(1, sizeof(*utp));
-	if (!utp) return NULL;
+    struct utp_t* utp;
+    utp = (struct utp_t*)calloc(1, sizeof(*utp));
+    if (!utp) return NULL;
 
-	utp->onconnected = onconnected;
-	utp->param = param;
+    utp->ptr = udp_buffer_create(UTP_SOCKET_BUFFER);
+    utp->onconnected = onconnected;
+    utp->param = param;
 
-	if (0 != udp_socket_create(port, &utp->udp))
-	{
-		utp_destroy(utp);
-		utp = NULL;
-	}
+    if (!utp->ptr || 0 != udp_socket_create(port, &utp->udp))
+    {
+        utp_destroy(utp);
+        utp = NULL;
+    }
 
-	return utp;
+    return utp;
 }
 
 void utp_destroy(struct utp_t* utp)
 {
 	udp_socket_destroy(&utp->udp);
+
+    if (utp->ptr)
+    {
+        udp_socket_destroy(utp->ptr);
+        utp->ptr = NULL;
+    }
 
 	if (utp->sockets)
 	{
@@ -35,6 +45,36 @@ void utp_destroy(struct utp_t* utp)
 	}
 
 	free(utp);
+}
+
+int utp_process(struct utp_t* utp)
+{
+    int i, r;
+    struct pollfd fds[2];
+
+    fds[0].fd = utp->udp.udp;
+    fds[1].fd = utp->udp.udp6;
+    for (i = 0; i < 2; i++)
+    {
+        fds[i].events = POLLIN;
+        fds[i].revents = 0;
+    }
+
+    r = poll(fds, 2, timeout);
+    while (-1 == r && EINTR == errno)
+        r = poll(fds, 2, timeout);
+
+    if (r <= 0)
+        return r;
+
+    for(i = 0; i < 2;i++)
+    {
+        if (0 == fds[i].revents)
+            continue;
+        
+        utp_read(fds[i].fd);
+    }
+    return r;
 }
 
 int utp_input(struct utp_t* utp, const uint8_t* data, unsigned int bytes)
