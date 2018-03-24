@@ -16,6 +16,9 @@
     <Filter Include="3rd">
       <UniqueIdentifier>{e8d6c407-6181-4d45-8804-dafcad53190e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\utp">
+      <UniqueIdentifier>{87ec033b-254d-4215-9250-2bb40d99ca87}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\bencode.h">
@@ -83,6 +86,15 @@
     </ClInclude>
     <ClInclude Include="src\udp-socket.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utp\utp-delay.h">
+      <Filter>Source Files\utp</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utp\utp-window.h">
+      <Filter>Source Files\utp</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utp\utp-rtt.h">
+      <Filter>Source Files\utp</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

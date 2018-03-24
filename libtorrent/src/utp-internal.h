@@ -6,12 +6,9 @@
 #include "udp-socket.h"
 #include "heap.h"
 
-#define N_SEND_BUFFER (64 * 1024)
-#define N_RECV_BUFFER (64 * 1024)
-#define N_RECV_BITMASK 32
+#define N_MAX_BUFFER (64 * 1024)
+#define N_ACK_BITMASK 32
 
-#define UTP_RECV 0
-#define UTP_SEND 0
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
@@ -46,38 +43,47 @@ struct utp_ack_t
 	uint64_t clock;
 };
 
+struct utp_connection_t
+{
+	uint16_t id;
+	uint32_t timestamp;
+	uint32_t delay;
+	uint32_t window_size;
+	uint16_t seq_nr;
+	uint16_t ack_nr;
+
+	uint64_t clock; // last recv/send clock
+	struct utp_ack_t ackQ[N_ACK_BITMASK];
+};
+
 struct utp_socket_t
 {
 	int state;
 	struct utp_t* utp;
 	struct sockaddr_storage addr;
+	struct utp_connection_t send;
+	struct utp_connection_t recv;
 
-	struct
-	{
-		uint16_t connection;
-		uint16_t seq; // latest packet sn
-	} headers[2]; // 0-recv, 1-send
-
+	struct heap_t* delay_heap; // same size with delays
+	uint32_t delays[2000];
 	uint32_t base_delay;
+	uint32_t max_window;
+	uint32_t packet_size;
 
-	uint32_t peer_delay; // last packet delay
-	uint16_t peer_seq_nr; // peer sequential data sn
-	uint16_t peer_ack_nr; // the first unack sn
-	uint16_t packet_size;
+	//uint32_t peer_delay; // last packet delay
+	//uint16_t peer_seq_nr; // peer sequential data sn
+	//uint16_t peer_ack_nr; // the first unack sn
 
-	uint8_t wbuffer[N_SEND_BUFFER];
 	const uint8_t* data; // send data
 	unsigned int bytes; // send data length
 	unsigned int offset;
 
 	struct
 	{
-		uint8_t buffer[N_RECV_BUFFER];
+		uint8_t buffer[N_MAX_BUFFER];
 		unsigned int pos;
 		unsigned int len;
-	} rb; // recv ring buffer
-
-	struct utp_ack_t ackQ[2][N_RECV_BITMASK];
+	} rb, wb;
 	
 	struct utp_hander_t handler;
 	void* param;

@@ -88,40 +88,44 @@ int utp_input(struct utp_t* utp, const uint8_t* data, unsigned int bytes)
 
 	if (UTP_ST_SYN == header.type)
 	{
-		r = utp_input_connect(utp, &header);
+		r = utp_input_connect(utp, &header, addr);
 		if(0 == r)
 			r = utp_socket_ack(utp);
 	}
 	else
 	{
-		r = utp_input_msg(utp, &header, data + r, bytes - r);
+		r = utp_input_msg(utp, &header, addr, data + r, bytes - r);
 	}
 	
 	return r;
 }
 
-static int utp_input_connect(struct utp_t* utp, const struct utp_header_t* header)
+static int utp_input_connect(struct utp_t* utp, const struct utp_header_t* header, const struct sockaddr_storage* addr)
 {
 	int r, pos;
 	struct utp_socket_t* socket;
-	socket = (struct utp_socket_t*)malloc(sizeof(*socket));
+	socket = (struct utp_socket_t*)malloc(1, sizeof(*socket));
 	if (!socket) return ENOMEM;
 
 	socket->utp = utp;
-	socket->headers[UTP_RECV].connection = header->connection_id + 1;
-	socket->headers[UTP_RECV].timestamp = header->timestamp;
-	socket->headers[UTP_RECV].clock = (uint32_t)system_clock();
-	socket->headers[UTP_RECV].window = header->window_size;
-	socket->headers[UTP_RECV].nr.seq = header->seq_nr;
+	socket->recv.id = header->connection_id + 1;
+	socket->recv.timestamp = header->timestamp;
+	socket->recv.delay = header->delay;
+	socket->recv.window_size = header->window_size;
+	socket->recv.seq_nr = header->seq_nr;
+	socket->recv.ack_nr = header->ack_nr;
+	socket->recv.clock = (uint32_t)system_clock();
 
-	socket->headers[UTP_SEND].connection = header->connection_id;
-	socket->headers[UTP_SEND].timestamp = 0;
-	socket->headers[UTP_SEND].clock = 0;
-	socket->headers[UTP_SEND].window = UTP_WINDOW_SIZE;
-	socket->headers[UTP_SEND].nr.ack = rand(socket->headers[0].clock);
+	socket->send.id = header->connection_id;
+	socket->send.timestamp = 0;
+	socket->send.delay = 0;
+	socket->send.window_size = UTP_WINDOW_SIZE;
+	socket->send.seq_nr = 0;
+	socket->send.ack_nr = 0;
+	socket->send.clock = 0;
 
-	if (0 == utp_find_socket(utp, header->connection_id, &pos)
-		|| 0 == utp_find_socket(utp, header->connection_id + 1, &pos))
+	if (0 == utp_find_socket(utp, header->connection_id, addr, &pos)
+		|| 0 == utp_find_socket(utp, header->connection_id + 1, addr, &pos))
 	{
 		// connection id exist
 		free(socket);
@@ -139,13 +143,13 @@ static int utp_input_connect(struct utp_t* utp, const struct utp_header_t* heade
 	return r;
 }
 
-static int utp_input_msg(struct utp_t* utp, const struct utp_header_t* header)
+static int utp_input_msg(struct utp_t* utp, const struct utp_header_t* header, const struct sockaddr_storage* addr)
 {
 	int r, pos;
 	struct utp_socket_t* socket;
 
-	if (0 != utp_find_socket(utp, header->connection_id, &pos)
-		|| header->connection_id != utp->sockets[pos]->headers[UTP_RECV].connection)
+	if (0 != utp_find_socket(utp, header->connection_id, addr, &pos)
+		|| header->connection_id != utp->sockets[pos]->recv.id)
 	{
 		return 0; // ENOENT
 	}
@@ -171,14 +175,14 @@ static int utp_input_msg(struct utp_t* utp, const struct utp_header_t* header)
 static int utp_connection_compare(const uint16_t* connection, const struct utp_socket_t* socket)
 {
 	uint16_t v;
-	v = MIN(socket->headers[UTP_RECV].connection, socket->headers[UTP_SEND].connection);
-	assert(v + 1 == MAX(socket->headers[UTP_RECV].connection, socket->headers[UTP_SEND].connection));
-	if (connection == v || connection == v + 1)
+	v = MIN(socket->recv.id, socket->send.id);
+	assert(v + 1 == MAX(socket->recv.id, socket->send.id));
+	if (*connection == v || *connection == v + 1)
 		return 0;	
-	return connection - v;
+	return *connection - v;
 }
 
-static int utp_find_socket(struct utp_t* utp, uint16_t connection, int* pos)
+static int utp_find_socket(struct utp_t* utp, uint16_t connection, const struct sockaddr_storage* addr, int* pos)
 {
 	int r;
 	struct utp_socket_t* socket;
@@ -196,11 +200,11 @@ static int utp_insert_socket(struct utp_t* utp, struct utp_socket_t* socket, int
 	if (utp->count >= utp->capacity)
 	{
 		void* ptr;
-		ptr = realloc(utp->sockets, sizeof(utp->sockets[0]) * (utp->capacity + 100));
+		ptr = realloc(utp->sockets, sizeof(utp->sockets[0]) * (utp->capacity + 50));
 		if (!ptr) return ENOMEM;
 
 		utp->sockets = (struct utp_socket_t**)ptr;
-		utp->capacity += 100;
+		utp->capacity += 50;
 	}
 
 	if (pos < utp->count)

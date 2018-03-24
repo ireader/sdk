@@ -25,12 +25,15 @@ struct utp_hander_t
 struct utp_t* utp_create(const uint16_t port, utp_onconnected onconnected, void* param);
 void utp_destroy(struct utp_t* utp);
 
-int utp_input(struct utp_t* utp, const uint8_t* data, unsigned int bytes);
+int utp_input(struct utp_t* utp, const uint8_t* data, unsigned int bytes, const struct sockaddr_storage* addr);
 
 struct utp_socket_t* utp_socket_create(struct utp_t* utp);
 void utp_socket_destroy(struct utp_socket_t* socket);
 
 void utp_socket_sethandler(struct utp_socket_t* socket, struct utp_hander_t* handler, void* param);
+
+/// uTP bind(server mode)
+int utp_socket_bind(struct utp_socket_t* socket, const struct sockaddr_storage* addr);
 
 /// uTP syn
 int utp_socket_connect(struct utp_socket_t* socket, const struct sockaddr_storage* addr);

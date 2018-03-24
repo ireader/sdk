@@ -172,6 +172,9 @@
     <ClInclude Include="src\tracker-internal.h" />
     <ClInclude Include="src\udp-socket.h" />
     <ClInclude Include="src\utp-internal.h" />
+    <ClInclude Include="src\utp\utp-delay.h" />
+    <ClInclude Include="src\utp\utp-rtt.h" />
+    <ClInclude Include="src\utp\utp-window.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\app-log.c" />

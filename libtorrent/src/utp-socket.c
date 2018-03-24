@@ -7,7 +7,7 @@
 struct utp_socket_t* utp_socket_create(struct utp_t* utp)
 {
 	struct utp_socket_t* socket;
-	socket = (struct utp_socket_t*)malloc(sizeof(*socket));
+	socket = (struct utp_socket_t*)calloc(1, sizeof(*socket));
 	if (!socket) return ENOMEM;
 
 	socket->utp = utp;
@@ -42,12 +42,12 @@ int utp_socket_connect(struct utp_socket_t* socket, const struct sockaddr_storag
 	do
 	{
 		connection = (uint16_t)rand();
-		socket->headers[UTP_RECV].connection = connection;
-		socket->headers[UTP_SEND].connection = connection + 1;
+		socket->recv.id = connection;
+		socket->send.id = connection + 1;
 	} while (0 != utp_insert_socket(socket->utp, socket));
 
-	socket->headers[UTP_RECV].seq = 0;
-	socket->headers[UTP_SEND].seq = (uint16_t)rand(); // The sequence number is initialized to 1
+	socket->recv.seq_nr = 0;
+	socket->send.seq_nr = (uint16_t)rand(); // The sequence number is initialized to 1
 	socket->peer_ack_nr = socket->headers[UTP_SEND].seq;
 	socket->peer_delay = 0;
 
