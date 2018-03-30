@@ -1,4 +1,6 @@
 #include "aio-recv.h"
+#include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 
 #define AIO_START_TIMEOUT(aio, timeout, callback)	\
