@@ -21,7 +21,7 @@ SOURCE_PATHS = src
 SOURCE_FILES = $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.cpp))
 SOURCE_FILES += $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.c))
 SOURCE_FILES += $(ROOT)/source/port/aio-socket-epoll.c
-SOURCE_FILES += $(ROOT)/source/timer.c
+SOURCE_FILES += $(ROOT)/source/twtimer.c
 
 #-----------------------------Library--------------------------------
 #
