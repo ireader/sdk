@@ -23,7 +23,7 @@ static void ontimer(void* param)
 	++s_stoped;
 }
 
-static void timer_delete(void)
+static void timer_stop(void)
 {
 	struct twtimer_t* t;
 	t = &s_timer[now % TIMER];
@@ -64,7 +64,7 @@ void timer_test(void)
 		twtimer_process(wheel, now);
 		now += rand() % 256;
 
-		timer_delete();
+		timer_stop();
 	}
 
 	free(s_timer);
