@@ -3,7 +3,7 @@
 #include "sys/thread.h"
 #include "sys/system.h"
 #include "sys/locker.h"
-#include "sys/semaphore.h"
+#include "sys/sema.h"
 #include "thread-pool.h"
 #include "list.h"
 #include <errno.h>
@@ -18,8 +18,8 @@ typedef struct _task_queue_context_t
 	thread_pool_t pool;
 
 	pthread_t thread_scheduler;
-	semaphore_t sema_worker;
-	semaphore_t sema_request;
+	sema_t sema_worker;
+	sema_t sema_request;
 
 	locker_t locker;
 	struct list_head tasks;
@@ -142,8 +142,8 @@ static void task_queue_relase(task_queue_context_t* taskQ)
 {
 	if(0 == atomic_decrement32(&taskQ->ref))
 	{
-		semaphore_destroy(&taskQ->sema_request);
-		semaphore_destroy(&taskQ->sema_worker);
+		sema_destroy(&taskQ->sema_request);
+		sema_destroy(&taskQ->sema_worker);
 		locker_destroy(&taskQ->locker);
 
 		task_clean(taskQ);
@@ -167,7 +167,7 @@ static void task_action(void* param)
 	task_recycle(taskQ, task); // recycle task
 	locker_unlock(&taskQ->locker);
 
-	semaphore_post(&taskQ->sema_worker); // add worker
+	sema_post(&taskQ->sema_worker); // add worker
 	task_queue_relase(taskQ);
 }
 
@@ -180,8 +180,8 @@ static int STDCALL task_queue_scheduler(void* param)
 	taskQ = (task_queue_context_t*)param;
 	while(taskQ->running)
 	{
-		r = semaphore_wait(&taskQ->sema_request);
-		r = semaphore_wait(&taskQ->sema_worker);
+		r = sema_wait(&taskQ->sema_request);
+		r = sema_wait(&taskQ->sema_worker);
 		if(0 == r && taskQ->running)
 		{
 			locker_lock(&taskQ->locker);
@@ -223,7 +223,7 @@ int task_queue_post(task_queue_t q, task_proc proc, void* param)
 	task_push(taskQ, task);
 	locker_unlock(&taskQ->locker);
 
-	return semaphore_post(&taskQ->sema_request);
+	return sema_post(&taskQ->sema_request);
 }
 
 task_queue_t task_queue_create(thread_pool_t pool, int maxWorker)
@@ -245,11 +245,11 @@ task_queue_t task_queue_create(thread_pool_t pool, int maxWorker)
 		assert(0 == r);
 
 		// create worker semaphore
-		r = semaphore_create(&taskQ->sema_worker, NULL, maxWorker);
+		r = sema_create(&taskQ->sema_worker, NULL, maxWorker);
 		assert(0 == r);
 
 		// create request semaphore
-		r = semaphore_create(&taskQ->sema_request, NULL, 0);
+		r = sema_create(&taskQ->sema_request, NULL, 0);
 		assert(0 == r);
 
 		// create schedule thread
@@ -266,8 +266,8 @@ int task_queue_destroy(task_queue_t q)
 
 	// notify exit
 	taskQ->running = 0;
-	semaphore_post(&taskQ->sema_request);
-	semaphore_post(&taskQ->sema_worker);
+	sema_post(&taskQ->sema_request);
+	sema_post(&taskQ->sema_worker);
 	thread_destroy(taskQ->thread_scheduler);
 
 	task_queue_relase(taskQ);
