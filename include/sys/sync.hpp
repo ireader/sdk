@@ -3,7 +3,7 @@
 
 #include "locker.h"
 #include "event.h"
-#include "semaphore.h"
+#include "sema.h"
 #include <stdio.h>
 
 //////////////////////////////////////////////////////////////////////////
@@ -125,7 +125,7 @@ class CSemaphore
 public:
 	CSemaphore(int initValue)
 	{
-		m_err = semaphore_create(&m_sema, NULL, initValue);
+		m_err = sema_create(&m_sema, NULL, initValue);
 	}
 
 	CSemaphore(const char* name)
@@ -135,27 +135,27 @@ public:
 
 	~CSemaphore()
 	{
-		semaphore_destroy(&m_sema);
+		sema_destroy(&m_sema);
 	}
 
 	int Post()
 	{
-		return semaphore_post(&m_sema);
+		return sema_post(&m_sema);
 	}
 
 	int Wait()
 	{
-		return semaphore_wait(&m_sema);
+		return sema_wait(&m_sema);
 	}
 
 	int TimeWait(int timeout)
 	{
-		return semaphore_timewait(&m_sema, timeout);
+		return sema_timewait(&m_sema, timeout);
 	}
 
 	int Trywait()
 	{
-		return semaphore_trywait(&m_sema);
+		return sema_trywait(&m_sema);
 	}
 
 	int CheckError() const
@@ -166,13 +166,13 @@ public:
 private:
 	int Open(const char* name)
 	{
-		int r = semaphore_open(&m_sema, name);
+		int r = sema_open(&m_sema, name);
 		if (0 != r)
 		{
-			r = semaphore_create(&m_sema, name, 1);
+			r = sema_create(&m_sema, name, 1);
 			if (0 == r)
 			{
-				r = semaphore_open(&m_sema, name);
+				r = sema_open(&m_sema, name);
 			}
 		}
 		return r;
@@ -180,7 +180,7 @@ private:
 
 private:
 	int m_err;
-	semaphore_t m_sema;
+	sema_t m_sema;
 };
 
 #endif /* !_platform_sync_hpp_ */

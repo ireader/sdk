@@ -5,7 +5,7 @@
 
 #if defined(OS_WINDOWS)
 #include <Windows.h>
-typedef HANDLE semaphore_t;
+typedef HANDLE sema_t;
 
 #else
 #include <time.h>
@@ -18,7 +18,7 @@ typedef struct
 {
 	sem_t*	semaphore;
 	char	name[256];
-} semaphore_t;
+} sema_t;
 
 #ifndef WAIT_TIMEOUT
 #define WAIT_TIMEOUT		ETIMEDOUT
@@ -30,44 +30,44 @@ typedef struct
 /// Named semaphores(process-shared semaphore)/Unnamed semaphores(thread-shared semaphore)
 ///	multi-processor: yes
 //-------------------------------------------------------------------------------------
-// int semaphore_create(semaphore_t* semaphore, const char* name, long value);
-// int semaphore_open(semaphore_t* semaphore, const char* name);
-// int semaphore_wait(semaphore_t* semaphore);
-// int semaphore_timewait(semaphore_t* semaphore, int timeout);
-// int semaphore_trywait(semaphore_t* semaphore);
-// int semaphore_post(semaphore_t* semaphore);
-// int semaphore_destroy(semaphore_t* semaphore);
+// int sema_create(semaphore_t* semaphore, const char* name, long value);
+// int sema_open(semaphore_t* semaphore, const char* name);
+// int sema_wait(semaphore_t* semaphore);
+// int sema_timewait(semaphore_t* semaphore, int timeout);
+// int sema_trywait(semaphore_t* semaphore);
+// int sema_post(semaphore_t* semaphore);
+// int sema_destroy(semaphore_t* semaphore);
 //-------------------------------------------------------------------------------------
 
 // Windows: the name can contain any character except the backslash
 // 0-success, other-error
-static inline int semaphore_create(semaphore_t* semaphore, const char* name, long value)
+static inline int sema_create(sema_t* sema, const char* name, long value)
 {
 #if defined(OS_WINDOWS)
 	HANDLE handle = CreateSemaphoreA(NULL, value, 0x7FFFFFFF, name);
 	if(NULL == handle)
 		return GetLastError();
-	*semaphore = handle;
+	*sema = handle;
 	return 0;
 #else
-	memset(semaphore->name, 0, sizeof(semaphore->name));
+	memset(sema->name, 0, sizeof(sema->name));
 	if(name && *name)
 	{
 		// Named semaphores(process-shared semaphore)
-		semaphore->semaphore = sem_open(name, O_CREAT|O_EXCL|O_RDWR, 0777, value);
-		if(SEM_FAILED == semaphore->semaphore)
+        sema->semaphore = sem_open(name, O_CREAT|O_EXCL|O_RDWR, 0777, value);
+		if(SEM_FAILED == sema->semaphore)
 			return errno;
-		strncpy(semaphore->name, name, sizeof(semaphore->name)-1);
+		strncpy(sema->name, name, sizeof(sema->name)-1);
 		return 0;
 	}
 #ifndef OS_MAC
 	else
 	{
 		// Unnamed semaphores (memory-based semaphores, thread-shared semaphore)
-		semaphore->semaphore = (sem_t*)malloc(sizeof(sem_t));
-		if(!semaphore->semaphore)
+        sema->semaphore = (sem_t*)malloc(sizeof(sem_t));
+		if(!sema->semaphore)
 			return ENOMEM;
-		return 0==sem_init(semaphore->semaphore, 0, value) ? 0 : errno;
+		return 0==sem_init(sema->semaphore, 0, value) ? 0 : errno;
 	}
 #endif
 	// __APPLE__ / __MACH__
@@ -78,44 +78,44 @@ static inline int semaphore_create(semaphore_t* semaphore, const char* name, lon
 }
 
 // 0-success, other-error
-static inline int semaphore_open(semaphore_t* semaphore, const char* name)
+static inline int sema_open(sema_t* sema, const char* name)
 {
 	if(!name || !*name)
 		return EINVAL;
 
 #if defined(OS_WINDOWS)
-	*semaphore = OpenSemaphoreA(SEMAPHORE_ALL_ACCESS, FALSE, name);
-	return *semaphore ? 0 : GetLastError();
+	*sema = OpenSemaphoreA(SEMAPHORE_ALL_ACCESS, FALSE, name);
+	return *sema ? 0 : GetLastError();
 #else
-	semaphore->semaphore = sem_open(name, 0);
-	if(SEM_FAILED == semaphore->semaphore)
+    sema->semaphore = sem_open(name, 0);
+	if(SEM_FAILED == sema->semaphore)
 		return errno;
 
-	memset(semaphore->name, 0, sizeof(semaphore->name));
+	memset(sema->name, 0, sizeof(sema->name));
 	return 0;
 #endif
 }
 
 // 0-success, other-error
-static inline int semaphore_wait(semaphore_t* semaphore)
+static inline int sema_wait(sema_t* sema)
 {
 #if defined(OS_WINDOWS)
-	DWORD r = WaitForSingleObjectEx(*semaphore, INFINITE, TRUE);
+	DWORD r = WaitForSingleObjectEx(*sema, INFINITE, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
 #else
-	return sem_wait(semaphore->semaphore);
+	return sem_wait(sema->semaphore);
 #endif
 }
 
 #if defined(OS_WINDOWS)
 // 0-success, WAIT_TIMEOUT-timeout, other-error
-static inline int semaphore_timewait(semaphore_t* semaphore, int timeout)
+static inline int sema_timewait(sema_t* sema, int timeout)
 {
-	DWORD r = WaitForSingleObjectEx(*semaphore, timeout, TRUE);
+	DWORD r = WaitForSingleObjectEx(*sema, timeout, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
 }
 #elif defined(OS_LINUX)
-static inline int semaphore_timewait(semaphore_t* semaphore, int timeout)
+static inline int sema_timewait(sema_t* sema, int timeout)
 {
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
@@ -125,52 +125,52 @@ static inline int semaphore_timewait(semaphore_t* semaphore, int timeout)
 	// tv_nsec >= 1000000000 ==> EINVAL
 	ts.tv_sec += ts.tv_nsec / 1000000000;
 	ts.tv_nsec %= 1000000000;
-	return -1==sem_timedwait(semaphore->semaphore, &ts) ? errno : 0;
+	return -1==sem_timedwait(sema->semaphore, &ts) ? errno : 0;
 }
 #endif
 
 // 0-success, other-error
-static inline int semaphore_trywait(semaphore_t* semaphore)
+static inline int sema_trywait(sema_t* sema)
 {
 #if defined(OS_WINDOWS)
-	DWORD r = WaitForSingleObjectEx(*semaphore, 0, TRUE);
+	DWORD r = WaitForSingleObjectEx(*sema, 0, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
 #else
-	return sem_trywait(semaphore->semaphore);
+	return sem_trywait(sema->semaphore);
 #endif
 }
 
 // 0-success, other-error
-static inline int semaphore_post(semaphore_t* semaphore)
+static inline int sema_post(sema_t* sema)
 {
 #if defined(OS_WINDOWS)
 	long r;
-	return ReleaseSemaphore(*semaphore, 1, &r)?0:GetLastError();
+	return ReleaseSemaphore(*sema, 1, &r)?0:GetLastError();
 #else
-	return sem_post(semaphore->semaphore);
+	return sem_post(sema->semaphore);
 #endif
 }
 
 // 0-success, other-error
-static inline int semaphore_destroy(semaphore_t* semaphore)
+static inline int sema_destroy(sema_t* sema)
 {
 #if defined(OS_WINDOWS)
-	return CloseHandle(*semaphore)?0:GetLastError();
+	return CloseHandle(*sema)?0:GetLastError();
 #else
 	int r = -1;
-	if(semaphore->name[0])
+	if(sema->name[0])
 	{
 		// sem_open
-		r = sem_close(semaphore->semaphore);
+		r = sem_close(sema->semaphore);
 		if(0 == r)
-			r = sem_unlink(semaphore->name);
+			r = sem_unlink(sema->name);
 	}
 #ifndef OS_MAC
 	else
 	{
 		// sem_init
-		r = sem_destroy(semaphore->semaphore);
-		free(semaphore->semaphore);
+		r = sem_destroy(sema->semaphore);
+		free(sema->semaphore);
 	}
 #endif
 	return r;
