@@ -1,4 +1,4 @@
-#include "sys/poll.h"
+#include "sys/pollfd.h"
 #include "utp.h"
 #include "utp-header.h"
 #include "utp-internal.h"
@@ -8,14 +8,14 @@
 #define UTP_WINDOW_SIZE 50000
 #define UTP_SOCKET_BUFFER (8*1024*1024)
 
-struct utp_t* utp_create(const uint16_t port, utp_onconnected onconnected, void* param)
+struct utp_t* utp_create(const uint16_t port, struct utp_hander_t* handler, void* param)
 {
     struct utp_t* utp;
     utp = (struct utp_t*)calloc(1, sizeof(*utp));
     if (!utp) return NULL;
 
     utp->ptr = udp_buffer_create(UTP_SOCKET_BUFFER);
-    utp->onconnected = onconnected;
+    memcpy(&utp->handler, handler, sizeof(utp->handler));
     utp->param = param;
 
     if (!utp->ptr || 0 != udp_socket_create(port, &utp->udp))
@@ -24,60 +24,29 @@ struct utp_t* utp_create(const uint16_t port, utp_onconnected onconnected, void*
         utp = NULL;
     }
 
+    darray_init(&utp->sockets, sizeof(struct utp_socket_t*), 8);
     return utp;
 }
 
 void utp_destroy(struct utp_t* utp)
 {
+    int i;
 	udp_socket_destroy(&utp->udp);
 
     if (utp->ptr)
     {
-        udp_socket_destroy(utp->ptr);
+        udp_buffer_destroy(utp->ptr);
         utp->ptr = NULL;
     }
 
-	if (utp->sockets)
-	{
-		assert(utp->capacity > 0);
-		free(utp->sockets);
-		utp->sockets = NULL;
-	}
+    for (i = 0; i < darray_count(&utp->sockets); i++)
+        free(darray_get(&utp->sockets, i));
+    darray_free(&utp->sockets);
 
 	free(utp);
 }
 
-int utp_process(struct utp_t* utp)
-{
-    int i, r;
-    struct pollfd fds[2];
-
-    fds[0].fd = utp->udp.udp;
-    fds[1].fd = utp->udp.udp6;
-    for (i = 0; i < 2; i++)
-    {
-        fds[i].events = POLLIN;
-        fds[i].revents = 0;
-    }
-
-    r = poll(fds, 2, timeout);
-    while (-1 == r && EINTR == errno)
-        r = poll(fds, 2, timeout);
-
-    if (r <= 0)
-        return r;
-
-    for(i = 0; i < 2;i++)
-    {
-        if (0 == fds[i].revents)
-            continue;
-        
-        utp_read(fds[i].fd);
-    }
-    return r;
-}
-
-int utp_input(struct utp_t* utp, const uint8_t* data, unsigned int bytes)
+int utp_input(struct utp_t* utp, const uint8_t* data, unsigned int bytes, const struct sockaddr_storage* addr)
 {
 	int r;
 	struct utp_header_t header;
@@ -90,7 +59,7 @@ int utp_input(struct utp_t* utp, const uint8_t* data, unsigned int bytes)
 	{
 		r = utp_input_connect(utp, &header, addr);
 		if(0 == r)
-			r = utp_socket_ack(utp);
+			r = utp_socket_ack(utp); // auto ack connection
 	}
 	else
 	{
@@ -106,6 +75,8 @@ static int utp_input_connect(struct utp_t* utp, const struct utp_header_t* heade
 	struct utp_socket_t* socket;
 	socket = (struct utp_socket_t*)malloc(1, sizeof(*socket));
 	if (!socket) return ENOMEM;
+
+    // TODO: check blacklist
 
 	socket->utp = utp;
 	socket->recv.id = header->connection_id + 1;
@@ -132,15 +103,8 @@ static int utp_input_connect(struct utp_t* utp, const struct utp_header_t* heade
 		return 0; // EEXIST;
 	}
 
-	utp_insert_socket(utp, socket, pos);
-
-	r = utp->onconnected(utp->param, socket);
-	if (0 != r)
-	{
-		free(socket);
-	}
-
-	return r;
+    r = darray_push_back(&utp->sockets, socket, 1);
+    return r;
 }
 
 static int utp_input_msg(struct utp_t* utp, const struct utp_header_t* header, const struct sockaddr_storage* addr)
@@ -154,12 +118,13 @@ static int utp_input_msg(struct utp_t* utp, const struct utp_header_t* header, c
 		return 0; // ENOENT
 	}
 
-	socket = utp->sockets[pos];
+	socket = darray_get(&utp->sockets, pos);
 	switch (header->type)
 	{
 	case UTP_ST_RESET:
 	case UTP_ST_FIN:
-		utp_remove_socket(utp, pos);
+        free(socket);
+        darray_erase(&utp->sockets, pos);
 		socket->handler.ondestroy(socket->param);
 		utp_socket_destroy(socket);
 		break;
@@ -187,39 +152,10 @@ static int utp_find_socket(struct utp_t* utp, uint16_t connection, const struct 
 	int r;
 	struct utp_socket_t* socket;
 
-	r = bsearch2(connection, utp->sockets, &socket, utp->count, sizeof(utp->sockets[0]), utp_connection_compare);
+	r = bsearch2(connection, utp->sockets.elements, &socket, utp->sockets.count, sizeof(struct utp_socket_t*), utp_connection_compare);
 	if (0 == r)
 	{
-		pos = socket - utp->sockets;
+		pos = socket - (struct utp_socket_t*)utp->sockets.elements;
 	}
 	return r;
-}
-
-static int utp_insert_socket(struct utp_t* utp, struct utp_socket_t* socket, int pos)
-{
-	if (utp->count >= utp->capacity)
-	{
-		void* ptr;
-		ptr = realloc(utp->sockets, sizeof(utp->sockets[0]) * (utp->capacity + 50));
-		if (!ptr) return ENOMEM;
-
-		utp->sockets = (struct utp_socket_t**)ptr;
-		utp->capacity += 50;
-	}
-
-	if (pos < utp->count)
-		memmove(utp->sockets + pos + 1, utp->sockets + pos, (utp->count - pos) * sizeof(utp->sockets[0]));
-
-	utp->sockets[pos] = socket;
-	utp->count += 1;
-	return 0;
-}
-
-static int utp_remove_socket(struct utp_t* utp, int pos)
-{
-	if (pos < utp->count)
-		memmove(utp->sockets + pos, utp->sockets + pos + 1, (utp->count - pos - 1) * sizeof(utp->sockets[0]));
-
-	utp->count -= 1;
-	return 0;
 }

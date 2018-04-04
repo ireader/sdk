@@ -4,6 +4,8 @@
 #include "utp.h"
 #include "sockutil.h"
 #include "udp-socket.h"
+#include "udp-buffer.h"
+#include "darray.h"
 #include "heap.h"
 
 #define N_MAX_BUFFER (64 * 1024)
@@ -25,13 +27,12 @@ struct utp_t
 {
 	uint16_t port;
 	struct udp_socket_t udp;
+    struct udp_buffer_t* ptr;
 
-	utp_onconnected onconnected;
+    struct utp_hander_t handler;
 	void* param;
 
-	struct utp_socket_t** sockets;
-	int capacity;
-	int count;
+    struct darray_t sockets;
 };
 
 struct utp_ack_t
