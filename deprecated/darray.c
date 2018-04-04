@@ -4,6 +4,9 @@
 #include <assert.h>
 #include <errno.h>
 
+#define SIZE(n)      (arr->size * (n))
+#define ADDRESS(idx) ((char*)arr->elements + SIZE(idx))
+
 void darray_init(struct darray_t* arr, int size, int capacity)
 {
     arr->count = 0;
@@ -33,11 +36,21 @@ void darray_free(struct darray_t* arr)
     arr->count = 0;
 }
 
-int darray_push(struct darray_t* arr, const void* items, int count)
+int darray_erase(struct darray_t* arr, int index)
+{
+    if (index < 0 || index >= arr->count)
+        return ENOENT;
+
+    memmove(ADDRESS(index), ADDRESS(index + 1), SIZE(arr->count - 1));
+    arr->count -= 1;
+    return 0;
+}
+
+int darray_insert(struct darray_t* arr, int before, const void* items, int count)
 {
     void* p;
 
-    if (!items || count < 1)
+    if (!items || count < 1 || before < 0 || before > arr->count)
         return EINVAL;
 
     if (arr->count + count > arr->capacity)
@@ -49,22 +62,31 @@ int darray_push(struct darray_t* arr, const void* items, int count)
         arr->capacity = arr->count + count + count / 2;
     }
 
-    memcpy((char*)arr->elements + arr->count * arr->size, items, count * arr->size);
+    memmove(ADDRESS(before + count), ADDRESS(before), SIZE(arr->count - before));
+    memcpy(ADDRESS(before), items, SIZE(count));
     arr->count += count;
     return 0;
 }
 
-int darray_pop(struct darray_t* arr)
+int darray_push_back(struct darray_t* arr, const void* items, int count)
 {
-    if (arr->count < 1)
-        return ENOENT;
+    return darray_insert(arr, arr->count, items, count);
+}
 
-    memmove(arr->elements, (char*)arr->elements + arr->size, arr->count - 1);
-    arr->count -= 1;
-    return 0;
+int darray_pop_front(struct darray_t* arr)
+{
+    return darray_erase(arr, 0);
 }
 
 int darray_count(struct darray_t* arr)
 {
     return arr->count;
+}
+
+void* darray_get(struct darray_t* arr, int index)
+{
+    if (index < 0 || index >= arr->count)
+        return NULL;
+
+    return (char*)arr->elements + (arr->size * index);
 }

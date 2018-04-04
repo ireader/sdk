@@ -19,9 +19,14 @@ struct darray_t
 void darray_init(struct darray_t* arr, int size, int capacity);
 void darray_free(struct darray_t* arr);
 
-int darray_push(struct darray_t* arr, const void* items, int count);
-int darray_pop(struct darray_t* arr);
+/// @param[in] index delete item at index
+int darray_erase(struct darray_t* arr, int index);
+/// @param[in] before insert items before index
+int darray_insert(struct darray_t* arr, int before, const void* items, int count);
+int darray_push_back(struct darray_t* arr, const void* items, int count);
+int darray_pop_front(struct darray_t* arr);
 
 int darray_count(struct darray_t* arr);
+void* darray_get(struct darray_t* arr, int index);
 
 #endif /* !_darray_h_ */
