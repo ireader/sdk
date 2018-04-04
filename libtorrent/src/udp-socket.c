@@ -73,3 +73,37 @@ int udp_socket_sendto(const struct udp_socket_t* s, const void* buf, size_t len,
 		return -1;
 	}
 }
+
+int udp_socket_readfrom(const struct udp_socket_t* s, int timeout, void* buf, size_t len, struct sockaddr_storage* addr)
+{
+    int i, r;
+    socklen_t addrlen;
+    struct pollfd fds[2];
+
+    fds[0].fd = s->udp;
+    fds[1].fd = s->udp6;
+    for (i = 0; i < 2; i++)
+    {
+        fds[i].events = POLLIN;
+        fds[i].revents = 0;
+    }
+
+    r = poll(fds, 2, timeout);
+    while (-1 == r && EINTR == errno)
+        r = poll(fds, 2, timeout);
+
+    if (r <= 0)
+        return r;
+
+    for (i = 0; i < 2; i++)
+    {
+        if (0 == fds[i].revents)
+            continue;
+
+        addrlen = sizeof(*addr);
+        r = socket_recvfrom(fds[i].fd, buf, len, 0, addr, &addrlen);
+        break;
+    }
+
+    return r;
+}
