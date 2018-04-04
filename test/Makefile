@@ -46,7 +46,7 @@ else
 LIBPATHS +=
 endif
 
-LIBS = rt pthread dl bsd aio
+LIBS = rt pthread dl aio
 
 STATIC_LIBS = $(ROOT)/libhttp/$(BUILD).$(PLATFORM)/libhttp.a
 
