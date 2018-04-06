@@ -13,19 +13,9 @@ struct utp_delay_t
 	int num;
 };
 
-static inline struct utp_delay_t* utp_delay_create()
+static inline void utp_delay_init(struct utp_delay_t* delay)
 {
-	struct utp_delay_t* delay;
-	delay = (struct utp_delay_t*)calloc(1, sizeof(*delay));
-	if (!delay)
-		return NULL;
-
-	return delay;
-}
-
-static inline void utp_delay_destroy(struct utp_delay_t* delay)
-{
-	free(delay);
+	memset(delay, 0, sizeof(*delay));
 }
 
 static inline void utp_delay_push(struct utp_delay_t* delay, int32_t value)
@@ -37,6 +27,13 @@ static inline void utp_delay_push(struct utp_delay_t* delay, int32_t value)
 		++delay->num;
 	else
 		delay->offset = (delay->offset + 1) % N_DELAY;
+}
+
+static inline uint32_t utp_delay_last(struct utp_delay_t* delay)
+{
+	if (delay->num < 1)
+		return 0;
+	return delay->delay[(delay->offset + delay->num - 1) % N_DELAY];
 }
 
 static inline uint32_t utp_delay_get(struct utp_delay_t* delay)
