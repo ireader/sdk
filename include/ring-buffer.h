@@ -2,20 +2,30 @@
 #define _ring_buffer_h_
 
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void* ring_buffer_create(size_t bytes);
-void ring_buffer_destroy(void* rb);
-void ring_buffer_clear(void* rb);
+struct ring_buffer_t
+{
+	uint8_t* ptr;
+	size_t capacity;
 
-int ring_buffer_write(void* rb, const void* data, size_t bytes);
-int ring_buffer_read(void* rb, void* data, size_t bytes);
+	size_t offset; // read position
+	size_t size;
+};
+
+int ring_buffer_create(struct ring_buffer_t* rb, size_t capacity);
+int ring_buffer_destroy(struct ring_buffer_t* rb);
+void ring_buffer_clear(struct ring_buffer_t* rb);
+
+int ring_buffer_write(struct ring_buffer_t* rb, const void* data, size_t bytes);
+int ring_buffer_read(struct ring_buffer_t* rb, void* data, size_t bytes);
 
 /// @return readable element count
-size_t ring_buffer_size(void* rb);
+size_t ring_buffer_size(struct ring_buffer_t* rb);
 
 #ifdef __cplusplus
 }
