@@ -24,6 +24,7 @@ int darray_erase(struct darray_t* arr, int index);
 /// @param[in] before insert items before index
 int darray_insert(struct darray_t* arr, int before, const void* items, int count);
 int darray_push_back(struct darray_t* arr, const void* items, int count);
+int darray_pop_back(struct darray_t* arr);
 int darray_pop_front(struct darray_t* arr);
 
 int darray_count(struct darray_t* arr);
