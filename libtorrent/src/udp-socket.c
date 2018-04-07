@@ -74,6 +74,23 @@ int udp_socket_sendto(const struct udp_socket_t* s, const void* buf, size_t len,
 	}
 }
 
+int udp_socket_sendto_v(const struct udp_socket_t* socket, const socket_bufvec_t* vec, size_t n, const struct sockaddr_storage* addr)
+{
+	if (AF_INET == addr->ss_family && socket_invalid != s->udp)
+	{
+		return socket_sendto_v(s->udp, vec, n, 0, (const struct sockaddr*)addr, sizeof(struct sockaddr_in));
+	}
+	else if (AF_INET6 == addr->ss_family && socket_invalid != s->udp6)
+	{
+		return socket_sendto_v(s->udp6, vec, n, 0, (const struct sockaddr*)addr, sizeof(struct sockaddr_in6));
+	}
+	else
+	{
+		assert(0);
+		return -1;
+	}
+}
+
 int udp_socket_readfrom(const struct udp_socket_t* s, int timeout, void* buf, size_t len, struct sockaddr_storage* addr)
 {
     int i, r;
