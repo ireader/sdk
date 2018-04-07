@@ -170,10 +170,10 @@
     <ClInclude Include="src\piece.h" />
     <ClInclude Include="src\torrent-internal.h" />
     <ClInclude Include="src\tracker-internal.h" />
-    <ClInclude Include="src\udp-buffer.h" />
     <ClInclude Include="src\udp-socket.h" />
-    <ClInclude Include="src\utp-internal.h" />
+    <ClInclude Include="src\utp\udp-buffer.h" />
     <ClInclude Include="src\utp\utp-delay.h" />
+    <ClInclude Include="src\utp\utp-internal.h" />
     <ClInclude Include="src\utp\utp-timeout.h" />
     <ClInclude Include="src\utp\utp-window.h" />
   </ItemGroup>
@@ -213,11 +213,11 @@
     <ClCompile Include="src\torrent.c" />
     <ClCompile Include="src\tracker-http.c" />
     <ClCompile Include="src\tracker-udp.c" />
-    <ClCompile Include="src\udp-buffer.c" />
     <ClCompile Include="src\udp-socket.c" />
-    <ClCompile Include="src\utp-header.c" />
-    <ClCompile Include="src\utp-socket.c" />
-    <ClCompile Include="src\utp.c" />
+    <ClCompile Include="src\utp\udp-buffer.c" />
+    <ClCompile Include="src\utp\utp-header.c" />
+    <ClCompile Include="src\utp\utp-socket.c" />
+    <ClCompile Include="src\utp\utp.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="libtorrent.def" />

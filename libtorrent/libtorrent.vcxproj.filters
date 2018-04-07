@@ -81,23 +81,23 @@
     <ClInclude Include="include\utp-header.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\utp-internal.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\udp-socket.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\utp\utp-delay.h">
       <Filter>Source Files\utp</Filter>
     </ClInclude>
     <ClInclude Include="src\utp\utp-window.h">
       <Filter>Source Files\utp</Filter>
     </ClInclude>
-    <ClInclude Include="src\udp-buffer.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\utp\utp-timeout.h">
       <Filter>Source Files\utp</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utp\udp-buffer.h">
+      <Filter>Source Files\utp</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utp\utp-internal.h">
+      <Filter>Source Files\utp</Filter>
+    </ClInclude>
+    <ClInclude Include="src\udp-socket.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -197,21 +197,6 @@
     <ClCompile Include="src\tex.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\utp-header.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\udp-socket.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\utp.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\utp-socket.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\udp-buffer.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\ring-buffer.c">
       <Filter>3rd</Filter>
     </ClCompile>
@@ -220,6 +205,21 @@
     </ClCompile>
     <ClCompile Include="..\source\darray.c">
       <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utp\udp-buffer.c">
+      <Filter>Source Files\utp</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utp\utp.c">
+      <Filter>Source Files\utp</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utp\utp-header.c">
+      <Filter>Source Files\utp</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utp\utp-socket.c">
+      <Filter>Source Files\utp</Filter>
+    </ClCompile>
+    <ClCompile Include="src\udp-socket.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

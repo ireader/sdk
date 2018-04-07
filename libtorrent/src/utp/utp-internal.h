@@ -3,11 +3,11 @@
 
 #include "utp.h"
 #include "sockutil.h"
-#include "udp-socket.h"
+#include "../udp-socket.h"
 #include "udp-buffer.h"
 #include "utp-header.h"
 #include "ring-buffer.h"
-#include "utp/utp-delay.h"
+#include "utp-delay.h"
 #include "darray.h"
 #include "rarray.h"
 #include "heap.h"
