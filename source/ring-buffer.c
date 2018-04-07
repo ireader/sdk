@@ -5,14 +5,16 @@
 #include <assert.h>
 #include <errno.h>
 
-int ring_buffer_create(struct ring_buffer_t* rb, size_t capacity)
+struct ring_buffer_t* ring_buffer_create(size_t capacity)
 {
-	rb->ptr = (uint8_t*)malloc(capacity);
-	if (NULL == rb->ptr) return ENOMEM;
+	struct ring_buffer_t* rb;
+	rb = (struct ring_buffer_t*)malloc(capacity);
+	if (NULL == rb) return ENOMEM;
 
+	rb->ptr = (uint8_t*)(rb + 1);
 	rb->capacity = capacity;
 	rb->offset = 0;
-	rb->size = 0;
+	rb->count = 0;
 	return 0;
 }
 
@@ -31,7 +33,7 @@ int ring_buffer_destroy(struct ring_buffer_t* rb)
 void ring_buffer_clear(struct ring_buffer_t* rb)
 {
 	rb->offset = 0;
-	rb->size = 0;
+	rb->count = 0;
 }
 
 int ring_buffer_write(struct ring_buffer_t* rb, const void* data, size_t bytes)
@@ -40,10 +42,10 @@ int ring_buffer_write(struct ring_buffer_t* rb, const void* data, size_t bytes)
 	const uint8_t* p;
 	p = (const uint8_t*)data;
 	
-	if (bytes + rb->size > rb->capacity)
+	if (bytes + rb->count > rb->capacity)
 		return E2BIG;
 
-	write = (rb->offset + rb->size) % rb->capacity;
+	write = (rb->offset + rb->count) % rb->capacity;
 	n = (bytes + write) < rb->capacity ? bytes : (rb->capacity - write);
 	memcpy(rb->ptr + write, p, n);
 
@@ -53,7 +55,7 @@ int ring_buffer_write(struct ring_buffer_t* rb, const void* data, size_t bytes)
 		memcpy(rb->ptr, p + n, bytes - n);
 	}
 
-	rb->size += bytes;
+	rb->count += bytes;
 	return 0;
 }
 
@@ -63,7 +65,7 @@ int ring_buffer_read(struct ring_buffer_t* rb, void* data, size_t bytes)
 	uint8_t* p;
 	p = (uint8_t*)data;
 
-	if (bytes > rb->size)
+	if (bytes > rb->count)
 		return ENOMEM;
 
 	n = (bytes + rb->offset) < rb->capacity ? bytes : (rb->capacity - rb->offset);
@@ -74,14 +76,14 @@ int ring_buffer_read(struct ring_buffer_t* rb, void* data, size_t bytes)
 		memcpy(p + n, rb->ptr, bytes - n);
 	}
 
-	rb->size -= bytes;
+	rb->count -= bytes;
 	rb->offset = (rb->offset + bytes) % rb->capacity;
 	return 0;
 }
 
 size_t ring_buffer_size(struct ring_buffer_t* rb)
 {
-	return rb->size;
+	return rb->count;
 }
 
 #if defined(DEBUG) || defined(_DEBUG)

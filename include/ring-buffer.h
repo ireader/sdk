@@ -14,10 +14,10 @@ struct ring_buffer_t
 	size_t capacity;
 
 	size_t offset; // read position
-	size_t size;
+	size_t count;
 };
 
-int ring_buffer_create(struct ring_buffer_t* rb, size_t capacity);
+struct ring_buffer_t* ring_buffer_create(size_t capacity);
 int ring_buffer_destroy(struct ring_buffer_t* rb);
 void ring_buffer_clear(struct ring_buffer_t* rb);
 
