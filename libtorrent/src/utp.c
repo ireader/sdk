@@ -1,12 +1,15 @@
-#include "sys/pollfd.h"
+#include "utp-internal.h"
+#include "sys/system.h"
 #include "utp.h"
 #include "utp-header.h"
-#include "utp-internal.h"
 #include "udp-buffer.h"
 #include "bsearch.h"
 
 #define UTP_WINDOW_SIZE 50000
 #define UTP_SOCKET_BUFFER (8*1024*1024)
+
+static int utp_find_socket(struct utp_t* utp, uint16_t connection, const struct sockaddr_storage* addr);
+static struct utp_socket_t* utp_input_connect(struct utp_t* utp, const struct utp_header_t* header, const struct sockaddr_storage* addr);
 
 struct utp_t* utp_create(const uint16_t port, struct utp_hander_t* handler, void* param)
 {
@@ -48,37 +51,150 @@ void utp_destroy(struct utp_t* utp)
 
 int utp_input(struct utp_t* utp, const uint8_t* data, unsigned int bytes, const struct sockaddr_storage* addr)
 {
-	int r;
+	int r, pos;
 	struct utp_header_t header;
+	struct utp_socket_t* socket;
+
 	r = utp_header_read(data, bytes, &header);
 	if (r < 0)
 		return -1;
 	assert(20 == r);
 
-	if (UTP_ST_SYN == header.type)
-	{
-		r = utp_input_connect(utp, &header, addr);
-		if(0 == r)
-			r = utp_socket_ack(utp); // auto ack connection
-	}
-	else
-	{
-		r = utp_input_msg(utp, &header, addr, data + r, bytes - r);
-	}
+	pos = utp_find_socket(utp, header.connection_id + (UTP_ST_SYN == header.type ? 1 : 0), addr);
 	
+	switch (header.type)
+	{
+	case UTP_ST_SYN:
+		if (-1 != pos)
+		{
+			// connection exist, ignore
+			return 0; // EEXIST
+		}
+
+		socket = utp_input_connect(utp, &header, addr);
+		if (socket)
+			r = utp_socket_send_ack(socket); // auto ack connection
+		else
+			r = ENOMEM;
+		return r;
+
+	case UTP_ST_RESET:
+	case UTP_ST_FIN:
+		if (-1 == pos)
+		{
+			// don't find connection, ignore
+			return 0; // ENOENT
+		}
+
+		socket = darray_get(&utp->sockets, pos);
+		assert(socket->utp == utp);
+		darray_erase(&utp->sockets, pos);
+		utp_socket_release(socket);
+		return 0;
+
+	case UTP_ST_STATE:
+	case UTP_ST_DATA:
+		if (-1 == pos)
+		{
+			// don't find connection, ignore
+			return 0; // ENOENT
+		}
+
+		socket = darray_get(&utp->sockets, pos);
+		assert(socket->utp == utp);
+
+		if (UTP_STATE_SYN == socket->state)
+		{
+			socket->recv.timestamp = header.timestamp;
+			socket->recv.delay = header.delay;
+			socket->recv.window_size = header.window_size;
+			socket->recv.seq_nr = header.seq_nr;
+			socket->recv.ack_nr = header.ack_nr;
+			socket->recv.clock = (uint32_t)system_clock();
+
+			utp->handler.onconnect(utp->param, 0, socket);
+			return 0;
+		}
+		else if (UTP_STATE_FIN == socket->state || UTP_STATE_RESET == socket->state)
+		{
+			socket->recv.timestamp = header.timestamp;
+			socket->recv.delay = header.delay;
+			socket->recv.window_size = header.window_size;
+			socket->recv.seq_nr = header.seq_nr;
+			socket->recv.ack_nr = header.ack_nr;
+			socket->recv.clock = (uint32_t)system_clock();
+
+			utp->handler.ondisconnect(utp->param, 0, socket);
+			return 0;
+		}
+
+		r = utp_socket_input(socket, &header, data + r, bytes - r);
+		return r;
+
+	default:
+		return -1;
+	}
+}
+
+int utp_connect(struct utp_t* utp, const struct sockaddr_storage* addr)
+{
+	int r;
+	uint16_t connection_id;
+	struct utp_socket_t* socket;
+	socket = utp_socket_create(utp);
+	if (!socket) return ENOMEM;
+
+	// choose one connection id
+	do
+	{
+		connection_id = (uint16_t)rand();
+	} while (utp_find_socket(utp, connection_id, addr));
+
+	socket->recv.id = connection_id;
+	socket->recv.timestamp = 0;
+	socket->recv.delay = 0;
+	socket->recv.window_size = 0;
+	socket->recv.seq_nr = 0;
+	socket->recv.ack_nr = 0;
+	socket->recv.clock = 0;
+
+	socket->send.id = connection_id + 1;
+	socket->send.timestamp = (uint32_t)system_clock();
+	socket->send.delay = 0;
+	socket->send.window_size = UTP_WINDOW_SIZE;
+	socket->send.seq_nr = (uint16_t)rand(); // The sequence number is initialized to 1
+	socket->send.ack_nr = 0;
+	socket->send.clock = (uint32_t)system_clock();
+
+	r = utp_socket_connect(socket, addr);
+	if (0 == r)
+		r = darray_push_back(&utp->sockets, socket, 1);
+	else
+		utp_socket_release(socket);
 	return r;
 }
 
-static int utp_input_connect(struct utp_t* utp, const struct utp_header_t* header, const struct sockaddr_storage* addr)
+int utp_disconnect(struct utp_socket_t* socket)
 {
-	int r, pos;
+	return utp_socket_disconnect(socket);
+}
+
+int utp_send(struct utp_socket_t* socket, const uint8_t* data, unsigned int bytes)
+{
+	return utp_socket_send(socket, data, bytes);
+}
+
+static struct utp_socket_t* utp_input_connect(struct utp_t* utp, const struct utp_header_t* header, const struct sockaddr_storage* addr)
+{
+	int r;
 	struct utp_socket_t* socket;
-	socket = (struct utp_socket_t*)malloc(1, sizeof(*socket));
-	if (!socket) return ENOMEM;
+	socket = utp_socket_create(utp);
+	if (!socket) return NULL;
 
     // TODO: check blacklist
 
-	socket->utp = utp;
+	memcpy(&socket->addr, addr, sizeof(socket->addr));
+
 	socket->recv.id = header->connection_id + 1;
 	socket->recv.timestamp = header->timestamp;
 	socket->recv.delay = header->delay;
@@ -95,67 +211,26 @@ static int utp_input_connect(struct utp_t* utp, const struct utp_header_t* heade
 	socket->send.ack_nr = 0;
 	socket->send.clock = 0;
 
-	if (0 == utp_find_socket(utp, header->connection_id, addr, &pos)
-		|| 0 == utp_find_socket(utp, header->connection_id + 1, addr, &pos))
-	{
-		// connection id exist
-		free(socket);
-		return 0; // EEXIST;
-	}
-
     r = darray_push_back(&utp->sockets, socket, 1);
-    return r;
-}
-
-static int utp_input_msg(struct utp_t* utp, const struct utp_header_t* header, const struct sockaddr_storage* addr)
-{
-	int r, pos;
-	struct utp_socket_t* socket;
-
-	if (0 != utp_find_socket(utp, header->connection_id, addr, &pos)
-		|| header->connection_id != utp->sockets[pos]->recv.id)
-	{
-		return 0; // ENOENT
-	}
-
-	socket = darray_get(&utp->sockets, pos);
-	switch (header->type)
-	{
-	case UTP_ST_RESET:
-	case UTP_ST_FIN:
-        free(socket);
-        darray_erase(&utp->sockets, pos);
-		socket->handler.ondestroy(socket->param);
-		utp_socket_destroy(socket);
-		break;
-
-	case UTP_ST_STATE:
-	case UTP_ST_DATA:
-	default:
-		break;
-	}
+    return socket;
 }
 
 /// @return 0-find, other-not found, pos insert position
-static int utp_connection_compare(const uint16_t* connection, const struct utp_socket_t* socket)
-{
-	uint16_t v;
-	v = MIN(socket->recv.id, socket->send.id);
-	assert(v + 1 == MAX(socket->recv.id, socket->send.id));
-	if (*connection == v || *connection == v + 1)
-		return 0;	
-	return *connection - v;
-}
-
-static int utp_find_socket(struct utp_t* utp, uint16_t connection, const struct sockaddr_storage* addr, int* pos)
+static int utp_connection_compare(const struct utp_socket_t* req, const struct utp_socket_t* socket)
 {
 	int r;
-	struct utp_socket_t* socket;
+	r = memcmp(&req->addr, &socket->addr, sizeof(req->addr));
+	return 0 == r ? req->recv.id - socket->recv.id : r;
+}
 
-	r = bsearch2(connection, utp->sockets.elements, &socket, utp->sockets.count, sizeof(struct utp_socket_t*), utp_connection_compare);
-	if (0 == r)
-	{
-		pos = socket - (struct utp_socket_t*)utp->sockets.elements;
-	}
-	return r;
+static int utp_find_socket(struct utp_t* utp, uint16_t connection, const struct sockaddr_storage* addr)
+{
+	int r;
+	void* socket;
+	struct utp_socket_t req;
+
+	req.recv.id = connection;
+	memcpy(&req.addr, addr, sizeof(req.addr));
+	r = bsearch2(&req, utp->sockets.elements, &socket, utp->sockets.count, sizeof(struct utp_socket_t*), utp_connection_compare);
+	return 0 == r ? (struct utp_socket_t**)socket - (struct utp_socket_t**)utp->sockets.elements : -1;
 }

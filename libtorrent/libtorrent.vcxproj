@@ -170,20 +170,24 @@
     <ClInclude Include="src\piece.h" />
     <ClInclude Include="src\torrent-internal.h" />
     <ClInclude Include="src\tracker-internal.h" />
+    <ClInclude Include="src\udp-buffer.h" />
     <ClInclude Include="src\udp-socket.h" />
     <ClInclude Include="src\utp-internal.h" />
     <ClInclude Include="src\utp\utp-delay.h" />
-    <ClInclude Include="src\utp\utp-rtt.h" />
+    <ClInclude Include="src\utp\utp-timeout.h" />
     <ClInclude Include="src\utp\utp-window.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\app-log.c" />
     <ClCompile Include="..\source\base64.c" />
     <ClCompile Include="..\source\bitmap.c" />
+    <ClCompile Include="..\source\bsearch.c" />
+    <ClCompile Include="..\source\darray.c" />
     <ClCompile Include="..\source\digest\sha1.c" />
     <ClCompile Include="..\source\heap.c" />
     <ClCompile Include="..\source\hweight.c" />
     <ClCompile Include="..\source\rbtree.c" />
+    <ClCompile Include="..\source\ring-buffer.c" />
     <ClCompile Include="..\source\uri-parse.c" />
     <ClCompile Include="..\source\urlcodec.c" />
     <ClCompile Include="src\bencode.c" />
@@ -209,6 +213,7 @@
     <ClCompile Include="src\torrent.c" />
     <ClCompile Include="src\tracker-http.c" />
     <ClCompile Include="src\tracker-udp.c" />
+    <ClCompile Include="src\udp-buffer.c" />
     <ClCompile Include="src\udp-socket.c" />
     <ClCompile Include="src\utp-header.c" />
     <ClCompile Include="src\utp-socket.c" />

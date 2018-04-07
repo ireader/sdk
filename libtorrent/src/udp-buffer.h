@@ -3,8 +3,8 @@
 
 struct udp_buffer_t;
 
-/// @bytes[in] buffer size in byte
-struct udp_buffer_t* udp_buffer_create(int bytes);
+/// @bytes[in] capacity buffer size in byte
+struct udp_buffer_t* udp_buffer_create(int capacity);
 void udp_buffer_destroy(struct udp_buffer_t* buffer);
 
 /// Get idle buffer pointer

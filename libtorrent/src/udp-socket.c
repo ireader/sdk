@@ -1,4 +1,5 @@
 #include "udp-socket.h"
+#include "sys/pollfd.h"
 #include "sockutil.h"
 
 int udp_socket_create(u_short port, struct udp_socket_t* s)
@@ -74,7 +75,7 @@ int udp_socket_sendto(const struct udp_socket_t* s, const void* buf, size_t len,
 	}
 }
 
-int udp_socket_sendto_v(const struct udp_socket_t* socket, const socket_bufvec_t* vec, size_t n, const struct sockaddr_storage* addr)
+int udp_socket_sendto_v(const struct udp_socket_t* s, const socket_bufvec_t* vec, size_t n, const struct sockaddr_storage* addr)
 {
 	if (AF_INET == addr->ss_family && socket_invalid != s->udp)
 	{
@@ -118,7 +119,7 @@ int udp_socket_readfrom(const struct udp_socket_t* s, int timeout, void* buf, si
             continue;
 
         addrlen = sizeof(*addr);
-        r = socket_recvfrom(fds[i].fd, buf, len, 0, addr, &addrlen);
+        r = socket_recvfrom(fds[i].fd, buf, len, 0, (struct sockaddr*)addr, &addrlen);
         break;
     }
 

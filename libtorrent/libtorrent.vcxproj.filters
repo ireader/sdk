@@ -93,7 +93,10 @@
     <ClInclude Include="src\utp\utp-window.h">
       <Filter>Source Files\utp</Filter>
     </ClInclude>
-    <ClInclude Include="src\utp\utp-rtt.h">
+    <ClInclude Include="src\udp-buffer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utp\utp-timeout.h">
       <Filter>Source Files\utp</Filter>
     </ClInclude>
   </ItemGroup>
@@ -205,6 +208,18 @@
     </ClCompile>
     <ClCompile Include="src\utp-socket.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\udp-buffer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\ring-buffer.c">
+      <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\bsearch.c">
+      <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\darray.c">
+      <Filter>3rd</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

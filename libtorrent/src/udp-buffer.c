@@ -10,14 +10,14 @@ struct udp_buffer_t
     int capacity;
 };
 
-struct udp_buffer_t* udp_buffer_create(int bytes)
+struct udp_buffer_t* udp_buffer_create(int capacity)
 {
     struct udp_buffer_t* buffer;
-    buffer = (struct udp_buffer_t*)malloc(sizeof(*buffer) + bytes);
+    buffer = (struct udp_buffer_t*)malloc(sizeof(*buffer) + capacity);
     if (buffer)
     {
         buffer->ptr = buffer + 1;
-        buffer->capacity = bytes;
+        buffer->capacity = capacity;
         buffer->offset = 0;
         buffer->bytes = 0;
     }
