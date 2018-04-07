@@ -73,7 +73,7 @@ int utp_input(struct utp_t* utp, const uint8_t* data, unsigned int bytes, const 
 
 		socket = utp_input_connect(utp, &header, addr);
 		if (socket)
-			r = utp_socket_send_ack(socket); // auto ack connection
+			r = utp_socket_ack(socket); // auto ack connection
 		else
 			r = ENOMEM;
 		return r;

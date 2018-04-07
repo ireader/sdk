@@ -52,7 +52,7 @@ struct utp_ack_t
 	int len;
 
 	int flag; // 0-don't ack, 1-ack
-	int type;
+	uint8_t type;
 	uint16_t seq;
 	uint64_t clock;
 };
@@ -84,16 +84,11 @@ struct utp_socket_t
 	struct utp_connection_t recv;
 
 	int packet_loss;
-	int32_t rtt_var;
-	int32_t rtt;
+	int rtt_var;
+	int rtt;
+	int timeout;
 	struct utp_delay_t delay; // calculate base_delay
-	int32_t base_delay;
 	int32_t max_window;
-	int32_t packet_size;
-
-	//uint32_t peer_delay; // last packet delay
-	//uint16_t peer_seq_nr; // peer sequential data sn
-	//uint16_t peer_ack_nr; // the first unack sn
 
 	struct utp_hander_t handler;
 	void* param;
@@ -105,6 +100,7 @@ int utp_socket_connect(struct utp_socket_t* socket, const struct sockaddr_storag
 int utp_socket_disconnect(struct utp_socket_t* socket);
 int utp_socket_input(struct utp_socket_t* socket, const struct utp_header_t* header, const uint8_t* data, int bytes);
 int utp_socket_send(struct utp_socket_t* socket, const uint8_t* data, unsigned int bytes);
-int utp_socket_send_ack(struct utp_socket_t* socket);
+int utp_socket_ack(struct utp_socket_t* socket);
+int utp_socket_timer(struct utp_socket_t* socket);
 
 #endif /* !_utp_internal_h_ */

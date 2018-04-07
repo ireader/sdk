@@ -8,14 +8,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+// The initial timeout is set to 1000 milliseconds
+#define UTP_DEFAULT_TIMEOUT 1000
+// the minimum timeout for a packet is 1/2 second
+#define UTP_MINIMUM_TIMEOUT 500
+
 // Default max packet size (1500, minus allowance for IP, UDP, UMTP headers)
 // (Also, make it a multiple of 4 bytes, just in case that matters.)
 //static int s_max_packet_size = 1456; // from Live555 MultiFrameRTPSink.cpp RTP_PAYLOAD_MAX_SIZE
 //static size_t s_max_packet_size = 576; // UNIX Network Programming by W. Richard Stevens
 static int s_max_packet_size = 1434; // from VLC
 static int utp_ack_inert(struct rarray_t* acks, const struct utp_ack_t* ack);
+static int utp_socket_send_packet(struct utp_socket_t* socket, const struct utp_ack_t* ack);
+static int utp_socket_send_data(struct utp_socket_t* socket);
 static uint32_t utp_socket_window_size(struct utp_socket_t* socket);
 static void utp_socket_congestion_control(struct utp_socket_t* socket, uint32_t delay);
+static void utp_socket_rtt(struct utp_socket_t* socket, uint64_t rtt);
 
 struct utp_socket_t* utp_socket_create(struct utp_t* utp)
 {
@@ -27,6 +35,7 @@ struct utp_socket_t* utp_socket_create(struct utp_t* utp)
 	socket->ref = 1;
 	socket->utp = utp;
 	socket->state = UTP_STATE_INIT;
+	socket->timeout = UTP_DEFAULT_TIMEOUT;
 	socket->max_window = 8 * 1024;
 	socket->recv.rb = ring_buffer_create(N_MAX_BUFFER);
 	if (!socket->recv.rb
@@ -54,10 +63,8 @@ void utp_socket_release(struct utp_socket_t* socket)
 
 int utp_socket_connect(struct utp_socket_t* socket, const struct sockaddr_storage* addr)
 {
-	int r, n;
-	uint8_t data[32];
+	int r;
 	struct utp_ack_t ack;
-	struct utp_header_t header;
 
 	assert(UTP_STATE_INIT == socket->state);
 	if (UTP_STATE_INIT != socket->state)
@@ -66,72 +73,47 @@ int utp_socket_connect(struct utp_socket_t* socket, const struct sockaddr_storag
 	socket->state = UTP_STATE_SYN;
 	memcpy(&socket->addr, addr, sizeof(socket->addr));
 
-	header.type = UTP_ST_SYN;
-	header.ack_nr = socket->recv.seq_nr;
-	header.seq_nr = socket->send.seq_nr++;
-	header.window_size = utp_socket_window_size(socket);
-	header.connection_id = socket->recv.id;
-	header.timestamp = (uint32_t)system_clock();
-	header.delay = socket->send.delay;
-	header.extension = 0;
-
-	n = utp_header_write(&header, data, sizeof(data));
-	assert(20 == n);
-
 	memset(&ack, 0, sizeof(ack));
-	ack.clock = header.timestamp;
+	ack.clock = system_clock();
 	ack.type = UTP_ST_SYN;
+	ack.seq = socket->send.seq_nr++;
 	rarray_push_back(&socket->send.acks, &ack);
 	assert(1 == rarray_count(&socket->send.acks));
 
-	r = udp_socket_sendto(&socket->utp->udp, data, n, &socket->addr);
+	r = utp_socket_send_packet(socket, &ack);
 	if (r < 0)
 	{
 		rarray_pop_back(&socket->send.acks); // clear ack
 		socket->state = UTP_STATE_INIT; // reset status
 		return r;
 	}
-	return r != n ? -1 : 0;
+	return 0;
 }
 
 int utp_socket_disconnect(struct utp_socket_t* socket)
 {
-	int r, n;
-	uint8_t data[32];
+	int r;
 	struct utp_ack_t ack;
-	struct utp_header_t header;
 
 	assert(UTP_STATE_CONN == socket->state);
 	if (UTP_STATE_CONN != socket->state)
 		return -1; // invalid state
 
-	socket->state = UTP_STATE_FIN;
-
-	header.type = UTP_STATE_FIN;
-	header.ack_nr = socket->recv.seq_nr;
-	header.seq_nr = socket->send.seq_nr++;
-	header.window_size = utp_socket_window_size(socket);
-	header.connection_id = socket->send.id;
-	header.timestamp = (uint32_t)system_clock();
-	header.delay = socket->send.delay;
-	header.extension = 0;
-
-	n = utp_header_write(&header, data, sizeof(data));
-	assert(20 == n);
-
 	memset(&ack, 0, sizeof(ack));
-	ack.clock = header.timestamp;
-	ack.type = UTP_ST_FIN;
+	ack.clock = system_clock();
+	ack.type = UTP_STATE_FIN;
+	ack.seq = socket->send.seq_nr++;
 	rarray_push_back(&socket->send.acks, &ack);
 
-	r = udp_socket_sendto(&socket->utp->udp, data, n, &socket->addr);
+	socket->state = UTP_STATE_FIN;
+	r = utp_socket_send_packet(socket, &ack);
 	if (r < 0)
 	{
 		rarray_pop_back(&socket->send.acks); // clear ack
 		socket->state = UTP_STATE_CONN; // reset status
 		return r;
 	}
-	return r != n ? -1 : 0;
+	return 0;
 }
 
 int utp_socket_send(struct utp_socket_t* socket, const uint8_t* data, unsigned int bytes)
@@ -149,20 +131,25 @@ int utp_socket_send(struct utp_socket_t* socket, const uint8_t* data, unsigned i
 	return utp_socket_send_data(socket);
 }
 
-static int utp_socket_ack(struct utp_socket_t* socket, uint16_t ack_nr, const uint8_t* data, unsigned int bytes)
+static int utp_socket_handle_recv(struct utp_socket_t* socket, uint16_t ack_nr, const uint8_t* data, unsigned int bytes)
 {
-	uint16_t lost;
-	unsigned int i;
+	uint64_t clock;
+	unsigned int i, lost;
 	struct utp_ack_t* ack;
-	assert(0 == bytes / 4);
+	assert(0 == bytes % 4);
+
+	clock = system_clock();
 
 	// case 1: ack < peer_ack_nr || ack >= utp_send.seq: invalid, discard
-	assert(ack_nr + bytes + 1 >= socket->recv.ack_nr);
-	assert(ack_nr + bytes + 1 < socket->recv.ack_nr + rarray_count(&socket->send.acks));
+	if (ack_nr - socket->recv.ack_nr > socket->send.seq_nr - socket->recv.ack_nr)
+	{
+		assert(0);
+		return -1; // invalid ack
+	}
 
 	// when receiving 3 duplicate acks, ack_nr + 1 is assumed to have been lost 
 	// (if a packet with that sequence number has been sent).
-	if (socket->recv.ack_nr == ack_nr && ack_nr < socket->send.seq_nr)
+	if (socket->recv.ack_nr == ack_nr && ack_nr != socket->send.seq_nr)
 		socket->packet_loss += 1;
 	else
 		socket->packet_loss = 0;
@@ -174,7 +161,16 @@ static int utp_socket_ack(struct utp_socket_t* socket, uint16_t ack_nr, const ui
 		if (!ack) break;
 
 		assert(ack && ack->flag >= 0);
-		++ack->flag;
+		assert(ack->seq == socket->recv.ack_nr);
+		if (1 == ++ack->flag)
+		{
+			// 1. Every packet that is ACKed, either by falling in the range (last_ack_nr, ack_nr] 
+			//    or by explicitly being acked by a Selective ACK message, should be used to 
+			//    update an rtt (round trip time) and rtt_var (rtt variance) measurement. 
+			// 2. The rtt and rtt_var is only updated for packets that were sent only once
+			utp_socket_rtt(socket, clock - ack->clock);
+		}
+
 		rarray_pop_front(&socket->send.acks);
 	}
 	assert(socket->recv.ack_nr >= ack_nr);
@@ -194,7 +190,8 @@ static int utp_socket_ack(struct utp_socket_t* socket, uint16_t ack_nr, const ui
 		// the most significant bit in the byte represents ack_nr + 2 + 7. 
 		if (data[i / 8] & (1 << (i % 8)))
 		{
-			++ack->flag;
+			if(1 == ++ack->flag)
+				utp_socket_rtt(socket, clock - ack->clock);
 
 			// 1. 3 or more packets have been acked past it 
 			// 2. Each packet that is acked in the selective ack message counts as one duplicate ack
@@ -213,10 +210,9 @@ static int utp_socket_ack(struct utp_socket_t* socket, uint16_t ack_nr, const ui
 int utp_socket_input(struct utp_socket_t* socket, const struct utp_header_t* header, const uint8_t* data, int bytes)
 {
 	int r;
-	uint16_t len;
-	uint16_t extension;
+	uint8_t len;
+	uint8_t extension;
 	struct utp_extension_t selective_acks;
-	struct utp_ack_t* ack;
 
 	assert(UTP_STATE_CONN == socket->state);
 	assert(UTP_ST_DATA == header->type || UTP_ST_STATE == header->type);
@@ -250,7 +246,7 @@ int utp_socket_input(struct utp_socket_t* socket, const struct utp_header_t* hea
 	}
 
 	// 1. ack send buffer
-	r = utp_socket_ack(socket, header->ack_nr, selective_acks.data, selective_acks.byte);
+	r = utp_socket_handle_recv(socket, header->ack_nr, selective_acks.data, selective_acks.byte);
 	if (0 != r)
 		return r;
 
@@ -287,6 +283,7 @@ int utp_socket_input(struct utp_socket_t* socket, const struct utp_header_t* hea
 
 		while (rarray_count(&socket->recv.acks) > 0)
 		{
+			struct utp_ack_t* ack;
 			ack = rarray_front(&socket->recv.acks);
 			if (ack->seq != socket->send.ack_nr + 1)
 				break;
@@ -296,25 +293,25 @@ int utp_socket_input(struct utp_socket_t* socket, const struct utp_header_t* hea
 			rarray_pop_front(&socket->recv.acks);
 		}
 
-		r = utp_socket_send_ack(socket);
+		r = utp_socket_ack(socket);
 	}
 
 	assert(header->connection_id == socket->recv.id);
+	socket->recv.clock = system_clock();
 //	socket->recv.ack_nr = header->ack_nr;
 	socket->recv.seq_nr = header->seq_nr;
 	socket->recv.delay = header->delay;
 	socket->recv.timestamp = header->timestamp;
 	socket->recv.window_size = header->window_size;
-	socket->recv.clock = (uint32_t)system_clock();
 
 	// calculate peer network delay
-	socket->send.delay = socket->recv.clock - header->timestamp;
+	socket->send.delay = (uint32_t)socket->recv.clock - header->timestamp;
 
 	utp_socket_congestion_control(socket, header->delay);
 	return 0;
 }
 
-int utp_socket_send_ack(struct utp_socket_t* socket)
+int utp_socket_ack(struct utp_socket_t* socket)
 {
 	int i, n, r;
 	uint16_t idx;
@@ -358,59 +355,102 @@ int utp_socket_send_ack(struct utp_socket_t* socket)
 	return r < 0 ? r : (r != n ? -1 : 0);
 }
 
-static int utp_socket_send_data(struct utp_socket_t* socket)
+int utp_socket_timer(struct utp_socket_t* socket)
 {
-	int n, r;
-	int i, flight;
-	int max_window;
-	int packet_size;
+	int i;
+	uint64_t clock;
+	struct utp_ack_t *ack;
+
+	clock = system_clock();
+	for (i = 0; i < rarray_count(&socket->send.acks); i++)
+	{
+		ack = rarray_get(&socket->send.acks, i);
+		if (ack->clock + socket->timeout < clock)
+		{
+			// trigger timeout
+
+			// 1. It will set its packet_size and max_window to the smallest packet size (150 bytes). 
+			//    This allows it to send one more packet, and this is how the socket gets started again 
+			//    if the window size goes down to zero.
+			// 2. The initial timeout is set to 1000 milliseconds, and later updated according to the formula above. 
+			//    For every packet consecutive subsequent packet that times out, the timeout is doubled.
+			socket->max_window = 150;
+			socket->timeout *= 2;
+
+			// retransmit packet
+			ack->clock = clock;
+			utp_socket_send_packet(socket, ack);
+		}
+	}
+	return 0;
+}
+
+static int utp_socket_send_packet(struct utp_socket_t* socket, const struct utp_ack_t* ack)
+{
+	int r, n;
 	uint8_t data[32];
 	socket_bufvec_t vec[2];
-	struct utp_ack_t ack, *pack;
 	struct utp_header_t header;
+
+	header.type = ack->type;
+	header.seq_nr = ack->seq;
+	header.ack_nr = socket->send.ack_nr;
+	header.window_size = utp_socket_window_size(socket);
+	header.connection_id = socket->send.id;
+	header.timestamp = (uint32_t)ack->clock;
+	header.delay = socket->send.delay;
+	header.extension = 0;
+
+	n = utp_header_write(&header, data, sizeof(data));
+	assert(20 == n);
+
+	socket_setbufvec(vec, 0, data, n);
+	socket_setbufvec(vec, 1, ack->ptr, ack->len);
+	r = udp_socket_sendto_v(&socket->utp->udp, vec, ack->len > 0 ? 2 : 1, &socket->addr);
+
+	assert(r == n + ack->len);
+	return r < 0 ? r : (r != n + ack->len ? -1 : n + ack->len);
+}
+
+static int utp_socket_send_data(struct utp_socket_t* socket)
+{
+	int i, r;
+	int flight;
+	int32_t max_window;
+	int32_t packet_size;
+	struct utp_ack_t ack, *pack;
 
 	for (flight = i = 0; i < rarray_count(&socket->send.acks); i++)
 	{
-		pack = rarray_get(&socket->recv.acks, i);
+		pack = rarray_get(&socket->send.acks, i);
 		flight += pack->len + 20 /* utp header */ + 10 /* selective acks */;
 	}
 
-	max_window = min(socket->max_window, socket->recv.window_size);
+	max_window = min(socket->max_window, (int32_t)socket->recv.window_size);
 	packet_size = min(max_window - flight, s_max_packet_size);
 
-	while (flight + packet_size < max_window)
+	while (flight + packet_size < max_window && rarray_count(&socket->send.acks) < N_ACK_BITS)
 	{
 		memset(&ack, 0, sizeof(ack));
 		ack.clock = system_clock();
 		ack.type = UTP_ST_DATA;
-		ack.len = min(packet_size, socket->send.rb->capacity - socket->send.rb->offset);
+		ack.seq = socket->send.seq_nr++;
 		ack.ptr = socket->send.rb->ptr + socket->send.rb->offset;
+		ack.len = min(packet_size, (int)(socket->send.rb->capacity - socket->send.rb->offset));
+		
+		socket->send.rb->offset += ack.len; // update offset
 		rarray_push_back(&socket->send.acks, &ack);
 
-		header.type = UTP_ST_DATA;
-		header.ack_nr = socket->send.ack_nr;
-		header.seq_nr = socket->send.seq_nr++;
-		header.window_size = utp_socket_window_size(socket);
-		header.connection_id = socket->send.id;
-		header.timestamp = (uint32_t)ack.clock;
-		header.delay = socket->send.delay;
-		header.extension = 0;
-		n = utp_header_write(&header, data, sizeof(data));
-		assert(20 == n);
-
-		socket_setbufvec(vec, 0, data, n);
-		socket_setbufvec(vec, 1, ack.ptr, ack.len);
-		socket->send.rb->offset += ack.len; // update offset
-
-		r = udp_socket_sendto_v(&socket->utp->udp, vec, 2, &socket->addr);
-		if (r != n + ack.len)
+		r = utp_socket_send_packet(socket, &ack);
+		if (r < 0)
 		{
-			rarray_pop_back(&socket->send.acks);
-			socket->send.rb->offset -= ack.len; // update offset
-			return r < 0 ? r : (r != n ? -1 : 0);
+			// try it later
+//			rarray_pop_back(&socket->send.acks);
+//			socket->send.rb->offset -= ack.len; // update offset
+			return r;
 		}
 
-		flight += n + ack.len;
+		flight += r;
 	}
 
 	return 0;
@@ -425,13 +465,21 @@ static int utp_ack_inert(struct rarray_t* acks, const struct utp_ack_t* ack)
 {
 	void* pos;
 	if (0 != bsearch2(ack, acks->elements, &pos, acks->count, acks->size, utp_ack_compare))
-		return rarray_insert(acks, (struct utp_ack_t*)pos - (struct utp_ack_t*)acks->elements, ack, 1);
+		return rarray_insert(acks, (struct utp_ack_t*)pos - (struct utp_ack_t*)acks->elements, ack);
 	return EEXIST;
 }
 
 static uint32_t utp_socket_window_size(struct utp_socket_t* socket)
 {
 	return socket->recv.rb->capacity - socket->recv.rb->count;
+}
+
+// Every packet that is ACKed, either by falling in the range (last_ack_nr, ack_nr] 
+// or by explicitly being acked by a Selective ACK message, 
+// should be used to update an rtt (round trip time) and rtt_var (rtt variance) measurement. 
+static void utp_socket_rtt(struct utp_socket_t* socket, uint64_t rtt)
+{
+	socket->timeout = utp_timeout(socket->rtt, socket->rtt_var, (uint32_t)rtt);
 }
 
 static void utp_socket_congestion_control(struct utp_socket_t* socket, uint32_t delay)
