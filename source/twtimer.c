@@ -67,6 +67,13 @@ int twtimer_start(struct time_wheel_t* tm, struct twtimer_t* timer)
 
 	assert(timer->ontimeout);
 	spinlock_lock(&tm->locker);
+	if (timer->pprev)
+	{
+		assert(0); // timer have been started
+		spinlock_unlock(&tm->locker);
+		return EEXIST;
+	}
+
 	diff = TIME(timer->expire - tm->clock); // per 64ms
 
 	if (timer->expire < tm->clock)
@@ -123,10 +130,14 @@ int twtimer_stop(struct time_wheel_t* tm, struct twtimer_t* timer)
 	spinlock_lock(&tm->locker);
 	pprev = timer->pprev;
 	if (timer->pprev)
+	{
+		--tm->count; // timer validation ???
 		*timer->pprev = timer->next;
+	}
 	if (timer->next)
 		timer->next->pprev = timer->pprev;
-	--tm->count;
+	timer->pprev = NULL;
+	timer->next = NULL;
 	spinlock_unlock(&tm->locker);
 	return pprev ? 0 : -1;
 }
@@ -192,6 +203,8 @@ static int twtimer_cascade(struct time_wheel_t* tm, struct time_bucket_t* tv, in
 	{
 		--tm->count; // start will add count
 		next = timer->next;
+		timer->next = NULL;
+		timer->pprev = NULL;
 		twtimer_start(tm, timer);
 	}
 
