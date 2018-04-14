@@ -14,13 +14,13 @@ endif
 all:
 	$(MAKE) -C libaio
 	$(MAKE) -C libhttp
-	$(MAKE) -C test
 	
 clean:
 	$(MAKE) -C libaio clean
 	$(MAKE) -C libhttp clean
-	$(MAKE) -C test clean
 
 .PHONY : test
 test:
+	$(MAKE) -C test clean
+	$(MAKE) -C test
 	cd libaio/$(BUILD).$(PLATFORM) && ../../test/$(BUILD).$(PLATFORM)/test
