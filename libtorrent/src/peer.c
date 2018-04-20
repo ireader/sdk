@@ -446,11 +446,11 @@ static int peer_extended_handler(peer_t* peer, const uint8_t* ptr, uint32_t len)
 		if (0 == r)
 		{
 			if(pex.n_flags == pex.n_added)
-				r = peer->handler.pex(peer->param, pex.flags, pex.added, pex.n_added, pex.droped, pex.n_dropped);
+				r = peer->handler.pex(peer->param, pex.flags, pex.added, pex.n_added, pex.dropped, pex.n_dropped);
 
 			if (pex.added) free(pex.added);
 			if (pex.flags) free(pex.flags);
-			if (pex.droped) free(pex.droped);
+			if (pex.dropped) free(pex.dropped);
 		}
 		return r;
 	}

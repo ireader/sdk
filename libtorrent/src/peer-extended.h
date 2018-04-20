@@ -49,7 +49,7 @@ struct peer_pex_t
 	struct sockaddr_storage* added;
 	size_t n_added;
 
-	struct sockaddr_storage* droped;
+	struct sockaddr_storage* dropped;
 	size_t n_dropped;
 };
 
