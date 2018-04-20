@@ -22,6 +22,7 @@ typedef __int64 int64_t;
 // int32_t atomic_increment32(volatile int32_t *value)
 // int32_t atomic_decrement32(volatile int32_t *value)
 // int32_t atomic_add32(volatile int32_t *value, int32_t incr)
+// int32_t atomic_load32(volatile int32_t *value)
 // int atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t newvalue)
 // int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
 //-------------------------------------------------------------------------------------
@@ -29,6 +30,7 @@ typedef __int64 int64_t;
 // int64_t atomic_increment64(volatile int64_t *value)
 // int64_t atomic_decrement64(volatile int64_t *value)
 // int64_t atomic_add64(volatile int64_t *value, int64_t incr)
+// int64_t atomic_load64(volatile int64_t *value)
 // int atomic_cas64(volatile int64_t *value, int64_t oldvalue, int64_t newvalue)
 //-------------------------------------------------------------------------------------
 
@@ -52,6 +54,13 @@ static inline int32_t atomic_add32(volatile int32_t *value, int32_t incr)
 	assert((intptr_t)value % 4 == 0);
 	assert(sizeof(LONG) == sizeof(int32_t));
 	return InterlockedExchangeAdd((LONG volatile*)value, incr) + incr; // The function returns the initial value of the Addend parameter.
+}
+
+static inline int32_t atomic_load32(volatile int32_t *value)
+{
+    assert((intptr_t)value % 4 == 0);
+    assert(sizeof(LONG) == sizeof(int32_t));
+    return InterlockedOr((LONG volatile*)value, 0);
 }
 
 static inline int atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t newvalue)
@@ -92,6 +101,13 @@ static inline int64_t atomic_add64(volatile int64_t *value, int64_t incr)
 	assert((intptr_t)value % 8 == 0);
 	assert(sizeof(LONGLONG) == sizeof(int64_t));
 	return InterlockedExchangeAdd64(value, incr) + incr; // The function returns the initial value of the Addend parameter.
+}
+
+static inline int64_t atomic_load64(volatile int64_t *value)
+{
+    assert((intptr_t)value % 8 == 0);
+    assert(sizeof(LONGLONG) == sizeof(int64_t));
+    return InterlockedOr64((LONGLONG volatile*)value, 0);
 }
 
 static inline int atomic_cas64(volatile int64_t *value, int64_t oldvalue, int64_t newvalue)
@@ -139,6 +155,18 @@ static inline int64_t atomic_add64(volatile int64_t *value, int64_t incr)
 {
 	assert((intptr_t)value % 8 == 0);
 	return OSAtomicAdd64(incr, value);
+}
+
+static inline int32_t atomic_load32(volatile int32_t *value)
+{
+    assert((intptr_t)value % 4 == 0);
+    return OSAtomicOr32(0, value);
+}
+
+static inline int64_t atomic_load64(volatile int64_t *value)
+{
+    assert((intptr_t)value % 8 == 0);
+    return OSAtomicAdd64(0, value);
 }
 
 static inline int atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t newvalue)
@@ -189,6 +217,12 @@ static inline int32_t atomic_add32(volatile int32_t *value, int32_t incr)
 	return __sync_add_and_fetch_4(value, incr);
 }
 
+static inline int32_t atomic_load32(volatile int32_t *value)
+{
+    assert((intptr_t)value % 4 == 0);
+    return __sync_fetch_and_or_4(value, 0);
+}
+
 static inline int atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t newvalue)
 {
 	assert((intptr_t)value % 4 == 0);
@@ -217,6 +251,12 @@ static inline int64_t atomic_add64(volatile int64_t *value, int64_t incr)
 {
 	assert((intptr_t)value % 8 == 0);
 	return __sync_add_and_fetch_8(value, incr);
+}
+
+static inline int64_t atomic_load64(volatile int64_t *value)
+{
+    assert((intptr_t)value % 8 == 0);
+    return __sync_fetch_and_or_8(value, 0);
 }
 
 static inline int atomic_cas64(volatile int64_t *value, int64_t oldvalue, int64_t newvalue)
