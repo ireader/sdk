@@ -33,19 +33,11 @@ static FDisconnectEx DisconnectEx;
 
 enum { AIO_READ = 0x01, AIO_WRITE = 0x02, };
 
-#if defined(DEBUG) || defined(_DEBUG)
-#define IOCP_FLAG_SET(ctx, flag)	{assert(0 == (ctx->flags & flag));ctx->flags |= flag;}
-#define IOCP_FLAG_UNSET(ctx, flag)	{assert(0 != (ctx->flags & flag));ctx->flags &= ~flag;}
-#else
-#define IOCP_FLAG_SET(ctx, flag)	(void)ctx,(void)flag
-#define IOCP_FLAG_UNSET(ctx, flag)	(void)ctx,(void)flag
-#endif
-
 struct aio_context
 {
 	volatile LONG ref;
 	//volatile LONG closed;
-	volatile int flags;
+	volatile LONG flags;
 
 	int own;
 	SOCKET socket;
@@ -201,7 +193,7 @@ static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio,
 	int locallen, remotelen;
 	struct sockaddr *local;
 	struct sockaddr *remote;
-	IOCP_FLAG_UNSET(ctx, AIO_READ);
+	assert(0 != (AIO_READ & InterlockedAnd(&ctx->flags, ~AIO_READ)));
 	if(0 == error)
 	{
 		// http://msdn.microsoft.com/en-us/library/windows/desktop/ms737524%28v=vs.85%29.aspx
@@ -227,7 +219,7 @@ static void iocp_accept(struct aio_context* ctx, struct aio_context_action* aio,
 static void iocp_connect(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
 	(void)bytes;
-	IOCP_FLAG_UNSET(ctx, AIO_WRITE);
+	assert(0 != (AIO_WRITE & InterlockedAnd(&ctx->flags, ~AIO_WRITE)));
 	// http://msdn.microsoft.com/en-us/library/windows/desktop/ms737606%28v=vs.85%29.aspx
 	// When the ConnectEx function returns TRUE, the socket s is in the default state for a connected socket. 
 	// The socket s does not enable previously set properties or options until SO_UPDATE_CONNECT_CONTEXT is 
@@ -238,19 +230,19 @@ static void iocp_connect(struct aio_context* ctx, struct aio_context_action* aio
 
 static void iocp_recv(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
-	IOCP_FLAG_UNSET(ctx, AIO_READ);
+	assert(0 != (AIO_READ & InterlockedAnd(&ctx->flags, ~AIO_READ)));
 	aio->recv.proc(aio->recv.param, error, bytes);
 }
 
 static void iocp_send(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
-	IOCP_FLAG_UNSET(ctx, AIO_WRITE);
+	assert(0 != (AIO_WRITE & InterlockedAnd(&ctx->flags, ~AIO_WRITE)));
 	aio->send.proc(aio->send.param, error, bytes);
 }
 
 static void iocp_recvfrom(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
 {
-	IOCP_FLAG_UNSET(ctx, AIO_READ);
+	assert(0 != (AIO_READ & InterlockedAnd(&ctx->flags, ~AIO_READ)));
 	aio->recvfrom.proc(aio->recvfrom.param, error, bytes, (struct sockaddr*)&aio->recvfrom.addr, aio->recvfrom.addrlen);
 }
 
@@ -340,7 +332,7 @@ static inline int aio_socket_result(struct aio_context_action *aio, int flag)
 	DWORD ret = WSAGetLastError();
 	if (WSA_IO_PENDING != ret)
 	{
-		IOCP_FLAG_UNSET(aio->context, flag);
+		assert(0 != (flag & InterlockedAnd(&aio->context->flags, ~flag)));
 		util_free(aio);
 		return ret;
 	}
@@ -479,9 +471,9 @@ int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 		return WSAGetLastError();
 	}
 
-	IOCP_FLAG_SET(ctx, AIO_READ);
 	dwBytes = sizeof(aio->accept.buffer) / 2;
-	if(!AcceptEx(ctx->socket, aio->accept.socket, aio->accept.buffer, 0, dwBytes, dwBytes, &dwBytes, &aio->overlapped))
+	assert(0 == (AIO_READ & InterlockedOr(&ctx->flags, AIO_READ)));
+	if (!AcceptEx(ctx->socket, aio->accept.socket, aio->accept.buffer, 0, dwBytes, dwBytes, &dwBytes, &aio->overlapped))
 	{
 		ret = aio_socket_result(aio, AIO_READ);
 		if(0 != ret)
@@ -503,8 +495,8 @@ int aio_socket_connect(aio_socket_t socket, const struct sockaddr *addr, socklen
 	aio->connect.proc = proc;
 	aio->connect.param = param;
 
-	IOCP_FLAG_SET(ctx, AIO_WRITE);
-	if(!ConnectEx(ctx->socket, addr, addrlen, NULL, 0, NULL, &aio->overlapped))
+	assert(0 == (AIO_WRITE & InterlockedOr(&ctx->flags, AIO_WRITE)));
+	if (!ConnectEx(ctx->socket, addr, addrlen, NULL, 0, NULL, &aio->overlapped))
 	{
 		return aio_socket_result(aio, AIO_WRITE);
 	}
@@ -538,7 +530,7 @@ int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onre
 	aio->recv.proc = proc;
 	aio->recv.param = param;
 
-	IOCP_FLAG_SET(ctx, AIO_READ);
+	assert(0 == (AIO_READ & InterlockedOr(&ctx->flags, AIO_READ)));
 	if(SOCKET_ERROR == WSARecv(ctx->socket, vec, n, NULL/*&dwBytes*/, &flags, &aio->overlapped, NULL))
 	{
 		return aio_socket_result(aio, AIO_READ);
@@ -556,7 +548,7 @@ int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onse
 	aio->send.proc = proc;
 	aio->send.param = param;
 
-	IOCP_FLAG_SET(ctx, AIO_WRITE);
+	assert(0 == (AIO_WRITE & InterlockedOr(&ctx->flags, AIO_WRITE)));
 	if(SOCKET_ERROR == WSASend(ctx->socket, vec, n, NULL/*&dwBytes*/, 0, &aio->overlapped, NULL))
 	{
 		return aio_socket_result(aio, AIO_WRITE);
@@ -592,7 +584,7 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 	aio->recvfrom.param = param;
 	aio->recvfrom.addrlen = sizeof(aio->recvfrom.addr);
 
-	IOCP_FLAG_SET(ctx, AIO_READ);
+	assert(0 == (AIO_READ & InterlockedOr(&ctx->flags, AIO_READ)));
 	if(SOCKET_ERROR == WSARecvFrom(ctx->socket, vec, (DWORD)n, NULL/*&dwBytes*/, &flags, (struct sockaddr *)&aio->recvfrom.addr, &aio->recvfrom.addrlen, &aio->overlapped, NULL))
 	{
 		return aio_socket_result(aio, AIO_READ);
@@ -610,7 +602,7 @@ int aio_socket_sendto_v(aio_socket_t socket, const struct sockaddr *addr, sockle
 	aio->send.proc = proc;
 	aio->send.param = param;
 
-	IOCP_FLAG_SET(ctx, AIO_WRITE);
+	assert(0 == (AIO_WRITE & InterlockedOr(&ctx->flags, AIO_WRITE)));
 	if(SOCKET_ERROR == WSASendTo(ctx->socket, vec, (DWORD)n, NULL/*&dwBytes*/, 0, addr, addrlen, &aio->overlapped, NULL))
 	{
 		return aio_socket_result(aio, AIO_WRITE);
