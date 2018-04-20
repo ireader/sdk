@@ -1,7 +1,12 @@
 #include "aio-send.h"
+#include "sys/atomic.h"
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+
+enum { AIO_STATUS_INIT = 0, AIO_STATUS_START, AIO_STATUS_TIMEOUT };
+
+#define AIO_SEND_START(send) {assert(AIO_STATUS_INIT == send->status);send->status = AIO_STATUS_START;}
 
 #define AIO_START_TIMEOUT(aio, timeout, callback)	\
 	if (timeout > 0) {								\
@@ -18,7 +23,7 @@ static void aio_send_timeout(void* param)
 	struct aio_send_t* send;
 	send = (struct aio_send_t*)param;
 
-	if (send->onsend)
+	if (atomic_cas32(&send->status, AIO_STATUS_START, AIO_STATUS_TIMEOUT) && send->onsend)
 		send->onsend(send->param, ETIMEDOUT, 0);
 }
 
@@ -26,16 +31,16 @@ static void aio_send_handler(void* param, int code, size_t bytes)
 {
 	struct aio_send_t* send;
 	send = (struct aio_send_t*)param;
-	if (0 != aio_timeout_stop(&send->timeout))
-		return;
 
-	if (send->onsend)
+	aio_timeout_stop(&send->timeout);
+	if (atomic_cas32(&send->status, AIO_STATUS_START, AIO_STATUS_INIT) && send->onsend)
 		send->onsend(send->param, code, bytes);
 }
 
 int aio_send(struct aio_send_t* send, int timeout, aio_socket_t aio, const void* buffer, size_t bytes, aio_onsend onsend, void* param)
 {
 	int r;
+	AIO_SEND_START(send);
 	send->param = param;
 	send->onsend = onsend;
 	memset(&send->timeout, 0, sizeof(send->timeout));
@@ -48,6 +53,7 @@ int aio_send(struct aio_send_t* send, int timeout, aio_socket_t aio, const void*
 int aio_send_v(struct aio_send_t* send, int timeout, aio_socket_t aio, socket_bufvec_t* vec, int n, aio_onsend onsend, void* param)
 {
 	int r;
+	AIO_SEND_START(send);
 	send->param = param;
 	send->onsend = onsend;
 	memset(&send->timeout, 0, sizeof(send->timeout));
@@ -60,6 +66,7 @@ int aio_send_v(struct aio_send_t* send, int timeout, aio_socket_t aio, socket_bu
 int aio_sendto(struct aio_send_t* send, int timeout, aio_socket_t aio, const struct sockaddr *addr, socklen_t addrlen, const void* buffer, size_t bytes, aio_onsend onsend, void* param)
 {
 	int r;
+	AIO_SEND_START(send);
 	send->param = param;
 	send->onsend = onsend;
 	memset(&send->timeout, 0, sizeof(send->timeout));
@@ -72,6 +79,7 @@ int aio_sendto(struct aio_send_t* send, int timeout, aio_socket_t aio, const str
 int aio_sendto_v(struct aio_send_t* send, int timeout, aio_socket_t aio, const struct sockaddr *addr, socklen_t addrlen, socket_bufvec_t* vec, int n, aio_onsend onsend, void* param)
 {
 	int r;
+	AIO_SEND_START(send);
 	send->param = param;
 	send->onsend = onsend;
 	memset(&send->timeout, 0, sizeof(send->timeout));
