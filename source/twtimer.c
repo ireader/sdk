@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <assert.h>
+#include <errno.h>
 
 #define TIME_RESOLUTION 6
 #define TIME(clock) ((clock) >> TIME_RESOLUTION) // per 64ms
