@@ -105,14 +105,12 @@
     <ClCompile Include="..\libhttp\test\http-list-dir.cpp" />
     <ClCompile Include="..\libhttp\test\http-server-test.cpp" />
     <ClCompile Include="..\libtorrent\test\bencode-test.c" />
-    <ClCompile Include="..\libtorrent\test\metainfo-test.c" />
-    <ClCompile Include="..\libtorrent\test\torrent-test.c" />
-    <ClCompile Include="..\libtorrent\test\tracker-test.c" />
     <ClCompile Include="..\source\app-log.c" />
     <ClCompile Include="..\source\base64.c" />
     <ClCompile Include="..\source\bitmap.c" />
     <ClCompile Include="..\source\bits.c" />
     <ClCompile Include="..\source\bsearch.c" />
+    <ClCompile Include="..\source\darray.c" />
     <ClCompile Include="..\source\digest\crc32.c" />
     <ClCompile Include="..\source\digest\hkdf.c" />
     <ClCompile Include="..\source\digest\hmac.c" />
@@ -124,7 +122,6 @@
     <ClCompile Include="..\source\heap.c" />
     <ClCompile Include="..\source\html-entities.c" />
     <ClCompile Include="..\source\hweight.c" />
-    <ClCompile Include="..\source\memory-dump.c" />
     <ClCompile Include="..\source\ntp-time.c" />
     <ClCompile Include="..\source\port\ip-route.c" />
     <ClCompile Include="..\source\port\serial-port-win32.c" />
@@ -147,7 +144,7 @@
     <ClCompile Include="..\source\task-queue.c" />
     <ClCompile Include="..\source\thread-pool.c" />
     <ClCompile Include="..\source\time64.c" />
-    <ClCompile Include="..\source\timer.c" />
+    <ClCompile Include="..\source\twtimer.c" />
     <ClCompile Include="..\source\unicode.c" />
     <ClCompile Include="..\source\uri-parse.c" />
     <ClCompile Include="..\source\urlcodec.c" />
@@ -156,6 +153,7 @@
     <ClCompile Include="aio-socket-test2.c" />
     <ClCompile Include="aio-socket-test3.c" />
     <ClCompile Include="aio-socket-test4.c" />
+    <ClCompile Include="aio-socket-test5.c" />
     <ClCompile Include="atomic-test.c" />
     <ClCompile Include="atomic-test2.c" />
     <ClCompile Include="bitmap-test.c" />
@@ -173,6 +171,7 @@
     <ClCompile Include="semaphore-test.c" />
     <ClCompile Include="sha-test.c" />
     <ClCompile Include="socket-test.c" />
+    <ClCompile Include="socket-ipv6-dual-stack-test.c" />
     <ClCompile Include="spinlock-test.c" />
     <ClCompile Include="stack-test.c" />
     <ClCompile Include="systimer-test.c" />
@@ -195,7 +194,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\bitmap.h" />
     <ClInclude Include="..\include\bsearch.h" />
     <ClInclude Include="..\include\hash-list.h" />
     <ClInclude Include="..\include\hash.h" />
@@ -204,6 +202,7 @@
     <ClInclude Include="..\include\jhash.h" />
     <ClInclude Include="..\include\list.h" />
     <ClInclude Include="..\include\rbtree.h" />
+    <ClInclude Include="..\include\rarray.h" />
     <ClInclude Include="..\include\ring-buffer.h" />
     <ClInclude Include="..\include\stack.h" />
   </ItemGroup>
