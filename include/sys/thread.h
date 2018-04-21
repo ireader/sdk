@@ -210,4 +210,37 @@ static inline int thread_yield(void)
 #endif
 }
 
+#if defined(OS_WINDOWS_XP)
+typedef DWORD KPRIORITY;
+typedef struct _CLIENT_ID
+{
+	PVOID UniqueProcess;
+	PVOID UniqueThread;
+} CLIENT_ID, *PCLIENT_ID;
+
+typedef struct _THREAD_BASIC_INFORMATION
+{
+	NTSTATUS                ExitStatus;
+	PVOID                   TebBaseAddress;
+	CLIENT_ID               ClientId;
+	KAFFINITY               AffinityMask;
+	KPRIORITY               Priority;
+	KPRIORITY               BasePriority;
+} THREAD_BASIC_INFORMATION, *PTHREAD_BASIC_INFORMATION;
+
+typedef NTSTATUS(__stdcall *NtQueryInformationThread)(HANDLE ThreadHandle, int ThreadInformationClass, PVOID ThreadInformation, ULONG ThreadInformationLength, PULONG ReturnLength);
+
+static inline tid_t thread_getid_xp(HANDLE handle)
+{
+	// NT_TIB* tib = (NT_TIB*)__readfsdword(0x18);
+	HMODULE module;
+	THREAD_BASIC_INFORMATION tbi;
+	memset(&tbi, 0, sizeof(tbi));
+	module = GetModuleHandleA("ntdll.dll");
+	NtQueryInformationThread fp = (NtQueryInformationThread)GetProcAddress(module, "NtQueryInformationThread");
+	fp(handle, 0/*ThreadBasicInformation*/, &tbi, sizeof(tbi), NULL);
+	return (tid_t)tbi.ClientId.UniqueThread;
+}
+#endif
+
 #endif /* !_platform_thread_h_ */
