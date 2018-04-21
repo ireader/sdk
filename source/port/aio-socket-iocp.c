@@ -18,11 +18,13 @@ typedef BOOL (PASCAL FAR * FAcceptEx)(SOCKET, SOCKET, PVOID, DWORD, DWORD, DWORD
 typedef VOID (PASCAL FAR * FGetAcceptExSockaddrs)(PVOID, DWORD, DWORD, DWORD, struct sockaddr **, LPINT, struct sockaddr **, LPINT);
 typedef BOOL (PASCAL FAR * FConnectEx)(SOCKET, const struct sockaddr *, int, PVOID, DWORD, LPDWORD, LPOVERLAPPED);
 typedef BOOL (PASCAL FAR * FDisconnectEx)(SOCKET, LPOVERLAPPED, DWORD, DWORD);
+typedef INT  (PASCAL FAR * FWSARECVMSG)(SOCKET, LPWSAMSG, LPDWORD, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
 
 #define WSAID_ACCEPTEX		{0xb5367df1,0xcbac,0x11cf,{0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92}}
 #define WSAID_GETACCEPTEXSOCKADDRS {0xb5367df2,0xcbac,0x11cf,{0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92}}
 #define WSAID_CONNECTEX		{0x25a207b9,0xddf3,0x4660,{0x8e,0xe9,0x76,0xe5,0x8c,0x74,0x06,0x3e}}
 #define WSAID_DISCONNECTEX	{0x7fda2e11,0x8630,0x436f,{0xa0, 0x31, 0xf5, 0x36, 0xa6, 0xee, 0xc1, 0x57}}
+#define WSAID_WSARECVMSG	{0xf689d7c8,0x6f1f,0x436b,{0x8a,0x53,0xe5,0x4f,0xe3,0x51,0xc3,0x22}}
 
 #define SO_UPDATE_ACCEPT_CONTEXT    0x700B
 
@@ -30,6 +32,7 @@ static FAcceptEx AcceptEx;
 static FGetAcceptExSockaddrs GetAcceptExSockaddrs;
 static FConnectEx ConnectEx;
 static FDisconnectEx DisconnectEx;
+static FWSARECVMSG WSARecvMsg;
 
 enum { AIO_READ = 0x01, AIO_WRITE = 0x02, };
 
@@ -115,12 +118,14 @@ static int iocp_init()
 	GUID guid2 = WSAID_GETACCEPTEXSOCKADDRS;
 	GUID guid3 = WSAID_CONNECTEX;
 	GUID guid4 = WSAID_DISCONNECTEX;
+	GUID guid5 = WSAID_WSARECVMSG;
 
 	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid1, sizeof(GUID), &AcceptEx, sizeof(AcceptEx), &bytes, NULL, NULL);
 	WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid2, sizeof(GUID), &GetAcceptExSockaddrs, sizeof(GetAcceptExSockaddrs), &bytes, NULL, NULL);
 	WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid3, sizeof(GUID), &ConnectEx, sizeof(ConnectEx), &bytes, NULL, NULL);
 	WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid4, sizeof(GUID), &DisconnectEx, sizeof(DisconnectEx), &bytes, NULL, NULL);
+	WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid5, sizeof(GUID), &WSARecvMsg, sizeof(WSARecvMsg), &bytes, NULL, NULL);
 	closesocket(sock);
 
 	assert(AcceptEx && GetAcceptExSockaddrs && ConnectEx && DisconnectEx);
