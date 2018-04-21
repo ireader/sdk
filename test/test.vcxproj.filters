@@ -291,17 +291,20 @@
     <ClCompile Include="..\libtorrent\test\bencode-test.c">
       <Filter>libtorrent</Filter>
     </ClCompile>
-    <ClCompile Include="..\libtorrent\test\metainfo-test.c">
-      <Filter>libtorrent</Filter>
-    </ClCompile>
-    <ClCompile Include="..\libtorrent\test\torrent-test.c">
-      <Filter>libtorrent</Filter>
-    </ClCompile>
-    <ClCompile Include="..\libtorrent\test\tracker-test.c">
-      <Filter>libtorrent</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\string\strrev.c">
       <Filter>lib\string</Filter>
+    </ClCompile>
+    <ClCompile Include="socket-ipv6-dual-stack-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\twtimer.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\darray.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="aio-socket-test5.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="aio-socket-test5.c">
       <Filter>Source Files</Filter>
@@ -332,9 +335,6 @@
     <ClInclude Include="..\include\bsearch.h">
       <Filter>lib\algorithm</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\bitmap.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\hash.h">
       <Filter>lib\algorithm</Filter>
     </ClInclude>
@@ -343,6 +343,9 @@
     </ClInclude>
     <ClInclude Include="..\include\hash-list.h">
       <Filter>lib\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\rarray.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

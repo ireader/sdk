@@ -104,14 +104,12 @@
     <ClCompile Include="..\libhttp\test\http-list-dir.cpp" />
     <ClCompile Include="..\libhttp\test\http-server-test.cpp" />
     <ClCompile Include="..\libtorrent\test\bencode-test.c" />
-    <ClCompile Include="..\libtorrent\test\metainfo-test.c" />
-    <ClCompile Include="..\libtorrent\test\torrent-test.c" />
-    <ClCompile Include="..\libtorrent\test\tracker-test.c" />
     <ClCompile Include="..\source\app-log.c" />
     <ClCompile Include="..\source\base64.c" />
     <ClCompile Include="..\source\bitmap.c" />
     <ClCompile Include="..\source\bits.c" />
     <ClCompile Include="..\source\bsearch.c" />
+    <ClCompile Include="..\source\darray.c" />
     <ClCompile Include="..\source\digest\crc32.c" />
     <ClCompile Include="..\source\digest\hkdf.c" />
     <ClCompile Include="..\source\digest\hmac.c" />
@@ -172,6 +170,7 @@
     <ClCompile Include="semaphore-test.c" />
     <ClCompile Include="sha-test.c" />
     <ClCompile Include="socket-test.c" />
+    <ClCompile Include="socket-ipv6-dual-stack-test.c" />
     <ClCompile Include="spinlock-test.c" />
     <ClCompile Include="stack-test.c" />
     <ClCompile Include="systimer-test.c" />
@@ -194,7 +193,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\bitmap.h" />
     <ClInclude Include="..\include\bsearch.h" />
     <ClInclude Include="..\include\hash-list.h" />
     <ClInclude Include="..\include\hash.h" />
@@ -203,6 +201,7 @@
     <ClInclude Include="..\include\jhash.h" />
     <ClInclude Include="..\include\list.h" />
     <ClInclude Include="..\include\rbtree.h" />
+    <ClInclude Include="..\include\rarray.h" />
     <ClInclude Include="..\include\ring-buffer.h" />
     <ClInclude Include="..\include\stack.h" />
   </ItemGroup>
