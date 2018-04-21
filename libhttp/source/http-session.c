@@ -72,6 +72,9 @@ static void http_session_onrecv(void* param, int code, size_t bytes)
 		code = http_parser_input(session->parser, session->data, &session->remain);
 		if (0 == code)
 		{
+			// wait for next recv
+			atomic_cas_ptr(&session->rlocker, session, NULL);
+
 			// http pipeline remain data
 			assert(bytes > session->remain);
 			if (session->remain > 0 && bytes > session->remain)
@@ -114,13 +117,12 @@ static void http_session_onsend(void* param, int code, size_t bytes)
 	if (session->onsend)
 		r = session->onsend(session->onsendparam, code, bytes);
 
-	// hack session->vec value for send multi-data
-	if (0 == r && 0 == code && NULL == session->vec)
+	if (0 == r && 0 == code)
 	{
 		http_parser_clear(session->parser); // reset parser
 		if (session->remain > 0)
 			http_session_onrecv(session, 0, session->remain); // next round
-		else
+		else if(atomic_cas_ptr(&session->rlocker, NULL, session))
 			r = aio_tcp_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER);
 	}
 
@@ -148,6 +150,7 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	assert(AF_INET == sa->sa_family || AF_INET6 == sa->sa_family);
 	assert(salen <= sizeof(session->addr));
 	memcpy(&session->addr, sa, salen);
+	session->rlocker = session;
 	session->addrlen = salen;
 	session->socket = socket;
 	session->param = server->param;

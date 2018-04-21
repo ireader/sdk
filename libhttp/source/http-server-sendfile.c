@@ -138,7 +138,6 @@ static int http_server_onsendfile(void* param, int code, size_t bytes)
 		}
 		
 		http_file_read(sendfile);
-		sendfile->session->vec = sendfile->session->vec5; // hack for send remain data
 		code = aio_tcp_transport_send(sendfile->session->transport, sendfile->ptr, sendfile->bytes);
 	}
 

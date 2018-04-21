@@ -5,6 +5,7 @@
 #include "http-parser.h"
 #include "aio-tcp-transport.h"
 #include "sys/sock.h"
+#include "sys/atomic.h"
 
 struct http_session_t
 {
@@ -16,6 +17,7 @@ struct http_session_t
 
 	char* data; // recv buffer
 	size_t remain; // remain size
+	void* rlocker; // recv status
 
 	char status_line[64];
 	char* header;
