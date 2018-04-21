@@ -101,7 +101,6 @@
     <ClCompile Include="..\libhttp\test\benchmark.c" />
     <ClCompile Include="..\libhttp\test\http-client-test.cpp" />
     <ClCompile Include="..\libhttp\test\http-client-test2.cpp" />
-    <ClCompile Include="..\libhttp\test\http-download.c" />
     <ClCompile Include="..\libhttp\test\http-list-dir.cpp" />
     <ClCompile Include="..\libhttp\test\http-server-test.cpp" />
     <ClCompile Include="..\libtorrent\test\bencode-test.c" />
@@ -124,7 +123,6 @@
     <ClCompile Include="..\source\heap.c" />
     <ClCompile Include="..\source\html-entities.c" />
     <ClCompile Include="..\source\hweight.c" />
-    <ClCompile Include="..\source\memory-dump.c" />
     <ClCompile Include="..\source\ntp-time.c" />
     <ClCompile Include="..\source\port\ip-route.c" />
     <ClCompile Include="..\source\port\serial-port-win32.c" />
@@ -147,7 +145,7 @@
     <ClCompile Include="..\source\task-queue.c" />
     <ClCompile Include="..\source\thread-pool.c" />
     <ClCompile Include="..\source\time64.c" />
-    <ClCompile Include="..\source\timer.c" />
+    <ClCompile Include="..\source\twtimer.c" />
     <ClCompile Include="..\source\unicode.c" />
     <ClCompile Include="..\source\uri-parse.c" />
     <ClCompile Include="..\source\urlcodec.c" />
@@ -156,6 +154,7 @@
     <ClCompile Include="aio-socket-test2.c" />
     <ClCompile Include="aio-socket-test3.c" />
     <ClCompile Include="aio-socket-test4.c" />
+    <ClCompile Include="aio-socket-test5.c" />
     <ClCompile Include="atomic-test.c" />
     <ClCompile Include="atomic-test2.c" />
     <ClCompile Include="bitmap-test.c" />
