@@ -37,8 +37,8 @@ struct utp_socket_t* utp_socket_create(struct utp_t* utp)
 	socket->state = UTP_STATE_INIT;
 	socket->timeout = UTP_DEFAULT_TIMEOUT;
 	socket->max_window = 8 * 1024;
-	socket->recv.rb = ring_buffer_create(N_MAX_BUFFER);
-	if (!socket->recv.rb
+
+	if (0 != ring_buffer_alloc(&socket->recv.rb, N_MAX_BUFFER)
 		|| 0 != rarray_init(&socket->send.acks, sizeof(struct utp_ack_t), N_ACK_BITS)
 		|| 0 != rarray_init(&socket->recv.acks, sizeof(struct utp_ack_t), N_ACK_BITS))
 	{
@@ -55,7 +55,7 @@ void utp_socket_release(struct utp_socket_t* socket)
 		return;
 
 	//socket->handler.ondestroy(socket->param);
-	ring_buffer_destroy(socket->recv.rb);
+	ring_buffer_free(&socket->recv.rb);
 	rarray_free(&socket->send.acks);
 	rarray_free(&socket->recv.acks);
 	free(socket);
@@ -118,15 +118,15 @@ int utp_socket_disconnect(struct utp_socket_t* socket)
 
 int utp_socket_send(struct utp_socket_t* socket, const uint8_t* data, unsigned int bytes)
 {
-	assert(NULL == socket->send.rb->ptr && 0 == socket->send.rb->capacity);
+	assert(NULL == socket->send.rb.ptr && 0 == socket->send.rb.capacity);
 
 	// save data
-	if (!socket->send.rb->ptr)
+	if (!socket->send.rb.ptr)
 		return -1;
-	socket->send.rb->ptr = (uint8_t*)data;
-	socket->send.rb->capacity = bytes;
-	socket->send.rb->offset = 0;
-	socket->send.rb->count = 0;
+	socket->send.rb.ptr = (uint8_t*)data;
+	socket->send.rb.capacity = bytes;
+	socket->send.rb.offset = 0;
+	socket->send.rb.count = 0;
 
 	return utp_socket_send_data(socket);
 }
@@ -250,8 +250,8 @@ int utp_socket_input(struct utp_socket_t* socket, const struct utp_header_t* hea
 	if (0 != r)
 		return r;
 
-	if(socket->recv.ack_nr + 1 >= (uint16_t)socket->send.rb->count && socket->send.rb->offset == socket->send.rb->capacity && socket->send.rb->capacity > 0)
-		socket->handler.onsend(socket->utp->param, socket, 0, socket->send.rb->ptr, socket->send.rb->capacity);
+	if(socket->recv.ack_nr + 1 >= (uint16_t)socket->send.rb.count && socket->send.rb.offset == socket->send.rb.capacity && socket->send.rb.capacity > 0)
+		socket->handler.onsend(socket->utp->param, socket, 0, socket->send.rb.ptr, socket->send.rb.capacity);
 
 	// 2. recv data
 	if (bytes > 0)
@@ -266,12 +266,12 @@ int utp_socket_input(struct utp_socket_t* socket, const struct utp_header_t* hea
 		{
 			struct utp_ack_t ack;
 			memset(&ack, 0, sizeof(ack));
-			ack.ptr = socket->recv.rb->ptr + socket->recv.rb->offset; // rb write position
+			ack.ptr = socket->recv.rb.ptr + socket->recv.rb.offset; // rb write position
 			ack.len = bytes;
 			ack.seq = header->seq_nr;
 			ack.clock = system_clock();
 
-			if (0 == ring_buffer_write(socket->recv.rb, data, bytes))
+			if (0 == ring_buffer_write(&socket->recv.rb, data, bytes))
 			{
 				r = utp_ack_inert(&socket->recv.acks, &ack);
 			}
@@ -435,10 +435,10 @@ static int utp_socket_send_data(struct utp_socket_t* socket)
 		ack.clock = system_clock();
 		ack.type = UTP_ST_DATA;
 		ack.seq = socket->send.seq_nr++;
-		ack.ptr = socket->send.rb->ptr + socket->send.rb->offset;
-		ack.len = min(packet_size, (int)(socket->send.rb->capacity - socket->send.rb->offset));
+		ack.ptr = socket->send.rb.ptr + socket->send.rb.offset;
+		ack.len = min(packet_size, (int)(socket->send.rb.capacity - socket->send.rb.offset));
 		
-		socket->send.rb->offset += ack.len; // update offset
+		socket->send.rb.offset += ack.len; // update offset
 		rarray_push_back(&socket->send.acks, &ack);
 
 		r = utp_socket_send_packet(socket, &ack);
@@ -446,7 +446,7 @@ static int utp_socket_send_data(struct utp_socket_t* socket)
 		{
 			// try it later
 //			rarray_pop_back(&socket->send.acks);
-//			socket->send.rb->offset -= ack.len; // update offset
+//			socket->send.rb.offset -= ack.len; // update offset
 			return r;
 		}
 
@@ -471,7 +471,7 @@ static int utp_ack_inert(struct rarray_t* acks, const struct utp_ack_t* ack)
 
 static uint32_t utp_socket_window_size(struct utp_socket_t* socket)
 {
-	return socket->recv.rb->capacity - socket->recv.rb->count;
+	return socket->recv.rb.capacity - socket->recv.rb.count;
 }
 
 // Every packet that is ACKed, either by falling in the range (last_ack_nr, ack_nr] 

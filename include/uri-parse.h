@@ -30,6 +30,20 @@ struct uri_t* uri_parse(const char* uri, int len);
 /// @param[in] uri return by uri_parse
 void uri_free(struct uri_t* uri);
 
+
+struct uri_query_t
+{
+	const char* name;
+	int n_name;
+
+	const char* value;
+	int n_value;
+};
+
+int uri_query(const char* query, const char* end, struct uri_query_t** items);
+
+void uri_query_free(struct uri_query_t** items);
+
 #ifdef __cplusplus
 }
 #endif

@@ -17,8 +17,8 @@ struct ring_buffer_t
 	size_t count;
 };
 
-struct ring_buffer_t* ring_buffer_create(size_t capacity);
-int ring_buffer_destroy(struct ring_buffer_t* rb);
+int ring_buffer_alloc(struct ring_buffer_t* rb, size_t capacity);
+int ring_buffer_free(struct ring_buffer_t* rb);
 void ring_buffer_clear(struct ring_buffer_t* rb);
 
 int ring_buffer_write(struct ring_buffer_t* rb, const void* data, size_t bytes);

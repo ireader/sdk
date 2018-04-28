@@ -15,6 +15,7 @@ enum { AIO_STATUS_INIT = 0, AIO_STATUS_START, AIO_STATUS_TIMEOUT };
 	} else {}
 
 #define AIO_STOP_TIMEOUT_ON_FAILED(aio, r, timeout)	\
+	if (0 != r) aio->status = AIO_STATUS_INIT;		\
 	if (0 != r && timeout > 0) {					\
 		aio_timeout_stop(&aio->timeout);			\
 	} else {}

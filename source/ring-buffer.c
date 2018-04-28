@@ -5,20 +5,17 @@
 #include <assert.h>
 #include <errno.h>
 
-struct ring_buffer_t* ring_buffer_create(size_t capacity)
+int ring_buffer_alloc(struct ring_buffer_t* rb, size_t capacity)
 {
-	struct ring_buffer_t* rb;
-	rb = (struct ring_buffer_t*)malloc(capacity);
-	if (NULL == rb) return NULL;
-
-	rb->ptr = (uint8_t*)(rb + 1);
+	rb->ptr = (uint8_t*)malloc(capacity);
+	if (NULL == rb->ptr) return ENOMEM;
 	rb->capacity = capacity;
 	rb->offset = 0;
 	rb->count = 0;
 	return 0;
 }
 
-int ring_buffer_destroy(struct ring_buffer_t* rb)
+int ring_buffer_free(struct ring_buffer_t* rb)
 {
 	if (!rb || !rb->ptr)
 		return EINVAL;
@@ -96,7 +93,7 @@ void ring_buffer_test(void)
 {
 	int n;
 	int i, j;
-	struct ring_buffer_t* rb;
+	struct ring_buffer_t rb;
 	uint8_t *src, *dst;
 
 	srand((unsigned int)time(NULL));
@@ -106,45 +103,46 @@ void ring_buffer_test(void)
 	for (i = 0; i < N; i++)
 		src[i] = (uint8_t)(rand() % 256);
 
-	rb = ring_buffer_create(1000);
+	assert(0 == ring_buffer_alloc(&rb, 1000));
 
-	assert(0 == ring_buffer_write(rb, src, 888));
-	assert(0 != ring_buffer_write(rb, src, 1000 - 888 + 1)); // overrun(overflow)
-	assert(0 == ring_buffer_write(rb, src + 888, 1000 - 888)); // write full
-	assert(0 != ring_buffer_write(rb, src + 1000, 1)); // overrun(overflow)
-	assert(0 != ring_buffer_write(rb, src + 1000, 1000));
+	assert(0 == ring_buffer_write(&rb, src, 888));
+	assert(0 != ring_buffer_write(&rb, src, 1000 - 888 + 1)); // overrun(overflow)
+	assert(0 == ring_buffer_write(&rb, src + 888, 1000 - 888)); // write full
+	assert(0 != ring_buffer_write(&rb, src + 1000, 1)); // overrun(overflow)
+	assert(0 != ring_buffer_write(&rb, src + 1000, 1000));
 	
-	assert(1000 == ring_buffer_size(rb));
-	assert(0 == ring_buffer_read(rb, dst, 100));
-	assert(900 == ring_buffer_size(rb));
-	assert(0 != ring_buffer_read(rb, dst + 100, 901)); // underrun(hungry)
-	assert(0 == ring_buffer_read(rb, dst + 100, 900));
-	assert(0 == ring_buffer_size(rb));
+	assert(1000 == ring_buffer_size(&rb));
+	assert(0 == ring_buffer_read(&rb, dst, 100));
+	assert(900 == ring_buffer_size(&rb));
+	assert(0 != ring_buffer_read(&rb, dst + 100, 901)); // underrun(hungry)
+	assert(0 == ring_buffer_read(&rb, dst + 100, 900));
+	assert(0 == ring_buffer_size(&rb));
+	assert(0 == memcmp(src, dst, 1000));
 
 	i = 1000;
 	j = 1000;
 	while (i < N)
 	{
-		n = 1000 - ring_buffer_size(rb);
+		n = 1000 - ring_buffer_size(&rb);
 		n = (N - i) > n ? n : (N - i);
 		n = rand() % (n + 1);
 
-		assert(0 == ring_buffer_write(rb, src + i, n));
+		assert(0 == ring_buffer_write(&rb, src + i, n));
 		i += n;
 
-		n = rand() % (ring_buffer_size(rb) + 1);
-		assert(0 == ring_buffer_read(rb, dst + j, n));
+		n = rand() % (ring_buffer_size(&rb) + 1);
+		assert(0 == ring_buffer_read(&rb, dst + j, n));
 		j += n;
 
 		assert(j <= i);
 	}
 
-	n = ring_buffer_size(rb);
-	assert(0 == ring_buffer_read(rb, dst + j, n));
+	n = ring_buffer_size(&rb);
+	assert(0 == ring_buffer_read(&rb, dst + j, n));
 	j += n;
 
 	assert(0 == memcmp(src, dst, N));
-	ring_buffer_destroy(rb);
+	ring_buffer_free(&rb);
 	free(src);
 	free(dst);
 }

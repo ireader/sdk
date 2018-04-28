@@ -70,7 +70,7 @@ struct utp_connection_t
 	struct rarray_t acks; // struct utp_ack_t array
 	
 	// send/recv buffer
-	struct ring_buffer_t* rb;
+	struct ring_buffer_t rb;
 };
 
 struct utp_socket_t
