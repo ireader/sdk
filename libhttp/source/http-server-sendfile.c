@@ -116,7 +116,7 @@ static void http_file_read(struct http_sendfile_t* sendfile)
 	}
 	else
 	{
-		sendfile->bytes = fread(sendfile->ptr, 1, sendfile->capacity, sendfile->fp);
+		sendfile->bytes = fread(sendfile->ptr, 1, size, sendfile->fp);
 		sendfile->sent += sendfile->bytes;
 	}
 }
