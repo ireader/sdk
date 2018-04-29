@@ -146,9 +146,11 @@ static int http_server_onsendfile(void* param, int code, size_t bytes)
 		if (sendfile->onsend)
 			sendfile->onsend(sendfile->param, code, 0);
 		http_file_close(sendfile);
+		assert(1 != code);
+		return code;
 	}
 
-	return code;
+	return 1; // HACK: has more data to send
 }
 
 static int http_session_range(struct http_sendfile_t* sendfile)

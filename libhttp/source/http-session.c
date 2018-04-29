@@ -115,7 +115,11 @@ static void http_session_onsend(void* param, int code, size_t bytes)
 	session->vec_count = 0;
 	session->vec = NULL;
 	if (session->onsend)
+	{
 		r = session->onsend(session->onsendparam, code, bytes);
+		if (1 == r)
+			return; // HACK: has more data to send(such as sendfile)
+	}
 
 	if (0 == r && 0 == code)
 	{
