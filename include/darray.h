@@ -9,6 +9,9 @@ struct darray_t
     int size; // per element size
     int count; 
     int capacity;
+
+	void* (*alloc)(struct darray_t* arr, size_t size);
+	void (*free)(struct darray_t* arr);
 };
 
 #define darray_int(arr, capacity) darray_init(arr, sizeof(int), capacity)

@@ -3,19 +3,36 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#include <math.h>
 
 #define SIZE(n)      (arr->size * (n))
 #define ADDRESS(idx) ((char*)arr->elements + SIZE(idx))
+
+static void* darray_realloc(struct darray_t* arr, size_t size)
+{
+	return realloc(arr->elements, size);
+}
+
+static void darray_ptrfree(struct darray_t* arr)
+{
+	free(arr->elements);
+}
 
 void darray_init(struct darray_t* arr, int size, int capacity)
 {
     arr->count = 0;
     arr->size = size;
+	arr->capacity = 0;
+	arr->elements = NULL;
+	if (!arr->alloc)
+		arr->alloc = darray_realloc;
+	if (!arr->free)
+		arr->free = darray_ptrfree;
 
     size *= capacity;
     if (size > 0)
     {
-        arr->elements = malloc(size * capacity);
+        arr->elements = arr->alloc(arr, size);
         arr->capacity = arr->elements ? capacity : 0;
     }
     else
@@ -29,7 +46,7 @@ void darray_free(struct darray_t* arr)
 {
     if (arr->elements)
     {
-        free(arr->elements);
+		arr->free(arr);
         arr->elements = NULL;
     }
     arr->capacity = 0;
@@ -48,6 +65,7 @@ int darray_erase(struct darray_t* arr, int index)
 
 int darray_insert(struct darray_t* arr, int before, const void* items, int count)
 {
+	int n;
     void* p;
 
     if (!items || count < 1 || before < 0 || before > arr->count)
@@ -55,14 +73,16 @@ int darray_insert(struct darray_t* arr, int before, const void* items, int count
 
     if (arr->count + count > arr->capacity)
     {
-        p = realloc(arr->elements, (arr->count + count + count / 2) * arr->size);
+		n = arr->count + count + (int)sqrt(arr->count);
+        p = arr->alloc(arr, n * arr->size);
         if (!p)
             return ENOMEM;
         arr->elements = p;
-        arr->capacity = arr->count + count + count / 2;
+        arr->capacity = n;
     }
 
-    memmove(ADDRESS(before + count), ADDRESS(before), SIZE(arr->count - before));
+	if(arr->count > before)
+		memmove(ADDRESS(before + count), ADDRESS(before), SIZE(arr->count - before));
     memcpy(ADDRESS(before), items, SIZE(count));
     arr->count += count;
     return 0;
