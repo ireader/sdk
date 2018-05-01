@@ -371,7 +371,7 @@ static int http_parse_request_line(struct http_parser_t *http)
 				|| http->u.req.uri.len < 1
 				// H3.1 HTTP Version (p13)
 				// HTTP-Version = "HTTP" "/" 1*DIGIT "." 1*DIGIT
-				|| http->header.name.len < 8
+				|| http->header.name.len < 5
 				|| 3 != sscanf(http->raw + http->header.name.pos, "%16[^/]/%d.%d", http->protocol, &http->vermajor, &http->verminor))
 			{
 				assert(0);
@@ -483,7 +483,7 @@ static int http_parse_status_line(struct http_parser_t *http)
 			assert('\n' == c);
 			// H3.1 HTTP Version (p13)
 			// HTTP-Version = "HTTP" "/" 1*DIGIT "." 1*DIGIT
-			if (http->header.name.len < 8 || 3 != sscanf(http->raw + http->header.name.pos, "%16[^/]/%d.%d", http->protocol, &http->vermajor, &http->verminor)
+			if (http->header.name.len < 5 || 3 != sscanf(http->raw + http->header.name.pos, "%16[^/]/%d.%d", http->protocol, &http->vermajor, &http->verminor)
 				// H6.1.1 Status Code and Reason Phrase (p26)
 				// The Status-Code element is a 3-digit integer result code
 				|| http->header.value.len != 3 || http->u.reply.reason.len < 1)
@@ -1016,26 +1016,30 @@ int http_parser_input(struct http_parser_t* http, const void* data, size_t *byte
 		{
 			if(-1 == http->content_length)
 			{
-				// RFC2326 RTSP 4.4 Message Length
-				// 2. If a Content-Length header field is not present, a value of zero is assumed.
-				// 3. By the server closing the connection. (Closing the connection cannot be used to 
-				//    indicate the end of a request body, since that would leave no possibility for the 
-				//    server to send back a response.)
-				if(is_server_mode(http) || 0 != strcasecmp("HTTP", http->protocol))
-				{
-					http->content_length = 0;
-					http->stateM = SM_DONE;
-				}
-				else
+				// 4.3 Message Body: All 1xx(informational), 204 (no content), and 304 (not modified) responses MUST NOT include a message-body
+				// 4.4 Message Length: HEAD/1xx/204/304
+
+				if(!is_server_mode(http) && 0 == strcasecmp("HTTP", http->protocol) 
+					&& http->u.reply.code != 204 && http->u.reply.code != 304
+					&& (http->u.reply.code < 100 || http->u.reply.code >= 200))
 				{
 					// H4.4 Message Length, section 5, server closing the connection
 					// receive all until socket closed
-					assert(!is_server_mode(http));
 					if(0 == *bytes /*|| http->raw_size == http->offset*/)
 					{
 						http->content_length = http->raw_size - http->offset;
 						http->stateM = SM_DONE;
 					}
+				}
+				else
+				{
+					// RFC2326 RTSP 4.4 Message Length
+					// 2. If a Content-Length header field is not present, a value of zero is assumed.
+					// 3. By the server closing the connection. (Closing the connection cannot be used to 
+					//    indicate the end of a request body, since that would leave no possibility for the 
+					//    server to send back a response.)
+					http->content_length = 0;
+					http->stateM = SM_DONE;
 				}
 			}
 			else
@@ -1181,6 +1185,11 @@ int http_get_connection(struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	return http->connection_close;
+}
+
+const char* http_get_content_type(struct http_parser_t* http)
+{
+	return http_get_header_by_name(http, "Content-Type");
 }
 
 const char* http_get_content_encoding(struct http_parser_t* http)

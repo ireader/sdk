@@ -60,9 +60,11 @@ int http_get_header_by_name2(http_parser_t* parser, const char* name, int *value
 int http_get_content_length(http_parser_t* parser);
 /// @return 1-close, 0-keep-alive, <0-don't have connection header
 int http_get_connection(http_parser_t* parser);
-/// @return Content-Encoding, 0-don't have this header
+/// @return Content-Type, NULL-don't have this header
+const char* http_get_content_type(http_parser_t* parser);
+/// @return Content-Encoding, NULL-don't have this header
 const char* http_get_content_encoding(http_parser_t* parser);
-/// @return Transfer-Encoding, 0-don't have this header
+/// @return Transfer-Encoding, NULL-don't have this header
 const char* http_get_transfer_encoding(http_parser_t* parser);
 /// @return Set-Cookie, 0-don't have this header
 const char* http_get_cookie(http_parser_t* parser);
