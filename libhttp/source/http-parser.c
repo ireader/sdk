@@ -60,7 +60,7 @@ struct http_parser_t
 	struct http_chunk_t chunk;
 
 	// start line
-	char protocol[16]; // HTTP/RTSP/SIP
+	char protocol[17]; // HTTP/RTSP/SIP
 	int verminor, vermajor;
 	union
 	{
