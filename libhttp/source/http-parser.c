@@ -60,6 +60,7 @@ struct http_parser_t
 	struct http_chunk_t chunk;
 
 	// start line
+	char protocol[16]; // HTTP/RTSP/SIP
 	int verminor, vermajor;
 	union
 	{
@@ -371,7 +372,7 @@ static int http_parse_request_line(struct http_parser_t *http)
 				// H3.1 HTTP Version (p13)
 				// HTTP-Version = "HTTP" "/" 1*DIGIT "." 1*DIGIT
 				|| http->header.name.len < 8
-				|| 2 != sscanf(http->raw + http->header.name.pos, "HTTP/%d.%d", &http->vermajor, &http->verminor))
+				|| 3 != sscanf(http->raw + http->header.name.pos, "%16[^/]/%d.%d", http->protocol, &http->vermajor, &http->verminor))
 			{
 				assert(0);
 				return -1;
@@ -379,8 +380,8 @@ static int http_parse_request_line(struct http_parser_t *http)
 
 			http->raw[http->u.req.method.pos + http->u.req.method.len] = '\0';
 			http->raw[http->u.req.uri.pos + http->u.req.uri.len] = '\0';
-			assert(1 == http->vermajor || 2 == http->vermajor);
-			assert(1 == http->verminor || 0 == http->verminor);
+			//assert(1 == http->vermajor || 2 == http->vermajor);
+			//assert(1 == http->verminor || 0 == http->verminor);
 			http->stateM = SM_HEADER;
 			http->offset += 1; // skip '\n'
 			return 0;
@@ -482,7 +483,7 @@ static int http_parse_status_line(struct http_parser_t *http)
 			assert('\n' == c);
 			// H3.1 HTTP Version (p13)
 			// HTTP-Version = "HTTP" "/" 1*DIGIT "." 1*DIGIT
-			if (http->header.name.len < 8 || 2 != sscanf(http->raw + http->header.name.pos, "HTTP/%d.%d", &http->vermajor, &http->verminor)
+			if (http->header.name.len < 8 || 3 != sscanf(http->raw + http->header.name.pos, "%16[^/]/%d.%d", http->protocol, &http->vermajor, &http->verminor)
 				// H6.1.1 Status Code and Reason Phrase (p26)
 				// The Status-Code element is a 3-digit integer result code
 				|| http->header.value.len != 3 || http->u.reply.reason.len < 1)
@@ -494,8 +495,8 @@ static int http_parse_status_line(struct http_parser_t *http)
 			http->raw[http->u.reply.reason.pos + http->u.reply.reason.len] = '\0';
 			http->raw[http->header.value.pos + http->header.value.len] = '\0';
 			http->u.reply.code = atoi(http->raw + http->header.value.pos);
-			assert(1 == http->vermajor || 2 == http->vermajor);
-			assert(1 == http->verminor || 0 == http->verminor);
+			//assert(1 == http->vermajor || 2 == http->vermajor);
+			//assert(1 == http->verminor || 0 == http->verminor);
 			http->stateM = SM_HEADER;
 			http->offset += 1; // skip '\n'
 			return 0;
@@ -1015,7 +1016,12 @@ int http_parser_input(struct http_parser_t* http, const void* data, size_t *byte
 		{
 			if(-1 == http->content_length)
 			{
-				if(is_server_mode(http))
+				// RFC2326 RTSP 4.4 Message Length
+				// 2. If a Content-Length header field is not present, a value of zero is assumed.
+				// 3. By the server closing the connection. (Closing the connection cannot be used to 
+				//    indicate the end of a request body, since that would leave no possibility for the 
+				//    server to send back a response.)
+				if(is_server_mode(http) || 0 != strcasecmp("HTTP", http->protocol))
 				{
 					http->content_length = 0;
 					http->stateM = SM_DONE;
@@ -1064,9 +1070,10 @@ int http_set_max_size(size_t bytes)
 	return 0;
 }
 
-int http_get_version(struct http_parser_t* http, int *major, int *minor)
+int http_get_version(struct http_parser_t* http, char protocol[64], int *major, int *minor)
 {
 	assert(http->stateM>=SM_BODY);
+	memcpy(protocol, http->protocol, sizeof(http->protocol));
 	*major = http->vermajor;
 	*minor = http->verminor;
 	return 0;

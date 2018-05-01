@@ -38,7 +38,7 @@ void http_parser_clear(http_parser_t* parser);
 int http_parser_input(http_parser_t* parser, const void* data, size_t *bytes);
 
 /// HTTP start-line
-int http_get_version(http_parser_t* parser, int *major, int *minor);
+int http_get_version(http_parser_t* parser, char protocol[64], int *major, int *minor);
 int http_get_status_code(http_parser_t* parser);
 const char* http_get_status_reason(http_parser_t* parser);
 const char* http_get_request_uri(http_parser_t* parser);
