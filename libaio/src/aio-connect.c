@@ -5,6 +5,7 @@
 #include "sys/locker.h"
 #include "sockutil.h"
 #include <stdlib.h>
+#include <errno.h>
 
 struct aio_connect_t
 {
@@ -116,6 +117,8 @@ int aio_connect(const char* host, int port, int timeout, void (*onconnect)(void*
 		return r;
 
 	conn = calloc(1, sizeof(*conn));
+    if (!conn) return ENOMEM;
+
 	conn->onconnect = onconnect;
 	conn->param = param;
 	conn->addr = addr;
