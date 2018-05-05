@@ -39,6 +39,7 @@ struct time_wheel_t
 	struct time_bucket_t tv5[TVN_SIZE];
 };
 
+static int twtimer_add(struct time_wheel_t* tm, struct twtimer_t* timer);
 static int twtimer_cascade(struct time_wheel_t* tm, struct time_bucket_t* tv, int index);
 
 struct time_wheel_t* time_wheel_create(uint64_t clock)
@@ -62,67 +63,12 @@ int time_wheel_destroy(struct time_wheel_t* tm)
 
 int twtimer_start(struct time_wheel_t* tm, struct twtimer_t* timer)
 {
-	int i;
-	uint64_t diff;
-	struct time_bucket_t* tv;
-
+	int r;
 	assert(timer->ontimeout);
 	spinlock_lock(&tm->locker);
-	if (timer->pprev)
-	{
-		assert(0); // timer have been started
-		spinlock_unlock(&tm->locker);
-		return EEXIST;
-	}
-
-	diff = TIME(timer->expire - tm->clock); // per 64ms
-
-	if (timer->expire < tm->clock)
-	{
-		i = TIME(tm->clock) & TVR_MASK;
-		tv = tm->tv1 + i;
-	}
-	else if (diff < (1 << TVR_BITS))
-	{
-		i = TIME(timer->expire) & TVR_MASK;
-		tv = tm->tv1 + i;
-	}
-	else if (diff < (1 << (TVR_BITS + TVN_BITS)))
-	{
-		i = (TIME(timer->expire) >> TVR_BITS) & TVN_MASK;
-		tv = tm->tv2 + i;
-	}
-	else if (diff < (1 << (TVR_BITS + 2 * TVN_BITS)))
-	{
-		i = (TIME(timer->expire) >> (TVR_BITS + TVN_BITS)) & TVN_MASK;
-		tv = tm->tv3 + i;
-	}
-	else if (diff < (1 << (TVR_BITS + 3 * TVN_BITS)))
-	{
-		i = (TIME(timer->expire) >> (TVR_BITS + 2 * TVN_BITS)) & TVN_MASK;
-		tv = tm->tv4 + i;
-	}
-	else if (diff < (1ULL << (TVR_BITS + 4 * TVN_BITS)))
-	{
-		i = (TIME(timer->expire) >> (TVR_BITS + 3 * TVN_BITS)) & TVN_MASK;
-		tv = tm->tv5 + i;
-	}
-	else
-	{
-		spinlock_unlock(&tm->locker);
-		assert(0); // exceed max timeout value
-		return -1;
-	}
-
-	// list insert
-	timer->pprev = &tv->first;
-	timer->next = tv->first;
-	if (timer->next)
-		timer->next->pprev = &timer->next;
-	tv->first = timer;
-	++tm->count;
+	r = twtimer_add(tm, timer);
 	spinlock_unlock(&tm->locker);
-	return 0;
+	return r;
 }
 
 int twtimer_stop(struct time_wheel_t* tm, struct twtimer_t* timer)
@@ -206,8 +152,70 @@ static int twtimer_cascade(struct time_wheel_t* tm, struct time_bucket_t* tv, in
 		next = timer->next;
 		timer->next = NULL;
 		timer->pprev = NULL;
-		twtimer_start(tm, timer);
+		twtimer_add(tm, timer);
 	}
 
 	return index;
+}
+
+static int twtimer_add(struct time_wheel_t* tm, struct twtimer_t* timer)
+{
+	int i;
+	uint64_t diff;
+	struct time_bucket_t* tv;
+
+	assert(timer->ontimeout);
+	if (timer->pprev)
+	{
+		assert(0); // timer have been started
+		return EEXIST;
+	}
+
+	diff = TIME(timer->expire - tm->clock); // per 64ms
+
+	if (timer->expire < tm->clock)
+	{
+		i = TIME(tm->clock) & TVR_MASK;
+		tv = tm->tv1 + i;
+	}
+	else if (diff < (1 << TVR_BITS))
+	{
+		i = TIME(timer->expire) & TVR_MASK;
+		tv = tm->tv1 + i;
+	}
+	else if (diff < (1 << (TVR_BITS + TVN_BITS)))
+	{
+		i = (TIME(timer->expire) >> TVR_BITS) & TVN_MASK;
+		tv = tm->tv2 + i;
+	}
+	else if (diff < (1 << (TVR_BITS + 2 * TVN_BITS)))
+	{
+		i = (TIME(timer->expire) >> (TVR_BITS + TVN_BITS)) & TVN_MASK;
+		tv = tm->tv3 + i;
+	}
+	else if (diff < (1 << (TVR_BITS + 3 * TVN_BITS)))
+	{
+		i = (TIME(timer->expire) >> (TVR_BITS + 2 * TVN_BITS)) & TVN_MASK;
+		tv = tm->tv4 + i;
+	}
+	else if (diff < (1ULL << (TVR_BITS + 4 * TVN_BITS)))
+	{
+		i = (TIME(timer->expire) >> (TVR_BITS + 3 * TVN_BITS)) & TVN_MASK;
+		tv = tm->tv5 + i;
+	}
+	else
+	{
+		spinlock_unlock(&tm->locker);
+		assert(0); // exceed max timeout value
+		return -1;
+	}
+
+	// list insert
+	timer->pprev = &tv->first;
+	timer->next = tv->first;
+	if (timer->next)
+		timer->next->pprev = &timer->next;
+	tv->first = timer;
+	++tm->count;
+	return 0;
 }
