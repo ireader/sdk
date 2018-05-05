@@ -42,6 +42,12 @@ static inline void rarray_free(struct rarray_t* arr)
 	arr->count = 0;
 }
 
+static inline void rarray_clear(struct rarray_t* arr)
+{
+    arr->count = 0;
+    arr->offset = 0;
+}
+
 static inline int rarray_count(struct rarray_t* arr)
 {
 	return arr->count;
