@@ -480,6 +480,34 @@ static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t
 	return bytes;
 }
 
+static inline int socket_recvfrom_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, OUT struct sockaddr* from, OUT socklen_t* fromlen, IN int timeout)
+{
+    int r;
+
+    r = socket_select_read(sock, timeout);
+    if (r <= 0)
+        return 0 == r ? SOCKET_TIMEDOUT : r;
+    assert(1 == r);
+
+    r = socket_recvfrom(sock, buf, len, flags, from, fromlen);
+    return r;
+}
+
+/// @param[in] timeout ms, -1==infinite
+/// @return >0-sent bytes, SOCKET_TIMEDOUT-timeout, <0-error(by socket_geterror())
+static inline int socket_sendto_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen, IN int timeout)
+{
+    int r;
+
+    r = socket_select_write(sock, timeout);
+    if (r <= 0)
+        return 0 == r ? SOCKET_TIMEDOUT : r;
+    assert(1 == r);
+
+    r = socket_sendto(sock, buf, len, flags, to, tolen);
+    return r;
+}
+
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
