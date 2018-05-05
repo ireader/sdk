@@ -101,10 +101,10 @@ static inline int path_chcwd(const char* path)
 
 /// get full path name
 /// 0-ok, other-error
-static inline int path_realpath(const char* path, char* resolved_path, unsigned int bytes)
+static inline int path_realpath(const char* path, char resolved_path[PATH_MAX])
 {
 #if defined(OS_WINDOWS)
-	DWORD r = GetFullPathNameA(path, bytes, resolved_path, NULL);
+	DWORD r = GetFullPathNameA(path, PATH_MAX, resolved_path, NULL);
 	return 0==r ? 0 : (int)GetLastError();
 #else
 	char* p = realpath(path, resolved_path);
@@ -129,6 +129,23 @@ static inline int path_dirname(const char* fullname, char* dir)
 	memmove(dir, fullname, p-fullname);
 	dir[p-fullname - (p-fullname>1? 1 : 0)] = 0;
 	return 0;
+}
+
+/// path_concat("a/./b/../c.txt", "e:\dir\") => e:\dir\a\c.txt
+/// path_concat("../c.txt", "e:\dir\") => error
+/// @return 0-ok, other-error
+static inline int path_concat(const char* path, const char* localdir, char fullpath[PATH_MAX])
+{
+    int r;
+    char userpath[PATH_MAX];
+    snprintf(userpath, PATH_MAX - 1, "%s%s", localdir, path);
+    r = path_realpath(userpath, fullpath);
+	r = 0 != r ? r : path_realpath(localdir, userpath);
+#if defined(OS_WINDOWS)
+    return 0 != r ? r : _strnicmp(userpath, fullpath, strlen(userpath));
+#else
+    return 0 != r ? r : strncmp(userpath, fullpath, strlen(userpath));
+#endif
 }
 
 /// delete a name and possibly the file it refers to
