@@ -132,4 +132,36 @@ static inline int cstrsuffix(const struct cstring_t* s, const char* suffix)
 	return memcmp(s->p + s->n - n, suffix, n);
 }
 
+static inline long cstrtol(const struct cstring_t* s, char** endptr, int base)
+{
+	long v;
+	char* end;
+
+	v = strtol(s->p, &end, base);
+	while (end > s->p + s->n)
+	{
+		v /= base;
+		--end;
+	}
+
+	if (endptr) *endptr = end;
+	return v;
+}
+
+static inline long long cstrtoll(const struct cstring_t* s, char** endptr, int base)
+{
+	long long v;
+	char* end;
+
+	v = strtoll(s->p, &end, base);
+	while (end > s->p + s->n)
+	{
+		v /= base;
+		--end;
+	}
+
+	if (endptr) *endptr = end;
+	return v;
+}
+
 #endif /* !_cstring_h_ */
