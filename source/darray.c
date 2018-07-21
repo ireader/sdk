@@ -103,7 +103,7 @@ int darray_pop_front(struct darray_t* arr)
     return darray_erase(arr, 0);
 }
 
-int darray_count(struct darray_t* arr)
+int darray_count(const struct darray_t* arr)
 {
     return arr->count;
 }

@@ -30,7 +30,7 @@ int darray_push_back(struct darray_t* arr, const void* items, int count);
 int darray_pop_back(struct darray_t* arr);
 int darray_pop_front(struct darray_t* arr);
 
-int darray_count(struct darray_t* arr);
+int darray_count(const struct darray_t* arr);
 void* darray_get(struct darray_t* arr, int index);
 
 #endif /* !_darray_h_ */
