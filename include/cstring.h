@@ -95,6 +95,12 @@ static inline int cstrcmp(const struct cstring_t* s, const char* c)
 	return cstrncmp(s, c, strlen(c));
 }
 
+// @return 1-equal, 0-don't equal
+static inline int cstreq(const struct cstring_t* s, const struct cstring_t* o)
+{
+	return s->n == o->n && 0 == memcmp(s->p, o->p, s->n) ? 1 : 0;
+}
+
 // same as strnicmp/strncasecmp
 static inline int cstrncasecmp(const struct cstring_t* s, const char* c, size_t n)
 {
@@ -103,7 +109,7 @@ static inline int cstrncasecmp(const struct cstring_t* s, const char* c, size_t 
 
 	m = s->n > n ? n : s->n;
 #if defined(OS_WINDOWS)
-	r = strnicmp(s->p, c, m);
+	r = _strnicmp(s->p, c, m);
 #else
 	r = strcasecmp(s->p, c, m);
 #endif
