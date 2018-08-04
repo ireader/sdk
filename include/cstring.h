@@ -12,7 +12,7 @@ struct cstring_t
 
 static inline int cstrvalid(const struct cstring_t* s)
 {
-	return (s->p && s->n) > 0 ? 1 : 0;
+	return (s->p && s->n > 0) ? 1 : 0;
 }
 
 // same as strchr
