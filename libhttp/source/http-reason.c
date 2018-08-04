@@ -1,3 +1,5 @@
+// https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
+
 #include "http-reason.h"
 
 const char* http_reason_phrase(int code)
@@ -6,6 +8,8 @@ const char* http_reason_phrase(int code)
 	{
 		"Continue", // 100
 		"Switching Protocols" // 101
+		"Processing", // 102-RFC2518 Section 10.1
+		"Early Hints", // 103-RFC8297
 	};
 
 	static const char *reason2xx[] = 
@@ -16,7 +20,9 @@ const char* http_reason_phrase(int code)
 		"Non-Authoritative Information", // 203
 		"No Content", // 204
 		"Reset Content", // 205
-		"Partial Content" // 206
+		"Partial Content", // 206
+		"Multi-Status", // 207-RFC4918 Section 13
+		"Already Reported", // 208-RFC5842 Section 7.1
 	};
 
 	static const char *reason3xx[] = 
@@ -28,7 +34,8 @@ const char* http_reason_phrase(int code)
 		"Not Modified", // 304
 		"Use Proxy", // 305
 		"Unused", // 306
-		"Temporary Redirect" // 307
+		"Temporary Redirect", // 307
+		"Permanent Redirect", // 308-RFC738 Section 3
 	};
 
 	static const char *reason4xx[] = 
@@ -50,7 +57,21 @@ const char* http_reason_phrase(int code)
 		"Request-URI Too Long", // 414
 		"Unsupported Media Type", // 415
 		"Request Range Not Satisfiable", // 416
-		"Expectation Failed" // 417
+		"Expectation Failed", // 417
+		"I'm a teapot", // 418-RFC2324 Section 2.3.2
+		"", // 419
+		"Bad Extension", // 420-RFC3261 Section 21.4.15
+		"Extension Required", // 421-RFC3261 Section 21.4.16
+		"Unprocessable Entity", // 422-RFC4918 Section 11.2
+		"Interval Too Brief", // 423-RFC3261 Section 21.4.16
+		"Failed Dependency", // 424-RFC4918 Section 11.4
+		"Unordered Collection", // 425
+		"Upgrade Required", // 426-RFC7231 Section 6.5.15
+		"", // 427
+		"Precondition Required", // 428-RFC6585 Section 3
+		"Too Many Requests", // 429-RFC6585 Section 4
+		"", // 430
+		"Request Header Fields Too Large", // 431-RFC6585 Section 5
 	};
 
 	static const char *reason5xx[] = 
@@ -60,7 +81,15 @@ const char* http_reason_phrase(int code)
 		"Bad Gateway", // 502
 		"Service Unavailable", // 503
 		"Gateway Timeout", // 504
-		"HTTP Version Not Supported" // 505
+		"HTTP Version Not Supported", // 505
+		"Variant Also Negotiates", // 506-RFC2295 Section 8.1
+		"Insufficient Storage", // 507-RFC4918 Section 11.5
+		"Loop Detected", // 508-RFC5842 Section 7.2
+		"Bandwidth Limit Exceeded", // 509-Apache Web Server/cPanel
+		"Not Extended", // 510-RFC2774 Section 7
+		"Network Authentication Required", // 511-RFC6585 Section 6
+		"", // 512
+		"Message Too Large", // 513-RFC3261 Section 21.5.7
 	};
 
 	if(code >= 100 && code < 100+sizeof(reason1xx)/sizeof(reason1xx[0]))
