@@ -60,7 +60,7 @@ public:
 				memset(m_p, 0, (n + 1) * 4);
 				unicode_to_utf8(wbuf, n, m_p, (n + 1) * 4);
 			}
-			delete wbuf;
+			delete[] wbuf;
 		}
 		else
 		{

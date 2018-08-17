@@ -111,7 +111,7 @@ int aio_connect(const char* host, int port, int timeout, void (*onconnect)(void*
 	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 //	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
-	snprintf(portstr, sizeof(portstr), "%hu", port);
+	snprintf(portstr, sizeof(portstr), "%d", port);
 	r = getaddrinfo(host, portstr, &hints, &addr);
 	if (0 != r)
 		return r;

@@ -1,8 +1,8 @@
 #include "thread-pool.h"
 #include "sys/locker.h"
-#include "sys/event.h"
 #include "sys/system.h"
 #include "sys/thread.h"
+#include "sys/event.h"
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>

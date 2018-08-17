@@ -5,6 +5,7 @@
 #include <Windows.h>
 typedef CRITICAL_SECTION spinlock_t;
 #elif defined(OS_MAC)
+#include <assert.h>
 #include <libkern/OSAtomic.h>
 typedef OSSpinLock spinlock_t;
 #elif defined(OS_LINUX_KERNEL)

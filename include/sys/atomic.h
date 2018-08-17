@@ -160,7 +160,7 @@ static inline int64_t atomic_add64(volatile int64_t *value, int64_t incr)
 static inline int32_t atomic_load32(volatile int32_t *value)
 {
     assert((intptr_t)value % 4 == 0);
-    return OSAtomicOr32(0, value);
+    return OSAtomicOr32(0, (uint32_t*)value);
 }
 
 static inline int64_t atomic_load64(volatile int64_t *value)

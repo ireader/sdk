@@ -230,7 +230,7 @@ static int http_session_data(struct http_session_t *session, const struct http_v
 	assert(NULL == session->vec);
 	assert(0 == session->vec_count);
 	session->vec = socket_bufvec_alloc(session, num + 3);
-	if (!session->vec || num < 0)
+	if (!session->vec || num < 1)
 		return -1;
 
 	// HTTP Response Data

@@ -6,10 +6,11 @@
 typedef HANDLE	event_t;
 
 #else
-#include <errno.h>
-#include <unistd.h>
+#include <sys/time.h> // gettimeofday
 #include <pthread.h>
-#include <time.h>
+#include <unistd.h>
+#include <errno.h>
+#include <time.h> // clock_gettime
 typedef struct
 {
 	int count; // fixed pthread_cond_signal/pthread_cond_wait call order
@@ -44,8 +45,10 @@ static inline int event_create(event_t* event)
 	return 0;
 #else
 	int r;
+#if defined(OS_LINUX) && defined(CLOCK_MONOTONIC) && defined(__USE_XOPEN2K)
 	pthread_condattr_t attr;
-	pthread_mutexattr_t mutex;
+#endif
+    pthread_mutexattr_t mutex;
 
 	pthread_mutexattr_init(&mutex);
 #if defined(OS_LINUX)
@@ -111,7 +114,7 @@ static inline int event_timewait(event_t* event, int timeout)
 	return WAIT_FAILED==r ? GetLastError() : r;
 #else
 
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) && defined(CLOCK_REALTIME)
 	int r = 0;
 	struct timespec ts;
 #ifdef CLOCK_MONOTONIC // __USE_XOPEN2K

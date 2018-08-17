@@ -691,17 +691,14 @@ static inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable)
 }
 
 
+#if defined(OS_LINUX)
 // 1-cork, 0-uncork
 static inline int socket_setcork(IN socket_t sock, IN int cork)
 {
-#if defined(OS_WINDOWS)
-	(void)sock, (void)cork;
-	return -1;
-#else
-	//return setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &cork, sizeof(cork));
-	return setsockopt(sock, IPPROTO_TCP, TCP_CORK, &cork, sizeof(cork));
-#endif
+    //return setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &cork, sizeof(cork));
+    return setsockopt(sock, IPPROTO_TCP, TCP_CORK, &cork, sizeof(cork));
 }
+#endif
 
 static inline int socket_setnonblock(IN socket_t sock, IN int noblock)
 {
@@ -753,9 +750,11 @@ static inline int socket_getdomain(IN socket_t sock, OUT int* domain)
 	r = getsockopt(sock, SOL_SOCKET, SO_PROTOCOL_INFOW, (char*)&protocolInfo, &len);
 	if (0 == r)
 		*domain = protocolInfo.iAddressFamily;
-#else
+#elif defined(OS_LINUX)
 	socklen_t len = sizeof(domain);
 	r = getsockopt(sock, SOL_SOCKET, SO_DOMAIN, (char*)domain, &len);
+#else
+    r = -1;
 #endif
 	return r;
 }
