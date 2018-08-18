@@ -133,6 +133,8 @@ static inline int socket_setrecvtimeout(IN socket_t sock, IN size_t seconds); //
 static inline int socket_getrecvtimeout(IN socket_t sock, OUT size_t* seconds);
 static inline int socket_setreuseaddr(IN socket_t sock, IN int enable); // reuse addr. 
 static inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable);
+static inline int socket_setreuseport(IN socket_t sock, IN int enable); // reuse port. 
+static inline int socket_getreuseport(IN socket_t sock, OUT int* enable);
 static inline int socket_setipv6only(IN socket_t sock, IN int ipv6_only); // 1-ipv6 only, 0-both ipv4 and ipv6
 static inline int socket_getdomain(IN socket_t sock, OUT int* domain); // get socket protocol address family(sock don't need bind)
 
@@ -690,8 +692,17 @@ static inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable)
 	return socket_getopt_bool(sock, SO_REUSEADDR, enable);
 }
 
-
 #if defined(OS_LINUX)
+static inline int socket_setreuseport(IN socket_t sock, IN int enable)
+{
+	return socket_setopt_bool(sock, SO_REUSEPORT, enable);
+}
+
+static inline int socket_getreuseport(IN socket_t sock, OUT int* enable)
+{
+	return socket_getopt_bool(sock, SO_REUSEPORT, enable);
+}
+
 // 1-cork, 0-uncork
 static inline int socket_setcork(IN socket_t sock, IN int cork)
 {
