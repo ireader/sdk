@@ -170,4 +170,16 @@ static inline long long cstrtoll(const struct cstring_t* s, char** endptr, int b
 	return v;
 }
 
+static inline double cstrtod(const struct cstring_t* s, char** endptr)
+{
+	double v;
+	char* end;
+
+	v = strtod(s->p, &end);
+	//while (end > s->p + s->n)
+	//{
+	//}
+	return v;
+}
+
 #endif /* !_cstring_h_ */
