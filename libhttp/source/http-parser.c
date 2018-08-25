@@ -1077,7 +1077,7 @@ int http_set_max_size(size_t bytes)
 int http_get_version(struct http_parser_t* http, char protocol[64], int *major, int *minor)
 {
 	assert(http->stateM>=SM_BODY);
-	strcpy(protocol, http->protocol);
+	snprintf(protocol, 64, "%s", http->protocol);
 	*major = http->vermajor;
 	*minor = http->verminor;
 	return 0;
