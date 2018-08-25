@@ -13,11 +13,22 @@ typedef HANDLE sema_t;
 #include <semaphore.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+
+#if defined(OS_MAC)
+#include <sys/time.h> // gettimeofday
+#include <dispatch/base.h>
+#include <dispatch/dispatch.h>
+#include <dispatch/time.h>
+#endif
 
 typedef struct
 {
 	sem_t*	semaphore;
 	char	name[256];
+#if defined(OS_MAC)
+    dispatch_semaphore_t dispatch;
+#endif
 } sema_t;
 
 #ifndef WAIT_TIMEOUT
@@ -41,41 +52,46 @@ typedef struct
 
 // Windows: the name can contain any character except the backslash
 // 0-success, other-error
+#if defined(OS_WINDOWS)
 static inline int sema_create(sema_t* sema, const char* name, long value)
 {
-#if defined(OS_WINDOWS)
 	HANDLE handle = CreateSemaphoreA(NULL, value, 0x7FFFFFFF, name);
 	if(NULL == handle)
 		return GetLastError();
 	*sema = handle;
 	return 0;
+}
 #else
+static inline int sema_create(sema_t* sema, const char* name, long value)
+{
 	memset(sema->name, 0, sizeof(sema->name));
 	if(name && *name)
 	{
-		// Named semaphores(process-shared semaphore)
+		// POSIX Named semaphores(process-shared semaphore)
         sema->semaphore = sem_open(name, O_CREAT|O_EXCL|O_RDWR, 0777, value);
 		if(SEM_FAILED == sema->semaphore)
 			return errno;
 		strncpy(sema->name, name, sizeof(sema->name)-1);
 		return 0;
 	}
-#ifndef OS_MAC
-	else
-	{
+    else
+    {
+#if defined(OS_MAC)
+        // __APPLE__ / __MACH__
+        // https://github.com/joyent/libuv/blob/master/src/unix/thread.c
+        // semaphore_create/semaphore_destroy/semaphore_signal/semaphore_wait/semaphore_timedwait
+        sema->dispatch = dispatch_semaphore_create(value);
+        return sema->dispatch ? 0 : -1;
+#else
 		// Unnamed semaphores (memory-based semaphores, thread-shared semaphore)
         sema->semaphore = (sem_t*)malloc(sizeof(sem_t));
 		if(!sema->semaphore)
 			return ENOMEM;
 		return 0==sem_init(sema->semaphore, 0, value) ? 0 : errno;
+#endif
 	}
-#endif
-	// __APPLE__ / __MACH__
-	// https://github.com/joyent/libuv/blob/master/src/unix/thread.c
-	// semaphore_create/semaphore_destroy/semaphore_signal/semaphore_wait/semaphore_timedwait
-	return -1;
-#endif
 }
+#endif
 
 // 0-success, other-error
 static inline int sema_open(sema_t* sema, const char* name)
@@ -103,7 +119,14 @@ static inline int sema_wait(sema_t* sema)
 	DWORD r = WaitForSingleObjectEx(*sema, INFINITE, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
 #else
-	return sem_wait(sema->semaphore);
+    
+#if defined(OS_MAC)
+    // OSX unnamed semaphore
+    if(!sema->name[0])
+        return 0 == dispatch_semaphore_wait(sema->dispatch, DISPATCH_TIME_FOREVER) ? 0 : WAIT_TIMEOUT;
+#endif
+    
+    return sem_wait(sema->semaphore);
 #endif
 }
 
@@ -114,11 +137,30 @@ static inline int sema_timewait(sema_t* sema, int timeout)
 	DWORD r = WaitForSingleObjectEx(*sema, timeout, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
 }
-#elif defined(OS_LINUX)
+#elif defined(OS_MAC)
 static inline int sema_timewait(sema_t* sema, int timeout)
 {
-	struct timespec ts;
-	clock_gettime(CLOCK_REALTIME, &ts);
+    if(!sema->name[0])
+        return 0==dispatch_semaphore_wait(sema->dispatch, dispatch_time(DISPATCH_TIME_NOW, timeout)) ? 0 : WAIT_TIMEOUT;
+    
+    // OSX don't have sem_timedwait
+    return -1;
+}
+#else
+static inline int sema_timewait(sema_t* sema, int timeout)
+{
+    struct timespec ts;
+    
+#if defined(CLOCK_REALTIME)
+    clock_gettime(CLOCK_REALTIME, &ts);
+#else
+    // POSIX.1-2008 marks gettimeofday() as obsolete, recommending the use of clock_gettime(2) instead.
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    ts.tv_sec = tv.tv_sec;
+    ts.tv_nsec = tv.tv_usec * 1000;
+#endif
+
 	ts.tv_sec += timeout/1000;
 	ts.tv_nsec += (timeout%1000)*1000000;
 
@@ -136,6 +178,12 @@ static inline int sema_trywait(sema_t* sema)
 	DWORD r = WaitForSingleObjectEx(*sema, 0, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
 #else
+    
+#if defined(OS_MAC)
+    if(!sema->name[0])
+        return 0==dispatch_semaphore_wait(sema->dispatch, DISPATCH_TIME_NOW) ? 0 : WAIT_TIMEOUT;
+#endif
+    
 	return sem_trywait(sema->semaphore);
 #endif
 }
@@ -147,6 +195,15 @@ static inline int sema_post(sema_t* sema)
 	long r;
 	return ReleaseSemaphore(*sema, 1, &r)?0:GetLastError();
 #else
+    
+#if defined(OS_MAC)
+    if(!sema->name[0])
+    {
+        dispatch_semaphore_signal(sema->dispatch);
+        return 0;
+    }
+#endif
+    
 	return sem_post(sema->semaphore);
 #endif
 }
@@ -165,15 +222,19 @@ static inline int sema_destroy(sema_t* sema)
 		if(0 == r)
 			r = sem_unlink(sema->name);
 	}
-#ifndef OS_MAC
 	else
 	{
+#if defined(OS_MAC)
+        r = 0;
+        free(sema->dispatch);
+#else
 		// sem_init
 		r = sem_destroy(sema->semaphore);
 		free(sema->semaphore);
-	}
 #endif
-	return r;
+	}
+    
+    return r;
 #endif
 }
 
