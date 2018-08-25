@@ -139,6 +139,7 @@
     <ClCompile Include="source\http-cookie.c" />
     <ClCompile Include="source\http-header-authorization.c" />
     <ClCompile Include="source\http-header-content-type.c" />
+    <ClCompile Include="source\http-header-expires.c" />
     <ClCompile Include="source\http-header-host.c" />
     <ClCompile Include="source\http-header-range.c" />
     <ClCompile Include="source\http-header-www-authenticate.c" />
@@ -158,6 +159,7 @@
     <ClInclude Include="include\http-cookie.h" />
     <ClInclude Include="include\http-header-auth.h" />
     <ClInclude Include="include\http-header-content-type.h" />
+    <ClInclude Include="include\http-header-expires.h" />
     <ClInclude Include="include\http-header-host.h" />
     <ClInclude Include="include\http-header-range.h" />
     <ClInclude Include="include\http-parser.h" />

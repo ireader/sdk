@@ -72,6 +72,9 @@
     <ClCompile Include="source\http-client.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\http-header-expires.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\http-client.h">
@@ -118,6 +121,9 @@
     </ClInclude>
     <ClInclude Include="source\http-client-internal.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http-header-expires.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

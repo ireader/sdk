@@ -11,10 +11,8 @@ static int STDCALL thread0(void* param)
 {
 	param = param;
 	printf("semaphore thread0 - init\n");
-#if defined(OS_LINUX) || defined(OS_WINDOWS)
 	assert(WAIT_TIMEOUT == sema_timewait(&sem1, 1000));
 	printf("thread0 - timewait ok\n");
-#endif
 
 	assert(0 == sema_post(&sem1));
 	printf("thread0 - post 1 ok\n");
