@@ -137,6 +137,12 @@ static inline int socket_setreuseport(IN socket_t sock, IN int enable); // reuse
 static inline int socket_getreuseport(IN socket_t sock, OUT int* enable);
 static inline int socket_setipv6only(IN socket_t sock, IN int ipv6_only); // 1-ipv6 only, 0-both ipv4 and ipv6
 static inline int socket_getdomain(IN socket_t sock, OUT int* domain); // get socket protocol address family(sock don't need bind)
+static inline int socket_setpriority(IN socket_t sock, IN int priority);
+static inline int socket_getpriority(IN socket_t sock, OUT int* priority);
+static inline int socket_settos(IN socket_t sock, IN int dscp); // ipv4 only
+static inline int socket_gettos(IN socket_t sock, OUT int* dscp); // ipv4 only
+static inline int socket_settclass(IN socket_t sock, IN int dscp); // ipv6 only
+static inline int socket_gettclass(IN socket_t sock, OUT int* dscp); // ipv6 only
 
 // socket status
 // @return 0-ok, <0-socket_error(by socket_geterror())
@@ -751,6 +757,63 @@ static inline int socket_setipv6only(IN socket_t sock, IN int ipv6_only)
 	// http://www.man7.org/linux/man-pages/man7/ipv6.7.html
 	return setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (const char*)&ipv6_only, sizeof(ipv6_only));
 }
+
+#if defined(OS_LINUX)
+static inline int socket_setpriority(IN socket_t sock, IN int priority)
+{
+	return setsockopt(sock, SOL_SOCKET, SO_PRIORITY, (const char*)&priority, sizeof(priority));
+}
+
+static inline int socket_getpriority(IN socket_t sock, OUT int* priority)
+{
+	socklen_t len;
+	len = sizeof(int);
+	return getsockopt(sock, SOL_SOCKET, SO_PRIORITY, (char*)priority, &len);
+}
+
+// ipv4 only
+static inline int socket_settos(IN socket_t sock, IN int dscp)
+{
+	// Winsock IP_TOS option is no longer available, The call will always be ignored silently.
+	// https://blogs.msdn.microsoft.com/wndp/2006/07/05/deprecating-old-qos-apis/
+
+	//https://en.wikipedia.org/wiki/Type_of_service
+	//http://www.bogpeople.com/networking/dscp.shtml
+	dscp <<= 2; // 0 - ECN (Explicit Congestion Notification)
+	return setsockopt(sock, IPPROTO_IP, IP_TOS, (const char*)&dscp, sizeof(dscp));
+}
+
+// ipv4 only
+static inline int socket_gettos(IN socket_t sock, OUT int* dscp)
+{
+	int r;
+	socklen_t len;
+	len = sizeof(int);
+	r = getsockopt(sock, IPPROTO_IP, IP_TOS, (char*)&dscp, &len);
+	if (0 == r)
+		*dscp >>= 2; // skip ECN (Explicit Congestion Notification)
+	return r;
+}
+
+// ipv6 only
+static inline int socket_settclass(IN socket_t sock, IN int dscp)
+{
+	dscp <<= 2; // 0 - ECN (Explicit Congestion Notification)
+	return setsockopt(sock, IPPROTO_IPV6, IPV6_TCLASS, (const char*)&dscp, sizeof(dscp));
+}
+
+// ipv6 only
+static inline int socket_gettclass(IN socket_t sock, OUT int* dscp)
+{
+	int r;
+	socklen_t len;
+	len = sizeof(int);
+	r = getsockopt(sock, IPPROTO_IPV6, IPV6_TCLASS, (char*)&dscp, &len);
+	if (0 == r)
+		*dscp >>= 2; // skip ECN (Explicit Congestion Notification)
+	return r;
+}
+#endif
 
 static inline int socket_getdomain(IN socket_t sock, OUT int* domain)
 {
