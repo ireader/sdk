@@ -38,38 +38,38 @@ void http_parser_clear(http_parser_t* parser);
 int http_parser_input(http_parser_t* parser, const void* data, size_t *bytes);
 
 /// HTTP start-line
-int http_get_version(http_parser_t* parser, char protocol[64], int *major, int *minor);
-int http_get_status_code(http_parser_t* parser);
-const char* http_get_status_reason(http_parser_t* parser);
-const char* http_get_request_uri(http_parser_t* parser);
-const char* http_get_request_method(http_parser_t* parser);
+int http_get_version(const http_parser_t* parser, char protocol[64], int *major, int *minor);
+int http_get_status_code(const http_parser_t* parser);
+const char* http_get_status_reason(const http_parser_t* parser);
+const char* http_get_request_uri(const http_parser_t* parser);
+const char* http_get_request_method(const http_parser_t* parser);
 
 /// HTTP body(use with http_get_content_length)
-const void* http_get_content(http_parser_t* parser);
+const void* http_get_content(const http_parser_t* parser);
 
 /// HTTP headers
 /// @return 0-ok, other-error
-int http_get_header_count(http_parser_t* parser);
+int http_get_header_count(const http_parser_t* parser);
 /// @return 0-ok, <0-don't have header
-int http_get_header(http_parser_t* parser, int idx, const char** name, const char** value);
+int http_get_header(const http_parser_t* parser, int idx, const char** name, const char** value);
 /// @return NULL-don't found header, other-header value
-const char* http_get_header_by_name(http_parser_t* parser, const char* name);
+const char* http_get_header_by_name(const http_parser_t* parser, const char* name);
 /// @return 0-ok, <0-don't have header
-int http_get_header_by_name2(http_parser_t* parser, const char* name, int *value);
+int http_get_header_by_name2(const http_parser_t* parser, const char* name, int *value);
 /// @return >=0-content-length, <0-don't have content-length header
-int http_get_content_length(http_parser_t* parser);
+int http_get_content_length(const http_parser_t* parser);
 /// @return 1-close, 0-keep-alive, <0-don't have connection header
-int http_get_connection(http_parser_t* parser);
+int http_get_connection(const http_parser_t* parser);
 /// @return Content-Type, NULL-don't have this header
-const char* http_get_content_type(http_parser_t* parser);
+const char* http_get_content_type(const http_parser_t* parser);
 /// @return Content-Encoding, NULL-don't have this header
-const char* http_get_content_encoding(http_parser_t* parser);
+const char* http_get_content_encoding(const http_parser_t* parser);
 /// @return Transfer-Encoding, NULL-don't have this header
-const char* http_get_transfer_encoding(http_parser_t* parser);
+const char* http_get_transfer_encoding(const http_parser_t* parser);
 /// @return Set-Cookie, 0-don't have this header
-const char* http_get_cookie(http_parser_t* parser);
+const char* http_get_cookie(const http_parser_t* parser);
 /// @return Location, 0-don't have this header
-const char* http_get_location(http_parser_t* parser);
+const char* http_get_location(const http_parser_t* parser);
 
 #ifdef __cplusplus
 }

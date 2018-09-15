@@ -102,12 +102,12 @@ static int is_valid_token(const char* s, size_t len)
 	return p == s+len ? 1 : 0;
 }
 
-static int is_server_mode(struct http_parser_t *http)
+static int is_server_mode(const struct http_parser_t *http)
 {
 	return HTTP_PARSER_SERVER==http->server_mode ? 1 : 0;
 }
 
-static int is_transfer_encoding_chunked(struct http_parser_t *http)
+static int is_transfer_encoding_chunked(const struct http_parser_t *http)
 {
 	return (http->transfer_encoding > 0 && 0==strcasecmp("chunked", http->raw + http->transfer_encoding)) ? 1 : 0;
 }
@@ -1074,57 +1074,59 @@ int http_set_max_size(size_t bytes)
 	return 0;
 }
 
-int http_get_version(struct http_parser_t* http, char protocol[64], int *major, int *minor)
+int http_get_version(const struct http_parser_t* http, char protocol[64], int *major, int *minor)
 {
 	assert(http->stateM>=SM_BODY);
-	snprintf(protocol, 64, "%s", http->protocol);
+	assert(64 >= sizeof(http->protocol));
+	memcpy(protocol, http->protocol, sizeof(http->protocol));
+	protocol[63] = 0;
 	*major = http->vermajor;
 	*minor = http->verminor;
 	return 0;
 }
 
-int http_get_status_code(struct http_parser_t* http)
+int http_get_status_code(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	assert(!is_server_mode(http));
 	return http->u.reply.code;
 }
 
-const char* http_get_status_reason(struct http_parser_t* http)
+const char* http_get_status_reason(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	assert(!is_server_mode(http));
 	return http->raw + http->u.reply.reason.pos;
 }
 
-const char* http_get_request_method(struct http_parser_t* http)
+const char* http_get_request_method(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	assert(is_server_mode(http));
 	return http->raw + http->u.req.method.pos;
 }
 
-const char* http_get_request_uri(struct http_parser_t* http)
+const char* http_get_request_uri(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	assert(is_server_mode(http));
 	return http->raw + http->u.req.uri.pos;
 }
 
-const void* http_get_content(struct http_parser_t* http)
+const void* http_get_content(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	assert(http->offset <= http->raw_size);
 	return http->raw + http->offset;
 }
 
-int http_get_header_count(struct http_parser_t* http)
+int http_get_header_count(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	return http->header_size;
 }
 
-int http_get_header(struct http_parser_t* http, int idx, const char** name, const char** value)
+int http_get_header(const struct http_parser_t* http, int idx, const char** name, const char** value)
 {
 	assert(http->stateM>=SM_BODY);
 
@@ -1136,7 +1138,7 @@ int http_get_header(struct http_parser_t* http, int idx, const char** name, cons
 	return 0;
 }
 
-const char* http_get_header_by_name(struct http_parser_t* http, const char* name)
+const char* http_get_header_by_name(const struct http_parser_t* http, const char* name)
 {
 	int i;
 	assert(http->stateM>=SM_BODY);
@@ -1153,7 +1155,7 @@ const char* http_get_header_by_name(struct http_parser_t* http, const char* name
 	return NULL; // not found
 }
 
-int http_get_header_by_name2(struct http_parser_t* http, const char* name, int *value)
+int http_get_header_by_name2(const struct http_parser_t* http, const char* name, int *value)
 {
 	int i;
 	assert(http->stateM>=SM_BODY);
@@ -1170,7 +1172,7 @@ int http_get_header_by_name2(struct http_parser_t* http, const char* name, int *
 	return -1;
 }
 
-int http_get_content_length(struct http_parser_t* http)
+int http_get_content_length(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	if(-1 == http->content_length)
@@ -1181,18 +1183,18 @@ int http_get_content_length(struct http_parser_t* http)
 	return http->content_length;
 }
 
-int http_get_connection(struct http_parser_t* http)
+int http_get_connection(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	return http->connection_close;
 }
 
-const char* http_get_content_type(struct http_parser_t* http)
+const char* http_get_content_type(const struct http_parser_t* http)
 {
 	return http_get_header_by_name(http, "Content-Type");
 }
 
-const char* http_get_content_encoding(struct http_parser_t* http)
+const char* http_get_content_encoding(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	if(0 == http->content_encoding)
@@ -1200,7 +1202,7 @@ const char* http_get_content_encoding(struct http_parser_t* http)
 	return http->raw + http->content_encoding;
 }
 
-const char* http_get_transfer_encoding(struct http_parser_t* http)
+const char* http_get_transfer_encoding(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	if(0 == http->transfer_encoding)
@@ -1208,7 +1210,7 @@ const char* http_get_transfer_encoding(struct http_parser_t* http)
 	return http->raw + http->transfer_encoding;
 }
 
-const char* http_get_cookie(struct http_parser_t* http)
+const char* http_get_cookie(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	assert(!is_server_mode(http));
@@ -1217,7 +1219,7 @@ const char* http_get_cookie(struct http_parser_t* http)
 	return http->raw + http->cookie;
 }
 
-const char* http_get_location(struct http_parser_t* http)
+const char* http_get_location(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
 	assert(!is_server_mode(http));
