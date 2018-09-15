@@ -698,7 +698,7 @@ static inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable)
 	return socket_getopt_bool(sock, SO_REUSEADDR, enable);
 }
 
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) && defined(SO_REUSEPORT)
 static inline int socket_setreuseport(IN socket_t sock, IN int enable)
 {
 	return socket_setopt_bool(sock, SO_REUSEPORT, enable);
@@ -708,7 +708,9 @@ static inline int socket_getreuseport(IN socket_t sock, OUT int* enable)
 {
 	return socket_getopt_bool(sock, SO_REUSEPORT, enable);
 }
+#endif
 
+#if defined(OS_LINUX) && defined(TCP_CORK)
 // 1-cork, 0-uncork
 static inline int socket_setcork(IN socket_t sock, IN int cork)
 {
