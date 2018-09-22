@@ -86,13 +86,17 @@ static inline int cstrncmp(const struct cstring_t* s, const char* c, size_t n)
 
 	m = s->n > n ? n : s->n;
 	r = memcmp(s->p, c, m);
-	return 0 != r ? r : (s->n > n ? 1 : -1);
+	return 0 != r ? r : (s->n >= n ? 0 : -1);
 }
 
 // cstrcmp("abc", "ab") => 1
 static inline int cstrcmp(const struct cstring_t* s, const char* c)
 {
-	return cstrncmp(s, c, strlen(c));
+	int r;
+	size_t n;
+	n = c ? strlen(c) : 0;
+	r = cstrncmp(s, c, n);
+	return 0 == r ? s->n - n : r;
 }
 
 // @return 1-equal, 0-don't equal
@@ -113,13 +117,17 @@ static inline int cstrncasecmp(const struct cstring_t* s, const char* c, size_t 
 #else
 	r = strcasecmp(s->p, c, m);
 #endif
-	return 0 != r ? r : (s->n > n ? 1 : -1);
+	return 0 != r ? r : (s->n >= n ? 0 : -1);
 }
 
 // same as stricmp/strcasecmp
 static inline int cstrcasecmp(const struct cstring_t* s, const char* c)
 {
-	return cstrncasecmp(s, c, strlen(c));
+	int r;
+	size_t n;
+	n = c ? strlen(c) : 0;
+	r = cstrncasecmp(s, c, n);
+	return 0 == r ? s->n - n : r;
 }
 
 // cstrprefix("abc", "ab") => 1
