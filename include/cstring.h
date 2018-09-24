@@ -133,7 +133,7 @@ static inline int cstrcasecmp(const struct cstring_t* s, const char* c)
 // cstrprefix("abc", "ab") => 1
 static inline int cstrprefix(const struct cstring_t* s, const char* prefix)
 {
-	return cstrncmp(s, prefix, strlen(prefix));
+	return 0 == cstrncmp(s, prefix, strlen(prefix)) ? 1 : 0;
 }
 
 // cstrsuffix("abc", "bc") => 1
@@ -143,7 +143,7 @@ static inline int cstrsuffix(const struct cstring_t* s, const char* suffix)
 	n = strlen(suffix);
 	if (n > s->n)
 		return -1;
-	return memcmp(s->p + s->n - n, suffix, n);
+	return 0 == memcmp(s->p + s->n - n, suffix, n) ? 1 : 0;
 }
 
 static inline long cstrtol(const struct cstring_t* s, char** endptr, int base)
