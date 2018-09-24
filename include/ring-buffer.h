@@ -26,6 +26,8 @@ int ring_buffer_read(struct ring_buffer_t* rb, void* data, size_t bytes);
 
 /// @return readable element count
 size_t ring_buffer_size(struct ring_buffer_t* rb);
+/// @return writeable element count
+size_t ring_buffer_space(struct ring_buffer_t* rb);
 
 #ifdef __cplusplus
 }

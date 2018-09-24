@@ -83,6 +83,12 @@ size_t ring_buffer_size(struct ring_buffer_t* rb)
 	return rb->count;
 }
 
+size_t ring_buffer_space(struct ring_buffer_t* rb)
+{
+	assert(rb->capacity >= rb->count);
+	return rb->capacity - rb->count;
+}
+
 #if defined(DEBUG) || defined(_DEBUG)
 #include <math.h>
 #include <time.h>
