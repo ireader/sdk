@@ -117,7 +117,7 @@ static inline int event_timewait(event_t* event, int timeout)
 #if defined(OS_LINUX) && defined(CLOCK_REALTIME)
 	int r = 0;
 	struct timespec ts;
-#ifdef CLOCK_MONOTONIC // __USE_XOPEN2K
+#if defined(CLOCK_MONOTONIC) && defined(__USE_XOPEN2K)
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 #else
 	clock_gettime(CLOCK_REALTIME, &ts);

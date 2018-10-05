@@ -9,9 +9,13 @@ static event_t ev2;
 
 static int STDCALL thread0(void* param)
 {
+	uint64_t t1, t2;
 	param = param;
 	printf("event thread0 - 0\n");
-	assert(WAIT_TIMEOUT == event_timewait(&ev1, 1000));
+	t1 = system_clock();
+	assert(WAIT_TIMEOUT == event_timewait(&ev1, 3000));
+	t2 = system_clock();
+	assert(t2 - t1 >= 3000);
 	printf("thread0 - timewait ok\n");
 
 	assert(0 == event_signal(&ev1));
