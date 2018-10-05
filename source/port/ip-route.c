@@ -1,4 +1,4 @@
-#include "port/ip-route.h"
+#include "ip-route.h"
 #if defined(OS_WINDOWS)
 #include <winsock2.h>
 #include <iphlpapi.h>
@@ -8,8 +8,14 @@
 
 #else
 #include <sys/types.h>
+#include <sys/sock.h>
+#include <sys/ioctl.h>
 #include <arpa/inet.h>
+#include <net/if.h>
+#if !defined(__ANDROID_API__) || __ANDROID_API__ >= 24
 #include <ifaddrs.h>
+#endif
+
 #endif
 
 #include <stdio.h>
@@ -183,6 +189,8 @@ int ip_route_get(const char* distination, char ip[40])
 	return 0==ip[0] ? -1 : 0;
 }
 #else
+
+#if !defined(__ANDROID_API__) || __ANDROID_API__ >= 24
 static uint32_t ipv4_iface_addr(const char* iface)
 {
 	uint32_t addr;
@@ -205,6 +213,39 @@ static uint32_t ipv4_iface_addr(const char* iface)
 	return addr;
 }
 
+#else
+static uint32_t ipv4_iface_addr(const char* iface)
+{
+	int sockfd;
+	uint32_t addr;
+	struct ifreq ifr;
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd == -1)
+		return INADDR_ANY;
+
+	ifr.ifr_addr.sa_family = AF_INET;
+	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", iface);
+
+	if (ioctl(sockfd, SIOCGIFADDR, &ifr) == -1)
+		return INADDR_ANY;
+
+	addr = ((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr.s_addr;
+
+	close(sockfd);
+	return addr;
+}
+#endif
+
+static inline int hweight32(uint32_t w)
+{
+	w = w - ((w >> 1) & 0x55555555);
+	w = (w & 0x33333333) + ((w >> 2) & 0x33333333);
+	w = (w + (w >> 4)) & 0x0F0F0F0F;
+	w = (w + (w >> 8));
+	return (w + (w >> 16)) & 0x000000FF;
+}
+
 /*
 [root@localhost net]# cat route
 Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT                                                       
@@ -215,36 +256,50 @@ eth0	00000000	010CA8C0	0003	0		0	0		00000000	0	0	0
 static uint32_t ipv4_route(uint32_t peer)
 {
 	FILE* fp;
-	char iface[18], iface0[18], line[1024];
+	int n, score;
+	char name[18], iface[18], line[1024];
 	uint32_t destination, gateway, netmask;
 
 	fp = fopen("/proc/net/route", "r");
-	if(!fp)
+	if (!fp)
 		return INADDR_ANY;
 
-	iface0[0] = '\0';
+	score = -1;
+	name[0] = iface[0] = '\0';
 	fgets(line, sizeof(line), fp); // filter first line
 
-	while(NULL != fgets(line, sizeof(line), fp))
+	while (NULL != fgets(line, sizeof(line), fp))
 	{
-		if(4 == sscanf(line, "%16s %X %X %*X %*d %*d %*d %X", iface, &destination, &gateway, &netmask))
+		if (4 == sscanf(line, "%16s %X %X %*X %*d %*d %*d %X", name, &destination, &gateway, &netmask))
 		{
 			assert((destination & netmask) == destination);
-			if(0 == destination)
+			if (0 == destination && -1 == score)
 			{
-				strcpy(iface0, iface); // save default gateway
+				// default gateway
+				score = 0;
+				strcpy(iface, name);
 			}
-			else if((peer & netmask) == destination)
+			else if ((peer & netmask) == destination)
 			{
-				strcpy(iface0, iface); // found
-				break;
+				// found
+				n = hweight32(netmask);
+				if (n > score)
+				{
+					score = n;
+					strcpy(iface, name);
+				}
+			}
+			else if (-1 == score)
+			{
+				// don't have default gateway
+				strcpy(iface, name); // fall-through
 			}
 		}
 	}
 
 	fclose(fp);
 
-	return ipv4_iface_addr(iface0);
+	return ipv4_iface_addr(iface);
 }
 
 int ip_route_get(const char* distination, char ip[40])
@@ -322,6 +377,8 @@ int ip_local(char ip[40])
 	return 0==ip[0] ? -1 : 0;
 }
 #else
+
+#if !defined(__ANDROID_API__) || __ANDROID_API__ >= 24
 int ip_local(char ip[40])
 {
 	struct ifaddrs *ifaddr, *ifa;
@@ -341,4 +398,6 @@ int ip_local(char ip[40])
 	freeifaddrs(ifaddr);
 	return 0;
 }
+#endif
+
 #endif
