@@ -1078,8 +1078,7 @@ int http_get_version(const struct http_parser_t* http, char protocol[64], int *m
 {
 	assert(http->stateM>=SM_BODY);
 	assert(64 >= sizeof(http->protocol));
-	memcpy(protocol, http->protocol, sizeof(http->protocol));
-	protocol[63] = 0;
+	strcpy(protocol, http->protocol);
 	*major = http->vermajor;
 	*minor = http->verminor;
 	return 0;
