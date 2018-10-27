@@ -28,9 +28,9 @@ static const char* http_header_attr_token(const char* source, const char* token,
 	return source + 1 + strspn(source + 1, WHITESPACE);
 }
 
-static int http_header_attr_value(const char* source, char* value, size_t bytes)
+static int http_header_attr_value(const char* source, char* value, int bytes)
 {
-	size_t n;
+	int n;
 	
 	source += strspn(source, "\'\"");
 	n = strcspn(source, "; \t\r\n\'\"");

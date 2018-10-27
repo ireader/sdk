@@ -14,9 +14,9 @@ static inline const char* string_token_int64(const char* str, int64_t *value)
 	return str;
 }
 
-int http_header_range(const char* field, struct http_header_range_t* range, size_t num)
+int http_header_range(const char* field, struct http_header_range_t* range, int num)
 {
-	size_t i;
+	int i;
 	const char* p;
 
 	p = field;

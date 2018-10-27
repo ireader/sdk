@@ -81,7 +81,7 @@ void bsearch_test(void)
 	for (num = i = 0; i < sizeof(arr)/sizeof(arr[0]); i++)
 	{
 		v = rand();
-		if (0 == bsearch2(&v, arr, (void**)&p, num, sizeof(int), bsearch_int_compare))
+		if (0 == bsearch2(&v, arr, (const void**)&p, num, sizeof(int), bsearch_int_compare))
 		{
 			assert(v == *p);
 		}

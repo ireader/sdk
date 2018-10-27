@@ -163,7 +163,7 @@ static int http_aio_request(struct http_client_t* http, const char* req, size_t 
 	return 0;
 }
 
-struct http_client_connection_t* http_client_connection_aio()
+struct http_client_connection_t* http_client_connection_aio(void)
 {
 	static struct http_client_connection_t conn = {
 		http_aio_create,

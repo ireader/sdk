@@ -16,7 +16,7 @@
 #define HTTP_RECV_BUFFER (2*1024)
 
 static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int count);
-static int http_session_data(struct http_session_t *session, const struct http_vec_t* vec, size_t num);
+static int http_session_data(struct http_session_t *session, const struct http_vec_t* vec, int num);
 
 static const char* s_http_header_end = "\r\n";
 
@@ -176,7 +176,7 @@ int http_server_send(struct http_session_t *session, int code, const void* data,
 	return http_server_send_vec(session, code, &vec, 1, onsend, param);
 }
 
-int http_server_send_vec(struct http_session_t *session, int code, const struct http_vec_t* vec, size_t num, http_server_onsend onsend, void* param)
+int http_server_send_vec(struct http_session_t *session, int code, const struct http_vec_t* vec, int num, http_server_onsend onsend, void* param)
 {
 	int r;
 	char content_length[32];
@@ -221,9 +221,9 @@ static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int 
 	return session->__vec;
 }
 
-static int http_session_data(struct http_session_t *session, const struct http_vec_t* vec, size_t num)
+static int http_session_data(struct http_session_t *session, const struct http_vec_t* vec, int num)
 {
-	size_t i;
+	int i;
 	int len = 0;
 
 	// multi-thread onrecv maybe before onsend

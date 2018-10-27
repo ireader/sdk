@@ -8,7 +8,7 @@
 
 #else
 #include <sys/types.h>
-#include <sys/sock.h>
+#include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <net/if.h>
@@ -388,7 +388,7 @@ int ip_local(char ip[40])
 
 	for(ifa = ifaddr; ifa; ifa = ifa->ifa_next)
 	{
-		if(!ifa->ifa_addr || AF_INET != ifa->ifa_addr->sa_family || 0 == strcmp("lo", ifa->ifa_name))
+		if(!ifa->ifa_addr || AF_INET != ifa->ifa_addr->sa_family || 0 == strncmp("lo", ifa->ifa_name, 2))
 			continue;
 
 		inet_ntop(AF_INET, &((struct sockaddr_in*)ifa->ifa_addr)->sin_addr, ip, 40);

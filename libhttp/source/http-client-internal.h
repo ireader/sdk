@@ -44,8 +44,8 @@ struct http_client_connection_t
 	int (*request)(struct http_client_t *http, const char* req, size_t nreq, const void* msg, size_t bytes);
 };
 
-struct http_client_connection_t* http_client_connection();
-struct http_client_connection_t* http_client_connection_aio();
+struct http_client_connection_t* http_client_connection(void);
+struct http_client_connection_t* http_client_connection_aio(void);
 
 void http_client_release(struct http_client_t* http);
 void http_client_handle(struct http_client_t *http, int code);

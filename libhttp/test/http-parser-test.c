@@ -105,7 +105,7 @@ static void sip_response_test(void)
 
 	size_t n;
 	int major, minor;
-	char *name, *value;
+	const char *name, *value;
 	char protocol[64];
 	http_parser_t* parser;
 

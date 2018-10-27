@@ -236,7 +236,7 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	return ctx;
 }
 
-int aio_socket_destroy(aio_socket_t socket)
+int aio_socket_destroy(aio_socket_t socket, aio_ondestroy ondestroy, void* param)
 {
     struct kqueue_context* ctx = (struct kqueue_context*)socket;
     assert(ctx->ev[0].udata == ctx);
@@ -692,7 +692,6 @@ static int kqueue_recvfrom_v(struct kqueue_context* ctx, int flags, int error)
 	r = recvmsg(ctx->socket, &msg, 0);
 	if(r >= 0)
 	{
-		socket_getip(&addr, ip, &port);
 		ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, 0, (size_t)r, (struct sockaddr*)&addr, msg.msg_namelen);
 		return 0;
 	}

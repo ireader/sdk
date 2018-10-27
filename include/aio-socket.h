@@ -68,7 +68,6 @@ typedef void (*aio_onrecvfrom)(void* param, int code, size_t bytes, const struct
 
 /// aio initialization
 /// @param[in] threads max concurrent thread call aio_socket_process
-/// @param[in] timeout aio process timeout
 /// @return 0-ok, other-error
 int aio_socket_init(int threads);
 
@@ -77,6 +76,7 @@ int aio_socket_init(int threads);
 int aio_socket_clean(void);
 
 /// aio worker
+/// @param[in] timeout aio process timeout
 /// @return 0-timeout, <0-error, >0-work number
 int aio_socket_process(int timeout);
 
@@ -90,8 +90,6 @@ aio_socket_t aio_socket_create(socket_t socket, int own);
 int aio_socket_destroy(aio_socket_t socket, aio_ondestroy ondestroy, void* param);
 
 /// listen and accept client
-/// @param[in] ip local ip address for bind, NULL if bind all
-/// @param[in] port local port for bind
 /// @param[in] proc callback procedure
 /// @param[in] param user-defined parameter
 /// @return 0-ok, <0-error, don't call proc if return error

@@ -19,22 +19,22 @@ struct bits_t
 void bits_init(struct bits_t* bits, const void* data, size_t bytes);
 
 /// get 1-bit from bit stream(don't offset position)
-/// @param[in] stream bit stream
+/// @param[in] bits bit stream
 /// @return -1-error, 1-value, 0-value
 int bits_next(struct bits_t* bits);
 
 /// read n-bit(n <= 32) from bit stream(don't offset position)
-/// @param[in] stream bit stream
+/// @param[in] bits bit stream
 /// @return -1-error, 1-value, 0-value
 int bits_next2(struct bits_t* bits, int n);
 
 /// read 1-bit from bit stream(offset position)
-/// @param[in] stream bit stream
+/// @param[in] bits bit stream
 /// @return -1-error, 1-value, 0-value
 int bits_read(struct bits_t* bits);
 
 /// read n-bit(n <= 32) from bit stream(offset position)
-/// @param[in] stream bit stream
+/// @param[in] bits bit stream
 /// @return -1-error, other-value
 int bits_read2(struct bits_t* bits, int n);
 

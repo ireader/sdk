@@ -290,7 +290,7 @@ static void aio_client_onconn(void* param, int code, aio_socket_t aio)
 		}
 		else if (RW_VECTOR == client->data[RECV].state)
 		{
-			recv = aio_recv_v(&client->recv, client->rtimeout, client->socket, client->data[RECV].u.vec, client->data[RECV].count, aio_client_onrecv, client);
+			recv = aio_recv_v(&client->recv, client->rtimeout, client->socket, client->data[RECV].u.vec, (int)client->data[RECV].count, aio_client_onrecv, client);
 		}
 
 		if(0 != recv)
@@ -305,7 +305,7 @@ static void aio_client_onconn(void* param, int code, aio_socket_t aio)
 		}
 		else if (RW_VECTOR == client->data[SEND].state)
 		{
-			send = aio_socket_send_v_all(&client->send, client->wtimeout, client->socket, client->data[SEND].u.vec, client->data[SEND].count, aio_client_onsend, client);
+			send = aio_socket_send_v_all(&client->send, client->wtimeout, client->socket, client->data[SEND].u.vec, (int)client->data[SEND].count, aio_client_onsend, client);
 		}
 
 		if (0 != send)

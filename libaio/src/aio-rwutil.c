@@ -29,7 +29,7 @@ struct aio_socket_ptr_t
 	void* param;
 
 	socket_bufvec_t* vec;
-	size_t count;
+	int count;
 
 	socket_bufvec_t __vec[1];
 	size_t __n; // reserved internal use, don't change it value

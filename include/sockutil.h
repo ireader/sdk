@@ -26,7 +26,7 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_dns, IN u_short po
 static inline socket_t socket_udp_bind_ipv6(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int ipv4);
 
 /// @Notice: need restore block status
-/// @param[in] timeout: ms, <0-forever
+/// @param[in] timeout ms, <0-forever
 /// @return 0-ok, other-error code
 static inline int socket_connect_by_time(IN socket_t sock, IN const struct sockaddr* addr, IN socklen_t addrlen, IN int timeout);
 /// @return >=0-socket, <0-socket_invalid(by socket_geterror())
@@ -41,7 +41,7 @@ static inline int socket_send_by_time(IN socket_t sock, IN const void* buf, IN s
 static inline int socket_send_all_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, <0-forever
 static inline int socket_recv_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, <0-forever
 static inline int socket_recv_all_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout);  // timeout: ms, <0-forever
-static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN int timeout); // timeout: ms, <0-forever
+static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t* vec, IN int n, IN int flags, IN int timeout); // timeout: ms, <0-forever
 
 //////////////////////////////////////////////////////////////////////////
 /// socket connect
@@ -87,6 +87,7 @@ static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, I
 		return socket_invalid;
 
 	r = -1; // not found
+    sock = socket_invalid;
 	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
 		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
@@ -172,6 +173,7 @@ static inline socket_t socket_tcp_listen(IN const char* ipv4_or_dns, IN u_short 
 		return socket_invalid;
 
 	r = -1; // not found
+    sock = socket_invalid;
 	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
 		assert(AF_INET == ptr->ai_family);
@@ -198,7 +200,7 @@ static inline socket_t socket_tcp_listen(IN const char* ipv4_or_dns, IN u_short 
 }
 
 /// create a new TCP socket, bind, and listen
-/// @param[in] ip socket bind local address, NULL-bind any address
+/// @param[in] ipv4_or_ipv6_or_dns socket bind local address, NULL-bind any address
 /// @param[in] port bind local port
 /// @param[in] backlog the maximum length to which the queue of pending connections for socket may grow
 /// @param[in] ipv4 0-ipv6 only, 1-ipv6 dual stack
@@ -220,6 +222,7 @@ static inline socket_t socket_tcp_listen_ipv6(IN const char* ipv4_or_ipv6_or_dns
 		return socket_invalid;
 
 	r = -1; // not found
+    sock = socket_invalid;
 	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
 		assert(AF_INET6 == ptr->ai_family);
@@ -252,7 +255,7 @@ static inline socket_t socket_tcp_listen_ipv6(IN const char* ipv4_or_ipv6_or_dns
 }
 
 /// create a new UDP socket and bind with ip/port
-/// @param[in] ip socket bind local address, NULL-bind any address
+/// @param[in] ipv4_or_ipv6_or_dns socket bind local address, NULL-bind any address
 /// @param[in] port bind local port
 /// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
 static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_short port)
@@ -272,6 +275,7 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_
 		return socket_invalid;
 
 	r = -1; // not found
+    sock = socket_invalid;
 	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
 		assert(AF_INET == ptr->ai_family);
@@ -295,7 +299,7 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_
 }
 
 /// create a new UDP socket and bind with ip/port
-/// @param[in] ip socket bind local address, NULL-bind any address
+/// @param[in] ipv4_or_ipv6_or_dns socket bind local address, NULL-bind any address
 /// @param[in] port bind local port
 /// @param[in] ipv4 0-ipv6 only, 1-ipv6 dual stack
 /// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
@@ -316,6 +320,7 @@ static inline socket_t socket_udp_bind_ipv6(IN const char* ipv4_or_ipv6_or_dns, 
 		return socket_invalid;
 
 	r = -1; // not found
+    sock = socket_invalid;
 	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
 	{
 		assert(AF_INET6 == ptr->ai_family);
@@ -403,7 +408,7 @@ static inline int socket_send_all_by_time(IN socket_t sock, IN const void* buf, 
 
 		bytes += r;
 	}
-	return bytes;
+	return (int)bytes;
 }
 
 /// @param[in] timeout ms, -1==infinite
@@ -436,12 +441,12 @@ static inline int socket_recv_all_by_time(IN socket_t sock, OUT void* buf, IN si
 
 		bytes += r;
 	}
-	return bytes;
+	return (int)bytes;
 }
 
 /// @param[in] timeout ms, -1==infinite
 /// @return >0-sent bytes, SOCKET_TIMEDOUT-timeout, <0-error(by socket_geterror())
-static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN int timeout)
+static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t* vec, IN int n, IN int flags, IN int timeout)
 {
 	int r;
 	size_t i, count;
@@ -477,7 +482,7 @@ static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t
 		}
 	}
 
-	return bytes;
+	return (int)bytes;
 }
 
 static inline int socket_recvfrom_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, OUT struct sockaddr* from, OUT socklen_t* fromlen, IN int timeout)

@@ -119,7 +119,7 @@ static void http_socket_timeout(struct http_client_t* http, int conn, int recv, 
 	http->timeout.send = send;
 }
 
-struct http_client_connection_t* http_client_connection()
+struct http_client_connection_t* http_client_connection(void)
 {
 	static struct http_client_connection_t conn = {
 		http_socket_create,

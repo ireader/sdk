@@ -48,7 +48,7 @@ int aio_tcp_transport_send(aio_tcp_transport_t* transport, const void* data, siz
 /// @return 0-ok, other-error
 int aio_tcp_transport_send_v(aio_tcp_transport_t* transport, socket_bufvec_t *vec, int n);
 
-/// @param[in] timeout recv/send timeout(millisecond), default 4min, 0-infinite
+/// @param[in] recvMS recv/send timeout(millisecond), default 4min, 0-infinite
 void aio_tcp_transport_set_timeout(aio_tcp_transport_t* transport, int recvMS, int sendMS);
 void aio_tcp_transport_get_timeout(aio_tcp_transport_t* transport, int *recvMS, int* sendMS);
 

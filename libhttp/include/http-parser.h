@@ -16,7 +16,7 @@ enum HTTP_PARSER_MODE {
 
 /// get/set maximum body size(global setting)
 /// @param[in] bytes 0-unlimited, other-limit bytes
-int http_get_max_size();
+int http_get_max_size(void);
 int http_set_max_size(size_t bytes);
 
 /// create

@@ -46,7 +46,7 @@ static int cleanup()
 	return 0;
 }
 
-static int handler(void* param, void* session, const char* method, const char* path)
+static int handler(void* param, http_session_t* session, const char* method, const char* path)
 {
 	const char* msg = (const char*)param;
 	(void)method, (void)path;

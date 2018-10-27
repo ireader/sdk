@@ -25,6 +25,7 @@ typedef WSABUF	socket_bufvec_t;
 #define SHUT_WR SD_SEND
 #define SHUT_RDWR SD_BOTH
 #else
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -98,10 +99,10 @@ static inline int socket_sendto(IN socket_t sock, IN const void* buf, IN size_t 
 static inline int socket_recvfrom(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, OUT struct sockaddr* from, OUT socklen_t* fromlen);
 
 // @return >0-sent/received bytes, <0-socket_error(by socket_geterror()), 0-peer shutdown(recv only)
-static inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags);
-static inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags);
-static inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen);
-static inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN struct sockaddr* from, IN socklen_t* fromlen);
+static inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN int n, IN int flags);
+static inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN int n, IN int flags);
+static inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN int n, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen);
+static inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN int n, IN int flags, IN struct sockaddr* from, IN socklen_t* fromlen);
 
 // Linux: 1. select may update the timeout argument to indicate how much time was left
 //        2. This interval will be rounded up to the system clock granularity, and kernel scheduling delays mean that the blocking interval may overrun by a small amount.
@@ -302,7 +303,7 @@ static inline int socket_send(IN socket_t sock, IN const void* buf, IN size_t le
 #if defined(OS_WINDOWS)
 	return send(sock, (const char*)buf, (int)len, flags);
 #else
-	return send(sock, buf, len, flags);
+	return (int)send(sock, buf, len, flags);
 #endif
 }
 
@@ -311,7 +312,7 @@ static inline int socket_recv(IN socket_t sock, OUT void* buf, IN size_t len, IN
 #if defined(OS_WINDOWS)
 	return recv(sock, (char*)buf, (int)len, flags);
 #else
-	return recv(sock, buf, len, flags);
+	return (int)recv(sock, buf, len, flags);
 #endif
 }
 
@@ -320,7 +321,7 @@ static inline int socket_sendto(IN socket_t sock, IN const void* buf, IN size_t 
 #if defined(OS_WINDOWS)
 	return sendto(sock, (const char*)buf, (int)len, flags, to, tolen);
 #else
-	return sendto(sock, buf, len, flags, to, tolen);
+	return (int)sendto(sock, buf, len, flags, to, tolen);
 #endif
 }
 
@@ -329,11 +330,11 @@ static inline int socket_recvfrom(IN socket_t sock, OUT void* buf, IN size_t len
 #if defined(OS_WINDOWS)
 	return recvfrom(sock, (char*)buf, (int)len, flags, from, fromlen);
 #else
-	return recvfrom(sock, buf, len, flags, from, fromlen);
+	return (int)recvfrom(sock, buf, len, flags, from, fromlen);
 #endif
 }
 
-static inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags)
+static inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN int n, IN int flags)
 {
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
@@ -344,11 +345,11 @@ static inline int socket_send_v(IN socket_t sock, IN const socket_bufvec_t* vec,
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = (struct iovec*)vec;
 	msg.msg_iovlen = n;
-	return sendmsg(sock, &msg, flags);
+	return (int)sendmsg(sock, &msg, flags);
 #endif
 }
 
-static inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags)
+static inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN int n, IN int flags)
 {
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
@@ -359,11 +360,11 @@ static inline int socket_recv_v(IN socket_t sock, IN socket_bufvec_t* vec, IN si
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = vec;
 	msg.msg_iovlen = n;
-	return recvmsg(sock, &msg, flags);
+	return (int)recvmsg(sock, &msg, flags);
 #endif
 }
 
-static inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN size_t n, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen)
+static inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* vec, IN int n, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen)
 {
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
@@ -376,11 +377,11 @@ static inline int socket_sendto_v(IN socket_t sock, IN const socket_bufvec_t* ve
 	msg.msg_namelen = tolen;
 	msg.msg_iov = (struct iovec*)vec;
 	msg.msg_iovlen = n;
-	return sendmsg(sock, &msg, flags);
+	return (int)sendmsg(sock, &msg, flags);
 #endif
 }
 
-static inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN size_t n, IN int flags, IN struct sockaddr* from, IN socklen_t* fromlen)
+static inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, IN int n, IN int flags, IN struct sockaddr* from, IN socklen_t* fromlen)
 {
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
@@ -393,7 +394,7 @@ static inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, I
 	msg.msg_namelen = *fromlen;
 	msg.msg_iov = vec;
 	msg.msg_iovlen = n;
-	return recvmsg(sock, &msg, flags);
+	return (int)recvmsg(sock, &msg, flags);
 #endif
 }
 

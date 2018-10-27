@@ -11,8 +11,6 @@
 
 #if defined(OS_WINDOWS) || defined(OS_MAC)
 #define HTTP_TEST
-#define RTSP_TEST
-#define SDP_TEST
 #endif
 
 void heap_test(void);
@@ -52,10 +50,6 @@ void onetime_test(void);
 
 #if defined(HTTP_TEST)
 void http_test(void);
-#endif
-
-#if defined(RTSP_TEST)
-void rtsp_test(void);
 #endif
 
 #if defined(SDP_TEST)
@@ -102,24 +96,16 @@ int main(int argc, char* argv[])
 	http_test();
 #endif
 
-#if defined(SDP_TEST)
-	sdp_test();
-#endif
-
-#if defined(RTSP_TEST)
-	rtsp_test();
-#endif
-
 	thread_pool_test();
 	task_queue_test();
 
 	ip_route_test();
 
-	aio_socket_test_cancel();
-	aio_socket_test();
-	aio_socket_test2();
+    aio_socket_test_cancel();
+    aio_socket_test();
+    aio_socket_test2();
     aio_socket_test3();
-//	aio_socket_test4();
+    aio_socket_test4();
 
 #if defined(OS_WINDOWS)
 	unicode_test();

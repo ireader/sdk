@@ -31,7 +31,7 @@ Examples of byte-ranges-specifier values (assuming an entity-body of length 1000
 	bytes=500-600,601-999
 	bytes=500-700,601-999
 */
-int http_header_range(const char* field, struct http_header_range_t* range, size_t num);
+int http_header_range(const char* field, struct http_header_range_t* range, int num);
 
 #ifdef __cplusplus
 }

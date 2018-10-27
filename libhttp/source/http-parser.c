@@ -1063,7 +1063,7 @@ int http_parser_input(struct http_parser_t* http, const void* data, size_t *byte
 	return http->stateM == SM_DONE ? INPUT_DONE : (SM_BODY == http->stateM ? INPUT_HEADER : INPUT_NEEDMORE);
 }
 
-int http_get_max_size()
+int http_get_max_size(void)
 {
 	return s_body_max_size;
 }

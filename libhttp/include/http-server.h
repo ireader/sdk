@@ -16,6 +16,7 @@ struct http_vec_t
 	size_t bytes;
 };
 
+/// @param[in] code HTTP status-code(200-OK, 301-Move Permanently, ...)
 /// @return 0-ok(continue read), other-close socket
 typedef int (*http_server_onsend)(void* param, int code, size_t bytes);
 
@@ -49,21 +50,19 @@ int http_server_get_client(http_session_t* session, char ip[65], unsigned short 
 /// Reply
 /// @param[in] session handle callback session parameter
 /// @param[in] code HTTP status-code(200-OK, 301-Move Permanently, ...)
-/// @param[in] bundle create by http_bundle_alloc
 /// @return 0-ok, other-error
 int http_server_send(http_session_t* session, int code, const void* data, size_t bytes, http_server_onsend onsend, void* param);
 
 /// Reply
 /// @param[in] session handle callback session parameter
 /// @param[in] code HTTP status-code(200-OK, 301-Move Permanently, ...)
-/// @param[in] bundles bundle array
+/// @param[in] vec bundle array
 /// @param[in] num array elementary number
 /// @return 0-ok, other-error
-int http_server_send_vec(http_session_t* session, int code, const struct http_vec_t* vec, size_t num, http_server_onsend onsend, void* param);
+int http_server_send_vec(http_session_t* session, int code, const struct http_vec_t* vec, int num, http_server_onsend onsend, void* param);
 
 /// Reply a server side file(must be local regular file)
 /// @param[in] session handle callback session parameter
-/// @param[in] code HTTP status-code(200-OK, 301-Move Permanently, ...)
 /// @param[in] localpath local regular file pathname
 /// @return 0-ok, other-error
 int http_server_sendfile(http_session_t* session, const char* localpath, http_server_onsend onsend, void* param);

@@ -71,7 +71,7 @@ static void uuid_generate_random(struct uuid_t* uuid)
 static void uuid_generate_time(struct uuid_t* uuid)
 {
 	srand((unsigned int)time(NULL));
-	uuid->time_low = ((uint16_t)rand() << 16) | (uint16_t)rand();
+	uuid->time_low = ((uint32_t)rand() << 16) | (uint16_t)rand();
 	uuid->time_mid = (uint16_t)rand();
 	uuid->time_hi_and_version = (uint16_t)rand();
 	uuid->clock_seq = (uint16_t)rand();
