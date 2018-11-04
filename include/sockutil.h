@@ -448,8 +448,8 @@ static inline int socket_recv_all_by_time(IN socket_t sock, OUT void* buf, IN si
 /// @return >0-sent bytes, SOCKET_TIMEDOUT-timeout, <0-error(by socket_geterror())
 static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t* vec, IN int n, IN int flags, IN int timeout)
 {
-	int r;
-	size_t i, count;
+	int r, i;
+	size_t count;
 	size_t bytes = 0;
 
 	while (n > 0)

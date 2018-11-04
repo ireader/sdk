@@ -38,7 +38,7 @@ static void queue_dispatch_create(void)
     struct job_dispatch_t* dispatcher = &s_dispatcher;
     LIST_INIT_HEAD(&dispatcher->root);
     locker_create(&dispatcher->locker);
-    sema_create(dispatcher->sema, NULL, 0);
+    sema_create(&dispatcher->sema, NULL, 0);
 }
 
 static void queue_dispatch_destroy(struct job_dispatch_t* dispatcher)

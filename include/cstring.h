@@ -115,7 +115,7 @@ static inline int cstrncasecmp(const struct cstring_t* s, const char* c, size_t 
 #if defined(OS_WINDOWS)
 	r = _strnicmp(s->p, c, m);
 #else
-	r = strcasecmp(s->p, c, m);
+	r = strncasecmp(s->p, c, m);
 #endif
 	return 0 != r ? r : (s->n >= n ? 0 : -1);
 }
