@@ -144,6 +144,8 @@ static inline int socket_settos(IN socket_t sock, IN int dscp); // ipv4 only
 static inline int socket_gettos(IN socket_t sock, OUT int* dscp); // ipv4 only
 static inline int socket_settclass(IN socket_t sock, IN int dscp); // ipv6 only
 static inline int socket_gettclass(IN socket_t sock, OUT int* dscp); // ipv6 only
+static inline int socket_setdontfrag(IN socket_t sock, IN int dontfrag); // ipv4 udp only
+static inline int socket_getdontfrag(IN socket_t sock, OUT int* dontfrag); // ipv4 udp only
 
 // socket status
 // @return 0-ok, <0-socket_error(by socket_geterror())
@@ -817,6 +819,37 @@ static inline int socket_gettclass(IN socket_t sock, OUT int* dscp)
 	return r;
 }
 #endif
+
+// ipv4 udp only
+static inline int socket_setdontfrag(IN socket_t sock, IN int dontfrag)
+{
+#if defined(OS_WINDOWS)
+	DWORD v = (DWORD)dontfrag;
+	return setsockopt(sock, IPPROTO_IP, IP_DONTFRAGMENT, (const char*)&v, sizeof(DWORD));
+#elif defined(OS_LINUX)
+	dontfrag = dontfrag ? IP_PMTUDISC_DO : IP_PMTUDISC_WANT;
+	return setsockopt(sock, IPPROTO_IP, IP_MTU_DISCOVER, &dontfrag, sizeof(dontfrag));
+#else
+	return -1;
+#endif
+}
+
+// ipv4 udp only
+static inline int socket_getdontfrag(IN socket_t sock, OUT int* dontfrag)
+{
+	int r = -1;
+#if defined(OS_WINDOWS)
+	DWORD v;
+	int n = sizeof(DWORD);
+	r = getsockopt(sock, IPPROTO_IP, IP_DONTFRAGMENT, (char*)&v, &n);
+	*dontfrag = (int)v;
+#elif defined(OS_LINUX)
+	socklen_t n = sizeof(int);
+	r = getsockopt(sock, IPPROTO_IP, IP_MTU_DISCOVER, dontfrag, &n);
+	*dontfrag = IP_PMTUDISC_DO == *dontfrag ? 1 : 0;
+#endif
+	return r;
+}
 
 static inline int socket_getdomain(IN socket_t sock, OUT int* domain)
 {
