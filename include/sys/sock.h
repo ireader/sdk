@@ -158,7 +158,7 @@ static inline int socket_getname(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], 
 static inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
 
 // socket utility
-static inline int socket_isip(IN const char* ip); // socket_isip("192.168.1.2") -> 0, socket_isip("www.google.com") -> -1
+static inline int socket_isip(IN const char* ip); // socket_isip("192.168.1.2") -> 1, socket_isip("www.google.com") -> 0
 static inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN]);
 static inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN]);
 
@@ -890,23 +890,24 @@ static inline int socket_getpeername(IN socket_t sock, OUT char ip[SOCKET_ADDRLE
 	return socket_addr_to((struct sockaddr*)&addr, addrlen, ip, port);
 }
 
+/// @return 1-ok, 0-error
 static inline int socket_isip(IN const char* ip)
 {
 #if 1
 	struct sockaddr_storage addr;
 	if(1 != inet_pton(AF_INET, ip, &((struct sockaddr_in*)&addr)->sin_addr) 
 		&& 1 != inet_pton(AF_INET6, ip, &((struct sockaddr_in6*)&addr)->sin6_addr))
-		return -1;
-	return 0;
+		return 0;
+	return 1;
 #else
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = AI_NUMERICHOST /*| AI_V4MAPPED | AI_ADDRCONFIG*/;
 	if (0 != getaddrinfo(ip, NULL, &hints, &addr))
-		return -1;
+		return 0;
 	freeaddrinfo(&addr);
 #endif
-	return 0;
+	return 1;
 }
 
 static inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN])
