@@ -44,7 +44,7 @@ int ip_route_get(const char* destination, char ip[40])
 
 	addrin.sin_family = AF_INET;
 	addrin.sin_port = htons(0);
-	inet_pton(AF_INET, distination, &addrin.sin_addr);
+	inet_pton(AF_INET, destination, &addrin.sin_addr);
 	if(NO_ERROR != GetBestInterfaceEx((struct sockaddr*)&addrin, &index))
 		return -1;
 
@@ -92,7 +92,7 @@ int ip_route_get(const char* destination, char ip[40])
     
     r = router_gateway((struct sockaddr*)&dst, &gateway);
     if(0 == r)
-        r = socket_addr_to((struct sockaddr*)&gateway, gateway.ss_len, ip, &port);
+        r = socket_addr_to((struct sockaddr*)&gateway, socket_addr_len((struct sockaddr*)&gateway), ip, &port);
 	return r;
 }
 #endif

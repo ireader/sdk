@@ -1,6 +1,7 @@
 #include "port/async-pipe.h"
 #include "sys/atomic.h"
 #include <sys/ioctl.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>

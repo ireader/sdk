@@ -114,13 +114,13 @@ static int netlink_getgateway(socket_t s, const struct sockaddr* addr)
 	hdr->nlmsg_type = RTM_GETROUTE;
 
 	rt = (struct rtmsg*)NLMSG_DATA(hdr);
-	rt->rtm_family = addr->ss_family;
+	rt->rtm_family = addr->sa_family;
 	rt->rtm_table = RT_TABLE_MAIN;
 	rt->rtm_dst_len = 8 * (AF_INET == addr->sa_family ? 4 : 16);
 
 	attr = (struct rtattr*)(rt + 1);
 	attr->rta_type = RTA_DST;
-	if (AF_INET == addr->ss_family)
+	if (AF_INET == addr->sa_family)
 	{
 		attr->rta_len = RTA_LENGTH(4);
 		memcpy(RTA_DATA(attr), &((struct sockaddr_in*)addr)->sin_addr.s_addr, 4);

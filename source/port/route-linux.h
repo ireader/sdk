@@ -72,7 +72,7 @@ static int router_iface_addr(const char* iface, struct sockaddr_storage* addr)
         if(AF_INET != ifa->ifa_addr->sa_family && AF_INET6 != ifa->ifa_addr->sa_family)
             continue;
         
-        memcpy(addr, ifa->ifa_addr, ifa->ifa_addr->sa_len);
+        memcpy(addr, ifa->ifa_addr, socket_addr_len(ifa->ifa_addr));
         break;
     }
     
@@ -84,7 +84,6 @@ static int router_iface_addr(const char* iface, struct sockaddr_storage* addr)
 static int router_iface_addr(const char* iface, struct sockaddr_storage* addr)
 {
     int sockfd;
-    uint32_t addr;
     struct ifreq ifr;
     
     sockfd = socket(addr->ss_family, SOCK_DGRAM, 0);
@@ -101,7 +100,7 @@ static int router_iface_addr(const char* iface, struct sockaddr_storage* addr)
         return -1;
     }
     
-    memcpy(addr, &ifr.ifr_addr, ifr.ifr_addr.sa_len);
+    memcpy(addr, &ifr.ifr_addr, socket_addr_len(&ifr.ifr_addr));
     close(sockfd);
     return 0;
 }
