@@ -17,7 +17,6 @@ typedef HANDLE sema_t;
 
 #if defined(OS_MAC)
 #include <sys/time.h> // gettimeofday
-#include <dispatch/base.h>
 #include <dispatch/dispatch.h>
 #include <dispatch/time.h>
 #endif
