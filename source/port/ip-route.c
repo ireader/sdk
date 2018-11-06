@@ -1,4 +1,6 @@
 #include "port/ip-route.h"
+#include "sys/sock.h"
+
 #if defined(OS_WINDOWS)
 #include <winsock2.h>
 #include <iphlpapi.h>
@@ -9,11 +11,18 @@
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <net/if.h>
 #if !defined(__ANDROID_API__) || __ANDROID_API__ >= 24
 #include <ifaddrs.h>
+#endif
+
+#if defined(OS_MAC)
+#include "route-rtm.h"
+#elif defined(OS_ANDROID)
+#include "route-linux.h"
+#else
+#include "route-netlink.h"
 #endif
 
 #endif
@@ -24,128 +33,7 @@
 #include <errno.h>
 
 #if defined(OS_WINDOWS)
-static int ipv4_valid(const char* ip)
-{
-	int a, b, c, d;
-	if(ip && 4 == sscanf(ip, "%d.%d.%d.%d", &a, &b, &c, &d))
-	{
-		if(0 <= a && a <= 255 && 0 <= b && b <= 255 && 0 <= c && c <= 255 && 0 <= d && d <= 255)
-			return 1;
-	}
-	return 0;
-}
-
-static int ipv6_valid(const char* src)
-{
-#if 0
-	unsigned char addr[sizeof(struct in6_addr)];
-	return 1 == InetPton(AF_INET6, src, addr) ? 1 : 0;
-#else
-	// freebsd
-	// lib\libc\inet\inet_pton.c
-	static const char xdigits_l[] = "0123456789abcdef",
-			  xdigits_u[] = "0123456789ABCDEF";
-	unsigned char tmp[16], *tp, *endp, *colonp;
-	const char *xdigits, *curtok;
-	int ch, seen_xdigits;
-	unsigned int val;
-
-	memset((tp = tmp), '\0', sizeof(tmp));
-	endp = tp + sizeof(tmp);
-	colonp = NULL;
-	/* Leading :: requires some special handling. */
-	if (*src == ':')
-		if (*++src != ':')
-			return (0);
-	curtok = src;
-	seen_xdigits = 0;
-	val = 0;
-	while ((ch = *src++) != '\0') {
-		const char *pch;
-
-		if ((pch = strchr((xdigits = xdigits_l), ch)) == NULL)
-			pch = strchr((xdigits = xdigits_u), ch);
-		if (pch != NULL) {
-			val <<= 4;
-			val |= (pch - xdigits);
-			if (++seen_xdigits > 4)
-				return (0);
-			continue;
-		}
-		if (ch == ':') {
-			curtok = src;
-			if (!seen_xdigits) {
-				if (colonp)
-					return (0);
-				colonp = tp;
-				continue;
-			} else if (*src == '\0') {
-				return (0);
-			}
-			if (tp + 2 > endp)
-				return (0);
-			*tp++ = (u_char) (val >> 8) & 0xff;
-			*tp++ = (u_char) val & 0xff;
-			seen_xdigits = 0;
-			val = 0;
-			continue;
-		}
-		//if (ch == '.' && ((tp + NS_INADDRSZ) <= endp) &&
-		//    inet_pton4(curtok, tp) > 0) {
-		//	tp += NS_INADDRSZ;
-		//	seen_xdigits = 0;
-		//	break;	/*%< '\\0' was seen by inet_pton4(). */
-		//}
-		return (0);
-	}
-	if (seen_xdigits) {
-		if (tp + 2 > endp)
-			return (0);
-		*tp++ = (u_char) (val >> 8) & 0xff;
-		*tp++ = (u_char) val & 0xff;
-	}
-	if (colonp != NULL) {
-		/*
-		 * Since some memmove()'s erroneously fail to handle
-		 * overlapping regions, we'll do the shift by hand.
-		 */
-		const int n = tp - colonp;
-		int i;
-
-		if (tp == endp)
-			return (0);
-		for (i = 1; i <= n; i++) {
-			endp[- i] = colonp[n - i];
-			colonp[n - i] = 0;
-		}
-		tp = endp;
-	}
-	if (tp != endp)
-		return (0);
-	return (1);
-#endif
-}
-#else
-static int ipv4_valid(const char* ip)
-{
-	unsigned char addr[sizeof(struct in_addr)];
-	return 1 == inet_pton(AF_INET, ip, addr) ? 1 : 0;
-}
-
-static int ipv6_valid(const char* ip)
-{
-	unsigned char addr[sizeof(struct in6_addr)];
-	return 1 == inet_pton(AF_INET6, ip, addr) ? 1 : 0;
-}
-#endif
-
-int ip_valid(const char* ip)
-{
-	return (1==ipv4_valid(ip) || 1==ipv6_valid(ip)) ? 1 : 0;
-}
-
-#if defined(OS_WINDOWS)
-int ip_route_get(const char* distination, char ip[40])
+int ip_route_get(const char* destination, char ip[40])
 {
 	DWORD index = ~(-1);
 	struct sockaddr_in addrin;
@@ -190,153 +78,22 @@ int ip_route_get(const char* distination, char ip[40])
 }
 #else
 
-#if !defined(__ANDROID_API__) || __ANDROID_API__ >= 24
-static uint32_t ipv4_iface_addr(const char* iface)
+int ip_route_get(const char* destination, char ip[40])
 {
-	uint32_t addr;
-	struct ifaddrs *ifaddr, *ifa;
-
-	if(0 != getifaddrs(&ifaddr))
-		return INADDR_ANY;
-
-	addr = INADDR_ANY;
-	for(ifa = ifaddr; ifa; ifa = ifa->ifa_next)
-	{
-		if(!ifa->ifa_addr || AF_INET != ifa->ifa_addr->sa_family || 0 != strcmp(iface, ifa->ifa_name))
-			continue;
-
-		addr = ((struct sockaddr_in*)ifa->ifa_addr)->sin_addr.s_addr;
-		break;
-	}
-
-	freeifaddrs(ifaddr);
-	return addr;
-}
-
-#else
-static uint32_t ipv4_iface_addr(const char* iface)
-{
-	int sockfd;
-	uint32_t addr;
-	struct ifreq ifr;
-
-	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sockfd == -1)
-		return INADDR_ANY;
-
-	ifr.ifr_addr.sa_family = AF_INET;
-	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", iface);
-
-	if (ioctl(sockfd, SIOCGIFADDR, &ifr) == -1)
-		return INADDR_ANY;
-
-	addr = ((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr.s_addr;
-
-	close(sockfd);
-	return addr;
-}
-#endif
-
-static inline int hweight32(uint32_t w)
-{
-	w = w - ((w >> 1) & 0x55555555);
-	w = (w & 0x33333333) + ((w >> 2) & 0x33333333);
-	w = (w + (w >> 4)) & 0x0F0F0F0F;
-	w = (w + (w >> 8));
-	return (w + (w >> 16)) & 0x000000FF;
-}
-
-/*
-[root@localhost net]# cat route
-Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT                                                       
-eth0	000CA8C0	00000000	0001	0		0	0		00FFFFFF	0	0	0                                                                               
-eth0	0000FEA9	00000000	0001	0		0	0		0000FFFF	0	0	0                                                                               
-eth0	00000000	010CA8C0	0003	0		0	0		00000000	0	0	0      
-*/
-static uint32_t ipv4_route(uint32_t peer)
-{
-	FILE* fp;
-	int n, score;
-	char name[18], iface[18], line[1024];
-	uint32_t destination, gateway, netmask;
-
-	fp = fopen("/proc/net/route", "r");
-	if (!fp)
-		return INADDR_ANY;
-
-	score = -1;
-	name[0] = iface[0] = '\0';
-	fgets(line, sizeof(line), fp); // filter first line
-
-	while (NULL != fgets(line, sizeof(line), fp))
-	{
-		if (4 == sscanf(line, "%16s %X %X %*X %*d %*d %*d %X", name, &destination, &gateway, &netmask))
-		{
-			assert((destination & netmask) == destination);
-			if (0 == destination && -1 == score)
-			{
-				// default gateway
-				score = 0;
-				strcpy(iface, name);
-			}
-			else if ((peer & netmask) == destination)
-			{
-				// found
-				n = hweight32(netmask);
-				if (n > score)
-				{
-					score = n;
-					strcpy(iface, name);
-				}
-			}
-			else if (-1 == score)
-			{
-				// don't have default gateway
-				strcpy(iface, name); // fall-through
-			}
-		}
-	}
-
-	fclose(fp);
-
-	return ipv4_iface_addr(iface);
-}
-
-int ip_route_get(const char* distination, char ip[40])
-{
-#if 1
-	struct in_addr addr;
-	inet_pton(AF_INET, distination, &addr);
-	addr.s_addr = ipv4_route(addr.s_addr);
-	return NULL==inet_ntop(AF_INET, &addr, ip, INET6_ADDRSTRLEN) ? errno : 0;
-#else
-	size_t n = 0;
-	FILE *fp = NULL;
-	char cmd[128] = {0};
-
-	// "ip route get 255.255.255.255 | grep -Po '(?<=src )(\d{1,3}.){4}'"
-	snprintf(cmd, sizeof(cmd), "ip route get %s | grep -Po '(?<=src )(\\d{1,3}.){4}'", distination);
-	fp = popen(cmd, "r");
-	if(!fp)
-		return -1;
-
-	fgets(cmd, sizeof(cmd)-1, fp);
-	pclose(fp);
-
-	n = strlen(cmd);
-	while(n > 0 && strchr(" \r\n\t", cmd[n-1]))
-	{
-		cmd[--n] = '\0';
-	}
-
-	if(n < 40 && ip_valid(cmd))
-	{
-		strncpy(ip, cmd, n);
-		ip[n] = '\0';
-		return 0;
-	}
-	return -1;
-#endif
+    int r;
+    u_short port;
+    socklen_t dstlen;
+    struct sockaddr_storage dst;
+    struct sockaddr_storage gateway;
+    memset(&gateway, 0, sizeof(gateway));
+    r = socket_addr_from(&dst, &dstlen, destination, 0);
+    if(0 != r)
+        return r;
+    
+    r = router_gateway((struct sockaddr*)&dst, &gateway);
+    if(0 == r)
+        r = socket_addr_to((struct sockaddr*)&gateway, gateway.ss_len, ip, &port);
+	return r;
 }
 #endif
 

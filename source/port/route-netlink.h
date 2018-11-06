@@ -1,7 +1,8 @@
 // https://www.linuxjournal.com/article/8498
 // http://manpages.ubuntu.com/manpages/xenial/man7/rtnetlink.7.html
 
-#include "sys/sock.h"
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h> //for IF_NAMESIZ, route_info   
 #include <stdlib.h>
@@ -91,7 +92,7 @@ static int netlink_recv(socket_t s, void* data, size_t bytes)
 	return r;
 }
 
-static int netlink_getgateway(socket_t s, const struct sockaddr_storage* addr)
+static int netlink_getgateway(socket_t s, const struct sockaddr* addr)
 {
 	size_t bytes;
 	uint8_t* data;
@@ -102,20 +103,20 @@ static int netlink_getgateway(socket_t s, const struct sockaddr_storage* addr)
 	ssize_t len;
 	int ifidx = -1;
 
-	assert(AF_INET == addr->ss_family || AF_INET6 == addr->ss_family);
-	bytes = NLMSG_SPACE(sizeof(*rt) + RTA_SPACE(AF_INET == addr->ss_family ? 4 : 16));
+	assert(AF_INET == addr->sa_family || AF_INET6 == addr->sa_family);
+	bytes = NLMSG_SPACE(sizeof(*rt) + RTA_SPACE(AF_INET == addr->sa_family ? 4 : 16));
 	data = (uint8_t*)calloc(1, bytes + 2048);
 	if (!data) goto out;
 
 	hdr = (struct nlmsghdr*)data;
-	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(*rt) + RTA_SPACE(AF_INET == addr->ss_family ? 4 : 16));
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(*rt) + RTA_SPACE(AF_INET == addr->sa_family ? 4 : 16));
 	hdr->nlmsg_flags = NLM_F_REQUEST;// | NLM_F_DUMP;
 	hdr->nlmsg_type = RTM_GETROUTE;
 
 	rt = (struct rtmsg*)NLMSG_DATA(hdr);
 	rt->rtm_family = addr->ss_family;
 	rt->rtm_table = RT_TABLE_MAIN;
-	rt->rtm_dst_len = 8 * (AF_INET == addr->ss_family ? 4 : 16);
+	rt->rtm_dst_len = 8 * (AF_INET == addr->sa_family ? 4 : 16);
 
 	attr = (struct rtattr*)(rt + 1);
 	attr->rta_type = RTA_DST;
@@ -166,7 +167,7 @@ out:
 	return ifidx;
 }
 
-static int netlink_getaddr(socket_t s, int ifidx, int family, struct sockaddr_storage *addr, socklen_t* addrlen)
+static int netlink_getaddr(socket_t s, int ifidx, int family, struct sockaddr_storage *addr)
 {
 	static const size_t addr_buffer_size = 1024;
 	void *req = NULL;
@@ -247,7 +248,6 @@ static int netlink_getaddr(socket_t s, int ifidx, int family, struct sockaddr_st
 			for (; RTA_OK(attr, attrlen); attr = RTA_NEXT(attr, attrlen)) {
 				if (attr->rta_type == IFA_ADDRESS) {
 					memset(addr, 0, sizeof(*addr));
-					*addrlen = (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
 					if (family == AF_INET)
 						memcpy(&((struct sockaddr_in*)addr)->sin_addr, RTA_DATA(attr), sizeof(struct in_addr));
 					else
@@ -268,25 +268,18 @@ out:
 	return ret;
 }
 
-int netlink_getroute(const char* destination, char ip[40])
+static int router_gateway(const struct sockaddr* dst, struct sockaddr_storage* gateway)
 {
 	int ifidx;
 	socket_t s;
-	struct sockaddr_storage addr;
-	struct sockaddr_storage out;
-	socklen_t outlen;
-	u_short port;
 	
 	s = netlink_route();
 	if (socket_invalid == s) return -1;
 
-	socket_addr_from(&addr, &outlen, destination, 0);
-	ifidx = netlink_getgateway(s, &addr);
+	ifidx = netlink_getgateway(s, dst);
 	if (ifidx >= 0)
 	{
-		ifidx = netlink_getaddr(s, ifidx, addr.ss_family, &out, &outlen);
-		if(0 == ifidx)
-			socket_addr_to((struct sockaddr*)&out, outlen, ip, &port);
+		ifidx = netlink_getaddr(s, ifidx, dst->sa_family, gateway);
 	}
 
 	socket_close(s);
