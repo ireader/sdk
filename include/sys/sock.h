@@ -705,7 +705,7 @@ static inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable)
 	return socket_getopt_bool(sock, SO_REUSEADDR, enable);
 }
 
-#if defined(OS_LINUX) && defined(SO_REUSEPORT)
+#if defined(SO_REUSEPORT)
 static inline int socket_setreuseport(IN socket_t sock, IN int enable)
 {
 	return socket_setopt_bool(sock, SO_REUSEPORT, enable);
@@ -717,7 +717,7 @@ static inline int socket_getreuseport(IN socket_t sock, OUT int* enable)
 }
 #endif
 
-#if defined(OS_LINUX) && defined(TCP_CORK)
+#if defined(TCP_CORK)
 // 1-cork, 0-uncork
 static inline int socket_setcork(IN socket_t sock, IN int cork)
 {
@@ -864,11 +864,15 @@ static inline int socket_getdomain(IN socket_t sock, OUT int* domain)
 	r = getsockopt(sock, SOL_SOCKET, SO_PROTOCOL_INFOW, (char*)&protocolInfo, &len);
 	if (0 == r)
 		*domain = protocolInfo.iAddressFamily;
-#elif defined(OS_LINUX)
+#elif defined(OS_LINUX) 
 	socklen_t len = sizeof(domain);
 	r = getsockopt(sock, SOL_SOCKET, SO_DOMAIN, (char*)domain, &len);
 #else
-    r = -1;
+    struct sockaddr_storage addr;
+    socklen_t addrlen = sizeof(addr);
+    memset(&addr, 0, sizeof(addr));
+    r = getsockname(sock, (struct sockaddr*)&addr, &addrlen);
+    *domain = addr.ss_family;
 #endif
 	return r;
 }
@@ -1094,7 +1098,7 @@ static inline int socket_addr_compare(const struct sockaddr* sa, const struct so
 	{
 	case AF_INET:	return memcmp(sa, sb, sizeof(struct sockaddr_in));
 	case AF_INET6:	return memcmp(sa, sb, sizeof(struct sockaddr_in6));
-#if defined(OS_LINUX) // Windows build 17061
+#if defined(OS_LINUX) || defined(OS_MAC) // Windows build 17061
 	// https://blogs.msdn.microsoft.com/commandline/2017/12/19/af_unix-comes-to-windows/
 	case AF_UNIX:	return memcmp(sa, sb, sizeof(struct sockaddr_un));
 #endif
@@ -1108,7 +1112,7 @@ static inline int socket_addr_len(const struct sockaddr* addr)
 	{
 	case AF_INET:	return sizeof(struct sockaddr_in);
 	case AF_INET6:	return sizeof(struct sockaddr_in6);
-#if defined(OS_LINUX) // Windows build 17061
+#if defined(OS_LINUX) || defined(OS_MAC)// Windows build 17061
 		// https://blogs.msdn.microsoft.com/commandline/2017/12/19/af_unix-comes-to-windows/
 	case AF_UNIX:	return sizeof(struct sockaddr_un);
 #endif

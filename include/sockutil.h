@@ -35,6 +35,8 @@ static inline socket_t socket_accept_by_time(IN socket_t socket, OUT struct sock
 
 /// @return 0-ok, <0-socket_error(by socket_geterror())
 static inline int socket_bind_any(IN socket_t sock, IN u_short port);
+static inline int socket_bind_any_ipv4(IN socket_t sock, IN u_short port);
+static inline int socket_bind_any_ipv6(IN socket_t sock, IN u_short port);
 
 /// @return >0-sent/received bytes, SOCKET_TIMEDOUT-timeout, <0-error(by socket_geterror()), 0-connection closed(recv only)
 static inline int socket_send_by_time(IN socket_t sock, IN const void* buf, IN size_t len, IN int flags, IN int timeout); // timeout: ms, <0-forever
@@ -114,6 +116,28 @@ static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, I
 //////////////////////////////////////////////////////////////////////////
 /// socket bind
 //////////////////////////////////////////////////////////////////////////
+static inline int socket_bind_any_ipv4(IN socket_t sock, IN u_short port)
+{
+    struct sockaddr_in addr;
+    int domain;
+    socket_getdomain(sock, &domain);
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = INADDR_ANY;
+    return socket_bind(sock, (struct sockaddr*)&addr, sizeof(addr));
+}
+
+static inline int socket_bind_any_ipv6(IN socket_t sock, IN u_short port)
+{
+    struct sockaddr_in6 addr6;
+    memset(&addr6, 0, sizeof(addr6));
+    addr6.sin6_family = AF_INET6;
+    addr6.sin6_port = htons(port);
+    addr6.sin6_addr = in6addr_any;
+    return socket_bind(sock, (struct sockaddr*)&addr6, sizeof(addr6));
+}
+
 static inline int socket_bind_any(IN socket_t sock, IN u_short port)
 {
 	int r;
@@ -124,21 +148,11 @@ static inline int socket_bind_any(IN socket_t sock, IN u_short port)
 
 	if (AF_INET == domain)
 	{
-		struct sockaddr_in addr;
-		memset(&addr, 0, sizeof(addr));
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(port);
-		addr.sin_addr.s_addr = INADDR_ANY;
-		return socket_bind(sock, (struct sockaddr*)&addr, sizeof(addr));
+        return socket_bind_any_ipv4(sock, port);
 	}
 	else if (AF_INET6 == domain)
 	{
-		struct sockaddr_in6 addr6;
-		memset(&addr6, 0, sizeof(addr6));
-		addr6.sin6_family = AF_INET6;
-		addr6.sin6_port = htons(port);
-		addr6.sin6_addr = in6addr_any;
-		return socket_bind(sock, (struct sockaddr*)&addr6, sizeof(addr6));
+        return socket_bind_any_ipv6(sock, port);
 	}
 	else
 	{
