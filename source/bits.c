@@ -4,60 +4,59 @@
 #define BIT_NUM_8	8
 //#define BIT_NUM (sizeof(char)*8)
 
-void bits_init(struct bits_t* bits, const void* data, size_t bytes)
+void bits_init(struct bits_t* bits, const void* data, size_t size)
 {
-	bits->data = (const uint8_t*)data;
-	bits->bytes = bytes;
-	bits->offsetBits = 0;
-	bits->offsetBytes = 0;
-}
-
-static void bitstream_move(struct bits_t* bits, int n)
-{
-	bits->offsetBytes += (bits->offsetBits + n) / BIT_NUM_8;
-	bits->offsetBits = (bits->offsetBits + n) % BIT_NUM_8;
+	bits->data = (uint8_t*)data;
+	bits->size = size;
+	bits->bits = 0;
+	bits->error = 0;
 }
 
 int bits_next(struct bits_t* bits)
 {
 	uint8_t bit;
-	assert(bits && bits->data && bits->bytes > 0);
-	if (bits->offsetBytes >= bits->bytes)
-		return -1; // throw exception
+	assert(bits && bits->data && bits->size > 0);
+	if (bits->bits >= bits->size * 8)
+	{
+		bits->error = -1;
+		return 0; // throw exception
+	}
 
-	bit = bits->data[bits->offsetBytes] & (0x80U >> bits->offsetBits);
+	bit = bits->data[bits->bits / 8] & (0x80U >> (bits->bits % 8));
 	return bit ? 1 : 0;
 }
 
-int bits_next2(struct bits_t* bits, int n)
+uint64_t bits_next_n(struct bits_t* bits, int n)
 {
-	int i, v;
+	size_t i;
+	uint64_t v;
 
-	assert(n > 0 && n <= 32);
-	assert(bits && bits->data && bits->bytes > 0);
-	if (bits->offsetBytes >= bits->bytes)
-		return -1; // throw exception
-
-	v = bits->data[bits->offsetBytes] & (0xFFU >> bits->offsetBits); // remain valid value
-	if (n <= BIT_NUM_8 - bits->offsetBits)
-		return v >> (BIT_NUM_8 - bits->offsetBits - n); // shift right value
-
-	n -= BIT_NUM_8 - bits->offsetBits;
-	for (i = 1; n >= BIT_NUM_8 && bits->offsetBytes + i < bits->bytes; i++)
+	assert(n > 0 && n <= 64);
+	assert(bits && bits->data && bits->size > 0);
+	if (bits->bits + n > bits->size * 8 || n > 64 || n < 0)
 	{
-		v <<= 8;
-		v += bits->data[bits->offsetBytes + i];
-		n -= 8;
+		bits->error = -1;
+		return 0; // throw exception
 	}
 
-	if (n > 0 && bits->offsetBytes + i >= bits->bytes)
-		return -1;
+	v = bits->data[bits->bits / 8] & (0xFFU >> (bits->bits % 8)); // remain valid value
+	if (n <= 8 - (int)(bits->bits % 8))
+		return v >> (8 - (bits->bits % 8) - n); // shift right value
+
+	n -= 8 - (int)(bits->bits % 8);
+	for (i = 1; n >= 8 && bits->bits / 8 + i < bits->size; i++)
+	{
+		v <<= 8;
+		v += bits->data[bits->bits / 8 + i];
+		n -= 8;
+	}
 
 	if (n > 0)
 	{
 		v <<= n;
-		v += bits->data[bits->offsetBytes + i] >> (BIT_NUM_8 - n);
+		v += bits->data[bits->bits / 8 + i] >> (8 - n);
 	}
+
 	return v;
 }
 
@@ -65,15 +64,17 @@ int bits_read(struct bits_t* bits)
 {
 	int bit;
 	bit = bits_next(bits);
-	bitstream_move(bits, 1); // update offset
+	if(0 == bits->error)
+		bits->bits += 1; // update offset
 	return bit;
 }
 
-int bits_read2(struct bits_t* bits, int n)
+uint64_t bits_read_n(struct bits_t* bits, int n)
 {
-	int bit;
-	bit = bits_next2(bits, n);
-	bitstream_move(bits, n); // update offset
+	uint64_t bit;
+	bit = bits_next_n(bits, n);
+	if (0 == bits->error)
+		bits->bits += n; // update offset
 	return bit;
 }
 
@@ -91,7 +92,7 @@ int bits_read_ue(struct bits_t* bits)
 	if (leadingZeroBits > 0)
 	{
 		assert(leadingZeroBits < 32);
-		bit = bits_read2(bits, leadingZeroBits);
+		bit = (int)bits_read_n(bits, leadingZeroBits);
 	}
 	return (1 << leadingZeroBits) - 1 + bit;
 }
@@ -109,6 +110,53 @@ int bits_read_te(struct bits_t* bits)
 		return v;
 	else
 		return bits_read(bits) ? 0 : 1;
+}
+
+int bits_write(struct bits_t* bits, int v)
+{
+	assert(bits && bits->data && bits->size > 0);
+	if (bits->bits >= bits->size * 8)
+	{
+		bits->error = -1;
+		return -1; // throw exception
+	}
+
+	if (v)
+		bits->data[bits->bits / 8] |= (0x80U >> (bits->bits % 8));
+	bits->bits += 1; // update offset
+	return 0;
+}
+
+int bits_write_n(struct bits_t* bits, uint64_t v, int n)
+{
+	int m;
+	size_t i;
+
+	assert(n > 0 && n <= 64);
+	assert(bits && bits->data && bits->size > 0);
+	if (bits->bits + n > bits->size * 8 || n > 64 || n < 0)
+	{
+		bits->error = -1;
+		return -1; // throw exception
+	}
+
+	m = n;
+	v <<= 64 - n; // left shift to first bit
+
+	bits->data[bits->bits / 8] |= v >> (56 + (bits->bits % 8)); // remain valid value
+	v <<= 8 - (bits->bits % 8);
+	n -= 8 - (int)(bits->bits % 8);
+
+	for (i = 1; n > 0; i++)
+	{
+		assert(bits->bits / 8 + i < bits->size);
+		bits->data[bits->bits / 8 + i] = (uint8_t)(v >> 56);
+		v <<= 8;
+		n -= 8;
+	}
+
+	bits->bits += m;
+	return 0;
 }
 
 #if defined(_DEBUG) || defined(DEBUG)
@@ -158,13 +206,13 @@ void bits_test(void)
 	assert(1 == bits_read(&bits));
 //	assert(1 == bits_read(&bits));
 
-	assert(0x05 == bits_read2(&bits, 3));
-	assert(0x15 == bits_read2(&bits, 8));
-	assert(0x27 == bits_read2(&bits, 6));
-	assert(0x08 == bits_read2(&bits, 4));
-	assert(0x09ABCDEF == bits_read2(&bits, 28));
+	assert(0x05 == bits_read_n(&bits, 3));
+	assert(0x15 == bits_read_n(&bits, 8));
+	assert(0x27 == bits_read_n(&bits, 6));
+	assert(0x08 == bits_read_n(&bits, 4));
+	assert(0x09ABCDEF == bits_read_n(&bits, 28));
 
-	assert(-1 == bits_read2(&bits, 17));
+	assert(0 == bits_read_n(&bits, 17) && bits.error);
 	bits_test2();
 }
 #endif
