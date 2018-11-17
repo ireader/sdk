@@ -694,6 +694,9 @@ static inline int socket_getrecvtimeout(IN socket_t sock, OUT size_t* seconds)
 
 static inline int socket_setreuseaddr(IN socket_t sock, IN int enable)
 {
+	// https://stackoverflow.com/questions/14388706/socket-options-so-reuseaddr-and-so-reuseport-how-do-they-differ-do-they-mean-t
+	// https://www.cnblogs.com/xybaby/p/7341579.html
+	// Windows: SO_REUSEADDR = SO_REUSEADDR + SO_REUSEPORT
 	return socket_setopt_bool(sock, SO_REUSEADDR, enable);
 }
 

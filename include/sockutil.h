@@ -283,8 +283,8 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_
 		if (socket_invalid == sock)
 			continue;
 
-		// reuse addr
-		socket_setreuseaddr(sock, 1);
+		// disable reuse addr(fixed rtp port reuse error)
+		//socket_setreuseaddr(sock, 1);
 
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
 		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
