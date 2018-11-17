@@ -1,0 +1,384 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		46C5B15D2182E16E00419E57 /* http-client.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1472182E16E00419E57 /* http-client.c */; };
+		46C5B15E2182E16E00419E57 /* http-header-expires.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1482182E16E00419E57 /* http-header-expires.c */; };
+		46C5B15F2182E16E00419E57 /* http-server-route.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1492182E16E00419E57 /* http-server-route.cpp */; };
+		46C5B1602182E16E00419E57 /* http-header-www-authenticate.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B14A2182E16E00419E57 /* http-header-www-authenticate.c */; };
+		46C5B1612182E16E00419E57 /* http-header-host.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B14B2182E16E00419E57 /* http-header-host.c */; };
+		46C5B1622182E16E00419E57 /* http-session.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B14C2182E16E00419E57 /* http-session.c */; };
+		46C5B1632182E16E00419E57 /* http-parser.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B14D2182E16E00419E57 /* http-parser.c */; };
+		46C5B1642182E16E00419E57 /* http-cookie.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B14E2182E16E00419E57 /* http-cookie.c */; };
+		46C5B1652182E16E00419E57 /* http-header-range.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B14F2182E16E00419E57 /* http-header-range.c */; };
+		46C5B1662182E16E00419E57 /* http-request.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1502182E16E00419E57 /* http-request.c */; };
+		46C5B1672182E16E00419E57 /* http-reason.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1512182E16E00419E57 /* http-reason.c */; };
+		46C5B1682182E16E00419E57 /* http-server-internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 46C5B1522182E16E00419E57 /* http-server-internal.h */; };
+		46C5B1692182E16E00419E57 /* http-client-internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 46C5B1532182E16E00419E57 /* http-client-internal.h */; };
+		46C5B16A2182E16E00419E57 /* http-client-connection-aio.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1542182E16E00419E57 /* http-client-connection-aio.c */; };
+		46C5B16B2182E16E00419E57 /* rfc822-datetime.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1552182E16E00419E57 /* rfc822-datetime.c */; };
+		46C5B16C2182E16E00419E57 /* http-client-connection.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1562182E16E00419E57 /* http-client-connection.c */; };
+		46C5B16D2182E16E00419E57 /* http-header-authorization.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1572182E16E00419E57 /* http-header-authorization.c */; };
+		46C5B16E2182E16E00419E57 /* http-server-reply.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1582182E16E00419E57 /* http-server-reply.c */; };
+		46C5B16F2182E16E00419E57 /* http-server-sendfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1592182E16E00419E57 /* http-server-sendfile.c */; };
+		46C5B1702182E16E00419E57 /* http-server.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B15A2182E16E00419E57 /* http-server.c */; };
+		46C5B1712182E16E00419E57 /* http-upload.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B15B2182E16E00419E57 /* http-upload.c */; };
+		46C5B1722182E16E00419E57 /* http-header-content-type.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B15C2182E16E00419E57 /* http-header-content-type.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		46C5B1332182E13000419E57 /* libhttp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libhttp.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		46C5B1472182E16E00419E57 /* http-client.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-client.c"; sourceTree = "<group>"; };
+		46C5B1482182E16E00419E57 /* http-header-expires.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-header-expires.c"; sourceTree = "<group>"; };
+		46C5B1492182E16E00419E57 /* http-server-route.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "http-server-route.cpp"; sourceTree = "<group>"; };
+		46C5B14A2182E16E00419E57 /* http-header-www-authenticate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-header-www-authenticate.c"; sourceTree = "<group>"; };
+		46C5B14B2182E16E00419E57 /* http-header-host.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-header-host.c"; sourceTree = "<group>"; };
+		46C5B14C2182E16E00419E57 /* http-session.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-session.c"; sourceTree = "<group>"; };
+		46C5B14D2182E16E00419E57 /* http-parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-parser.c"; sourceTree = "<group>"; };
+		46C5B14E2182E16E00419E57 /* http-cookie.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-cookie.c"; sourceTree = "<group>"; };
+		46C5B14F2182E16E00419E57 /* http-header-range.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-header-range.c"; sourceTree = "<group>"; };
+		46C5B1502182E16E00419E57 /* http-request.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-request.c"; sourceTree = "<group>"; };
+		46C5B1512182E16E00419E57 /* http-reason.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-reason.c"; sourceTree = "<group>"; };
+		46C5B1522182E16E00419E57 /* http-server-internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "http-server-internal.h"; sourceTree = "<group>"; };
+		46C5B1532182E16E00419E57 /* http-client-internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "http-client-internal.h"; sourceTree = "<group>"; };
+		46C5B1542182E16E00419E57 /* http-client-connection-aio.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-client-connection-aio.c"; sourceTree = "<group>"; };
+		46C5B1552182E16E00419E57 /* rfc822-datetime.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "rfc822-datetime.c"; sourceTree = "<group>"; };
+		46C5B1562182E16E00419E57 /* http-client-connection.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-client-connection.c"; sourceTree = "<group>"; };
+		46C5B1572182E16E00419E57 /* http-header-authorization.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-header-authorization.c"; sourceTree = "<group>"; };
+		46C5B1582182E16E00419E57 /* http-server-reply.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-server-reply.c"; sourceTree = "<group>"; };
+		46C5B1592182E16E00419E57 /* http-server-sendfile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-server-sendfile.c"; sourceTree = "<group>"; };
+		46C5B15A2182E16E00419E57 /* http-server.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-server.c"; sourceTree = "<group>"; };
+		46C5B15B2182E16E00419E57 /* http-upload.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-upload.c"; sourceTree = "<group>"; };
+		46C5B15C2182E16E00419E57 /* http-header-content-type.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-header-content-type.c"; sourceTree = "<group>"; };
+		46C5B1732182E17D00419E57 /* include */ = {isa = PBXFileReference; lastKnownFileType = folder; path = include; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		46C5B1312182E13000419E57 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		46C5B12A2182E13000419E57 = {
+			isa = PBXGroup;
+			children = (
+				46C5B1732182E17D00419E57 /* include */,
+				46C5B1462182E16E00419E57 /* source */,
+				46C5B1342182E13000419E57 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		46C5B1342182E13000419E57 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				46C5B1332182E13000419E57 /* libhttp.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		46C5B1462182E16E00419E57 /* source */ = {
+			isa = PBXGroup;
+			children = (
+				46C5B1472182E16E00419E57 /* http-client.c */,
+				46C5B1482182E16E00419E57 /* http-header-expires.c */,
+				46C5B1492182E16E00419E57 /* http-server-route.cpp */,
+				46C5B14A2182E16E00419E57 /* http-header-www-authenticate.c */,
+				46C5B14B2182E16E00419E57 /* http-header-host.c */,
+				46C5B14C2182E16E00419E57 /* http-session.c */,
+				46C5B14D2182E16E00419E57 /* http-parser.c */,
+				46C5B14E2182E16E00419E57 /* http-cookie.c */,
+				46C5B14F2182E16E00419E57 /* http-header-range.c */,
+				46C5B1502182E16E00419E57 /* http-request.c */,
+				46C5B1512182E16E00419E57 /* http-reason.c */,
+				46C5B1522182E16E00419E57 /* http-server-internal.h */,
+				46C5B1532182E16E00419E57 /* http-client-internal.h */,
+				46C5B1542182E16E00419E57 /* http-client-connection-aio.c */,
+				46C5B1552182E16E00419E57 /* rfc822-datetime.c */,
+				46C5B1562182E16E00419E57 /* http-client-connection.c */,
+				46C5B1572182E16E00419E57 /* http-header-authorization.c */,
+				46C5B1582182E16E00419E57 /* http-server-reply.c */,
+				46C5B1592182E16E00419E57 /* http-server-sendfile.c */,
+				46C5B15A2182E16E00419E57 /* http-server.c */,
+				46C5B15B2182E16E00419E57 /* http-upload.c */,
+				46C5B15C2182E16E00419E57 /* http-header-content-type.c */,
+			);
+			path = source;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		46C5B12F2182E13000419E57 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				46C5B1692182E16E00419E57 /* http-client-internal.h in Headers */,
+				46C5B1682182E16E00419E57 /* http-server-internal.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		46C5B1322182E13000419E57 /* libhttp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 46C5B1372182E13000419E57 /* Build configuration list for PBXNativeTarget "libhttp" */;
+			buildPhases = (
+				46C5B12F2182E13000419E57 /* Headers */,
+				46C5B1302182E13000419E57 /* Sources */,
+				46C5B1312182E13000419E57 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = libhttp;
+			productName = libhttp;
+			productReference = 46C5B1332182E13000419E57 /* libhttp.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		46C5B12B2182E13000419E57 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1000;
+				ORGANIZATIONNAME = ireader;
+				TargetAttributes = {
+					46C5B1322182E13000419E57 = {
+						CreatedOnToolsVersion = 10.0;
+					};
+				};
+			};
+			buildConfigurationList = 46C5B12E2182E13000419E57 /* Build configuration list for PBXProject "libhttp" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 46C5B12A2182E13000419E57;
+			productRefGroup = 46C5B1342182E13000419E57 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				46C5B1322182E13000419E57 /* libhttp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		46C5B1302182E13000419E57 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				46C5B1652182E16E00419E57 /* http-header-range.c in Sources */,
+				46C5B16E2182E16E00419E57 /* http-server-reply.c in Sources */,
+				46C5B15D2182E16E00419E57 /* http-client.c in Sources */,
+				46C5B15E2182E16E00419E57 /* http-header-expires.c in Sources */,
+				46C5B16D2182E16E00419E57 /* http-header-authorization.c in Sources */,
+				46C5B1622182E16E00419E57 /* http-session.c in Sources */,
+				46C5B1632182E16E00419E57 /* http-parser.c in Sources */,
+				46C5B15F2182E16E00419E57 /* http-server-route.cpp in Sources */,
+				46C5B1722182E16E00419E57 /* http-header-content-type.c in Sources */,
+				46C5B1702182E16E00419E57 /* http-server.c in Sources */,
+				46C5B1642182E16E00419E57 /* http-cookie.c in Sources */,
+				46C5B1672182E16E00419E57 /* http-reason.c in Sources */,
+				46C5B16A2182E16E00419E57 /* http-client-connection-aio.c in Sources */,
+				46C5B16B2182E16E00419E57 /* rfc822-datetime.c in Sources */,
+				46C5B16C2182E16E00419E57 /* http-client-connection.c in Sources */,
+				46C5B1662182E16E00419E57 /* http-request.c in Sources */,
+				46C5B16F2182E16E00419E57 /* http-server-sendfile.c in Sources */,
+				46C5B1602182E16E00419E57 /* http-header-www-authenticate.c in Sources */,
+				46C5B1712182E16E00419E57 /* http-upload.c in Sources */,
+				46C5B1612182E16E00419E57 /* http-header-host.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		46C5B1352182E13000419E57 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		46C5B1362182E13000419E57 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		46C5B1382182E13000419E57 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				EXECUTABLE_PREFIX = "";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					OS_MAC,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				USER_HEADER_SEARCH_PATHS = (
+					.,
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/../include",
+					"$(SRCROOT)/../libaio/include",
+				);
+			};
+			name = Debug;
+		};
+		46C5B1392182E13000419E57 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				EXECUTABLE_PREFIX = "";
+				GCC_PREPROCESSOR_DEFINITIONS = OS_MAC;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				USER_HEADER_SEARCH_PATHS = (
+					.,
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/../include",
+					"$(SRCROOT)/../libaio/include",
+				);
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		46C5B12E2182E13000419E57 /* Build configuration list for PBXProject "libhttp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46C5B1352182E13000419E57 /* Debug */,
+				46C5B1362182E13000419E57 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		46C5B1372182E13000419E57 /* Build configuration list for PBXNativeTarget "libhttp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46C5B1382182E13000419E57 /* Debug */,
+				46C5B1392182E13000419E57 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 46C5B12B2182E13000419E57 /* Project object */;
+}

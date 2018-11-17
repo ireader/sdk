@@ -1,0 +1,344 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		46C5B1A42182E23600419E57 /* aio-connect.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1922182E23600419E57 /* aio-connect.c */; };
+		46C5B1A52182E23600419E57 /* aio-recv.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1932182E23600419E57 /* aio-recv.c */; };
+		46C5B1A62182E23600419E57 /* aio-client.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1942182E23600419E57 /* aio-client.c */; };
+		46C5B1A82182E23600419E57 /* aio-accept.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1962182E23600419E57 /* aio-accept.c */; };
+		46C5B1AD2182E23600419E57 /* aio-timeout.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B19B2182E23600419E57 /* aio-timeout.c */; };
+		46C5B1B02182E23600419E57 /* aio-worker.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B19E2182E23600419E57 /* aio-worker.c */; };
+		46C5B1B22182E23600419E57 /* aio-send.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1A02182E23600419E57 /* aio-send.c */; };
+		46C5B1B32182E23600419E57 /* aio-rwutil.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1A12182E23600419E57 /* aio-rwutil.c */; };
+		46C5B1B42182E23600419E57 /* aio-tcp-transport.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1A22182E23600419E57 /* aio-tcp-transport.c */; };
+		46C5B1C32182E58A00419E57 /* twtimer.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1C22182E58A00419E57 /* twtimer.c */; };
+		46C5B1C52182E59700419E57 /* aio-socket-kqueue.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1C42182E59700419E57 /* aio-socket-kqueue.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		46C5B17D2182E20900419E57 /* libaio.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libaio.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		46C5B1922182E23600419E57 /* aio-connect.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-connect.c"; sourceTree = "<group>"; };
+		46C5B1932182E23600419E57 /* aio-recv.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-recv.c"; sourceTree = "<group>"; };
+		46C5B1942182E23600419E57 /* aio-client.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-client.c"; sourceTree = "<group>"; };
+		46C5B1962182E23600419E57 /* aio-accept.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-accept.c"; sourceTree = "<group>"; };
+		46C5B19B2182E23600419E57 /* aio-timeout.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-timeout.c"; sourceTree = "<group>"; };
+		46C5B19E2182E23600419E57 /* aio-worker.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-worker.c"; sourceTree = "<group>"; };
+		46C5B1A02182E23600419E57 /* aio-send.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-send.c"; sourceTree = "<group>"; };
+		46C5B1A12182E23600419E57 /* aio-rwutil.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-rwutil.c"; sourceTree = "<group>"; };
+		46C5B1A22182E23600419E57 /* aio-tcp-transport.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-tcp-transport.c"; sourceTree = "<group>"; };
+		46C5B1B52182E24000419E57 /* include */ = {isa = PBXFileReference; lastKnownFileType = folder; path = include; sourceTree = "<group>"; };
+		46C5B1C22182E58A00419E57 /* twtimer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = twtimer.c; path = ../../source/twtimer.c; sourceTree = "<group>"; };
+		46C5B1C42182E59700419E57 /* aio-socket-kqueue.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "aio-socket-kqueue.c"; path = "../../source/port/aio-socket-kqueue.c"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		46C5B17B2182E20900419E57 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		46C5B1742182E20900419E57 = {
+			isa = PBXGroup;
+			children = (
+				46C5B1B52182E24000419E57 /* include */,
+				46C5B1902182E23600419E57 /* src */,
+				46C5B17E2182E20900419E57 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		46C5B17E2182E20900419E57 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				46C5B17D2182E20900419E57 /* libaio.dylib */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		46C5B1902182E23600419E57 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				46C5B1C42182E59700419E57 /* aio-socket-kqueue.c */,
+				46C5B1C22182E58A00419E57 /* twtimer.c */,
+				46C5B1922182E23600419E57 /* aio-connect.c */,
+				46C5B1932182E23600419E57 /* aio-recv.c */,
+				46C5B1942182E23600419E57 /* aio-client.c */,
+				46C5B1962182E23600419E57 /* aio-accept.c */,
+				46C5B19B2182E23600419E57 /* aio-timeout.c */,
+				46C5B19E2182E23600419E57 /* aio-worker.c */,
+				46C5B1A02182E23600419E57 /* aio-send.c */,
+				46C5B1A12182E23600419E57 /* aio-rwutil.c */,
+				46C5B1A22182E23600419E57 /* aio-tcp-transport.c */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		46C5B1792182E20900419E57 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		46C5B17C2182E20900419E57 /* libaio */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 46C5B1812182E20900419E57 /* Build configuration list for PBXNativeTarget "libaio" */;
+			buildPhases = (
+				46C5B1792182E20900419E57 /* Headers */,
+				46C5B17A2182E20900419E57 /* Sources */,
+				46C5B17B2182E20900419E57 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = libaio;
+			productName = libaio;
+			productReference = 46C5B17D2182E20900419E57 /* libaio.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		46C5B1752182E20900419E57 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1000;
+				ORGANIZATIONNAME = ireader;
+				TargetAttributes = {
+					46C5B17C2182E20900419E57 = {
+						CreatedOnToolsVersion = 10.0;
+					};
+				};
+			};
+			buildConfigurationList = 46C5B1782182E20900419E57 /* Build configuration list for PBXProject "libaio" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 46C5B1742182E20900419E57;
+			productRefGroup = 46C5B17E2182E20900419E57 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				46C5B17C2182E20900419E57 /* libaio */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		46C5B17A2182E20900419E57 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				46C5B1B42182E23600419E57 /* aio-tcp-transport.c in Sources */,
+				46C5B1A42182E23600419E57 /* aio-connect.c in Sources */,
+				46C5B1B02182E23600419E57 /* aio-worker.c in Sources */,
+				46C5B1B32182E23600419E57 /* aio-rwutil.c in Sources */,
+				46C5B1A62182E23600419E57 /* aio-client.c in Sources */,
+				46C5B1A52182E23600419E57 /* aio-recv.c in Sources */,
+				46C5B1C32182E58A00419E57 /* twtimer.c in Sources */,
+				46C5B1B22182E23600419E57 /* aio-send.c in Sources */,
+				46C5B1AD2182E23600419E57 /* aio-timeout.c in Sources */,
+				46C5B1C52182E59700419E57 /* aio-socket-kqueue.c in Sources */,
+				46C5B1A82182E23600419E57 /* aio-accept.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		46C5B17F2182E20900419E57 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		46C5B1802182E20900419E57 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		46C5B1822182E20900419E57 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				EXECUTABLE_PREFIX = "";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					OS_MAC,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				USER_HEADER_SEARCH_PATHS = (
+					.,
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/../include",
+				);
+			};
+			name = Debug;
+		};
+		46C5B1832182E20900419E57 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				EXECUTABLE_PREFIX = "";
+				GCC_PREPROCESSOR_DEFINITIONS = OS_MAC;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				USER_HEADER_SEARCH_PATHS = (
+					.,
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/../include",
+				);
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		46C5B1782182E20900419E57 /* Build configuration list for PBXProject "libaio" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46C5B17F2182E20900419E57 /* Debug */,
+				46C5B1802182E20900419E57 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		46C5B1812182E20900419E57 /* Build configuration list for PBXNativeTarget "libaio" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46C5B1822182E20900419E57 /* Debug */,
+				46C5B1832182E20900419E57 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 46C5B1752182E20900419E57 /* Project object */;
+}
