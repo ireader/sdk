@@ -144,6 +144,10 @@ static inline int socket_settos(IN socket_t sock, IN int dscp); // ipv4 only
 static inline int socket_gettos(IN socket_t sock, OUT int* dscp); // ipv4 only
 static inline int socket_settclass(IN socket_t sock, IN int dscp); // ipv6 only
 static inline int socket_gettclass(IN socket_t sock, OUT int* dscp); // ipv6 only
+static inline int socket_setttl(IN socket_t sock, IN int ttl); // ipv4 only
+static inline int socket_getttl(IN socket_t sock, OUT int* ttl); // ipv4 only
+static inline int socket_setttl6(IN socket_t sock, IN int ttl); // ipv6 only
+static inline int socket_getttl6(IN socket_t sock, OUT int* ttl); // ipv6 only
 static inline int socket_setdontfrag(IN socket_t sock, IN int dontfrag); // ipv4 udp only
 static inline int socket_getdontfrag(IN socket_t sock, OUT int* dontfrag); // ipv4 udp only
 
@@ -853,6 +857,30 @@ static inline int socket_getdontfrag(IN socket_t sock, OUT int* dontfrag)
 	*dontfrag = IP_PMTUDISC_DO == *dontfrag ? 1 : 0;
 #endif
 	return r;
+}
+
+static inline int socket_setttl(IN socket_t sock, IN int ttl)
+{
+	return setsockopt(sock, IPPROTO_IP, IP_TTL, (const char*)&ttl, sizeof(ttl));
+}
+
+static inline int socket_getttl(IN socket_t sock, OUT int* ttl)
+{
+	socklen_t len;
+	len = sizeof(*ttl);
+	return getsockopt(sock, IPPROTO_IP, IP_TTL, (char*)ttl, &len);
+}
+
+static inline int socket_setttl6(IN socket_t sock, IN int ttl)
+{
+	return setsockopt(sock, IPPROTO_IPV6, IPV6_UNICAST_HOPS, (const char*)&ttl, sizeof(ttl));
+}
+
+static inline int socket_getttl6(IN socket_t sock, OUT int* ttl)
+{
+	socklen_t len;
+	len = sizeof(*ttl);
+	return getsockopt(sock, IPPROTO_IPV6, IPV6_UNICAST_HOPS, (char*)ttl, &len);
 }
 
 static inline int socket_getdomain(IN socket_t sock, OUT int* domain)
