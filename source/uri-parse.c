@@ -60,7 +60,7 @@ struct uri_t* uri_parse(const char* uri, int len)
 
 void uri_free(struct uri_t* uri)
 {
-	free(uri);
+	if(uri) free(uri);
 }
 
 struct uri_component_t
