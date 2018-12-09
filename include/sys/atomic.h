@@ -13,6 +13,9 @@ typedef __int64 int64_t;
 #include <stdint.h>
 #elif defined(OS_MAC)
 #if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12 || __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_10_0
+#if defined(__cplusplus)
+#include <atomic> // for compile error
+#endif
 #include <stdatomic.h>
 #else
 #include <libkern/OSAtomic.h>
