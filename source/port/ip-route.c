@@ -93,6 +93,8 @@ int ip_route_get(const char* destination, char ip[40])
     r = router_gateway((struct sockaddr*)&dst, &gateway);
     if(0 == r)
         r = socket_addr_to((struct sockaddr*)&gateway, socket_addr_len((struct sockaddr*)&gateway), ip, &port);
+    else
+        r = ip_local(ip);
 	return r;
 }
 #endif
@@ -136,8 +138,9 @@ int ip_local(char ip[40])
 #else
 
 #if !defined(__ANDROID_API__) || __ANDROID_API__ >= 24
-int ip_local(char ip[40])
+int ip_local(char ip[65])
 {
+    u_short port;
 	struct ifaddrs *ifaddr, *ifa;
 
 	if(0 != getifaddrs(&ifaddr))
@@ -145,11 +148,14 @@ int ip_local(char ip[40])
 
 	for(ifa = ifaddr; ifa; ifa = ifa->ifa_next)
 	{
-		if(!ifa->ifa_addr || AF_INET != ifa->ifa_addr->sa_family || 0 == strncmp("lo", ifa->ifa_name, 2))
+		if(!ifa->ifa_addr || 0 == strncmp("lo", ifa->ifa_name, 2))
 			continue;
 
-		inet_ntop(AF_INET, &((struct sockaddr_in*)ifa->ifa_addr)->sin_addr, ip, 40);
-		break;
+        if(AF_INET != ifa->ifa_addr->sa_family || AF_INET6 != ifa->ifa_addr->sa_family)
+            continue;
+        
+        socket_addr_to(ifa->ifa_addr, socket_addr_len(ifa->ifa_addr), ip, &port);
+        break;
 	}
 
 	freeifaddrs(ifaddr);

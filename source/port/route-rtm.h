@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <net/route.h>
+#include "net/route.h"
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -16,11 +16,36 @@
 #include <errno.h>
 
 #ifndef SA_SIZE
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
 #define SA_SIZE(sa) (  (!(sa) || ((struct sockaddr *)(sa))->sa_len == 0) ?  \
                             sizeof(long)     :               \
                             1 + ( (((struct sockaddr *)(sa))->sa_len - 1) | (sizeof(long) - 1) ) )
+#else
+#define SA_SIZE(sa) (  (!(sa) || ((struct sockaddr *)(sa))->sa_len == 0) ?  \
+                            sizeof(int)     :               \
+                            1 + ( (((struct sockaddr *)(sa))->sa_len - 1) | (sizeof(int) - 1) ) )
+#endif
 #endif
 
+static void router_getaddrs(struct rt_msghdr * rtm, struct sockaddr* addrs[RTAX_MAX])
+{
+    int i;
+    struct sockaddr* sa;
+    sa = (struct sockaddr*)(rtm + 1);
+    
+    for(i = 0; i < RTAX_MAX; i++)
+    {
+        if(rtm->rtm_addrs & (1 << i))
+        {
+            addrs[i] = sa;
+            sa = (struct sockaddr *)((char *)sa + SA_SIZE(sa)); // next addr
+        }
+        else
+        {
+            addrs[i] = NULL;
+        }
+    }
+}
 static int router_gateway(const struct sockaddr* dst, struct sockaddr_storage* gateway)
 {
     int               sockfd;
@@ -28,16 +53,17 @@ static int router_gateway(const struct sockaddr* dst, struct sockaddr_storage* g
     pid_t                pid;
     ssize_t                r;
     struct rt_msghdr    *rtm;
-    struct sockaddr*      sa;
+    struct sockaddr*    sa, *addrs[RTAX_MAX];
     
     sockfd = socket(AF_ROUTE, SOCK_RAW, 0);    /* need superuser privileges */
     
     pid = getpid();
+    memset(buf, 0, sizeof(buf));
     rtm = (struct rt_msghdr *) buf;
     rtm->rtm_msglen = sizeof(struct rt_msghdr) + dst->sa_len;
     rtm->rtm_version = RTM_VERSION;
     rtm->rtm_type = RTM_GET;
-    rtm->rtm_addrs = RTA_DST;
+    rtm->rtm_addrs = RTA_DST|RTA_IFA;
     rtm->rtm_pid = pid;
     
     sa = (struct sockaddr *) (rtm + 1);
@@ -56,12 +82,11 @@ static int router_gateway(const struct sockaddr* dst, struct sockaddr_storage* g
     /* end getrt1 */
     
     /* include getrt2 */
-    rtm = (struct rt_msghdr *) buf;
-    sa = (struct sockaddr *) (rtm + 1);
-    if(RTA_DST & rtm->rtm_addrs)
-        sa = (struct sockaddr *)(SA_SIZE(sa) + (char *)sa);
-    if(RTA_GATEWAY & rtm->rtm_addrs)
-        memcpy(gateway, sa, sa->sa_len);
+    router_getaddrs((struct rt_msghdr *) buf, addrs);
+    if(addrs[RTAX_IFA])
+        memcpy(gateway, addrs[RTAX_IFA], addrs[RTAX_IFA]->sa_len);
+    else if(addrs[RTAX_GATEWAY])
+        memcpy(gateway, addrs[RTAX_GATEWAY], addrs[RTAX_GATEWAY]->sa_len);
     
     close(sockfd);
     return 0;

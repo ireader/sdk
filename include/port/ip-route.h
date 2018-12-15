@@ -11,7 +11,7 @@ extern "C" {
 /// @return 0-ok, -1-error(get errno)
 int ip_route_get(const char* destination, char ip[40]);
 
-int ip_local(char ip[40]);
+int ip_local(char ip[65]);
 
 #ifdef __cplusplus
 }
