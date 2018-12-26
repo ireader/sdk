@@ -72,7 +72,7 @@ ifeq ($(OUTTYPE),0)
 	$(CXX) -o $@ -Wl,-rpath . $(LDFLAGS) $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS))
 else
 ifeq ($(OUTTYPE),1)
-	$(CXX) -o $@ -shared -fpic -rdynamic -Wl,-rpath . $(LDFLAGS) $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS))
+	$(CXX) -o $@ -shared -fPIC -rdynamic -Wl,-rpath . $(LDFLAGS) $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS))
 else
 	$(AR) -rc $@ $^
 endif
