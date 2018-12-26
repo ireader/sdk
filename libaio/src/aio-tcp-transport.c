@@ -28,8 +28,8 @@ struct aio_tcp_transport_t
 	void* param;
 };
 
-#define AIO_TRANSPORT_ADDREF(t)		atomic_increment32(&t->ref)
-#define AIO_TRANSPORT_ONFAIL(t, r)	if(0 != r) aio_tcp_transport_release(t)
+#define AIO_TRANSPORT_ADDREF(t)		if(atomic_increment32(&t->ref) < 2) { return -1; }
+#define AIO_TRANSPORT_ONFAIL(t, r)	if(0 != r) { aio_tcp_transport_release(t); }
 
 static void aio_socket_onclose(void* param);
 static void aio_socket_onrecv(void* param, int code, size_t bytes);
