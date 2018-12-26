@@ -24,6 +24,14 @@ typedef WSABUF	socket_bufvec_t;
 #define SHUT_RD SD_RECEIVE
 #define SHUT_WR SD_SEND
 #define SHUT_RDWR SD_BOTH
+
+// IPv6 MTU
+#ifndef IPV6_MTU_DISCOVER
+	#define IPV6_MTU_DISCOVER	71
+	#define IP_PMTUDISC_DO		1
+	#define IP_PMTUDISC_DONT	2
+#endif
+
 #else
 #include <sys/time.h>
 #include <sys/types.h>
@@ -150,6 +158,8 @@ static inline int socket_setttl6(IN socket_t sock, IN int ttl); // ipv6 only
 static inline int socket_getttl6(IN socket_t sock, OUT int* ttl); // ipv6 only
 static inline int socket_setdontfrag(IN socket_t sock, IN int dontfrag); // ipv4 udp only
 static inline int socket_getdontfrag(IN socket_t sock, OUT int* dontfrag); // ipv4 udp only
+static inline int socket_setdontfrag6(IN socket_t sock, IN int dontfrag); // ipv6 udp only
+static inline int socket_getdontfrag6(IN socket_t sock, OUT int* dontfrag); // ipv6 udp only
 
 // socket status
 // @return 0-ok, <0-socket_error(by socket_geterror())
@@ -854,6 +864,37 @@ static inline int socket_getdontfrag(IN socket_t sock, OUT int* dontfrag)
 #elif defined(OS_LINUX)
 	socklen_t n = sizeof(int);
 	r = getsockopt(sock, IPPROTO_IP, IP_MTU_DISCOVER, dontfrag, &n);
+	*dontfrag = IP_PMTUDISC_DO == *dontfrag ? 1 : 0;
+#endif
+	return r;
+}
+
+// ipv6 udp only
+static inline int socket_setdontfrag6(IN socket_t sock, IN int dontfrag)
+{
+#if defined(OS_WINDOWS)
+	DWORD v = (DWORD)(dontfrag ? IP_PMTUDISC_DO : IP_PMTUDISC_DONT);
+	return setsockopt(sock, IPPROTO_IPV6, IPV6_MTU_DISCOVER, (const char*)&v, sizeof(DWORD));
+#elif defined(OS_LINUX)
+	dontfrag = dontfrag ? IP_PMTUDISC_DO : IP_PMTUDISC_WANT;
+	return setsockopt(sock, IPPROTO_IPV6, IPV6_MTU_DISCOVER, &dontfrag, sizeof(dontfrag));
+#else
+	return -1;
+#endif
+}
+
+// ipv6 udp only
+static inline int socket_getdontfrag6(IN socket_t sock, OUT int* dontfrag)
+{
+	int r = -1;
+#if defined(OS_WINDOWS)
+	DWORD v;
+	int n = sizeof(DWORD);
+	r = getsockopt(sock, IPPROTO_IPV6, IPV6_MTU_DISCOVER, (char*)&v, &n);
+	*dontfrag = IP_PMTUDISC_DO == v ? 1 : 0;;
+#elif defined(OS_LINUX)
+	socklen_t n = sizeof(int);
+	r = getsockopt(sock, IPPROTO_IPV6, IPV6_MTU_DISCOVER, dontfrag, &n);
 	*dontfrag = IP_PMTUDISC_DO == *dontfrag ? 1 : 0;
 #endif
 	return r;

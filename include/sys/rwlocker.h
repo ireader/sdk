@@ -30,7 +30,7 @@ static inline int rwlocker_create(rwlocker_t* locker)
 	//pthread_rwlockattr_t attr;
 	//pthread_rwlockattr_init(&attr);
 	//pthread_rwlockattr_destroy(&attr);
-	return pthread_rwlock_init(locker);
+	return pthread_rwlock_init(locker, NULL);
 #endif
 }
 
