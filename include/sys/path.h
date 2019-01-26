@@ -138,8 +138,8 @@ static inline int path_concat(const char* path, const char* localdir, char fullp
 {
     int r;
     char userpath[PATH_MAX];
-    snprintf(userpath, PATH_MAX - 1, "%s%s", localdir, path);
-    r = path_realpath(userpath, fullpath);
+    r = snprintf(userpath, PATH_MAX - 1, "%s%s", localdir, path);
+    r = (r > 0 && r < sizeof(userpath)-1) ? path_realpath(userpath, fullpath) : -1;
 	r = 0 != r ? r : path_realpath(localdir, userpath);
 #if defined(OS_WINDOWS)
     return 0 != r ? r : _strnicmp(userpath, fullpath, strlen(userpath));
