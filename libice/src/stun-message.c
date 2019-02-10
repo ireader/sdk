@@ -97,12 +97,12 @@ int stun_message_add_credentials(struct stun_message_t* msg, const char* usernam
 			msg->attrs[msg->nattrs].type = STUN_ATTR_REALM;
 			msg->attrs[msg->nattrs].length = (uint16_t)strlen(realm);
 			msg->attrs[msg->nattrs].v.data = realm;
-			msg->header.length += 8 + ALGIN_4BYTES(msg->attrs[msg->nattrs++].length);
+			msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs++].length);
 
 			msg->attrs[msg->nattrs].type = STUN_ATTR_NONCE;
 			msg->attrs[msg->nattrs].length = (uint16_t)strlen(nonce);
 			msg->attrs[msg->nattrs].v.data = nonce;
-			msg->header.length += 8 + ALGIN_4BYTES(msg->attrs[msg->nattrs++].length);
+			msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs++].length);
 
 			long_term_key(md5, username, password, realm);
 			key = md5;
@@ -119,7 +119,7 @@ int stun_message_add_credentials(struct stun_message_t* msg, const char* usernam
 		msg->attrs[msg->nattrs].type = STUN_ATTR_MESSAGE_INTEGRITY;
 		msg->attrs[msg->nattrs].length = sizeof(sha1);
 		msg->attrs[msg->nattrs].v.data = sha1;
-		msg->header.length += 8 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
+		msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
 
 		r = stun_message_write(data, sizeof(data), msg);
 		if (r < 0)
@@ -142,7 +142,7 @@ int stun_message_add_fingerprint(struct stun_message_t* msg)
 	msg->attrs[msg->nattrs].type = STUN_ATTR_FIGNERPRINT;
 	msg->attrs[msg->nattrs].length = 4;
 	msg->attrs[msg->nattrs].v.u32 = 0;
-	msg->header.length += 8 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
+	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
 
 	r = stun_message_write(data, sizeof(data), msg);
 	if (r < 0)

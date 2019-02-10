@@ -151,15 +151,16 @@ static int stun_attr_mapped_address_read(const uint8_t* data, struct stun_attr_t
 	struct sockaddr_in6* addr6;
 
 	memset(&attr->v.addr, 0, sizeof(attr->v.addr));
-	attr->v.addr.ss_family = data[1];
-	if (AF_INET == attr->v.addr.ss_family)
+	if (1 == data[1])
 	{
+		attr->v.addr.ss_family = AF_INET;
 		addr4 = (struct sockaddr_in*)&attr->v.addr;
 		be_read_uint16(data + 2, &addr4->sin_port);
 		memmove(&addr4->sin_addr.s_addr, data + 4, sizeof(addr4->sin_addr.s_addr));
 	}
-	else if (AF_INET6 == attr->v.addr.ss_family)
+	else if (2 == data[1])
 	{
+		attr->v.addr.ss_family = AF_INET6;
 		addr6 = (struct sockaddr_in6*)&attr->v.addr;
 		be_read_uint16(data + 2, &addr6->sin6_port);
 		memmove(addr6->sin6_addr.s6_addr, data + 4, sizeof(addr6->sin6_addr.s6_addr));
@@ -178,15 +179,16 @@ static int stun_attr_mapped_address_write(uint8_t* data, const struct stun_attr_
 	const struct sockaddr_in6* addr6;
 
 	data[0] = 0;
-	data[1] = (uint8_t)attr->v.addr.ss_family;
 	if (AF_INET == attr->v.addr.ss_family)
 	{
+		data[1] = 1;
 		addr4 = (const struct sockaddr_in*)&attr->v.addr;
 		be_write_uint16(data + 2, (uint16_t)addr4->sin_port);
 		memmove(data + 4, &addr4->sin_addr.s_addr, sizeof(addr4->sin_addr.s_addr));
 	}
 	else if (AF_INET6 == attr->v.addr.ss_family)
 	{
+		data[1] = 2;
 		addr6 = (const struct sockaddr_in6*)&attr->v.addr;
 		be_write_uint16(data + 2, (uint16_t)addr6->sin6_port);
 		memmove(data + 4, addr6->sin6_addr.s6_addr, sizeof(addr6->sin6_addr.s6_addr));
@@ -292,7 +294,7 @@ uint8_t* stun_attr_write(uint8_t* data, const uint8_t* end, const struct stun_at
 			memmove(data + 4, attrs[i].v.data, attrs[i].length);
 
 		assert(r <= 0);
-		if (r <= 0)
+		if (r < 0)
 			return (uint8_t*)end;
 
 		data += 4 + ALGIN_4BYTES(attrs[i].length);

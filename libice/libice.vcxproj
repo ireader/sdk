@@ -20,12 +20,26 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\ice-agent.h" />
+    <ClInclude Include="include\stun-client.h" />
+    <ClInclude Include="include\stun-server.h" />
     <ClInclude Include="src\ice-internal.h" />
+    <ClInclude Include="src\stun-internal.h" />
+    <ClInclude Include="src\stun-attr.h" />
+    <ClInclude Include="src\stun-message.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\ice-checklist.c" />
     <ClCompile Include="src\ice-stream.c" />
     <ClCompile Include="src\ice-agent.c" />
+    <ClCompile Include="src\stun-attr.c" />
+    <ClCompile Include="src\stun-client.c" />
+    <ClCompile Include="src\stun-message.c" />
+    <ClCompile Include="src\stun-server.c" />
+    <ClCompile Include="src\stun-transid.c" />
+    <ClCompile Include="src\trun-data.c" />
+    <ClCompile Include="src\turn-allocate.c" />
+    <ClCompile Include="src\turn-channel.c" />
+    <ClCompile Include="src\turn-permission.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F565E04B-1E19-47F3-8923-36479C5CAE4D}</ProjectGuid>
