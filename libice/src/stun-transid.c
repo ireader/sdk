@@ -16,12 +16,13 @@ int stun_transaction_id(uint8_t* id, int bytes)
 }
 
 #else
+#include <unistd.h>
 #include <fcntl.h>
 
 static int read_random(uint8_t *id, int bytes, const char *file)
 {
 	int fd, err;
-	fp  = open(file, O_RDONLY);
+	fd = open(file, O_RDONLY);
 	if (fd == -1)
 		return -1;
 	err = read(fd, id, bytes);
@@ -35,6 +36,6 @@ int stun_transaction_id(uint8_t* id, int bytes)
 		return 0;
 	if (read_random(id, bytes, "/dev/random") == bytes)
 		return 0;
-	return -1
+    return -1;
 }
 #endif

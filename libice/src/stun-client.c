@@ -4,20 +4,7 @@
 #include "byte-order.h"
 #include "sockutil.h"
 #include "list.h"
-
-struct stun_request_t
-{
-	struct list_head link;
-	struct stun_message_t msg;
-	void* param;
-};
-
-struct stun_response_t
-{
-	struct list_head link;
-	uint64_t id;
-	void* param;
-};
+#include <stdlib.h>
 
 struct stun_client_t
 {
@@ -63,7 +50,7 @@ int stun_client_bind(stun_client_t* stun, const struct sockaddr* addr, socklen_t
 	int r;
 	struct stun_message_t msg;
 	memset(&msg, 0, sizeof(msg));
-	msg.header.msgtype = STUN_METHOD_BIND;
+	msg.header.msgtype = STUN_METHOD_BIND | STUN_METHOD_CLASS_REQUEST;
 	msg.header.length = 0;
 	msg.header.cookie = STUN_MAGIC_COOKIE;
 	stun_transaction_id(msg.header.tid, sizeof(msg.header.tid));
@@ -87,7 +74,7 @@ int stun_client_shared_secret(stun_client_t* stun, const struct sockaddr* addr, 
 	memset(&msg, 0, sizeof(msg));
 
 	// This request has no attributes, just the header
-	msg.header.msgtype = STUN_METHOD_SHARED_SECRET;
+	msg.header.msgtype = STUN_METHOD_SHARED_SECRET | STUN_METHOD_CLASS_REQUEST;
 	msg.header.length = 0;
 	msg.header.cookie = STUN_MAGIC_COOKIE;
 	stun_transaction_id(msg.header.tid, sizeof(msg.header.tid));
@@ -98,6 +85,25 @@ int stun_client_shared_secret(stun_client_t* stun, const struct sockaddr* addr, 
 	msg.header.length += 4 + ALGIN_4BYTES(msg.attrs[msg.nattrs++].length);
 
 	return stun_message_write(data, bytes, &msg);
+}
+
+int stun_client_indication(stun_client_t* stun, const struct sockaddr* addr, socklen_t addrlen, uint8_t* data, int bytes, void* param)
+{
+    struct stun_message_t msg;
+    memset(&msg, 0, sizeof(msg));
+    
+    // This request has no attributes, just the header
+    msg.header.msgtype = STUN_METHOD_BIND | STUN_METHOD_CLASS_INDICATION;
+    msg.header.length = 0;
+    msg.header.cookie = STUN_MAGIC_COOKIE;
+    stun_transaction_id(msg.header.tid, sizeof(msg.header.tid));
+    
+    msg.attrs[msg.nattrs].type = STUN_ATTR_SOFTWARE;
+    msg.attrs[msg.nattrs].length = strlen(STUN_SOFTWARE);
+    msg.attrs[msg.nattrs].v.data = STUN_SOFTWARE;
+    msg.header.length += 4 + ALGIN_4BYTES(msg.attrs[msg.nattrs++].length);
+    
+    return stun_message_write(data, bytes, &msg);
 }
 
 int stun_client_input(stun_client_t* stun, const void* data, int size, const struct sockaddr* addr, socklen_t addrlen)
