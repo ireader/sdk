@@ -1,6 +1,6 @@
 #include "stun-attr.h"
+#include "stun-proto.h"
 #include "stun-message.h"
-#include "stun-internal.h"
 #include "byte-order.h"
 #include <string.h>
 #include <assert.h>

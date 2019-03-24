@@ -4,8 +4,22 @@
 #include <stdint.h>
 #include <assert.h>
 #include "stun-attr.h"
+#include "stun-proto.h"
 
 #define STUN_ATTR_N 32
+
+enum
+{
+	STUN_CREDENTIAL_SHORT_TERM = 0,
+	STUN_CREDENTIAL_LONG_TERM,
+};
+
+struct stun_credetial_t
+{
+	int credential; // STUN_CREDENTIAL_SHORT_TERM/STUN_CREDENTIAL_LONG_TERM
+	char usr[256], pwd[256];
+	char realm[256], nonce[256];
+};
 
 // rfc 3489 11.1 Message Header (p25)
 struct stun_header_t
@@ -32,8 +46,19 @@ int stun_header_write(const struct stun_header_t* header, uint8_t* data, int byt
 int stun_message_read(struct stun_message_t* msg, const uint8_t* data, int size);
 int stun_message_write(uint8_t* data, int size, const struct stun_message_t* msg);
 
-int stun_message_add_credentials(struct stun_message_t* msg, const char* username, const char* password, const char* realm, const char* nonce);
+int stun_message_add_flag(struct stun_message_t* msg, uint16_t attr);
+int stun_message_add_uint8(struct stun_message_t* msg, uint16_t attr, uint8_t value);
+int stun_message_add_uint16(struct stun_message_t* msg, uint16_t attr, uint16_t value);
+int stun_message_add_uint32(struct stun_message_t* msg, uint16_t attr, uint32_t value);
+int stun_message_add_uint64(struct stun_message_t* msg, uint16_t attr, uint64_t value);
+int stun_message_add_string(struct stun_message_t* msg, uint16_t attr, const char* value);
+int stun_message_add_address(struct stun_message_t* msg, uint16_t attr, const struct sockaddr_storage* addr);
+
+int stun_message_add_error(struct stun_message_t* msg, uint32_t code, const char* phrase);
+int stun_message_add_credentials(struct stun_message_t* msg, const struct stun_credetial_t* auth);
 int stun_message_add_fingerprint(struct stun_message_t* msg);
+
+int stun_message_attr_find(struct stun_message_t* msg, uint16_t attr);
 
 int stun_transaction_id(uint8_t* id, int bytes);
 

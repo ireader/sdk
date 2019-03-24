@@ -51,6 +51,21 @@
     <ClCompile Include="src\stun-transid.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\turn-client.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stun-agent.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stun-request.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\turn-agent.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stun-response.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\ice-agent.h">
@@ -72,6 +87,27 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="src\stun-message.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ice-checklist.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ice-candidates.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ice-streams.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\turn-client.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\stun-proto.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\stun-agent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\turn-internal.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

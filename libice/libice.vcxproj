@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -20,25 +20,37 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\ice-agent.h" />
+    <ClInclude Include="include\stun-agent.h" />
     <ClInclude Include="include\stun-client.h" />
     <ClInclude Include="include\stun-server.h" />
+    <ClInclude Include="include\turn-client.h" />
+    <ClInclude Include="src\ice-candidates.h" />
+    <ClInclude Include="src\ice-checklist.h" />
     <ClInclude Include="src\ice-internal.h" />
+    <ClInclude Include="src\ice-streams.h" />
     <ClInclude Include="src\stun-internal.h" />
     <ClInclude Include="src\stun-attr.h" />
     <ClInclude Include="src\stun-message.h" />
+    <ClInclude Include="src\stun-proto.h" />
+    <ClInclude Include="src\turn-internal.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\ice-checklist.c" />
     <ClCompile Include="src\ice-stream.c" />
     <ClCompile Include="src\ice-agent.c" />
+    <ClCompile Include="src\stun-agent.c" />
     <ClCompile Include="src\stun-attr.c" />
     <ClCompile Include="src\stun-client.c" />
     <ClCompile Include="src\stun-message.c" />
+    <ClCompile Include="src\stun-request.c" />
+    <ClCompile Include="src\stun-response.c" />
     <ClCompile Include="src\stun-server.c" />
     <ClCompile Include="src\stun-transid.c" />
     <ClCompile Include="src\trun-data.c" />
+    <ClCompile Include="src\turn-agent.c" />
     <ClCompile Include="src\turn-allocate.c" />
     <ClCompile Include="src\turn-channel.c" />
+    <ClCompile Include="src\turn-client.c" />
     <ClCompile Include="src\turn-permission.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -57,20 +69,20 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>

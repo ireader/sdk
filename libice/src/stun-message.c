@@ -2,7 +2,6 @@
 // rfc5839 6. STUN Message Structure(p10)
 
 #include "stun-message.h"
-#include "stun-internal.h"
 #include "byte-order.h"
 #include "sha.h"
 #include "md5.h"
@@ -68,6 +67,97 @@ int stun_message_write(uint8_t* data, int size, const struct stun_message_t* msg
 	return p >= data + size ? -1 : 0;
 }
 
+int stun_message_attr_find(struct stun_message_t* msg, uint16_t attr)
+{
+	int i;
+	for (i = 0; i < msg->nattrs; i++)
+	{
+		if (msg->attrs[i].type == attr)
+			return i;
+	}
+	return -1;
+}
+
+int stun_message_add_flag(struct stun_message_t* msg, uint16_t attr)
+{
+	msg->attrs[msg->nattrs].type = attr;
+	msg->attrs[msg->nattrs].length = 0;
+	msg->header.length += 4;
+	msg->nattrs += 1;
+	return 0;
+}
+
+int stun_message_add_uint8(struct stun_message_t* msg, uint16_t attr, uint8_t value)
+{
+	msg->attrs[msg->nattrs].type = attr;
+	msg->attrs[msg->nattrs].length = 1;
+	msg->attrs[msg->nattrs].v.u64 = value;
+	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
+	msg->nattrs += 1;
+	return 0;
+}
+
+int stun_message_add_uint16(struct stun_message_t* msg, uint16_t attr, uint16_t value)
+{
+	msg->attrs[msg->nattrs].type = attr;
+	msg->attrs[msg->nattrs].length = 2;
+	msg->attrs[msg->nattrs].v.u64 = value;
+	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
+	msg->nattrs += 1;
+	return 0;
+}
+
+int stun_message_add_uint32(struct stun_message_t* msg, uint16_t attr, uint32_t value)
+{
+	msg->attrs[msg->nattrs].type = attr;
+	msg->attrs[msg->nattrs].length = 4;
+	msg->attrs[msg->nattrs].v.u64 = value;
+	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
+	msg->nattrs += 1;
+	return 0;
+}
+
+int stun_message_add_uint64(struct stun_message_t* msg, uint16_t attr, uint64_t value)
+{
+	msg->attrs[msg->nattrs].type = attr;
+	msg->attrs[msg->nattrs].length = 8;
+	msg->attrs[msg->nattrs].v.u64 = value;
+	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
+	msg->nattrs += 1;
+	return 0;
+}
+
+int stun_message_add_string(struct stun_message_t* msg, uint16_t attr, const char* value)
+{
+	msg->attrs[msg->nattrs].type = attr;
+	msg->attrs[msg->nattrs].length = (uint16_t)strlen(value);
+	msg->attrs[msg->nattrs].v.string = value;
+	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
+	msg->nattrs += 1;
+	return 0;
+}
+
+int stun_message_add_address(struct stun_message_t* msg, uint16_t attr, const struct sockaddr_storage* addr)
+{
+	msg->attrs[msg->nattrs].type = attr;
+	msg->attrs[msg->nattrs].length = addr->ss_family == AF_INET6 ? 17 : 5;
+	memcpy(&msg->attrs[msg->nattrs].v.addr, addr, sizeof(*addr));
+	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
+	msg->nattrs += 1;
+	return 0;
+}
+
+int stun_message_add_error(struct stun_message_t* msg, uint32_t code, const char* phrase)
+{
+	msg->attrs[msg->nattrs].type = STUN_ATTR_ERROR_CODE;
+	msg->attrs[msg->nattrs].length = 4 + strlen(phrase);
+	msg->attrs[msg->nattrs].v.errcode.code = code;
+	msg->attrs[msg->nattrs].v.errcode.reason_phrase = phrase;
+	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
+	msg->nattrs += 1;
+	return 0;
+}
+
 static void long_term_key(uint8_t md5[16], const char* username, const char* password, const char* realm)
 {
 	MD5_CTX ctx;
@@ -80,58 +170,48 @@ static void long_term_key(uint8_t md5[16], const char* username, const char* pas
 	MD5Final(md5, &ctx);
 }
 
-int stun_message_add_credentials(struct stun_message_t* msg, const char* username, const char* password, const char* realm, const char* nonce)
+int stun_message_add_credentials(struct stun_message_t* msg, const struct stun_credetial_t* auth)
 {
 	int r, nkey;
 	uint8_t md5[16];
 	uint8_t *key;
 	uint8_t data[1600];
 
-	if (username && *username && password && *password && realm && *realm)
+	if (!*auth->usr|| !*auth->pwd)
+		return -1; // invalid username/password
+
+	if (STUN_CREDENTIAL_LONG_TERM == auth->credential && (!*auth->realm || !*auth->nonce))
+		return -1; // invalid realm/nonce
+
+	stun_message_add_string(msg, STUN_ATTR_USERNAME, auth->usr);
+
+	if (STUN_CREDENTIAL_LONG_TERM == auth->credential)
 	{
-		msg->attrs[msg->nattrs].type = STUN_ATTR_USERNAME;
-		msg->attrs[msg->nattrs].length = (uint16_t)strlen(username);
-		msg->attrs[msg->nattrs].v.string = username;
-		msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
-        msg->nattrs += 1;
+		stun_message_add_string(msg, STUN_ATTR_REALM, auth->realm);
+		stun_message_add_string(msg, STUN_ATTR_NONCE, auth->nonce);
 
-		if (realm && *realm && nonce && *nonce)
-		{
-			msg->attrs[msg->nattrs].type = STUN_ATTR_REALM;
-			msg->attrs[msg->nattrs].length = (uint16_t)strlen(realm);
-			msg->attrs[msg->nattrs].v.string = realm;
-			msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
-            msg->nattrs += 1;
-
-			msg->attrs[msg->nattrs].type = STUN_ATTR_NONCE;
-			msg->attrs[msg->nattrs].length = (uint16_t)strlen(nonce);
-			msg->attrs[msg->nattrs].v.string = nonce;
-			msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
-            msg->nattrs += 1;
-
-			long_term_key(md5, username, password, realm);
-			key = md5;
-			nkey = sizeof(md5);
-		}
-		else
-		{
-			key = password;
-			nkey = strlen(password);
-		}
-
-		// The length MUST then be set to point to the length of the message up to, and including,
-		// the MESSAGE-INTEGRITY attribute itself, but excluding any attributes after it.
-		msg->attrs[msg->nattrs].type = STUN_ATTR_MESSAGE_INTEGRITY;
-		msg->attrs[msg->nattrs].length = sizeof(msg->attrs[msg->nattrs].v.sha1);
-		msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
-
-		r = stun_message_write(data, sizeof(data), msg);
-		if (r < 0)
-			return r;
-
-		hmac(SHA1, data, msg->header.length + STUN_HEADER_SIZE - sizeof(msg->attrs[msg->nattrs].v.sha1) - 4, key, nkey, msg->attrs[msg->nattrs].v.sha1);
-        msg->nattrs += 1;
+		long_term_key(md5, auth->usr, auth->pwd, auth->realm);
+		key = md5;
+		nkey = sizeof(md5);
 	}
+	else
+	{
+		key = auth->pwd;
+		nkey = strlen(auth->pwd);
+	}
+
+	// The length MUST then be set to point to the length of the message up to, and including,
+	// the MESSAGE-INTEGRITY attribute itself, but excluding any attributes after it.
+	msg->attrs[msg->nattrs].type = STUN_ATTR_MESSAGE_INTEGRITY;
+	msg->attrs[msg->nattrs].length = sizeof(msg->attrs[msg->nattrs].v.sha1);
+	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
+
+	r = stun_message_write(data, sizeof(data), msg);
+	if (r < 0)
+		return r;
+
+	hmac(SHA1, data, msg->header.length + STUN_HEADER_SIZE - sizeof(msg->attrs[msg->nattrs].v.sha1) - 4, key, nkey, msg->attrs[msg->nattrs].v.sha1);
+    msg->nattrs += 1;
 
 	return 0;
 }
@@ -164,10 +244,9 @@ int stun_message_add_fingerprint(struct stun_message_t* msg)
 // https://tools.ietf.org/html/rfc5769#section-2.2
 void stun_message_test(void)
 {
-    const char* software = "STUN test client";
-    const char* username = "evtj:h6vY";
-    const char* password = "VOkJxbRl1RmTxUk/WvJxBt";
-    const uint8_t transaction[] = { 0xb7, 0xe7, 0xa7, 0x01, 0xbc, 0x34, 0xd6, 0x86, 0xfa, 0x87, 0xdf, 0xae };
+	struct stun_credetial_t auth;
+	const char* software = "STUN test client";
+	const uint8_t transaction[] = { 0xb7, 0xe7, 0xa7, 0x01, 0xbc, 0x34, 0xd6, 0x86, 0xfa, 0x87, 0xdf, 0xae };
     const uint8_t result[] = {
         0x00, 0x01, 0x00, 0x58, 0x21, 0x12, 0xa4, 0x42, 0xb7, 0xe7, 0xa7, 0x01, 0xbc, 0x34, 0xd6, 0x86,
         0xfa, 0x87, 0xdf, 0xae, 0x80, 0x22, 0x00, 0x10, 0x53, 0x54, 0x55, 0x4e, 0x20, 0x74, 0x65, 0x73,
@@ -182,28 +261,20 @@ void stun_message_test(void)
     struct stun_message_t msg;
     memset(&msg, 0, sizeof(msg));
     memset(data, 0x20, sizeof(data));
-    
-    msg.header.msgtype = STUN_METHOD_BIND | STUN_METHOD_CLASS_REQUEST;
+	memset(&auth, 0, sizeof(auth));
+	snprintf(auth.usr, sizeof(auth.usr), "%s", "evtj:h6vY");
+	snprintf(auth.pwd, sizeof(auth.pwd), "%s", "VOkJxbRl1RmTxUk/WvJxBt");
+
+    msg.header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_REQUEST, STUN_METHOD_BIND);
     msg.header.length = 0;
     msg.header.cookie = STUN_MAGIC_COOKIE;
     memcpy(msg.header.tid, transaction, sizeof(msg.header.tid));
     
-    msg.attrs[msg.nattrs].type = STUN_ATTR_SOFTWARE;
-    msg.attrs[msg.nattrs].length = (uint16_t)strlen(software);
-    msg.attrs[msg.nattrs].v.string = software;
-    msg.header.length += 4 + ALGIN_4BYTES(msg.attrs[msg.nattrs++].length);
-
-    msg.attrs[msg.nattrs].type = STUN_ATTR_PRIORITY;
-    msg.attrs[msg.nattrs].length = 4;
-    msg.attrs[msg.nattrs].v.u32 = 0x6e0001ff;
-    msg.header.length += 4 + ALGIN_4BYTES(msg.attrs[msg.nattrs++].length);
+	stun_message_add_string(&msg, STUN_ATTR_SOFTWARE, software);
+	stun_message_add_uint32(&msg, STUN_ATTR_PRIORITY, 0x6e0001ff);
+	stun_message_add_uint64(&msg, STUN_ATTR_ICE_CONTROLLED, 0x932ff9b151263b36);
     
-    msg.attrs[msg.nattrs].type = STUN_ATTR_ICE_CONTROLLED;
-    msg.attrs[msg.nattrs].length = 8;
-    msg.attrs[msg.nattrs].v.u64 = 0x932ff9b151263b36;
-    msg.header.length += 4 + ALGIN_4BYTES(msg.attrs[msg.nattrs++].length);
-    
-    r = stun_message_add_credentials(&msg, username, password, NULL, NULL);
+    r = stun_message_add_credentials(&msg, &auth);
     r = 0 == r ? stun_message_add_fingerprint(&msg) : r;
     r = 0 == r ? stun_message_write(data, sizeof(data), &msg) : r;
     assert(0 == r);
