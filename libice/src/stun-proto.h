@@ -14,8 +14,10 @@
 #define STUN_MAGIC_COOKIE    0x2112A442
 
 // rfc5766 14.7. REQUESTED-TRANSPORT (p47)
-#define TURN_TRANSPORT_UDP   17 // UDP
-#define TURN_LIFETIME        600 // seconds
+#define TURN_TRANSPORT_UDP			17 // UDP
+#define TURN_LIFETIME				600 // seconds
+#define TURN_PERMISSION_LIFETIME	300 // seconds
+#define TURN_CHANNEL_LIFETIME		600 // seconds
 
 //rfc3489 8.2 Shared Secret Requests(p13)
 #define STUN_SHARED_SECRET_PERIOD (10*60*1000) // 10m
@@ -102,7 +104,5 @@ enum
 #define STUN_ERROR_CODE_SERVER_ERROR                    500
 #define STUN_ERROR_CODE_INSUFFICIENT_CAPACITY           508 // rfc5766
 #define STUN_ERROR_CODE_GLOBAL_FAILURE                  600
-
-#define ALGIN_4BYTES(v) (((v)+3) / 4 * 4)
 
 #endif /* _stun_proto_h_ */

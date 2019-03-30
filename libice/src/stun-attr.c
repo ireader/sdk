@@ -137,15 +137,15 @@ static int stun_attr_uint64_write(const struct stun_message_t* msg, uint8_t* dat
 	return 0;
 }
 
-static int stun_attr_string_read(const struct stun_message_t* msg, const uint8_t* data, struct stun_attr_t *attr)
+static int stun_attr_ptr_read(const struct stun_message_t* msg, const uint8_t* data, struct stun_attr_t *attr)
 {
-	attr->v.string = data;
+	attr->v.ptr = data;
 	return 0;
 }
 
-static int stun_attr_string_write(const struct stun_message_t* msg, uint8_t* data, const struct stun_attr_t *attr)
+static int stun_attr_ptr_write(const struct stun_message_t* msg, uint8_t* data, const struct stun_attr_t *attr)
 {
-	memmove(data, attr->v.string, attr->length);
+	memmove(data, attr->v.ptr, attr->length);
     if(0 != attr->length % 4)
         memset(data + attr->length, 0x20, 4 - (attr->length % 4)); // string fill with 0x20 ' '
 	return 0;
@@ -301,27 +301,27 @@ static struct
 	{ STUN_ATTR_CHANGE_REQUEST,		stun_attr_mapped_address_read,	    stun_attr_mapped_address_write },
 	{ STUN_ATTR_SOURCE_ADDRESS,		stun_attr_mapped_address_read,	    stun_attr_mapped_address_write },
 	{ STUN_ATTR_CHANGED_ADDRESS,	stun_attr_uint32_read,			    stun_attr_uint32_write },
-	{ STUN_ATTR_USERNAME,			stun_attr_string_read,			    stun_attr_string_write },
-	{ STUN_ATTR_PASSWORD,			stun_attr_string_read,			    stun_attr_string_write },
+	{ STUN_ATTR_USERNAME,			stun_attr_ptr_read,					stun_attr_ptr_write },
+	{ STUN_ATTR_PASSWORD,			stun_attr_ptr_read,					stun_attr_ptr_write },
 	{ STUN_ATTR_MESSAGE_INTEGRITY,	stun_attr_sha1_read,			    stun_attr_sha1_write },
 	{ STUN_ATTR_ERROR_CODE,			stun_attr_error_code_read,		    stun_attr_error_code_write },
-	{ STUN_ATTR_UNKNOWN_ATTRIBUTES, stun_attr_string_read,			    stun_attr_string_write },
+	{ STUN_ATTR_UNKNOWN_ATTRIBUTES, stun_attr_ptr_read,					stun_attr_ptr_write },
 	{ STUN_ATTR_REFLECTED_FROM,		stun_attr_mapped_address_read,	    stun_attr_mapped_address_write },
 	{ STUN_ATTR_CHANNEL_NUMBER,		stun_attr_uint32_read,			    stun_attr_uint32_write },
 	{ STUN_ATTR_LIFETIME,			stun_attr_uint32_read,			    stun_attr_uint32_write },
 	{ STUN_ATTR_BANDWIDTH,			stun_attr_uint32_read,			    stun_attr_uint32_write },
 	{ STUN_ATTR_XOR_PEER_ADDRESS,	stun_attr_xor_mapped_address_read,	stun_attr_xor_mapped_address_write },
-	{ STUN_ATTR_DATA,				stun_attr_string_read,			    stun_attr_string_write },
-	{ STUN_ATTR_REALM,				stun_attr_string_read,			    stun_attr_string_write },
-	{ STUN_ATTR_NONCE,				stun_attr_string_read,			    stun_attr_string_write },
+	{ STUN_ATTR_DATA,				stun_attr_ptr_read,					stun_attr_ptr_write },
+	{ STUN_ATTR_REALM,				stun_attr_ptr_read,					stun_attr_ptr_write },
+	{ STUN_ATTR_NONCE,				stun_attr_ptr_read,					stun_attr_ptr_write },
 	{ STUN_ATTR_XOR_RELAYED_ADDRESS,stun_attr_xor_mapped_address_read,	stun_attr_xor_mapped_address_write },
 	{ STUN_ATTR_EVEN_PORT,			stun_attr_uint8_read,			    stun_attr_uint8_write },
 	{ STUN_ATTR_REQUESTED_TRANSPORT,stun_attr_uint32_read,			    stun_attr_uint32_write },
 	{ STUN_ATTR_DONT_FRAGMENT,		stun_attr_uint8_read,			    stun_attr_uint8_write },
 	{ STUN_ATTR_XOR_MAPPED_ADDRESS, stun_attr_xor_mapped_address_read,	stun_attr_xor_mapped_address_write },
-	{ STUN_ATTR_TIMER_VAL,			stun_attr_string_read,			    stun_attr_string_write },
+	{ STUN_ATTR_TIMER_VAL,			stun_attr_ptr_read,					stun_attr_ptr_write },
 	{ STUN_ATTR_RESERVATION_TOKEN,	stun_attr_uint64_read,			    stun_attr_uint64_write },
-	{ STUN_ATTR_SOFTWARE,			stun_attr_string_read,			    stun_attr_string_write },
+	{ STUN_ATTR_SOFTWARE,			stun_attr_ptr_read,					stun_attr_ptr_write },
 	{ STUN_ATTR_ALTERNATE_SERVER,	stun_attr_mapped_address_read,	    stun_attr_mapped_address_write },
 	{ STUN_ATTR_FIGNERPRINT,		stun_attr_uint32_read,			    stun_attr_uint32_write },
     { STUN_ATTR_PRIORITY,           stun_attr_uint32_read,              stun_attr_uint32_write },

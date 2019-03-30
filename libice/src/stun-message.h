@@ -53,12 +53,14 @@ int stun_message_add_uint32(struct stun_message_t* msg, uint16_t attr, uint32_t 
 int stun_message_add_uint64(struct stun_message_t* msg, uint16_t attr, uint64_t value);
 int stun_message_add_string(struct stun_message_t* msg, uint16_t attr, const char* value);
 int stun_message_add_address(struct stun_message_t* msg, uint16_t attr, const struct sockaddr_storage* addr);
+int stun_message_add_data(struct stun_message_t* msg, uint16_t attr, const void* value, int len);
 
 int stun_message_add_error(struct stun_message_t* msg, uint32_t code, const char* phrase);
 int stun_message_add_credentials(struct stun_message_t* msg, const struct stun_credetial_t* auth);
 int stun_message_add_fingerprint(struct stun_message_t* msg);
 
-int stun_message_attr_find(struct stun_message_t* msg, uint16_t attr);
+const struct stun_attr_t* stun_message_attr_find(const struct stun_message_t* msg, uint16_t attr);
+int stun_message_attr_list(const struct stun_message_t* msg, uint16_t attr, int (*fn)(void*, const struct stun_attr_t*), void* param);
 
 int stun_transaction_id(uint8_t* id, int bytes);
 

@@ -28,33 +28,23 @@ enum
 	STUN_PROTOCOL_TLS,
 };
 
-struct stun_request_t
+struct stun_transaction_t
 {
 	struct list_head link; // 
 	struct stun_message_t msg;
+
 	int ref;
-
 	int rfc; // version
-	void* param;
-	struct stun_request_handler_t handler;
+	stun_agent_t* stun;
 
+	void* param;
+	stun_transaction_handler handler;
+	
 	int protocol; // STUN_PROTOCOL_UDP
 	struct sockaddr_storage host;
 	struct sockaddr_storage remote;
 	struct sockaddr_storage relay;
 	struct sockaddr_storage reflexive;
-
-	struct stun_credetial_t auth;
-};
-
-struct stun_response_t
-{
-    struct list_head link;
-	struct stun_message_t msg;
-	
-	int protocol; // STUN_PROTOCOL_UDP
-	struct sockaddr_storage local;
-	struct sockaddr_storage remote;
 
 	struct stun_credetial_t auth;
 };
@@ -70,13 +60,15 @@ struct stun_agent_t
 	void* param;
 };
 
-int stun_request_addref(struct stun_request_t* req);
-int stun_request_release(struct stun_request_t* req);
+int stun_transaction_addref(struct stun_transaction_t* t);
+int stun_transaction_release(struct stun_transaction_t* t);
+int stun_transaction_destroy(struct stun_transaction_t** pp);
+int stun_transaction_send(stun_agent_t* stun, stun_transaction_t* t);
+struct stun_transaction_t* stun_response_create(struct stun_transaction_t* req);
 
-struct stun_response_t* stun_response_create(struct stun_request_t* req);
-int stun_response_destroy(struct stun_response_t** resp);
+int stun_message_send(stun_agent_t* stun, struct stun_message_t* msg, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote);
 
-int stun_request_send(stun_agent_t* stun, stun_request_t* req);
-int stun_agent_send(stun_agent_t* stun, struct stun_message_t* msg, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote);
+int stun_agent_onbind(const struct stun_transaction_t* req, struct stun_transaction_t* resp);
+int stun_agent_onshared_secret(const struct stun_transaction_t* req, struct stun_transaction_t* resp);
 
 #endif /* !_stun_internal_h_ */

@@ -67,15 +67,26 @@ int stun_message_write(uint8_t* data, int size, const struct stun_message_t* msg
 	return p >= data + size ? -1 : 0;
 }
 
-int stun_message_attr_find(struct stun_message_t* msg, uint16_t attr)
+const struct stun_attr_t* stun_message_attr_find(const struct stun_message_t* msg, uint16_t attr)
 {
 	int i;
 	for (i = 0; i < msg->nattrs; i++)
 	{
 		if (msg->attrs[i].type == attr)
-			return i;
+			return msg->attrs + i;
 	}
-	return -1;
+	return NULL;
+}
+
+int stun_message_attr_list(const struct stun_message_t* msg, uint16_t attr, int(*fn)(void*, const struct stun_attr_t*), void* param)
+{
+	int i, r;
+	for (r = i = 0; i < msg->nattrs && 0 == r; i++)
+	{
+		if (msg->attrs[i].type == attr)
+			r = fn(param, msg->attrs + i);
+	}
+	return r;
 }
 
 int stun_message_add_flag(struct stun_message_t* msg, uint16_t attr)
@@ -131,7 +142,7 @@ int stun_message_add_string(struct stun_message_t* msg, uint16_t attr, const cha
 {
 	msg->attrs[msg->nattrs].type = attr;
 	msg->attrs[msg->nattrs].length = (uint16_t)strlen(value);
-	msg->attrs[msg->nattrs].v.string = value;
+	msg->attrs[msg->nattrs].v.ptr = value;
 	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
 	msg->nattrs += 1;
 	return 0;
@@ -142,6 +153,16 @@ int stun_message_add_address(struct stun_message_t* msg, uint16_t attr, const st
 	msg->attrs[msg->nattrs].type = attr;
 	msg->attrs[msg->nattrs].length = addr->ss_family == AF_INET6 ? 17 : 5;
 	memcpy(&msg->attrs[msg->nattrs].v.addr, addr, sizeof(*addr));
+	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
+	msg->nattrs += 1;
+	return 0;
+}
+
+int stun_message_add_data(struct stun_message_t* msg, uint16_t attr, const void* value, int len)
+{
+	msg->attrs[msg->nattrs].type = attr;
+	msg->attrs[msg->nattrs].length = (uint16_t)len;
+	msg->attrs[msg->nattrs].v.ptr = value;
 	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
 	msg->nattrs += 1;
 	return 0;

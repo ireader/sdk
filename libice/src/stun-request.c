@@ -2,17 +2,18 @@
 #include "stun-internal.h"
 #include "sys/atomic.h"
 
-stun_request_t* stun_request_create(int rfc, struct stun_request_handler_t* handler, void* param)
+stun_transaction_t* stun_transaction_create(stun_agent_t* stun, int rfc, stun_transaction_handler handler, void* param)
 {
-	stun_request_t* req;
+	stun_transaction_t* req;
 	struct stun_message_t* msg;
-	req = (stun_request_t*)calloc(1, sizeof(stun_request_t));
+	req = (stun_transaction_t*)calloc(1, sizeof(stun_transaction_t));
 	if (!req) return NULL;
 
 	req->ref = 1;
 	req->rfc = rfc;
+	req->stun = stun;
 	req->param = param;
-	memcpy(&req->handler, handler, sizeof(struct stun_request_handler_t));
+	req->handler = handler;
 
 	msg = &req->msg;
 //	memset(msg, 0, sizeof(struct stun_message_t));
@@ -25,19 +26,22 @@ stun_request_t* stun_request_create(int rfc, struct stun_request_handler_t* hand
 	return req;
 }
 
-int stun_request_destroy(stun_request_t* req)
+int stun_transaction_destroy(struct stun_transaction_t** pp)
 {
-	// CALL by user only
+	struct stun_transaction_t* trans;
+	if (!pp || !*pp)
+		return -1;
 
-	// TODO: cancel request
-
-	return stun_request_release(req);
+	trans = *pp;
+	free(trans);
+	*pp = NULL;
+	return 0;
 }
 
-int stun_request_addref(struct stun_request_t* req)
+int stun_transaction_addref(struct stun_transaction_t* t)
 {
-	assert(req->ref > 0);
-	if (atomic_increment32(&req->ref) <= 1)
+	assert(t->ref > 0);
+	if (atomic_increment32(&t->ref) <= 1)
 	{
 		//stun_request_release(req);
 		return -1;
@@ -45,14 +49,37 @@ int stun_request_addref(struct stun_request_t* req)
 	return 0;
 }
 
-int stun_request_release(struct stun_request_t* req)
+int stun_transaction_release(struct stun_transaction_t* t)
 {
-	if (0 == atomic_decrement32(&req->ref))
-		free(req);
+	if (0 == atomic_decrement32(&t->ref))
+		free(t);
 	return 0;
 }
 
-int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote)
+struct stun_transaction_t* stun_response_create(struct stun_transaction_t* req)
+{
+	stun_transaction_t* resp;
+	struct stun_message_t* msg;
+	resp = (stun_transaction_t*)calloc(1, sizeof(stun_transaction_t));
+	if (!resp) return NULL;
+
+	resp->msg.header.msgtype = STUN_MESSAGE_METHOD(req->msg.header.msgtype);
+	memcpy(resp->msg.header.tid, req->msg.header.tid, sizeof(resp->msg.header.tid));
+
+	resp->stun = req->stun;
+	resp->protocol = req->protocol;
+	memcpy(&resp->host, &req->remote, sizeof(struct sockaddr_storage));
+	memcpy(&resp->remote, &req->reflexive, sizeof(struct sockaddr_storage));
+	memcpy(&resp->auth, &req->auth, sizeof(struct stun_credetial_t));
+	return resp;
+}
+
+int stun_agent_discard(struct stun_transaction_t* resp)
+{
+	return stun_transaction_destroy(&resp);
+}
+
+int stun_transaction_setaddr(stun_transaction_t* req, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote)
 {
 	if (!local || !remote || (STUN_PROTOCOL_UDP != protocol && STUN_PROTOCOL_TCP != protocol && STUN_PROTOCOL_TLS != protocol))
 		return -1;
@@ -63,7 +90,7 @@ int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockadd
 	return 0;
 }
 
-int stun_request_getaddr(stun_request_t* req, int* protocol, struct sockaddr_storage* local, struct sockaddr_storage* remote, struct sockaddr_storage* reflexive)
+int stun_transaction_getaddr(stun_transaction_t* req, int* protocol, struct sockaddr_storage* local, struct sockaddr_storage* remote, struct sockaddr_storage* reflexive)
 {
 	if(protocol) *protocol = req->protocol;
 	if (local) memcpy(local, &req->host, sizeof(struct sockaddr_storage));
@@ -72,7 +99,7 @@ int stun_request_getaddr(stun_request_t* req, int* protocol, struct sockaddr_sto
 	return 0;
 }
 
-int stun_request_setauth(stun_request_t* req, int credential, const char* usr, const char* pwd, const char* realm, const char* nonce)
+int stun_transaction_setauth(stun_transaction_t* req, int credential, const char* usr, const char* pwd, const char* realm, const char* nonce)
 {
 	int r;
 	if (!usr || !*usr || !pwd || !*pwd || (STUN_CREDENTIAL_SHORT_TERM != credential && STUN_CREDENTIAL_LONG_TERM != credential))
@@ -98,7 +125,7 @@ int stun_request_setauth(stun_request_t* req, int credential, const char* usr, c
 	return 0;
 }
 
-int stun_request_getauth(stun_request_t* req, int *credential, char usr[256], char pwd[256], char realm[256], char nonce[256])
+int stun_transaction_getauth(stun_transaction_t* req, int *credential, char usr[256], char pwd[256], char realm[256], char nonce[256])
 {
 	if (credential) *credential = req->auth.credential;
 	if (usr) snprintf(usr, 256, "%s", req->auth.usr);

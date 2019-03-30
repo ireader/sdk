@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include "sys/sock.h"
 
+#define ALGIN_4BYTES(v) (((v)+3) / 4 * 4)
+
 struct stun_message_t;
 
 struct stun_attr_t
@@ -16,9 +18,8 @@ struct stun_attr_t
 		uint16_t				u16;
 		uint32_t				u32;
 		uint64_t				u64;
-		void*					data;
-		char*					string;
-        uint8_t                 sha1[20];
+		void*					ptr;
+		uint8_t                 sha1[20];
 		struct sockaddr_storage addr; // MAPPED-ADDRESS/XOR-MAPPED-ADDRESS
 		struct {
 			uint32_t			code;
