@@ -24,18 +24,6 @@
     <ClCompile Include="src\ice-agent.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\turn-allocate.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\turn-permission.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\turn-channel.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\trun-data.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\stun-client.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -64,6 +52,21 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\stun-response.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\turn-server.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\turn-allocate.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\trun-data.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\turn-channel.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\turn-permission.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

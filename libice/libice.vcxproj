@@ -52,6 +52,7 @@
     <ClCompile Include="src\turn-channel.c" />
     <ClCompile Include="src\turn-client.c" />
     <ClCompile Include="src\turn-permission.c" />
+    <ClCompile Include="src\turn-server.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F565E04B-1E19-47F3-8923-36479C5CAE4D}</ProjectGuid>

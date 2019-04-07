@@ -14,7 +14,8 @@ typedef uint8_t ice_foundation_t[32];
 
 enum ice_checklist_state_t
 {
-	ICE_CHECKLIST_RUNNING = 1,
+	ICE_CHECKLIST_FROZEN = 0,
+	ICE_CHECKLIST_RUNNING,
 	ICE_CHECKLIST_COMPLETED,
 	ICE_CHECKLIST_FAILED,
 };
