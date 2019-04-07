@@ -100,6 +100,17 @@ static int stun_attr_error_code_write(const struct stun_message_t* msg, uint8_t*
 	return 0;
 }
 
+static int stun_attr_flag_read(const struct stun_message_t* msg, const uint8_t* data, struct stun_attr_t *attr)
+{
+	attr->v.u8 = 1;
+	return 0;
+}
+
+static int stun_attr_flag_write(const struct stun_message_t* msg, uint8_t* data, const struct stun_attr_t *attr)
+{
+	return 0;
+}
+
 static int stun_attr_uint8_read(const struct stun_message_t* msg, const uint8_t* data, struct stun_attr_t *attr)
 {
 	attr->v.u8 = *data;
@@ -317,7 +328,7 @@ static struct
 	{ STUN_ATTR_XOR_RELAYED_ADDRESS,stun_attr_xor_mapped_address_read,	stun_attr_xor_mapped_address_write },
 	{ STUN_ATTR_EVEN_PORT,			stun_attr_uint8_read,			    stun_attr_uint8_write },
 	{ STUN_ATTR_REQUESTED_TRANSPORT,stun_attr_uint32_read,			    stun_attr_uint32_write },
-	{ STUN_ATTR_DONT_FRAGMENT,		stun_attr_uint8_read,			    stun_attr_uint8_write },
+	{ STUN_ATTR_DONT_FRAGMENT,		stun_attr_flag_read,			    stun_attr_flag_write }, // flag(no value)
 	{ STUN_ATTR_XOR_MAPPED_ADDRESS, stun_attr_xor_mapped_address_read,	stun_attr_xor_mapped_address_write },
 	{ STUN_ATTR_TIMER_VAL,			stun_attr_ptr_read,					stun_attr_ptr_write },
 	{ STUN_ATTR_RESERVATION_TOKEN,	stun_attr_uint64_read,			    stun_attr_uint64_write },
@@ -325,7 +336,7 @@ static struct
 	{ STUN_ATTR_ALTERNATE_SERVER,	stun_attr_mapped_address_read,	    stun_attr_mapped_address_write },
 	{ STUN_ATTR_FIGNERPRINT,		stun_attr_uint32_read,			    stun_attr_uint32_write },
     { STUN_ATTR_PRIORITY,           stun_attr_uint32_read,              stun_attr_uint32_write },
-    { STUN_ATTR_USE_CANDIDATE,      stun_attr_uint32_read,              stun_attr_uint32_write }, // flag(no value)
+    { STUN_ATTR_USE_CANDIDATE,      stun_attr_flag_read,                stun_attr_flag_write }, // flag(no value)
     { STUN_ATTR_ICE_CONTROLLED,     stun_attr_uint64_read,              stun_attr_uint64_write },
     { STUN_ATTR_ICE_CONTROLLING,    stun_attr_uint64_read,              stun_attr_uint64_write },
 };
@@ -356,7 +367,7 @@ int stun_attr_read(const struct stun_message_t* msg, const uint8_t* data, const 
 		if (-1 != j)
 			r = s_stun_attrs[j].read(msg, data + 4, attrs + i);
 		else
-			attrs[i].v.data = (void*)(data + 4);
+			attrs[i].v.ptr = (void*)(data + 4);
 
 		assert(r <= 0);
 		if (r < 0)

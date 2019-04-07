@@ -5,6 +5,7 @@
 struct ice_agent_t
 {
 	ice_streams_t streams;
+	struct darray_t valids; // valid list
 };
 
 struct ice_agent_t* ice_agent_create()

@@ -1,9 +1,11 @@
 #include "ice-checklist.h"
 #include "ice-candidates.h"
+#include "stun-internal.h"
 
 struct ice_checklist_t
 {
 	enum ice_checklist_state_t state;
+	int controlling;
 
 	stun_agent_t* stun;
 	ice_candidates_t locals;
@@ -11,7 +13,6 @@ struct ice_checklist_t
 
 	struct darray_t components; // ordinary check, pairs base on component
 	struct darray_t trigger; // trigger check list
-	struct darray_t valids; // valid list
 };
 
 struct ice_checklist_t* ice_checklist_create(stun_agent_t* stun)
@@ -96,6 +97,10 @@ int ice_checklist_gather_stun_candidate(struct ice_checklist_t* l, ice_agent_ong
 		req = stun_transaction_create(l->stun, STUN_RFC_5389, ice_checklist_ongather, l);
 		stun_transaction_setaddr(req, STUN_PROTOCOL_UDP, &p->addr, &p->stun);
 		stun_transaction_setauth(req, req->auth.credential, req->auth.usr, req->auth.pwd, req->auth.realm, req->auth.nonce);
+		stun_message_add_uint32(&req->msg, STUN_ATTR_PRIORITY, p->priority);
+		stun_message_add_flag(&req->msg, STUN_ATTR_USE_CANDIDATE);
+		stun_message_add_uint64(&req->msg, STUN_ATTR_ICE_CONTROLLING, rand() * rand());
+		stun_message_add_uint64(&req->msg, STUN_ATTR_ICE_CONTROLLED, rand() * rand());
 		r = stun_agent_bind(req);
 	}
 }
@@ -212,6 +217,26 @@ int ice_checklist_rebuild(struct ice_checklist_t* l)
 			ice_candidate_pairs_insert(component, &pair);
 		}
 	}
+}
+
+static int ice_checklist_onroleconflict(void* param, const stun_transaction_t* resp, int code, const char* phrase)
+{
+}
+
+static int ice_checklist_onconnected(void* param, const stun_transaction_t* resp, int code, const char* phrase)
+{
+}
+
+static int ice_checklist_bind(struct ice_checklist_t* l, struct ice_candidate_t *c)
+{
+	struct stun_transaction_t* req;
+	req = stun_transaction_create(l->stun, STUN_RFC_5389, ice_checklist_onconnected, l);
+	stun_transaction_setaddr(req, STUN_PROTOCOL_UDP, &c->addr, &c->stun);
+	stun_transaction_setauth(req, req->auth.credential, req->auth.usr, req->auth.pwd, req->auth.realm, req->auth.nonce);
+	stun_message_add_uint32(&req->msg, STUN_ATTR_PRIORITY, c->priority);
+	stun_message_add_flag(&req->msg, STUN_ATTR_USE_CANDIDATE);
+	stun_message_add_uint64(&req->msg, l->controlling ? STUN_ATTR_ICE_CONTROLLING : STUN_ATTR_ICE_CONTROLLED, rand() * rand());
+	return stun_agent_bind(req);
 }
 
 // When a check list is first constructed as the consequence of an
