@@ -115,3 +115,38 @@ void* darray_get(struct darray_t* arr, int index)
 
     return (char*)arr->elements + (arr->size * index);
 }
+
+int darray_find(const struct darray_t* arr, const void* item, int *before, darray_compare compare)
+{
+	int i, r;
+	const void* v;
+	before = before ? before : &i;
+	for (*before = 0; *before < darray_count(arr); *before++)
+	{
+		v = darray_get(arr, *before);
+		r = compare(v, item);
+		if (0 == r)
+			return *before;
+		else if (r > 0)
+			break;
+	}
+
+	return -1;
+}
+
+int darray_insert2(struct darray_t* arr, const void* item, darray_compare compare)
+{
+	int before;
+	if (-1 != darray_find(arr, item, &before, compare))
+		return -1; // EEXIST
+	return darray_insert(arr, before, item, 1);
+}
+
+int darray_erase2(struct darray_t* arr, const void* item, darray_compare compare)
+{
+	int n;
+	n = darray_find(arr, item, NULL, compare);
+	if (-1 == n)
+		return -1; // NOT FOUND
+	return darray_erase(arr, n);
+}

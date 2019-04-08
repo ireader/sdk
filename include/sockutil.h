@@ -527,6 +527,19 @@ static inline int socket_sendto_by_time(IN socket_t sock, IN const void* buf, IN
     return r;
 }
 
+static inline int socket_sendto_v_by_time(IN socket_t sock, IN const socket_bufvec_t* vec, IN int n, IN int flags, IN const struct sockaddr* to, IN socklen_t tolen, IN int timeout)
+{
+	int r;
+
+	r = socket_select_write(sock, timeout);
+	if (r <= 0)
+		return 0 == r ? SOCKET_TIMEDOUT : r;
+	assert(1 == r);
+
+	r = socket_sendto_v(sock, vec, n, flags, to, tolen);
+	return r;
+}
+
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
