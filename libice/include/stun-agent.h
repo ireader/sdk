@@ -14,11 +14,12 @@ typedef struct stun_transaction_t stun_transaction_t;
 
 enum { STUN_RFC_3489, STUN_RFC_5389 };
 
+/// @param[in] req transaction request
+/// @param[in] resp transaction response, NULL if timeout
 /// @param[in] code http like code, 2xx-ok, 4xx/5xx-error
 /// @param[in] phrase error code phrase
-/// @param[in] resp transaction response, NULL if timeout
 /// @return 0-ok, other-error
-typedef int (*stun_transaction_handler)(void* param, const stun_transaction_t* resp, int code, const char* phrase);
+typedef int (*stun_transaction_handler)(void* param, const stun_transaction_t* req, const stun_transaction_t* resp, int code, const char* phrase);
 
 /// @param[in] rfc STUN rfc version: STUN_RFC_3489/STUN_RFC_5389
 stun_transaction_t* stun_transaction_create(stun_agent_t* stun, int rfc, stun_transaction_handler handler, void* param);
@@ -41,8 +42,9 @@ struct stun_agent_handler_t
 	int (*send)(void* param, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote, const void* data, int bytes);
 
 	/// @param[out] pwd password of the usr
+	/// @param[out] cred STUN_CREDENTIAL_SHORT_TERM/STUN_CREDENTIAL_LONG_TERM
 	/// @return 0-ok, other-error
-	int (*auth)(void* param, const char* usr, const char* realm, const char* nonce, char pwd[256]);
+	int (*auth)(void* param, const char* usr, const char* realm, const char* nonce, char pwd[256], int *cred);
 	
 	// stun
 	int (*onbind)(void* param, const stun_transaction_t* req, struct stun_transaction_t* resp);

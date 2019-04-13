@@ -32,6 +32,9 @@ int stun_transaction_destroy(struct stun_transaction_t** pp)
 	if (!pp || !*pp)
 		return -1;
 
+	// delete link
+	stun_agent_remove(&trans->link);
+
 	trans = *pp;
 	free(trans);
 	*pp = NULL;

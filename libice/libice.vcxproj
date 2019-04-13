@@ -36,6 +36,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\ice-checklist.c" />
+    <ClCompile Include="src\ice-gather.c" />
     <ClCompile Include="src\ice-stream.c" />
     <ClCompile Include="src\ice-agent.c" />
     <ClCompile Include="src\stun-agent.c" />
