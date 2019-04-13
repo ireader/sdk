@@ -35,7 +35,7 @@ void* darray_get(struct darray_t* arr, int index);
 
 typedef int (*darray_compare)(const void* l, const void* r);
 
-int darray_find(const struct darray_t* arr, const void* item, int *before, darray_compare compare);
+void* darray_find(const struct darray_t* arr, const void* item, int *pos, darray_compare compare);
 int darray_insert2(struct darray_t* arr, const void* item, darray_compare compare);
 int darray_erase2(struct darray_t* arr, const void* item, darray_compare compare);
 
