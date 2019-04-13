@@ -6,12 +6,33 @@
 #include "ice-candidates.h"
 #include "stun-internal.h"
 
-struct ice_checklist_t;
-
 struct ice_checklist_handler_t
 {
-	int (*onvalid)(void* param, struct ice_checklist_t* l, const struct ice_candidate_pair_t* pair);
-	int (*onfinish)(void* param, struct ice_checklist_t* l, int status);
+	int(*onvalid)(void* param, struct ice_checklist_t* l, const struct ice_candidate_pair_t* pair);
+	int(*onfinish)(void* param, struct ice_checklist_t* l, int status);
+};
+
+struct ice_checklist_t
+{
+	const struct stun_credetial_t* auth;
+	enum ice_checklist_state_t state;
+	enum ice_nomination_t nomination;
+	int controlling;
+
+	stun_agent_t* stun;
+	ice_candidates_t locals;
+	ice_candidates_t remotes;
+
+	void* timer;
+	ice_candidate_pairs_t trigger; // trigger check list
+	ice_candidate_components_t components; // ordinary check, pairs base on component
+
+	struct ice_checklist_handler_t handler;
+	void* param;
+
+	struct darray_t gathers;
+	ice_agent_ongather ongather;
+	void* ongatherparam;
 };
 
 struct ice_checklist_t* ice_checklist_create(stun_agent_t* stun, const struct stun_credetial_t* auth, struct ice_checklist_handler_t* handler, void* param);

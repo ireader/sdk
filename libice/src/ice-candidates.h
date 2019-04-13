@@ -7,7 +7,7 @@ typedef struct darray_t ice_candidates_t;
 
 static inline void ice_candidates_init(ice_candidates_t* arr)
 {
-	darray_init(arr, sizeof(struct ice_candidate_t), 4);
+	darray_init(arr, sizeof(struct ice_candidate_t), 8);
 }
 
 static inline void ice_candidates_free(ice_candidates_t* arr)
@@ -70,7 +70,7 @@ typedef struct darray_t ice_candidate_pairs_t;
 
 static inline void ice_candidate_pairs_init(ice_candidate_pairs_t* arr)
 {
-	darray_init(arr, sizeof(struct ice_candidate_pair_t), 9);
+	darray_init(arr, sizeof(struct ice_candidate_pair_t), 16);
 }
 
 static inline void ice_candidate_pairs_free(ice_candidate_pairs_t* arr)

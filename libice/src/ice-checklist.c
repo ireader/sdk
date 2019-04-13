@@ -2,25 +2,6 @@
 #include "ice-candidates.h"
 #include "stun-internal.h"
 
-struct ice_checklist_t
-{
-	const struct stun_credetial_t* auth;
-	enum ice_checklist_state_t state;
-	enum ice_nomination_t nomination;
-	int controlling;
-
-	stun_agent_t* stun;
-	ice_candidates_t locals;
-	ice_candidates_t remotes;
-
-	void* timer;
-	ice_candidate_pairs_t trigger; // trigger check list
-	ice_candidate_components_t components; // ordinary check, pairs base on component
-
-	struct ice_checklist_handler_t handler;
-	void* param;
-};
-
 struct ice_checklist_t* ice_checklist_create(stun_agent_t* stun, const struct stun_credetial_t* auth, struct ice_checklist_handler_t* handler, void* param)
 {
 	struct ice_checklist_t* l;
@@ -34,6 +15,7 @@ struct ice_checklist_t* ice_checklist_create(stun_agent_t* stun, const struct st
 		l->auth = auth;
 		l->state = ICE_CHECKLIST_FROZEN;
 		l->nomination = ICE_REGULAR_NOMINATION;
+		darray_init(&l->gathers, sizeof(struct ice_candidate_t), 4);
 		ice_candidates_init(&l->locals);
 		ice_candidates_init(&l->remotes);
 		ice_candidate_pairs_init(&l->trigger);
