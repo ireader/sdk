@@ -395,7 +395,7 @@ uint8_t* stun_attr_write(const struct stun_message_t* msg, uint8_t* data, const 
 		if (-1 != j)
 			r = s_stun_attrs[j].write(msg, data + 4, attrs + i);
 		else
-			memmove(data + 4, attrs[i].v.data, attrs[i].length);
+			memmove(data + 4, attrs[i].v.ptr, attrs[i].length);
 
 		assert(r <= 0);
 		if (r < 0)

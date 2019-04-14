@@ -8,9 +8,18 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
+#define ICE_TIMER_INTERVAL	20
+#define ICE_BINDING_TIMEOUT	200
+
+// agent MUST limit the total number of connectivity checks the agent 
+// performs across all check lists to a specific value.
+// A default of 100 is RECOMMENDED.
+#define ICE_CANDIDATE_LIMIT 10
+
 typedef uint16_t ice_component_t; // [1, 256]
 typedef uint32_t ice_priority_t;  // [1, 2**31 - 1]
 typedef uint8_t ice_foundation_t[32];
+
 
 enum ice_checklist_state_t
 {
@@ -37,6 +46,12 @@ enum ice_candidate_type_t
 	ICE_CANDIDATE_HOST = 126,
 };
 
+enum ice_nomination_t
+{
+	ICE_REGULAR_NOMINATION = 0,
+	ICE_AGGRESSIVE_NOMINATION,
+};
+
 // rounded-time is the current time modulo 20 minutes
 // USERNAME = <prefix,rounded-time,clientIP,hmac>
 // password = <hmac(USERNAME,anotherprivatekey)>
@@ -51,6 +66,7 @@ struct ice_candidate_t
 
 	ice_priority_t priority;
 	ice_foundation_t foundation;
+	int protocol;
 };
 
 struct ice_candidate_pair_t
@@ -58,7 +74,6 @@ struct ice_candidate_pair_t
 	struct ice_candidate_t local;
 	struct ice_candidate_t remote;
 	enum ice_candidate_pair_state_t state;
-	int default;
 	int valid;
 	int nominated;
 	int controlling;
@@ -91,7 +106,10 @@ inline void ice_candidate_foundation(struct ice_candidate_t* c)
 	MD5Update(&ctx, (unsigned char*)":", 1);
 	MD5Update(&ctx, (unsigned char*)&c->base, sizeof(c->base));
 	MD5Update(&ctx, (unsigned char*)":", 1);
-	MD5Update(&ctx, (unsigned char*)&c->stun, sizeof(c->stun));
+	if (ICE_CANDIDATE_HOST != c->type)
+		MD5Update(&ctx, (unsigned char*)&c->stun, sizeof(c->stun));
+	else
+		MD5Update(&ctx, (unsigned char*)&c->base, sizeof(c->base));
 	MD5Final(c->foundation, &ctx);
 }
 

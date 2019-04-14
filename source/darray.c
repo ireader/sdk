@@ -116,37 +116,36 @@ void* darray_get(struct darray_t* arr, int index)
     return (char*)arr->elements + (arr->size * index);
 }
 
-int darray_find(const struct darray_t* arr, const void* item, int *before, darray_compare compare)
+void* darray_find(const struct darray_t* arr, const void* item, int *pos, darray_compare compare)
 {
 	int i, r;
-	const void* v;
-	before = before ? before : &i;
-	for (*before = 0; *before < darray_count(arr); *before++)
+	void* v;
+	pos = pos ? pos : &i;
+	for (*pos = 0; *pos < darray_count(arr); *pos++)
 	{
-		v = darray_get(arr, *before);
+		v = darray_get((struct darray_t*)arr, *pos);
 		r = compare(v, item);
 		if (0 == r)
-			return *before;
+			return v;
 		else if (r > 0)
 			break;
 	}
 
-	return -1;
+	return NULL;
 }
 
 int darray_insert2(struct darray_t* arr, const void* item, darray_compare compare)
 {
-	int before;
-	if (-1 != darray_find(arr, item, &before, compare))
+	int pos;
+	if (NULL != darray_find(arr, item, &pos, compare))
 		return -1; // EEXIST
-	return darray_insert(arr, before, item, 1);
+	return darray_insert(arr, pos, &item, 1);
 }
 
 int darray_erase2(struct darray_t* arr, const void* item, darray_compare compare)
 {
-	int n;
-	n = darray_find(arr, item, NULL, compare);
-	if (-1 == n)
+	int pos;
+	if (NULL == darray_find(arr, item, &pos, compare))
 		return -1; // NOT FOUND
-	return darray_erase(arr, n);
+	return darray_erase(arr, pos);
 }

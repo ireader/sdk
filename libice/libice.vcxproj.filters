@@ -69,6 +69,9 @@
     <ClCompile Include="src\turn-permission.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\ice-gather.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\ice-agent.h">

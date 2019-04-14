@@ -80,8 +80,9 @@ static int stun_agent_onrequest(stun_agent_t* stun, struct stun_transaction_t* r
 		return -1; // -ENOMEM
 
 	// auth
-	r = stun->handler.auth(stun->param, req->auth.usr, req->auth.realm, req->auth.nonce, req->auth.pwd);
-	stun_message_add_credentials(&req->msg, &req->auth);
+	r = stun->handler.auth(stun->param, req->auth.usr, req->auth.realm, req->auth.nonce, req->auth.pwd, &req->auth.credential);
+	//stun_message_add_credentials(&req->msg, &req->auth);
+	// TODO: check credential
 
 	stun_message_add_error(&resp->msg, 401, "requires integrity checks");
 	// have MESSAGE-INTEGRITY, don't have username

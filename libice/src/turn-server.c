@@ -1,6 +1,7 @@
 #include "stun-agent.h"
 #include "stun-internal.h"
 #include "turn-internal.h"
+#include "sys/system.h"
 
 // rfc5766 6.2. Receiving an Allocate Request (p24)
 int turn_agent_onallocate(const struct stun_transaction_t* req, struct stun_transaction_t* resp)
@@ -42,14 +43,14 @@ int turn_agent_onallocate(const struct stun_transaction_t* req, struct stun_tran
 	// 7.
 	stun_message_add_error(&resp->msg, 486, "Allocation Quota Reached");
 
-	memcpy(&allocate->client, req->relay, sizeof(allocate->client));
-	memcpy(&allocate->server, req->remote, sizeof(allocate->server));
+	memcpy(&allocate->client, &req->relay, sizeof(allocate->client));
+	memcpy(&allocate->server, &req->remote, sizeof(allocate->server));
 
 	// In all cases, the server SHOULD only allocate ports from the range
 	// 49152 - 65535 (the Dynamic and/or Private Port range [Port-Numbers]),
 
 	// alloc relayed transport address
-	memcpy(&allocate->relay, req->remote, sizeof(allocate->relay));
+	memcpy(&allocate->relay, &req->remote, sizeof(allocate->relay));
 	
 	
 	// reply
