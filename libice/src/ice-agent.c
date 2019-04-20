@@ -12,7 +12,7 @@ struct ice_agent_t
 	ice_streams_t streams;
 	ice_candidate_pairs_t valids; // valid list
 
-	struct stun_credetial_t auth; // local auth
+	struct stun_credential_t auth; // local auth
 	struct ice_agent_handler_t handler;
 	void* param;
 };
@@ -36,7 +36,7 @@ static int ice_stun_auth(void* param, const char* usr, const char* realm, const 
 	return ice->handler.auth(ice->param, usr, pwd);
 }
 
-static int ice_stun_onbind(void* param, const stun_transaction_t* req, struct stun_transaction_t* resp)
+static int ice_stun_onbind(void* param, stun_response_t* resp, const stun_request_t* req)
 {
 	int i, r;
 	int protocol;
@@ -45,7 +45,7 @@ static int ice_stun_onbind(void* param, const stun_transaction_t* req, struct st
 	struct sockaddr_storage local, remote, reflexive;
 
 	ice = (struct ice_agent_t*)param;
-	r = stun_transaction_getaddr(req, &protocol, &local, &remote, &reflexive);
+	r = stun_request_getaddr(req, &protocol, &local, &remote, &reflexive);
 	if (0 != r)
 		return r;
 
@@ -118,7 +118,7 @@ struct ice_agent_t* ice_create(struct ice_agent_handler_t* handler, void* param)
 	{
 		ice_streams_init(&ice->streams);
 		ice_candidate_pairs_init(&ice->valids);
-		ice->stun = stun_agent_create(&stun, ice);
+		ice->stun = stun_agent_create(STUN_RFC_5389, &stun, ice);
 		memcpy(&ice->handler, handler, sizeof(ice->handler));
 		ice->param = param;
 	}

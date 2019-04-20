@@ -47,9 +47,6 @@ int ice_list_remote_candidate(struct ice_agent_t* ice, int stream, ice_agent_onc
 
 int ice_start(struct ice_agent_t* ice);
 
-void* ice_timer_start(int ms, void (*ontimer)(void* param, void* tid), void* param);
-int ice_timer_stop(void* timer);
-
 #if defined(__cplusplus)
 }
 #endif

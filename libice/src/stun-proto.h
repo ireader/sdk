@@ -23,10 +23,13 @@
 #define STUN_SHARED_SECRET_PERIOD (10*60*1000) // 10m
 #define STUN_SHARED_SECRET_EXPIRE (30*60*1000) // 30m
 
+// rfc3489 9.3 Formulating the Binding Request (p17)
+// 0ms, 500ms, 1500ms, 3500ms, 7500ms, 15500ms, 31500ms
+// rfc5389 7.2.1. Sending over UDP (p13)
 // 0ms, 100ms, 300ms, 700ms, 1500ms, 3100ms, 4700ms, 6300ms, and 7900ms ==> At 9500ms,
-#define STUN_TIMEOUT 9500
-#define STUN_RETRANSMISSION_INTERVAL_MIN 100 //ms
-#define STUN_RETRANSMISSION_INTERVAL_MAX 1600 // ms
+#define STUN_TIMEOUT 39500
+#define STUN_RETRANSMISSION_INTERVAL_MIN 500 //ms
+#define STUN_RETRANSMISSION_INTERVAL_MAX 31500 // ms
 
 // rfc5389 6. STUN Message Structure(p10)
 #define STUN_METHOD_CLASS_REQUEST           0x0000 //0b00

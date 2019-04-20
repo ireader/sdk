@@ -26,6 +26,8 @@ struct stun_attr_t
 			char*				reason_phrase;
 		} errcode;
 	} v;
+
+	int unknown; // read(decode) only, -1-unknown attribute, other-valid
 };
 
 int stun_attr_read(const struct stun_message_t* msg, const uint8_t* data, const uint8_t* end, struct stun_attr_t *attrs, int n);

@@ -51,25 +51,16 @@
     <ClCompile Include="src\turn-agent.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\stun-response.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\turn-server.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\turn-allocate.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\trun-data.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\turn-channel.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\turn-permission.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\ice-gather.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stun-auth.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -82,12 +73,6 @@
     </ClInclude>
     <ClInclude Include="src\stun-internal.h">
       <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\stun-client.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\stun-server.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\stun-attr.h">
       <Filter>Source Files</Filter>
@@ -103,9 +88,6 @@
     </ClInclude>
     <ClInclude Include="src\ice-streams.h">
       <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\turn-client.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\stun-proto.h">
       <Filter>Source Files</Filter>

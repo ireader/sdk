@@ -2,7 +2,7 @@
 #include "ice-candidates.h"
 #include "stun-internal.h"
 
-static int ice_gather_onbind(void* param, const stun_transaction_t* req, const stun_transaction_t* resp, int code, const char* phrase)
+static int ice_gather_onbind(void* param, const stun_request_t* req, int code, const char* phrase)
 {
 	int i, r, protocol;
 	struct ice_checklist_t* l;
@@ -14,14 +14,14 @@ static int ice_gather_onbind(void* param, const stun_transaction_t* req, const s
 	{
 		memset(&c, 0, sizeof(struct ice_candidate_t));
 		c.type = ICE_CANDIDATE_SERVER_REFLEXIVE;
-		stun_transaction_getaddr(resp, &protocol, &c.base, &c.stun, &c.addr);
+		stun_request_getaddr(req, &protocol, &c.base, &c.stun, &c.addr);
 		ice_candidate_priority(&c);
 		ice_candidate_foundation(&c);
 
 		for (i = 0; i < ice_candidates_count(&l->locals); i++)
 		{
 			local = ice_candidates_get(&l->locals, i);
-			if (0 == socket_addr_compare(&local->addr, &c.base) && 0 == socket_addr_compare(&local->stun, &c.stun))
+			if (0 == socket_addr_compare((const struct sockaddr*)&local->addr, (const struct sockaddr*)&c.base) && 0 == socket_addr_compare((const struct sockaddr*)&local->stun, (const struct sockaddr*)&c.stun))
 			{
 				c.componentId = local->componentId;
 				break;
@@ -46,8 +46,8 @@ static int ice_gather_onbind(void* param, const stun_transaction_t* req, const s
 int ice_checklist_gather_stun_candidate(struct ice_checklist_t* l, ice_agent_ongather ongather, void* param)
 {
 	int i, r;
-	struct stun_transaction_t* req;
-	struct ice_candidate_t *p, *pc = NULL;
+	struct stun_request_t* req;
+	struct ice_candidate_t *p;
 	
 	l->gathers.count = 0; // reset gather array
 	l->ongatherparam = param;
@@ -59,15 +59,15 @@ int ice_checklist_gather_stun_candidate(struct ice_checklist_t* l, ice_agent_ong
 		if (p->type != ICE_CANDIDATE_HOST || 0 == p->stun.ss_family)
 			continue;
 
-		req = stun_transaction_create(l->stun, STUN_RFC_5389, ice_gather_onbind, l);
+		req = stun_request_create(l->stun, STUN_RFC_5389, ice_gather_onbind, l);
 		if (!req) continue;
 
-		stun_transaction_setaddr(req, STUN_PROTOCOL_UDP, &p->addr, &p->stun);
-		stun_transaction_setauth(req, l->auth->credential, l->auth->usr, l->auth->pwd, l->auth->realm, l->auth->nonce);
+		stun_request_setaddr(req, STUN_PROTOCOL_UDP, &p->addr, &p->stun);
+		stun_request_setauth(req, l->auth->credential, l->auth->usr, l->auth->pwd, l->auth->realm, l->auth->nonce);
 		r = stun_agent_bind(req);
 		if (0 != r)
 		{
-			stun_transaction_destroy(req);
+			stun_request_destroy(&req);
 			continue;
 		}
 
