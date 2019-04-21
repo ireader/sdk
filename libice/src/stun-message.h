@@ -54,7 +54,7 @@ int stun_message_add_uint16(struct stun_message_t* msg, uint16_t attr, uint16_t 
 int stun_message_add_uint32(struct stun_message_t* msg, uint16_t attr, uint32_t value);
 int stun_message_add_uint64(struct stun_message_t* msg, uint16_t attr, uint64_t value);
 int stun_message_add_string(struct stun_message_t* msg, uint16_t attr, const char* value);
-int stun_message_add_address(struct stun_message_t* msg, uint16_t attr, const struct sockaddr_storage* addr);
+int stun_message_add_address(struct stun_message_t* msg, uint16_t attr, const struct sockaddr* addr);
 int stun_message_add_data(struct stun_message_t* msg, uint16_t attr, const void* value, int len);
 
 int stun_message_add_error(struct stun_message_t* msg, uint32_t code, const char* phrase);

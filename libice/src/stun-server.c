@@ -1,13 +1,13 @@
 #include "stun-message.h"
 #include "stun-internal.h"
 
-int stun_agent_onbind(const struct stun_request_t* req, struct stun_response_t* resp)
+int stun_server_onbind(const struct stun_request_t* req, struct stun_response_t* resp)
 {
 	const struct stun_attr_t* attr;
 	attr = stun_message_attr_find(&req->msg, STUN_ATTR_RESPONSE_ADDRESS);
 	if (attr)
 	{
-		stun_message_add_address(&resp->msg, STUN_ATTR_REFLECTED_FROM, &resp->addr.peer);
+		stun_message_add_address(&resp->msg, STUN_ATTR_REFLECTED_FROM, (const struct sockaddr*)&resp->addr.peer);
 		memcpy(&resp->addr.peer, &attr->v.addr, sizeof(resp->addr.peer));
 	}
 
@@ -19,9 +19,9 @@ int stun_agent_onbind(const struct stun_request_t* req, struct stun_response_t* 
 		//stun_message_add_address(&resp->msg, STUN_ATTR_CHANGED_ADDRESS, &resp->C);
 	}
 
-	stun_message_add_address(&resp->msg, STUN_ATTR_SOURCE_ADDRESS, &resp->addr.host);
-	stun_message_add_address(&resp->msg, STUN_ATTR_MAPPED_ADDRESS, &resp->addr.peer);
-	stun_message_add_address(&resp->msg, STUN_ATTR_XOR_MAPPED_ADDRESS, &resp->addr.peer);
+	stun_message_add_address(&resp->msg, STUN_ATTR_SOURCE_ADDRESS, (const struct sockaddr*)&resp->addr.host);
+	stun_message_add_address(&resp->msg, STUN_ATTR_MAPPED_ADDRESS, (const struct sockaddr*)&resp->addr.peer);
+	stun_message_add_address(&resp->msg, STUN_ATTR_XOR_MAPPED_ADDRESS, (const struct sockaddr*)&resp->addr.peer);
 	return req->stun->handler.onbind(req->stun->param, resp, req);
 }
 
@@ -48,7 +48,7 @@ int stun_agent_bind_response(struct stun_response_t* resp, int code, const char*
 	return 0 == r ? stun_response_send(resp->stun, resp) : r;
 }
 
-int stun_agent_onshared_secret(const struct stun_request_t* req, struct stun_response_t* resp)
+int stun_server_onshared_secret(const struct stun_request_t* req, struct stun_response_t* resp)
 {
 	return req->stun->handler.onsharedsecret(req->stun->param, resp, req);
 }

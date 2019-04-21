@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="include\ice-agent.h" />
     <ClInclude Include="include\stun-agent.h" />
+    <ClInclude Include="include\stun-proto.h" />
     <ClInclude Include="src\ice-candidates.h" />
     <ClInclude Include="src\ice-checklist.h" />
     <ClInclude Include="src\ice-internal.h" />
@@ -28,7 +29,6 @@
     <ClInclude Include="src\stun-internal.h" />
     <ClInclude Include="src\stun-attr.h" />
     <ClInclude Include="src\stun-message.h" />
-    <ClInclude Include="src\stun-proto.h" />
     <ClInclude Include="src\turn-internal.h" />
   </ItemGroup>
   <ItemGroup>

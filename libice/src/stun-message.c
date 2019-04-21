@@ -148,11 +148,11 @@ int stun_message_add_string(struct stun_message_t* msg, uint16_t attr, const cha
 	return 0;
 }
 
-int stun_message_add_address(struct stun_message_t* msg, uint16_t attr, const struct sockaddr_storage* addr)
+int stun_message_add_address(struct stun_message_t* msg, uint16_t attr, const struct sockaddr* addr)
 {
 	msg->attrs[msg->nattrs].type = attr;
-	msg->attrs[msg->nattrs].length = addr->ss_family == AF_INET6 ? 17 : 5;
-	memcpy(&msg->attrs[msg->nattrs].v.addr, addr, sizeof(*addr));
+	msg->attrs[msg->nattrs].length = addr->sa_family == AF_INET6 ? 17 : 5;
+	memcpy(&msg->attrs[msg->nattrs].v.addr, addr, socket_addr_len(addr));
 	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
 	msg->nattrs += 1;
 	return 0;
@@ -256,7 +256,7 @@ int stun_message_add_fingerprint(struct stun_message_t* msg)
 		return r;
 
     crc32_lsb_init();
-    v = crc32_lsb(0xFFFFFFFF, data, msg->header.length + STUN_HEADER_SIZE - 8);
+	v = crc32_lsb(0xFFFFFFFF, data, msg->header.length + STUN_HEADER_SIZE - 8);
     msg->attrs[msg->nattrs].v.u32 = v ^ STUN_FINGERPRINT_XOR;
     msg->nattrs += 1;
 	return 0;
@@ -297,7 +297,7 @@ int stun_message_check_integrity(const uint8_t* data, int bytes, const struct st
 	md5[1] = (uint8_t)(len & 0xFF);
 	hmacInput(&context, data, 2); // stun header message type
 	hmacInput(&context, md5, 2); // stun header message length (filter fingerprint)
-	hmacInput(&context, data + 4, 16 /*stun remain header*/ + len /* payload except fingerprint */);
+	hmacInput(&context, data + 4, 16 /*stun remain header*/ + len /* payload except fingerprint */ - (sizeof(sha1) + 4) /* sha1 */);
 	hmacResult(&context, sha1);
 	return memcmp(msg->attrs[nattrs - 1].v.sha1, sha1, sizeof(sha1));
 }
@@ -306,7 +306,7 @@ int stun_message_check_fingerprint(const uint8_t* data, int bytes, const struct 
 {
 	int nattrs;
 	uint16_t len;
-	uint32_t crc32;
+	uint32_t v;
 
 	if (msg->header.length + STUN_HEADER_SIZE != bytes)
 		return -1;
@@ -317,10 +317,10 @@ int stun_message_check_fingerprint(const uint8_t* data, int bytes, const struct 
 		return -1;
 
 	crc32_lsb_init();
-	crc32 = crc32_lsb(0xFFFFFFFF, data, msg->header.length + STUN_HEADER_SIZE - 8);
-	crc32 = crc32 ^ STUN_FINGERPRINT_XOR;
+	v = crc32_lsb(0xFFFFFFFF, data, msg->header.length + STUN_HEADER_SIZE - 8);
+	v = v ^ STUN_FINGERPRINT_XOR;
 
-	return msg->attrs[nattrs-1].v.u32 - crc32;
+	return msg->attrs[nattrs-1].v.u32 - v;
 }
 
 int stun_message_has_integrity(const struct stun_message_t* msg)
@@ -376,5 +376,7 @@ void stun_message_test(void)
     r = 0 == r ? stun_message_write(data, sizeof(data), &msg) : r;
     assert(0 == r);
     assert(sizeof(result) == msg.header.length + STUN_HEADER_SIZE && 0 == memcmp(data, result, sizeof(result)));
+	assert(0 == stun_message_check_integrity(data, msg.header.length + STUN_HEADER_SIZE, &msg, &auth));
+	assert(0 == stun_message_check_fingerprint(data, msg.header.length + STUN_HEADER_SIZE, &msg));
 }
 #endif

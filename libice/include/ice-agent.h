@@ -11,7 +11,7 @@ extern "C" {
 struct ice_agent_handler_t
 {
 	/// @return 0-ok, other-error
-	int (*send)(void* param, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote, const void* data, int bytes);
+	int (*send)(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes);
 
 	/// @param[out] pwd password of the usr
 	/// @return 0-ok, other-error
@@ -24,7 +24,7 @@ int ice_destroy(struct ice_agent_t* ice);
 
 int ice_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd);
 
-int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote, const void* data, int bytes);
+int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes);
 
 /// Add host candidate (with stun/turn server)
 /// @param[in] c host candidate (should set stun/turn server addr)

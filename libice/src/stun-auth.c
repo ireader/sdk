@@ -39,7 +39,7 @@ static int stun_request_rfc3489_auth_check(stun_agent_t* stun, struct stun_reque
 	}
 
 
-	r = stun->handler.auth(stun->param, req->auth.usr, NULL, NULL, req->auth.pwd, &req->auth.credential);
+	r = stun->handler.auth(stun->param, req->auth.credential, req->auth.usr, NULL, NULL, req->auth.pwd);
 	if (0 != r)
 	{
 		// The Binding Request did contain a MESSAGEINTEGRITY attribute, 
@@ -77,7 +77,7 @@ static int stun_request_rfc5389_short_term_auth_check(stun_agent_t* stun, struct
 		return 401;
 	}
 
-	r = stun->handler.auth(stun->param, req->auth.usr, NULL, NULL, req->auth.pwd, &req->auth.credential);
+	r = stun->handler.auth(stun->param, req->auth.credential, req->auth.usr, NULL, NULL, req->auth.pwd);
 	if (0 != r || 0 != stun_message_check_integrity(data, bytes, &req->msg, &req->auth))
 	{
 		stun_auth_response(stun, req, 401, "Unauthorized", NULL, NULL);
@@ -97,7 +97,7 @@ static int stun_request_rfc5389_long_term_auth_check(stun_agent_t* stun, struct 
 	// If the message does not contain both a MESSAGE-INTEGRITY attribute
 	if (!integrity)
 	{
-		stun->handler.auth(stun->param, NULL, req->auth.realm, req->auth.nonce, req->auth.pwd, &req->auth.credential);
+		stun->handler.getnonce(stun->param, req->auth.realm, req->auth.nonce);
 		stun_auth_response(stun, req, 401, "Unauthorized", req->auth.realm, req->auth.nonce);
 		return 401;
 	}
@@ -112,7 +112,7 @@ static int stun_request_rfc5389_long_term_auth_check(stun_agent_t* stun, struct 
 	}
 
 	req->auth.credential = STUN_CREDENTIAL_LONG_TERM;
-	r = stun->handler.auth(stun->param, req->auth.usr, req->auth.realm, req->auth.nonce, req->auth.pwd, &req->auth.credential);
+	r = stun->handler.auth(stun->param, req->auth.credential, req->auth.usr, req->auth.realm, req->auth.nonce, req->auth.pwd);
 	if (0 != r)
 	{
 		// If the NONCE is no longer valid, the server MUST generate an error 

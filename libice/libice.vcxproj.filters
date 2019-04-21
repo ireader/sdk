@@ -89,14 +89,14 @@
     <ClInclude Include="src\ice-streams.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\stun-proto.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\stun-agent.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\turn-internal.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\stun-proto.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

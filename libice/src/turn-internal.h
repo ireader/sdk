@@ -51,19 +51,19 @@ struct turn_allocation_t
 
 
 // The port portion of each attribute is ignored
-static inline int turn_sockaddr_cmp(const struct sockaddr_storage* l, const struct sockaddr_storage* r)
+static inline int turn_sockaddr_cmp(const struct sockaddr* l, const struct sockaddr* r)
 {
-	if (AF_INET == l->ss_family && AF_INET == r->ss_family)
+	if (AF_INET == l->sa_family && AF_INET == r->sa_family)
 		return memcmp(&((struct sockaddr_in*)l)->sin_addr, &((struct sockaddr_in*)r)->sin_addr, sizeof(IN_ADDR));
-	if (AF_INET6 == l->ss_family && AF_INET6 == r->ss_family)
+	if (AF_INET6 == l->sa_family && AF_INET6 == r->sa_family)
 		return memcmp(&((struct sockaddr_in6*)l)->sin6_addr, &((struct sockaddr_in6*)r)->sin6_addr, sizeof(IN6_ADDR));
-	return memcmp(l, r, sizeof(struct sockaddr_storage));
+	return -1;
 }
 
-int turn_agent_onallocate(const struct stun_request_t* req, struct stun_response_t* resp);
-int turn_agent_onrefresh(const struct stun_request_t* req, struct stun_response_t* resp);
-int turn_agent_oncreate_permission(const struct stun_request_t* req, struct stun_response_t* resp);
-int turn_agent_onchannel_bind(const struct stun_request_t* req, struct stun_response_t* resp);
+int turn_server_onallocate(const struct stun_request_t* req, struct stun_response_t* resp);
+int turn_server_onrefresh(const struct stun_request_t* req, struct stun_response_t* resp);
+int turn_server_oncreate_permission(const struct stun_request_t* req, struct stun_response_t* resp);
+int turn_server_onchannel_bind(const struct stun_request_t* req, struct stun_response_t* resp);
 
 int turn_client_allocate_onresponse(struct stun_request_t* req, const struct stun_request_t* resp);
 int turn_client_refresh_onresponse(struct stun_request_t* req, const struct stun_request_t* resp);
@@ -71,7 +71,7 @@ int turn_client_create_permission_onresponse(struct stun_request_t* req, const s
 int turn_client_channel_bind_onresponse(struct stun_request_t* req, const struct stun_request_t* resp);
 
 /// turn server recv data from peer, forward data to client
-int turn_agent_relay(struct stun_agent_t* turn, const struct turn_allocation_t* allocate, const struct sockaddr_storage* peer, const void* data, int bytes);
+int turn_server_relay(struct stun_agent_t* turn, const struct turn_allocation_t* allocate, const struct sockaddr* peer, const void* data, int bytes);
 /// SEND indication: from client to turn server
 int turn_server_onsend(struct stun_agent_t* turn, const struct stun_request_t* req);
 /// ChannelData: from client to turn server
@@ -83,14 +83,14 @@ int turn_client_onchannel_data(struct stun_agent_t* stun, struct turn_allocation
 
 struct turn_allocation_t* turn_allocation_create();
 int turn_allocation_destroy(struct turn_allocation_t** pp);
-const struct turn_permission_t* turn_allocation_find_permission(const struct turn_allocation_t* allocate, const struct sockaddr_storage* addr);
-int turn_allocation_add_permission(struct turn_allocation_t* allocate, const struct sockaddr_storage* addr);
+const struct turn_permission_t* turn_allocation_find_permission(const struct turn_allocation_t* allocate, const struct sockaddr* addr);
+int turn_allocation_add_permission(struct turn_allocation_t* allocate, const struct sockaddr* addr);
 const struct turn_channel_t* turn_allocation_find_channel(const struct turn_allocation_t* allocate, uint16_t channel);
-const struct turn_channel_t* turn_allocation_find_channel_by_peer(const struct turn_allocation_t* allocate, const struct sockaddr_storage* addr);
-int turn_allocation_add_channel(struct turn_allocation_t* allocate, const struct sockaddr_storage* addr, uint16_t channel);
+const struct turn_channel_t* turn_allocation_find_channel_by_peer(const struct turn_allocation_t* allocate, const struct sockaddr* addr);
+int turn_allocation_add_channel(struct turn_allocation_t* allocate, const struct sockaddr* addr, uint16_t channel);
 
-struct turn_allocation_t* turn_agent_allocation_find_by_relay(struct list_head* root, const struct sockaddr_storage* relayed);
-struct turn_allocation_t* turn_agent_allocation_find_by_address(struct list_head* root, const struct sockaddr_storage* host, const struct sockaddr_storage* peer);
+struct turn_allocation_t* turn_agent_allocation_find_by_relay(struct list_head* root, const struct sockaddr* relayed);
+struct turn_allocation_t* turn_agent_allocation_find_by_address(struct list_head* root, const struct sockaddr* host, const struct sockaddr* peer);
 int turn_agent_allocation_insert(struct stun_agent_t* turn, struct turn_allocation_t* allocate);
 int turn_agent_allocation_remove(struct stun_agent_t* turn, struct turn_allocation_t* allocate);
 

@@ -137,7 +137,7 @@ unsigned int crc32_lsb(unsigned int crc, const unsigned char *buffer, unsigned i
 	for (i = 0; i < size; i++) {
 		crc = crc32lsbtable[(crc ^ buffer[i]) & 0xff] ^ (crc >> 8);  
 	} 
-	return crc ;  
+	return crc ^ 0xFFFFFFFF;
 }
 
 unsigned int crc32(unsigned int crc, const unsigned char *buffer, unsigned int size)  

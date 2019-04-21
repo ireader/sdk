@@ -89,6 +89,7 @@ static int stun_attr_error_code_read(const struct stun_message_t* msg, const uin
 {
 	(void)msg;
 	be_read_uint32(data, &attr->v.errcode.code);
+	attr->v.errcode.code = (attr->v.errcode.code & 0xFF) + ((attr->v.errcode.code >> 8) & 0x07) * 100;
 	attr->v.errcode.reason_phrase = (char*)data + 4;
 	return 0;
 }
@@ -97,7 +98,7 @@ static int stun_attr_error_code_write(const struct stun_message_t* msg, uint8_t*
 {
 	(void)msg;
 	assert(attr->length >= 4);
-	be_write_uint32(data, attr->v.errcode.code);
+	be_write_uint32(data, (((attr->v.errcode.code / 100) & 0x07) << 8) | (attr->v.errcode.code % 100));
 	memmove(data + 4, attr->v.errcode.reason_phrase, attr->length - 4);
     if(0 != attr->length % 4)
         memset(data + attr->length, 0x20, 4 - (attr->length % 4)); // string fill with 0x20 ' '

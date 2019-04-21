@@ -31,7 +31,7 @@ int ice_checklist_destroy(struct ice_checklist_t** pl)
 		return -1;
 	
 	l = *pl;
-	ice_timer_stop(l->timer);
+	stun_timer_stop(l->timer);
 	ice_candidates_free(&l->locals);
 	ice_candidates_free(&l->remotes);
 	ice_candidate_pairs_free(&l->trigger);
@@ -238,7 +238,7 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 		{
 			pair = ice_candidate_pairs_get(component, j);
 			assert(ICE_CANDIDATE_PAIR_INPROGRESS == pair->state);
-			if (0 == socket_addr_compare(&pair->local.addr, &local) && 0 == socket_addr_compare(&pair->remote.addr, &remote))
+			if (0 == socket_addr_compare((const struct sockaddr*)&pair->local.addr, (const struct sockaddr*)&local) && 0 == socket_addr_compare((const struct sockaddr*)&pair->remote.addr, (const struct sockaddr*)&remote))
 			{
 				if (0 == code)
 				{
@@ -257,13 +257,14 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 	ice_checlist_update_state(l);
 
 	// stream done callback
+	return 0;
 }
 
 static int ice_checklist_bind(struct ice_checklist_t* l, struct ice_candidate_t *c)
 {
 	struct stun_request_t* req;
 	req = stun_request_create(l->stun, STUN_RFC_5389, ice_checklist_onbind, l);
-	stun_request_setaddr(req, STUN_PROTOCOL_UDP, &c->addr, &c->stun);
+	stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&c->addr, (const struct sockaddr*)&c->stun);
 	stun_request_setauth(req, req->auth.credential, req->auth.usr, req->auth.pwd, req->auth.realm, req->auth.nonce);
 	stun_message_add_uint32(&req->msg, STUN_ATTR_PRIORITY, c->priority);
 	if(l->nomination != ICE_REGULAR_NOMINATION) stun_message_add_flag(&req->msg, STUN_ATTR_USE_CANDIDATE);
@@ -282,7 +283,7 @@ static int ice_checklist_bind(struct ice_checklist_t* l, struct ice_candidate_t 
 // 3. Find the highest-priority pair in that check list that is in the Waiting state.
 // 4. Find the highest-priority pair in that check list that is in the Frozen state.
 // 5. Terminate the timer for that check list.
-static int ice_checklist_ontimer(void* param, void* id)
+static int ice_checklist_ontimer(void* param)
 {
 	int i, j;
 	struct darray_t* component;
@@ -340,7 +341,7 @@ static int ice_checklist_ontimer(void* param, void* id)
 	else
 	{
 		// terminate timer
-		ice_timer_stop(l->timer);
+		stun_timer_stop(l->timer);
 		l->timer = NULL;
 
 //		l->state = ICE_CHECKLIST_COMPLETED;

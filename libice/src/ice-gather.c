@@ -62,7 +62,7 @@ int ice_checklist_gather_stun_candidate(struct ice_checklist_t* l, ice_agent_ong
 		req = stun_request_create(l->stun, STUN_RFC_5389, ice_gather_onbind, l);
 		if (!req) continue;
 
-		stun_request_setaddr(req, STUN_PROTOCOL_UDP, &p->addr, &p->stun);
+		stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&p->addr, (const struct sockaddr*)&p->stun);
 		stun_request_setauth(req, l->auth->credential, l->auth->usr, l->auth->pwd, l->auth->realm, l->auth->nonce);
 		r = stun_agent_bind(req);
 		if (0 != r)

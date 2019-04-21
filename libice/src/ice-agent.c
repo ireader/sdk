@@ -17,14 +17,14 @@ struct ice_agent_t
 	void* param;
 };
 
-static int ice_stun_send(void* param, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote, const void* data, int bytes)
+static int ice_stun_send(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
 	struct ice_agent_t* ice;
 	ice = (struct ice_agent_t*)param;
 	return ice->handler.send(ice->param, protocol, local, remote, data, bytes);
 }
 
-static int ice_stun_auth(void* param, const char* usr, const char* realm, const char* nonce, char pwd[256], int *cred)
+static int ice_stun_auth(void* param, int cred, const char* usr, const char* realm, const char* nonce, char pwd[512])
 {
 	// rfc5245 7.1.2. Sending the Request
 	// A connectivity check MUST utilize the STUN short-term credential mechanism
@@ -32,8 +32,15 @@ static int ice_stun_auth(void* param, const char* usr, const char* realm, const 
 	struct ice_agent_t* ice;
 	(void)realm, (void)nonce;
 	ice = (struct ice_agent_t*)param;
-	*cred = STUN_CREDENTIAL_SHORT_TERM;
+	assert(STUN_CREDENTIAL_SHORT_TERM == cred);
 	return ice->handler.auth(ice->param, usr, pwd);
+}
+
+static int ice_stun_getnonce(void* param, char realm[128], char nonce[128])
+{
+	assert(0);
+	realm[0] = nonce[0] = 0;
+	return -1; (void)param;
 }
 
 static int ice_stun_onbind(void* param, stun_response_t* resp, const stun_request_t* req)
@@ -112,6 +119,7 @@ struct ice_agent_t* ice_create(struct ice_agent_handler_t* handler, void* param)
 	stun.send = ice_stun_send;
 	stun.auth = ice_stun_auth;
 	stun.onbind = ice_stun_onbind;
+	stun.getnonce = ice_stun_getnonce;
 
 	ice = (struct ice_agent_t*)calloc(1, sizeof(struct ice_agent_t));
 	if (ice)
@@ -138,7 +146,7 @@ int ice_destroy(struct ice_agent_t* ice)
 	return 0;
 }
 
-int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote, const void* data, int bytes)
+int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
 	return ice && ice->stun ? stun_agent_input(ice->stun, protocol, local, remote, data, bytes) : -1;
 }

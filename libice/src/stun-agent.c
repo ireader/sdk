@@ -100,12 +100,11 @@ int stun_message_send(stun_agent_t* stun, struct stun_message_t* msg, int protoc
 	if (0 != r) return r;
 
 	bytes = msg->header.length + STUN_HEADER_SIZE;
-	r = stun->handler.send(stun->param, protocol, local, remote, data, bytes);
-	return r == bytes ? 0 : -1;
+	return stun->handler.send(stun->param, protocol, (const struct sockaddr*)local, (const struct sockaddr*)remote, data, bytes);
 }
 
 // rfc5389 7.2.1. Sending over UDP (p13)
-static void stun_request_ontimer(void* param, void* tid)
+static void stun_request_ontimer(void* param)
 {
 	stun_request_t* req;
 	req = (stun_request_t*)param;
@@ -159,22 +158,22 @@ static int stun_agent_onrequest(stun_agent_t* stun, struct stun_request_t* req)
 	switch (STUN_MESSAGE_METHOD(req->msg.header.msgtype))
 	{
 	case STUN_METHOD_BIND:
-		return stun_agent_onbind(req, resp);
+		return stun_server_onbind(req, resp);
 
 	case STUN_METHOD_SHARED_SECRET:
-		return stun_agent_onshared_secret(req, resp);
+		return stun_server_onshared_secret(req, resp);
 
 	case STUN_METHOD_ALLOCATE:
-		return turn_agent_onallocate(req, resp);
+		return turn_server_onallocate(req, resp);
 
 	case STUN_METHOD_REFRESH:
-		return turn_agent_onrefresh(req, resp);
+		return turn_server_onrefresh(req, resp);
 
 	case STUN_METHOD_CREATE_PERMISSION:
-		return turn_agent_oncreate_permission(req, resp);
+		return turn_server_oncreate_permission(req, resp);
 
 	case STUN_METHOD_CHANNEL_BIND:
-		return turn_agent_onchannel_bind(req, resp);
+		return turn_server_onchannel_bind(req, resp);
 
 	default:
 		assert(0);
@@ -351,7 +350,7 @@ static int stun_agent_parse_attr(stun_agent_t* stun, struct stun_request_t* req)
 	return 0;
 }
 
-int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote, const void* data, int bytes)
+int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
 	int r;
 	struct stun_request_t req;
@@ -359,7 +358,7 @@ int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr_sto
 	struct turn_allocation_t* allocate;
 
 	// 0x4000 ~ 0x7FFFF
-	if (bytes > 0 && 0x40 == (0xC0 & ((const uint8_t*)data)[0]))
+	if (bytes > 0 && 0x40 == (0xC0 & ((const uint8_t*)data)[0]) && local && remote)
 	{
 		allocate = turn_agent_allocation_find_by_address(&stun->turnclients, local, remote);
 		if (allocate)
@@ -376,9 +375,12 @@ int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr_sto
 		return 0;
 	}
 
-	allocate = turn_agent_allocation_find_by_relay(&stun->turnservers, local);
-	if (allocate)
-		return turn_agent_relay(stun, allocate, remote, data, bytes);
+	if (local)
+	{
+		allocate = turn_agent_allocation_find_by_relay(&stun->turnservers, local);
+		if (allocate)
+			return turn_server_relay(stun, allocate, remote, data, bytes);
+	}
 
 	memset(&req, 0, sizeof(req));
 	req.stun = stun;

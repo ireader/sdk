@@ -16,7 +16,7 @@ static int stun_server_response_failure(struct stun_response_t* resp, int code, 
 }
 
 // rfc5766 6.2. Receiving an Allocate Request (p24)
-int turn_agent_onallocate(const struct stun_request_t* req, struct stun_response_t* resp)
+int turn_server_onallocate(const struct stun_request_t* req, struct stun_response_t* resp)
 {
 	int r = 0;
 	int even_port;
@@ -27,7 +27,7 @@ int turn_agent_onallocate(const struct stun_request_t* req, struct stun_response
 	// 1. long-term credential auth
 
 	// 2. checks the 5-tuple
-	allocate = turn_agent_allocation_find_by_address(&resp->stun->turnservers, &req->addr.host, &req->addr.peer);
+	allocate = turn_agent_allocation_find_by_address(&resp->stun->turnservers, (const struct sockaddr*)&req->addr.host, (const struct sockaddr*)&req->addr.peer);
 	if (NULL != allocate && allocate->expire < system_clock())
 		return stun_server_response_failure(resp, 437, "Allocation Mismatch");
 
@@ -86,18 +86,18 @@ int turn_agent_onallocate(const struct stun_request_t* req, struct stun_response
 
 	// reply
 	r = 0 == r ? stun_message_add_uint32(&resp->msg, STUN_ATTR_LIFETIME, lifetime) : r;
-	r = 0 == r ? stun_message_add_address(&resp->msg, STUN_ATTR_XOR_MAPPED_ADDRESS, &allocate->addr.peer) : r;
+	r = 0 == r ? stun_message_add_address(&resp->msg, STUN_ATTR_XOR_MAPPED_ADDRESS, (const struct sockaddr*)&allocate->addr.peer) : r;
 	return 0 == r ? resp->stun->handler.onallocate(resp->stun->param, resp, req) : r;
 }
 
-int turn_agent_allocate_response(struct stun_response_t* resp, const struct sockaddr_storage* relay, int code, const char* pharse)
+int turn_agent_allocate_response(struct stun_response_t* resp, const struct sockaddr* relay, int code, const char* pharse)
 {
 	int r;
 	struct stun_message_t* msg;
 	struct turn_allocation_t* allocate;
 
 	msg = &resp->msg;
-	allocate = turn_agent_allocation_find_by_address(&resp->stun->turnservers, &resp->addr.host, &resp->addr.peer);
+	allocate = turn_agent_allocation_find_by_address(&resp->stun->turnservers, (const struct sockaddr*)&resp->addr.host, (const struct sockaddr*)&resp->addr.peer);
 	if (!allocate)
 		return stun_server_response_failure(resp, 437, "Allocation Mismatch");
 
@@ -105,8 +105,8 @@ int turn_agent_allocate_response(struct stun_response_t* resp, const struct sock
 	{
 		// alloc relayed transport address
 		allocate->expire += system_clock();
-		memcpy(&allocate->addr.relay, relay, sizeof(struct sockaddr_storage));
-		r = stun_message_add_address(&resp->msg, STUN_ATTR_XOR_RELAYED_ADDRESS, &allocate->addr.relay);
+		memcpy(&allocate->addr.relay, relay, socket_addr_len(relay));
+		r = stun_message_add_address(&resp->msg, STUN_ATTR_XOR_RELAYED_ADDRESS, (const struct sockaddr*)&allocate->addr.relay);
 
 		msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_SUCCESS_RESPONSE, STUN_METHOD_ALLOCATE);
 		r = 0 == r ? stun_message_add_credentials(msg, &resp->auth) : r;
@@ -124,13 +124,13 @@ int turn_agent_allocate_response(struct stun_response_t* resp, const struct sock
 	return 0 == r ? stun_response_send(resp->stun, resp) : r;
 }
 
-int turn_agent_onrefresh(const struct stun_request_t* req, struct stun_response_t* resp)
+int turn_server_onrefresh(const struct stun_request_t* req, struct stun_response_t* resp)
 {
 	uint32_t lifetime;
 	const struct stun_attr_t* attr;
 	struct turn_allocation_t* allocate;
 
-	allocate = turn_agent_allocation_find_by_address(&resp->stun->turnservers, &req->addr.host, &req->addr.peer);
+	allocate = turn_agent_allocation_find_by_address(&resp->stun->turnservers, (const struct sockaddr*)&req->addr.host, (const struct sockaddr*)&req->addr.peer);
 	if (NULL != allocate)
 		return stun_server_response_failure(resp, 437, "Allocation Mismatch");
 
@@ -178,16 +178,16 @@ static int turn_agent_add_permission(void* param, const struct stun_attr_t* attr
 {
 	struct turn_allocation_t* allocate;
 	allocate = (struct turn_allocation_t*)param;
-	return turn_allocation_add_permission(allocate, &attr->v.addr);
+	return turn_allocation_add_permission(allocate, (const struct sockaddr*)&attr->v.addr);
 }
 
-int turn_agent_oncreate_permission(const struct stun_request_t* req, struct stun_response_t* resp)
+int turn_server_oncreate_permission(const struct stun_request_t* req, struct stun_response_t* resp)
 {
 	int r;
 	struct turn_allocation_t* allocate;
 	struct turn_permission_t* permission;
 
-	allocate = turn_agent_allocation_find_by_address(&resp->stun->turnservers, &req->addr.host, &req->addr.peer);
+	allocate = turn_agent_allocation_find_by_address(&resp->stun->turnservers, (const struct sockaddr*)&req->addr.host, (const struct sockaddr*)&req->addr.peer);
 	if (NULL != allocate)
 		return stun_server_response_failure(resp, 437, "Allocation Mismatch");
 
@@ -208,7 +208,7 @@ int turn_agent_oncreate_permission(const struct stun_request_t* req, struct stun
 
 	// reply
 	permission = (struct turn_permission_t*)darray_get(&allocate->permissions, 0);
-	return resp->stun->handler.onpermission(resp->stun->param, resp, req, &permission->addr);
+	return resp->stun->handler.onpermission(resp->stun->param, resp, req, (const struct sockaddr*)&permission->addr);
 }
 
 int turn_agent_create_permission_response(struct stun_response_t* resp, int code, const char* pharse)
@@ -233,14 +233,14 @@ int turn_agent_create_permission_response(struct stun_response_t* resp, int code
 	return 0 == r ? stun_response_send(resp->stun, resp) : r;
 }
 
-int turn_agent_onchannel_bind(const struct stun_request_t* req, struct stun_response_t* resp)
+int turn_server_onchannel_bind(const struct stun_request_t* req, struct stun_response_t* resp)
 {
 	int r;
 	const struct stun_attr_t* peer;
 	const struct stun_attr_t* channel;
 	struct turn_allocation_t* allocate;
 
-	allocate = turn_agent_allocation_find_by_address(&resp->stun->turnservers, &req->addr.host, &req->addr.peer);
+	allocate = turn_agent_allocation_find_by_address(&resp->stun->turnservers, (const struct sockaddr*)&req->addr.host, (const struct sockaddr*)&req->addr.peer);
 	if (NULL != allocate)
 		return stun_server_response_failure(resp, 437, "Allocation Mismatch");
 
@@ -255,13 +255,13 @@ int turn_agent_onchannel_bind(const struct stun_request_t* req, struct stun_resp
 	//stun_message_add_error(&resp->msg, 403, "Forbidden)");
 
 	// A ChannelBind transaction also creates or refreshes a permission towards the peer
-	r = turn_allocation_add_permission(allocate, &peer->v.addr);
-	r = 0 == r ? turn_allocation_add_channel(allocate, &peer->v.addr, channel->v.u32 >> 16) : r;
+	r = turn_allocation_add_permission(allocate, (const struct sockaddr*)&peer->v.addr);
+	r = 0 == r ? turn_allocation_add_channel(allocate, (const struct sockaddr*)&peer->v.addr, channel->v.u32 >> 16) : r;
 	if (0 != r)
 		return stun_server_response_failure(resp, 508, "Insufficient Capacity)");
 
 	// reply
-	return resp->stun->handler.onchannel(resp->stun->param, resp, req, &peer->v.addr, (channel->v.u32) >> 16);
+	return resp->stun->handler.onchannel(resp->stun->param, resp, req, (const struct sockaddr*)&peer->v.addr, (channel->v.u32) >> 16);
 }
 
 int turn_agent_channel_bind_response(struct stun_response_t* resp, int code, const char* pharse)
@@ -287,7 +287,7 @@ int turn_agent_channel_bind_response(struct stun_response_t* resp, int code, con
 }
 
 /// turn server relay peer to client by DATA indication
-static int turn_server_relay_data(struct stun_agent_t* turn, const struct turn_allocation_t* allocate, const struct sockaddr_storage* peer, const void* data, int bytes)
+static int turn_server_relay_data(struct stun_agent_t* turn, const struct turn_allocation_t* allocate, const struct sockaddr* peer, const void* data, int bytes)
 {
 	int r;
 	struct stun_message_t msg;
@@ -325,10 +325,10 @@ static int turn_server_relay_channel_data(struct stun_agent_t* turn, const struc
 	ptr[3] = (uint8_t)(bytes);
 	memcpy(ptr + 4, data, bytes);
 
-	return turn->handler.send(turn->param, allocate->addr.protocol, &allocate->addr.host, &allocate->addr.peer, ptr, bytes+4);
+	return turn->handler.send(turn->param, allocate->addr.protocol, (const struct sockaddr*)&allocate->addr.host, (const struct sockaddr*)&allocate->addr.peer, ptr, bytes+4);
 }
 
-int turn_agent_relay(struct stun_agent_t* turn, const struct turn_allocation_t* allocate, const struct sockaddr_storage* peer, const void* data, int bytes)
+int turn_server_relay(struct stun_agent_t* turn, const struct turn_allocation_t* allocate, const struct sockaddr* peer, const void* data, int bytes)
 {
 	const struct turn_channel_t* channel;
 	const struct turn_permission_t* permission;
@@ -348,7 +348,7 @@ int turn_server_onsend(struct stun_agent_t* turn, const struct stun_request_t* r
 	const struct stun_attr_t* attr;
 	struct turn_allocation_t* allocate;
 	
-	allocate = turn_agent_allocation_find_by_address(&req->stun->turnservers, &req->addr.host, &req->addr.peer);
+	allocate = turn_agent_allocation_find_by_address(&req->stun->turnservers, (const struct sockaddr*)&req->addr.host, (const struct sockaddr*)&req->addr.peer);
 	if (NULL == allocate || allocate->expire < system_clock())
 		return 0; // discard
 
@@ -362,7 +362,7 @@ int turn_server_onsend(struct stun_agent_t* turn, const struct stun_request_t* r
 	attr = stun_message_attr_find(&req->msg, STUN_ATTR_DATA);
 	if (!attr) return 0; // discard
 
-	return turn->handler.send(turn->param, allocate->peertransport, &allocate->addr.relay, &peer, attr->v.ptr, attr->length);
+	return turn->handler.send(turn->param, allocate->peertransport, (const struct sockaddr*)&allocate->addr.relay, (const struct sockaddr*)&peer, attr->v.ptr, attr->length);
 }
 
 // ChannelData from client
@@ -376,7 +376,7 @@ int turn_server_onchannel_data(struct stun_agent_t* turn, struct turn_allocation
 	length = ((uint16_t)data[2] << 8) | (uint16_t)data[3];
 	channel = turn_allocation_find_channel(allocate, number);
 	if (channel && length + 4 <= bytes)
-		turn->handler.send(turn->param, allocate->peertransport, &allocate->addr.relay, &channel->addr, (const uint8_t*)data + 4, length);
+		turn->handler.send(turn->param, allocate->peertransport, (const struct sockaddr*)&allocate->addr.relay, (const struct sockaddr*)&channel->addr, (const uint8_t*)data + 4, length);
 	
 	return 0;
 }

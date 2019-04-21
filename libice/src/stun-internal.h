@@ -22,13 +22,6 @@
 #define STUN_MESSAGE_CLASS(type)			((((type) >> 7) & 0x02) | (((type) >> 4) & 0x01))
 #define STUN_MESSAGE_METHOD(type)			((((type) >> 2) & 0x0F80) | (((type) >> 1) & 0x0070) | ((type) & 0x000F))
 
-enum 
-{
-	STUN_PROTOCOL_UDP = 0,
-	STUN_PROTOCOL_TCP,
-	STUN_PROTOCOL_TLS,
-};
-
 struct stun_address_t
 {
 	int protocol; // STUN_PROTOCOL_UDP
@@ -103,7 +96,7 @@ struct stun_response_t* stun_response_create(struct stun_request_t* req);
 int stun_response_destroy(struct stun_response_t** pp);
 
 int stun_agent_auth(stun_agent_t* stun, struct stun_request_t* req, const void* data, int bytes);
-int stun_agent_onbind(const struct stun_request_t* req, struct stun_response_t* resp);
-int stun_agent_onshared_secret(const struct stun_request_t* req, struct stun_response_t* resp);
+int stun_server_onbind(const struct stun_request_t* req, struct stun_response_t* resp);
+int stun_server_onshared_secret(const struct stun_request_t* req, struct stun_response_t* resp);
 
 #endif /* !_stun_internal_h_ */

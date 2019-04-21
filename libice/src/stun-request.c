@@ -95,17 +95,17 @@ int stun_agent_discard(struct stun_response_t* resp)
 	return stun_response_destroy(&resp);
 }
 
-int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote)
+int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockaddr* local, const struct sockaddr* remote)
 {
-	if (!local || !remote || (STUN_PROTOCOL_UDP != protocol && STUN_PROTOCOL_TCP != protocol && STUN_PROTOCOL_TLS != protocol))
+	if (!remote || (STUN_PROTOCOL_UDP != protocol && STUN_PROTOCOL_TCP != protocol && STUN_PROTOCOL_TLS != protocol))
 	{
 		assert(0);
 		return -1;
 	}
 
 	req->addr.protocol = protocol;
-	memcpy(&req->addr.host, local, sizeof(struct sockaddr_storage));
-	memcpy(&req->addr.peer, remote, sizeof(struct sockaddr_storage));
+	memcpy(&req->addr.host, local, local ? socket_addr_len(local) : 0);
+	memcpy(&req->addr.peer, remote, remote ? socket_addr_len(remote) : 0);
 	return 0;
 }
 
@@ -144,9 +144,9 @@ int stun_request_setauth(stun_request_t* req, int credential, const char* usr, c
 	return 0;
 }
 
-int stun_request_getauth(const stun_request_t* req, char usr[256], char pwd[256])
+int stun_request_getauth(const stun_request_t* req, char usr[512], char pwd[512])
 {
-	if (usr) snprintf(usr, 256, "%s", req->auth.usr);
-	if (pwd) snprintf(usr, 256, "%s", req->auth.pwd);
+	if (usr) snprintf(usr, 512, "%s", req->auth.usr);
+	if (pwd) snprintf(usr, 512, "%s", req->auth.pwd);
 	return 0;
 }
