@@ -5,6 +5,7 @@
 #include "stun-attr.h"
 #include "stun-proto.h"
 #include "stun-message.h"
+#include "sys/locker.h"
 #include "list.h"
 #include <stdint.h>
 #include <assert.h>
@@ -21,37 +22,57 @@
 #define STUN_MESSAGE_CLASS(type)			((((type) >> 7) & 0x02) | (((type) >> 4) & 0x01))
 #define STUN_MESSAGE_METHOD(type)			((((type) >> 2) & 0x0F80) | (((type) >> 1) & 0x0070) | ((type) & 0x000F))
 
-enum 
+struct stun_address_t
 {
-	STUN_PROTOCOL_UDP = 0,
-	STUN_PROTOCOL_TCP,
-	STUN_PROTOCOL_TLS,
+	int protocol; // STUN_PROTOCOL_UDP
+	struct sockaddr_storage host; // local address
+	struct sockaddr_storage peer; // remote address
+	struct sockaddr_storage relay;
+	struct sockaddr_storage reflexive;
 };
 
-struct stun_transaction_t
+struct stun_request_t
 {
 	struct list_head link; // 
 	struct stun_message_t msg;
 
 	int ref;
 	int rfc; // version
+	int timeout;
+	void* timer;
 	stun_agent_t* stun;
 
 	void* param;
-	stun_transaction_handler handler;
-	
-	int protocol; // STUN_PROTOCOL_UDP
-	struct sockaddr_storage host;
-	struct sockaddr_storage remote;
-	struct sockaddr_storage relay;
-	struct sockaddr_storage reflexive;
+	stun_request_handler handler;
 
-	struct stun_credetial_t auth;
+	void* ondataparam;
+	turn_agent_ondata ondata;
+	
+	struct stun_address_t addr;
+	struct stun_credential_t auth;
+};
+
+struct stun_response_t
+{
+	struct stun_message_t msg;
+
+	int rfc; // version
+	void* ptr; // user-defined
+	stun_agent_t* stun;
+
+	struct stun_address_t addr;
+	struct stun_credential_t auth;
 };
 
 struct stun_agent_t
 {
-	struct list_head root;
+	locker_t locker;
+	struct list_head requests; // stun/turn requests
+	struct list_head turnclients; // client allocations
+	struct list_head turnservers; // server allocations
+
+	int rfc; // rfc version
+	int auth_term; // 0-short term, 1-long term
 
 	// for RFC3489 CHANGE-REQUEST
 	struct sockaddr_storage A1, A2;
@@ -60,15 +81,22 @@ struct stun_agent_t
 	void* param;
 };
 
-int stun_transaction_addref(struct stun_transaction_t* t);
-int stun_transaction_release(struct stun_transaction_t* t);
-int stun_transaction_destroy(struct stun_transaction_t** pp);
-int stun_transaction_send(stun_agent_t* stun, stun_transaction_t* t);
-struct stun_transaction_t* stun_response_create(struct stun_transaction_t* req);
+struct stun_request_t* stun_agent_find(stun_agent_t* stun, const struct stun_message_t* msg);
+int stun_agent_insert(stun_agent_t* stun, stun_request_t* req);
+int stun_agent_remove(stun_agent_t* stun, stun_request_t* req);
 
+int stun_request_addref(struct stun_request_t* req);
+int stun_request_release(struct stun_request_t* req);
+int stun_request_destroy(struct stun_request_t** preq);
+int stun_request_send(stun_agent_t* stun, stun_request_t* req);
+int stun_response_send(stun_agent_t* stun, stun_response_t* resp);
 int stun_message_send(stun_agent_t* stun, struct stun_message_t* msg, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote);
 
-int stun_agent_onbind(const struct stun_transaction_t* req, struct stun_transaction_t* resp);
-int stun_agent_onshared_secret(const struct stun_transaction_t* req, struct stun_transaction_t* resp);
+struct stun_response_t* stun_response_create(struct stun_request_t* req);
+int stun_response_destroy(struct stun_response_t** pp);
+
+int stun_agent_auth(stun_agent_t* stun, struct stun_request_t* req, const void* data, int bytes);
+int stun_server_onbind(const struct stun_request_t* req, struct stun_response_t* resp);
+int stun_server_onshared_secret(const struct stun_request_t* req, struct stun_response_t* resp);
 
 #endif /* !_stun_internal_h_ */

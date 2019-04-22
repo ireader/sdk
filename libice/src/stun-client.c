@@ -7,36 +7,28 @@
 
 // rfc3489 8.2 Shared Secret Requests (p13)
 // rfc3489 9.3 Formulating the Binding Request (p17)
-int stun_agent_bind(stun_transaction_t* req)
+int stun_agent_bind(stun_request_t* req)
 {
 	int r;
 	struct stun_message_t* msg;
 	msg = &req->msg;
 	msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_REQUEST, STUN_METHOD_BIND);
+	assert(msg->header.msgtype = 0x0001);
 
 	r = stun_message_add_credentials(msg, &req->auth);
 	r = 0 == r ? stun_message_add_fingerprint(msg) : r;
-	return 0 == r ? stun_transaction_send(req->stun, req) : r;
+	return 0 == r ? stun_request_send(req->stun, req) : r;
 }
 
 // rfc3489 8.1 Binding Requests (p10)
 // rfc3489 9.2 Obtaining a Shared Secret (p15)
-int stun_agent_shared_secret(stun_transaction_t* req)
+int stun_agent_shared_secret(stun_request_t* req)
 {
 	struct stun_message_t* msg;
 	msg = &req->msg;
 
 	// This request has no attributes, just the header
 	msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_REQUEST, STUN_METHOD_SHARED_SECRET);
-	return stun_transaction_send(req->stun, req);
-}
-
-int stun_agent_indication(stun_transaction_t* req)
-{
-	struct stun_message_t* msg;
-	msg = &req->msg;
-
-	// This request has no attributes, just the header
-	msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_INDICATION, STUN_METHOD_BIND);
-	return stun_transaction_send(req->stun, req);
+	assert(msg->header.msgtype = 0x0002);
+	return stun_request_send(req->stun, req);
 }

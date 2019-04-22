@@ -142,17 +142,17 @@ int stun_message_add_string(struct stun_message_t* msg, uint16_t attr, const cha
 {
 	msg->attrs[msg->nattrs].type = attr;
 	msg->attrs[msg->nattrs].length = (uint16_t)strlen(value);
-	msg->attrs[msg->nattrs].v.ptr = value;
+	msg->attrs[msg->nattrs].v.ptr = (void*)value;
 	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
 	msg->nattrs += 1;
 	return 0;
 }
 
-int stun_message_add_address(struct stun_message_t* msg, uint16_t attr, const struct sockaddr_storage* addr)
+int stun_message_add_address(struct stun_message_t* msg, uint16_t attr, const struct sockaddr* addr)
 {
 	msg->attrs[msg->nattrs].type = attr;
-	msg->attrs[msg->nattrs].length = addr->ss_family == AF_INET6 ? 17 : 5;
-	memcpy(&msg->attrs[msg->nattrs].v.addr, addr, sizeof(*addr));
+	msg->attrs[msg->nattrs].length = addr->sa_family == AF_INET6 ? 17 : 5;
+	memcpy(&msg->attrs[msg->nattrs].v.addr, addr, socket_addr_len(addr));
 	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
 	msg->nattrs += 1;
 	return 0;
@@ -162,7 +162,7 @@ int stun_message_add_data(struct stun_message_t* msg, uint16_t attr, const void*
 {
 	msg->attrs[msg->nattrs].type = attr;
 	msg->attrs[msg->nattrs].length = (uint16_t)len;
-	msg->attrs[msg->nattrs].v.ptr = value;
+	msg->attrs[msg->nattrs].v.ptr = (void*)value;
 	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
 	msg->nattrs += 1;
 	return 0;
@@ -170,10 +170,11 @@ int stun_message_add_data(struct stun_message_t* msg, uint16_t attr, const void*
 
 int stun_message_add_error(struct stun_message_t* msg, uint32_t code, const char* phrase)
 {
+	assert(strlen(phrase) + 4 < 0xFF);
 	msg->attrs[msg->nattrs].type = STUN_ATTR_ERROR_CODE;
-	msg->attrs[msg->nattrs].length = 4 + strlen(phrase);
+	msg->attrs[msg->nattrs].length = (uint16_t)(4 + strlen(phrase));
 	msg->attrs[msg->nattrs].v.errcode.code = code;
-	msg->attrs[msg->nattrs].v.errcode.reason_phrase = phrase;
+	msg->attrs[msg->nattrs].v.errcode.reason_phrase = (char*)phrase;
 	msg->header.length += 4 + ALGIN_4BYTES(msg->attrs[msg->nattrs].length);
 	msg->nattrs += 1;
 	return 0;
@@ -191,11 +192,11 @@ static void long_term_key(uint8_t md5[16], const char* username, const char* pas
 	MD5Final(md5, &ctx);
 }
 
-int stun_message_add_credentials(struct stun_message_t* msg, const struct stun_credetial_t* auth)
+int stun_message_add_credentials(struct stun_message_t* msg, const struct stun_credential_t* auth)
 {
 	int r, nkey;
 	uint8_t md5[16];
-	uint8_t *key;
+	const uint8_t *key;
 	uint8_t data[1600];
 
 	if (!*auth->usr|| !*auth->pwd)
@@ -217,7 +218,7 @@ int stun_message_add_credentials(struct stun_message_t* msg, const struct stun_c
 	}
 	else
 	{
-		key = auth->pwd;
+		key = (const uint8_t *)auth->pwd;
 		nkey = strlen(auth->pwd);
 	}
 
@@ -255,17 +256,92 @@ int stun_message_add_fingerprint(struct stun_message_t* msg)
 		return r;
 
     crc32_lsb_init();
-    v = crc32_lsb(0xFFFFFFFF, data, msg->header.length + STUN_HEADER_SIZE - 8);
+	v = crc32_lsb(0xFFFFFFFF, data, msg->header.length + STUN_HEADER_SIZE - 8);
     msg->attrs[msg->nattrs].v.u32 = v ^ STUN_FINGERPRINT_XOR;
     msg->nattrs += 1;
 	return 0;
+}
+
+int stun_message_check_integrity(const uint8_t* data, int bytes, const struct stun_message_t* msg, const struct stun_credential_t* auth)
+{
+	int nattrs;
+	uint16_t len;
+	uint8_t md5[16];
+	uint8_t sha1[20];
+	HMACContext context;
+
+	if (msg->header.length + STUN_HEADER_SIZE != bytes || msg->header.length < 24)
+		return -1;
+
+	if (STUN_CREDENTIAL_LONG_TERM == auth->credential)
+	{
+		long_term_key(md5, auth->usr, auth->pwd, auth->realm);
+		hmacReset(&context, SHA1, md5, sizeof(md5));
+	}
+	else
+	{
+		hmacReset(&context, SHA1, (const uint8_t *)auth->pwd, strlen(auth->pwd));
+	}
+
+	len = msg->header.length;
+	nattrs = msg->nattrs;
+	if (nattrs > 0 && STUN_ATTR_FIGNERPRINT == msg->attrs[nattrs - 1].type && msg->header.length > 8)
+	{
+		len -= 8;
+		nattrs--;
+	}
+	if (nattrs < 1 || STUN_ATTR_MESSAGE_INTEGRITY != msg->attrs[nattrs - 1].type || msg->header.length < 24)
+		return -1;
+
+	md5[0] = (uint8_t)(len >> 8);
+	md5[1] = (uint8_t)(len & 0xFF);
+	hmacInput(&context, data, 2); // stun header message type
+	hmacInput(&context, md5, 2); // stun header message length (filter fingerprint)
+	hmacInput(&context, data + 4, 16 /*stun remain header*/ + len /* payload except fingerprint */ - (sizeof(sha1) + 4) /* sha1 */);
+	hmacResult(&context, sha1);
+	return memcmp(msg->attrs[nattrs - 1].v.sha1, sha1, sizeof(sha1));
+}
+
+int stun_message_check_fingerprint(const uint8_t* data, int bytes, const struct stun_message_t* msg)
+{
+	int nattrs;
+	uint16_t len;
+	uint32_t v;
+
+	if (msg->header.length + STUN_HEADER_SIZE != bytes)
+		return -1;
+
+	nattrs = msg->nattrs;
+	be_read_uint16(data + 2, &len);
+	if (nattrs < 1 || STUN_ATTR_FIGNERPRINT != msg->attrs[nattrs - 1].type)
+		return -1;
+
+	crc32_lsb_init();
+	v = crc32_lsb(0xFFFFFFFF, data, msg->header.length + STUN_HEADER_SIZE - 8);
+	v = v ^ STUN_FINGERPRINT_XOR;
+
+	return msg->attrs[nattrs-1].v.u32 - v;
+}
+
+int stun_message_has_integrity(const struct stun_message_t* msg)
+{
+	int nattrs;
+	nattrs = msg->nattrs;
+	if (nattrs > 0 && STUN_ATTR_FIGNERPRINT == msg->attrs[msg->nattrs - 1].type)
+		nattrs--;
+	return nattrs > 0 && STUN_ATTR_MESSAGE_INTEGRITY == msg->attrs[msg->nattrs - 1].type ? 1 : 0;
+}
+
+int stun_message_has_fingerprint(const struct stun_message_t* msg)
+{
+	return msg->nattrs > 0 && STUN_ATTR_FIGNERPRINT == msg->attrs[msg->nattrs - 1].type ? 1 : 0;
 }
 
 #if defined(DEBUG) || defined(_DEBUG)
 // https://tools.ietf.org/html/rfc5769#section-2.2
 void stun_message_test(void)
 {
-	struct stun_credetial_t auth;
+	struct stun_credential_t auth;
 	const char* software = "STUN test client";
 	const uint8_t transaction[] = { 0xb7, 0xe7, 0xa7, 0x01, 0xbc, 0x34, 0xd6, 0x86, 0xfa, 0x87, 0xdf, 0xae };
     const uint8_t result[] = {
@@ -286,7 +362,7 @@ void stun_message_test(void)
 	snprintf(auth.usr, sizeof(auth.usr), "%s", "evtj:h6vY");
 	snprintf(auth.pwd, sizeof(auth.pwd), "%s", "VOkJxbRl1RmTxUk/WvJxBt");
 
-    msg.header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_REQUEST, STUN_METHOD_BIND);
+    msg.header.msgtype = STUN_METHOD_BIND;
     msg.header.length = 0;
     msg.header.cookie = STUN_MAGIC_COOKIE;
     memcpy(msg.header.tid, transaction, sizeof(msg.header.tid));
@@ -300,5 +376,7 @@ void stun_message_test(void)
     r = 0 == r ? stun_message_write(data, sizeof(data), &msg) : r;
     assert(0 == r);
     assert(sizeof(result) == msg.header.length + STUN_HEADER_SIZE && 0 == memcmp(data, result, sizeof(result)));
+	assert(0 == stun_message_check_integrity(data, msg.header.length + STUN_HEADER_SIZE, &msg, &auth));
+	assert(0 == stun_message_check_fingerprint(data, msg.header.length + STUN_HEADER_SIZE, &msg));
 }
 #endif

@@ -1188,7 +1188,7 @@ static inline int socket_addr_len(const struct sockaddr* addr)
 #if defined(AF_NETLINK)
 	//case AF_NETLINK:return sizeof(struct sockaddr_nl);
 #endif
-	default: return -1;
+	default: return 0;
 	}
 }
 

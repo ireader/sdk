@@ -57,29 +57,56 @@ int tls_socket_close(struct tls_socket_t* tls)
     return 0;
 }
 
+static int tls_connect(struct tls_socket_t* tls)
+{
+	int r;
+	tls->ctx = SSL_CTX_new(SSLv23_client_method());
+	if (!tls->ctx)
+		return -1;
+
+	socket_setnonblock(tls->tcp, 0);
+	tls->ssl = SSL_new(tls->ctx);
+	SSL_set_fd(tls->ssl, tls->tcp);
+	r = SSL_connect(tls->ssl);
+	return 1 == r ? 0 : -1;
+}
+
 struct tls_socket_t* tls_socket_connect(const char* host, unsigned int port, int timeout)
 {
-    int r;
     struct tls_socket_t* tls;
     tls = (struct tls_socket_t*)calloc(1, sizeof(*tls));
     
     tls->tcp = socket_connect_host(host, (u_short)port, timeout);
     if(socket_invalid == tls->tcp)
     {
-        free(tls);
+		tls_socket_close(tls);
         return NULL;
     }
     
-    tls->ctx = SSL_CTX_new(SSLv23_client_method());
-    if (tls->ctx)
-    {
-        socket_setnonblock(tls->tcp, 0);
-        tls->ssl = SSL_new(tls->ctx);
-        SSL_set_fd(tls->ssl, tls->tcp);
-        r = SSL_connect(tls->ssl);
-        if(0 == r)
-            return tls;
-    }
+	if(0 == tls_connect(tls))
+		return tls;
+    
+	ERR_get_error();
+    tls_socket_close(tls);
+    return NULL;
+}
+
+tls_socket_t* tls_socket_connect2(const struct sockaddr* addr, int timeout)
+{
+	int r;
+	struct tls_socket_t* tls;
+	tls = (struct tls_socket_t*)calloc(1, sizeof(*tls));
+
+	tls->tcp = socket_tcp();
+	r = socket_connect_by_time(tls->tcp, addr, socket_addr_len(addr), timeout);
+	if (0 != r)
+	{
+		tls_socket_close(tls);
+		return NULL;
+	}
+
+	if(0 == tls_connect(tls))
+		return tls;
     
     ERR_print_errors_fp(stderr);
     tls_socket_close(tls);

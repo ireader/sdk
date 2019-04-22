@@ -2,7 +2,7 @@
 #include "ice-candidates.h"
 #include "stun-internal.h"
 
-struct ice_checklist_t* ice_checklist_create(stun_agent_t* stun, const struct stun_credetial_t* auth, struct ice_checklist_handler_t* handler, void* param)
+struct ice_checklist_t* ice_checklist_create(stun_agent_t* stun, const struct stun_credential_t* auth, struct ice_checklist_handler_t* handler, void* param)
 {
 	struct ice_checklist_t* l;
 	l = (struct ice_checklist_t*)calloc(1, sizeof(struct ice_checklist_t));
@@ -31,7 +31,7 @@ int ice_checklist_destroy(struct ice_checklist_t** pl)
 		return -1;
 	
 	l = *pl;
-	ice_timer_stop(l->timer);
+	stun_timer_stop(l->timer);
 	ice_candidates_free(&l->locals);
 	ice_candidates_free(&l->remotes);
 	ice_candidate_pairs_free(&l->trigger);
@@ -152,7 +152,7 @@ int ice_checklist_build(struct ice_checklist_t* l)
 	return 0;
 }
 
-static int ice_checklist_onroleconflict(void* param, const stun_transaction_t* resp, int code, const char* phrase)
+static int ice_checklist_onroleconflict(void* param, const stun_request_t* resp, int code, const char* phrase)
 {
 	// TODO
 	assert(0);
@@ -188,13 +188,13 @@ static void ice_checlist_update_state(struct ice_checklist_t* l)
 }
 
 // rfc5245 7.1.3.2.1. Discovering Peer Reflexive Candidates (p43)
-static void ice_checlist_add_peer_reflexive(struct ice_checklist_t* l, const stun_transaction_t* resp)
+static void ice_checlist_add_peer_reflexive(struct ice_checklist_t* l, const stun_request_t* resp)
 {
 	struct ice_candidate_t c, *local;
 	const struct stun_attr_t* priority;
 
 	memset(&c, 0, sizeof(struct ice_candidate_t));
-	stun_transaction_getaddr(resp, &c.protocol, &c.base, &c.stun, &c.addr);
+	stun_request_getaddr(resp, &c.protocol, &c.base, &c.stun, &c.addr);
 	priority = stun_message_attr_find(&resp->msg, STUN_ATTR_PRIORITY);
 
 	local = darray_find(&l->locals, &c.base, NULL, ice_candidate_compare_host_addr);
@@ -211,7 +211,7 @@ static void ice_checlist_add_peer_reflexive(struct ice_checklist_t* l, const stu
 	ice_checklist_add_local_candidate(l, &c);
 }
 
-static int ice_checklist_onbind(void* param, const stun_transaction_t* req, const stun_transaction_t* resp, int code, const char* phrase)
+static int ice_checklist_onbind(void* param, const stun_request_t* req, int code, const char* phrase)
 {
 	int i, j, r, protocol, failed;
 	struct darray_t* component;
@@ -222,12 +222,12 @@ static int ice_checklist_onbind(void* param, const stun_transaction_t* req, cons
 	l = (struct ice_checklist_t*)param;
 
 	// ice agent callback
-	r = stun_transaction_getaddr(resp, &protocol, &local, &remote, &reflexive);
+	r = stun_request_getaddr(req, &protocol, &local, &remote, &reflexive);
 	if (0 != r)
 		return r;
 
 	// Discovering Peer Reflexive Candidates
-	ice_checlist_add_peer_reflexive(l, resp);
+	ice_checlist_add_peer_reflexive(l, req);
 
 	// completed
 	for (i = 0; i < ice_candidate_components_count(&l->components); i++)
@@ -238,7 +238,7 @@ static int ice_checklist_onbind(void* param, const stun_transaction_t* req, cons
 		{
 			pair = ice_candidate_pairs_get(component, j);
 			assert(ICE_CANDIDATE_PAIR_INPROGRESS == pair->state);
-			if (0 == socket_addr_compare(&pair->local.addr, &local) && 0 == socket_addr_compare(&pair->remote.addr, &remote))
+			if (0 == socket_addr_compare((const struct sockaddr*)&pair->local.addr, (const struct sockaddr*)&local) && 0 == socket_addr_compare((const struct sockaddr*)&pair->remote.addr, (const struct sockaddr*)&remote))
 			{
 				if (0 == code)
 				{
@@ -257,14 +257,15 @@ static int ice_checklist_onbind(void* param, const stun_transaction_t* req, cons
 	ice_checlist_update_state(l);
 
 	// stream done callback
+	return 0;
 }
 
 static int ice_checklist_bind(struct ice_checklist_t* l, struct ice_candidate_t *c)
 {
-	struct stun_transaction_t* req;
-	req = stun_transaction_create(l->stun, STUN_RFC_5389, ice_checklist_onbind, l);
-	stun_transaction_setaddr(req, STUN_PROTOCOL_UDP, &c->addr, &c->stun);
-	stun_transaction_setauth(req, req->auth.credential, req->auth.usr, req->auth.pwd, req->auth.realm, req->auth.nonce);
+	struct stun_request_t* req;
+	req = stun_request_create(l->stun, STUN_RFC_5389, ice_checklist_onbind, l);
+	stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&c->addr, (const struct sockaddr*)&c->stun);
+	stun_request_setauth(req, req->auth.credential, req->auth.usr, req->auth.pwd, req->auth.realm, req->auth.nonce);
 	stun_message_add_uint32(&req->msg, STUN_ATTR_PRIORITY, c->priority);
 	if(l->nomination != ICE_REGULAR_NOMINATION) stun_message_add_flag(&req->msg, STUN_ATTR_USE_CANDIDATE);
 	stun_message_add_uint64(&req->msg, l->controlling ? STUN_ATTR_ICE_CONTROLLING : STUN_ATTR_ICE_CONTROLLED, rand() * rand());
@@ -282,7 +283,7 @@ static int ice_checklist_bind(struct ice_checklist_t* l, struct ice_candidate_t 
 // 3. Find the highest-priority pair in that check list that is in the Waiting state.
 // 4. Find the highest-priority pair in that check list that is in the Frozen state.
 // 5. Terminate the timer for that check list.
-static int ice_checklist_ontimer(void* param, void* id)
+static int ice_checklist_ontimer(void* param)
 {
 	int i, j;
 	struct darray_t* component;
@@ -340,7 +341,7 @@ static int ice_checklist_ontimer(void* param, void* id)
 	else
 	{
 		// terminate timer
-		ice_timer_stop(l->timer);
+		stun_timer_stop(l->timer);
 		l->timer = NULL;
 
 //		l->state = ICE_CHECKLIST_COMPLETED;
@@ -414,7 +415,7 @@ int ice_checklist_init(struct ice_checklist_t* l)
 
 	// start timer
 	assert(NULL == l->timer);
-	l->timer = ice_timer_start(ICE_TIMER_INTERVAL, ice_checklist_ontimer, l);
+	l->timer = stun_timer_start(ICE_TIMER_INTERVAL, ice_checklist_ontimer, l);
 	return 0;
 }
 
@@ -481,7 +482,7 @@ int ice_checklist_update(struct ice_checklist_t* l, const ice_candidate_pairs_t*
 
 	// start timer
 	assert(NULL == l->timer);
-	l->timer = ice_timer_start(ICE_TIMER_INTERVAL, ice_checklist_ontimer, l);
+	l->timer = stun_timer_start(ICE_TIMER_INTERVAL, ice_checklist_ontimer, l);
 	l->state = ICE_CHECKLIST_RUNNING;
 	return 0;
 }

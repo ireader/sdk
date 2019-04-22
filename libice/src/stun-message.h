@@ -10,15 +10,17 @@
 
 enum
 {
-	STUN_CREDENTIAL_SHORT_TERM = 0,
+	STUN_CREDENTIAL_SHORT_TERM = 1,
 	STUN_CREDENTIAL_LONG_TERM,
 };
 
-struct stun_credetial_t
+// rfc5389 19. Changes since RFC 3489 (46)
+// REALM, SERVER, reason phrases, and NONCE limited to 127 characters. USERNAME to 513 bytes
+struct stun_credential_t
 {
 	int credential; // STUN_CREDENTIAL_SHORT_TERM/STUN_CREDENTIAL_LONG_TERM
-	char usr[256], pwd[256];
-	char realm[256], nonce[256];
+	char usr[512], pwd[512];
+	char realm[128], nonce[128];
 };
 
 // rfc 3489 11.1 Message Header (p25)
@@ -52,12 +54,17 @@ int stun_message_add_uint16(struct stun_message_t* msg, uint16_t attr, uint16_t 
 int stun_message_add_uint32(struct stun_message_t* msg, uint16_t attr, uint32_t value);
 int stun_message_add_uint64(struct stun_message_t* msg, uint16_t attr, uint64_t value);
 int stun_message_add_string(struct stun_message_t* msg, uint16_t attr, const char* value);
-int stun_message_add_address(struct stun_message_t* msg, uint16_t attr, const struct sockaddr_storage* addr);
+int stun_message_add_address(struct stun_message_t* msg, uint16_t attr, const struct sockaddr* addr);
 int stun_message_add_data(struct stun_message_t* msg, uint16_t attr, const void* value, int len);
 
 int stun_message_add_error(struct stun_message_t* msg, uint32_t code, const char* phrase);
-int stun_message_add_credentials(struct stun_message_t* msg, const struct stun_credetial_t* auth);
+int stun_message_add_credentials(struct stun_message_t* msg, const struct stun_credential_t* auth);
 int stun_message_add_fingerprint(struct stun_message_t* msg);
+
+int stun_message_check_integrity(const uint8_t* data, int bytes, const struct stun_message_t* msg, const struct stun_credential_t* auth);
+int stun_message_check_fingerprint(const uint8_t* data, int bytes, const struct stun_message_t* msg);
+int stun_message_has_integrity(const struct stun_message_t* msg);
+int stun_message_has_fingerprint(const struct stun_message_t* msg);
 
 const struct stun_attr_t* stun_message_attr_find(const struct stun_message_t* msg, uint16_t attr);
 int stun_message_attr_list(const struct stun_message_t* msg, uint16_t attr, int (*fn)(void*, const struct stun_attr_t*), void* param);

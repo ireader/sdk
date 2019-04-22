@@ -70,8 +70,22 @@ const char* http_reason_phrase(int code)
 		"", // 427
 		"Precondition Required", // 428-RFC6585 Section 3
 		"Too Many Requests", // 429-RFC6585 Section 4
-		"", // 430
+		"Stale Credentials", // 430-RFC3489 Section 11
+//		"Integrity Check Failure", // 431-RFC3489 Section 11
 		"Request Header Fields Too Large", // 431-RFC6585 Section 5
+		"Missing Username", // 432-RFC3489 Section 11
+		"Use TLS", // 433-RFC3489 Section 11
+		"", // 434
+		"", // 435
+		"", // 436
+		"Allocation Mismatch", // 437-RFC5766 Section 6
+		"Stale Nonce", // 438-RFC5389 Section 11
+		"", // 439
+		"", // 440
+		"Wrong Credentials", // 441-RFC5766 Section 6
+		"Unsupported Transport Address", // 442-RFC5766 Section 6
+
+		//"Allocation Quota Reached", // 486-RFC5766 Section 6
 	};
 
 	static const char *reason5xx[] = 

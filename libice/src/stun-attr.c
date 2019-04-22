@@ -66,6 +66,7 @@ static inline uint8_t* stun_attr_write_uint32(uint8_t* p, const uint8_t* end, ui
 // 14.4. DATA (rfc5766 p46)
 static inline const uint8_t* stun_attr_read_bytes(const struct stun_message_t* msg, const uint8_t* p, const uint8_t* end, int length, uint8_t* data, int size)
 {
+	(void)msg;
 	assert(size >= length);
 	if (p + ALGIN_4BYTES(length) > end)
 		return end;
@@ -76,6 +77,7 @@ static inline const uint8_t* stun_attr_read_bytes(const struct stun_message_t* m
 
 static inline uint8_t* stun_attr_write_bytes(const struct stun_message_t* msg, uint8_t* p, const uint8_t* end, const uint8_t* data, int size)
 {
+	(void)msg;
 	if (p + ALGIN_4BYTES(size) > end)
 		return (uint8_t*)end;
 
@@ -85,15 +87,18 @@ static inline uint8_t* stun_attr_write_bytes(const struct stun_message_t* msg, u
 
 static int stun_attr_error_code_read(const struct stun_message_t* msg, const uint8_t* data, struct stun_attr_t *attr)
 {
+	(void)msg;
 	be_read_uint32(data, &attr->v.errcode.code);
-	attr->v.errcode.reason_phrase = data + 4;
+	attr->v.errcode.code = (attr->v.errcode.code & 0xFF) + ((attr->v.errcode.code >> 8) & 0x07) * 100;
+	attr->v.errcode.reason_phrase = (char*)data + 4;
 	return 0;
 }
 
 static int stun_attr_error_code_write(const struct stun_message_t* msg, uint8_t* data, const struct stun_attr_t *attr)
 {
+	(void)msg;
 	assert(attr->length >= 4);
-	be_write_uint32(data, attr->v.errcode.code);
+	be_write_uint32(data, (((attr->v.errcode.code / 100) & 0x07) << 8) | (attr->v.errcode.code % 100));
 	memmove(data + 4, attr->v.errcode.reason_phrase, attr->length - 4);
     if(0 != attr->length % 4)
         memset(data + attr->length, 0x20, 4 - (attr->length % 4)); // string fill with 0x20 ' '
@@ -102,23 +107,27 @@ static int stun_attr_error_code_write(const struct stun_message_t* msg, uint8_t*
 
 static int stun_attr_flag_read(const struct stun_message_t* msg, const uint8_t* data, struct stun_attr_t *attr)
 {
+	(void)msg, (void)data;
 	attr->v.u8 = 1;
 	return 0;
 }
 
 static int stun_attr_flag_write(const struct stun_message_t* msg, uint8_t* data, const struct stun_attr_t *attr)
 {
+	(void)msg, (void)data, (void)attr;
 	return 0;
 }
 
 static int stun_attr_uint8_read(const struct stun_message_t* msg, const uint8_t* data, struct stun_attr_t *attr)
 {
+	(void)msg;
 	attr->v.u8 = *data;
 	return 0;
 }
 
 static int stun_attr_uint8_write(const struct stun_message_t* msg, uint8_t* data, const struct stun_attr_t *attr)
 {
+	(void)msg;
     *(uint32_t*)data = 0;
 	*data = attr->v.u8;
 	return 0;
@@ -126,36 +135,42 @@ static int stun_attr_uint8_write(const struct stun_message_t* msg, uint8_t* data
 
 static int stun_attr_uint32_read(const struct stun_message_t* msg, const uint8_t* data, struct stun_attr_t *attr)
 {
+	(void)msg;
 	be_read_uint32(data, &attr->v.u32);
 	return 0;
 }
 
 static int stun_attr_uint32_write(const struct stun_message_t* msg, uint8_t* data, const struct stun_attr_t *attr)
 {
+	(void)msg;
 	be_write_uint32(data, attr->v.u32);
 	return 0;
 }
 
 static int stun_attr_uint64_read(const struct stun_message_t* msg, const uint8_t* data, struct stun_attr_t *attr)
 {
+	(void)msg;
 	be_read_uint64(data, &attr->v.u64);
 	return 0;
 }
 
 static int stun_attr_uint64_write(const struct stun_message_t* msg, uint8_t* data, const struct stun_attr_t *attr)
 {
+	(void)msg;
 	be_write_uint64(data, attr->v.u64);
 	return 0;
 }
 
 static int stun_attr_ptr_read(const struct stun_message_t* msg, const uint8_t* data, struct stun_attr_t *attr)
 {
-	attr->v.ptr = data;
+	(void)msg;
+	attr->v.ptr = (void*)data;
 	return 0;
 }
 
 static int stun_attr_ptr_write(const struct stun_message_t* msg, uint8_t* data, const struct stun_attr_t *attr)
 {
+	(void)msg;
 	memmove(data, attr->v.ptr, attr->length);
     if(0 != attr->length % 4)
         memset(data + attr->length, 0x20, 4 - (attr->length % 4)); // string fill with 0x20 ' '
@@ -164,12 +179,14 @@ static int stun_attr_ptr_write(const struct stun_message_t* msg, uint8_t* data, 
 
 static int stun_attr_sha1_read(const struct stun_message_t* msg, const uint8_t* data, struct stun_attr_t *attr)
 {
+	(void)msg;
     memmove(attr->v.sha1, data, sizeof(attr->v.sha1));
     return 0;
 }
 
 static int stun_attr_sha1_write(const struct stun_message_t* msg, uint8_t* data, const struct stun_attr_t *attr)
 {
+	(void)msg;
     assert(0 == sizeof(attr->v.sha1) % 4);
     memmove(data, attr->v.sha1, sizeof(attr->v.sha1));
     return 0;
@@ -197,6 +214,7 @@ static int stun_attr_mapped_address_read(const struct stun_message_t* msg, const
 	}
 	else
 	{
+		(void)msg;
 		return -1;
 	}
 
@@ -225,6 +243,7 @@ static int stun_attr_mapped_address_write(const struct stun_message_t* msg, uint
 	}
 	else
 	{
+		(void)msg;
 		return -1;
 	}
 
@@ -354,7 +373,7 @@ static inline int stun_attr_find(uint16_t type)
 
 int stun_attr_read(const struct stun_message_t* msg, const uint8_t* data, const uint8_t* end, struct stun_attr_t *attrs, int n)
 {
-	int i, j, r;
+	int i, r;
 	for (r = i = 0; data + 4 <= end && i < n; i++)
 	{
 		be_read_uint16(data, &attrs[i].type);
@@ -363,9 +382,9 @@ int stun_attr_read(const struct stun_message_t* msg, const uint8_t* data, const 
 		if (data + 4 + attrs[i].length > end)
 			return -1;
 
-		j = stun_attr_find(attrs[i].type);
-		if (-1 != j)
-			r = s_stun_attrs[j].read(msg, data + 4, attrs + i);
+		attrs[i].unknown = stun_attr_find(attrs[i].type);
+		if (-1 != attrs[i].unknown)
+			r = s_stun_attrs[attrs[i].unknown].read(msg, data + 4, attrs + i);
 		else
 			attrs[i].v.ptr = (void*)(data + 4);
 
