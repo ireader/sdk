@@ -18,7 +18,7 @@
 |11|10|9|8|7|1|6|5|4|0|3|2|1|0|
 +--+--+-+-+-+-+-+-+-+-+-+-+-+-+
 */
-#define STUN_MESSAGE_TYPE(mclass, method)	((((mclass) & 02) << 7) | (((mclass) & 01) << 4) | (((method) & 0xF8) << 2) | (((method) & 0x0070) << 1) | ((method) & 0x000F))
+#define STUN_MESSAGE_TYPE(mclass, method)	((((mclass) & 02) << 7) | (((mclass) & 01) << 4) | (((method) & 0xF80) << 2) | (((method) & 0x0070) << 1) | ((method) & 0x000F))
 #define STUN_MESSAGE_CLASS(type)			((((type) >> 7) & 0x02) | (((type) >> 4) & 0x01))
 #define STUN_MESSAGE_METHOD(type)			((((type) >> 2) & 0x0F80) | (((type) >> 1) & 0x0070) | ((type) & 0x000F))
 
@@ -81,22 +81,23 @@ struct stun_agent_t
 	void* param;
 };
 
-struct stun_request_t* stun_agent_find(stun_agent_t* stun, const struct stun_message_t* msg);
-int stun_agent_insert(stun_agent_t* stun, stun_request_t* req);
-int stun_agent_remove(stun_agent_t* stun, stun_request_t* req);
+struct stun_request_t* stun_agent_find(struct stun_agent_t* stun, const struct stun_message_t* msg);
+int stun_agent_insert(struct stun_agent_t* stun, struct stun_request_t* req);
+int stun_agent_remove(struct stun_agent_t* stun, struct stun_request_t* req);
 
 int stun_request_addref(struct stun_request_t* req);
 int stun_request_release(struct stun_request_t* req);
 int stun_request_destroy(struct stun_request_t** preq);
-int stun_request_send(stun_agent_t* stun, stun_request_t* req);
-int stun_response_send(stun_agent_t* stun, stun_response_t* resp);
-int stun_message_send(stun_agent_t* stun, struct stun_message_t* msg, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote);
+int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req);
+int stun_response_send(struct stun_agent_t* stun, struct stun_response_t* resp);
+int stun_message_send(struct stun_agent_t* stun, struct stun_message_t* msg, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote);
 
 struct stun_response_t* stun_response_create(struct stun_request_t* req);
 int stun_response_destroy(struct stun_response_t** pp);
 
-int stun_agent_auth(stun_agent_t* stun, struct stun_request_t* req, const void* data, int bytes);
-int stun_server_onbind(const struct stun_request_t* req, struct stun_response_t* resp);
-int stun_server_onshared_secret(const struct stun_request_t* req, struct stun_response_t* resp);
+int stun_agent_auth(struct stun_agent_t* stun, struct stun_request_t* req, const void* data, int bytes);
+int stun_server_onbind(struct stun_agent_t* stun, const struct stun_request_t* req, struct stun_response_t* resp);
+int stun_server_onshared_secret(struct stun_agent_t* stun, const struct stun_request_t* req, struct stun_response_t* resp);
+int stun_server_onbindindication(struct stun_agent_t* stun, const struct stun_request_t* req);
 
 #endif /* !_stun_internal_h_ */

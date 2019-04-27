@@ -7,6 +7,7 @@ static int stun_auth_response(stun_agent_t* stun, struct stun_request_t* req, in
 	
 	memset(&msg, 0, sizeof(struct stun_message_t));
 	memcpy(&msg.header, &req->msg.header, sizeof(struct stun_header_t));
+    msg.header.length = 0;
 	msg.header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_FAILURE_RESPONSE, STUN_MESSAGE_METHOD(req->msg.header.msgtype));
 
 	r = stun_message_add_error(&msg, code, phrase);
@@ -139,51 +140,39 @@ static int stun_request_rfc5389_long_term_auth_check(stun_agent_t* stun, struct 
 // rfc5389 10.1.3. Receiving a Response (p24)
 static int stun_response_rfc5389_short_term_auth_check(stun_agent_t* stun, struct stun_request_t* resp, const void* data, int bytes)
 {
-	const struct stun_attr_t *integrity;
-	integrity = stun_message_attr_find(&resp->msg, STUN_ATTR_MESSAGE_INTEGRITY);
-
-	if (!integrity)
-		return -1;
-
-	(void)stun;
-	return stun_message_check_integrity(data, bytes, &resp->msg, &resp->auth);
+    struct stun_request_t* req;
+    const struct stun_attr_t* integrity;
+    const struct stun_attr_t* fingerprint;
+    integrity = stun_message_attr_find(&resp->msg, STUN_ATTR_MESSAGE_INTEGRITY);
+    fingerprint = stun_message_attr_find(&resp->msg, STUN_ATTR_FINGERPRINT);
+    
+    req = stun_agent_find(stun, &resp->msg);
+    
+    // If the value does not match, or if MESSAGE-INTEGRITY was absent, the response MUST be discarded,
+    // as if it was never received.
+	if (integrity && (!req || 0 != stun_message_check_integrity(data, bytes, &resp->msg, &req->auth)))
+        return -1;
+    
+	return fingerprint ? stun_message_check_fingerprint(data, bytes, &resp->msg) : 0;
 }
 
 // rfc5389 10.2.3. Receiving a Response (p27)
 static int stun_response_rfc5389_long_term_auth_check(stun_agent_t* stun, struct stun_request_t* resp, const void* data, int bytes)
 {
-	const struct stun_attr_t *integrity, *error;
-	error = stun_message_attr_find(&resp->msg, STUN_ATTR_ERROR_CODE);
-	integrity = stun_message_attr_find(&resp->msg, STUN_ATTR_MESSAGE_INTEGRITY);
-
-	if (error && 401 == error->v.errcode.code)
-	{
-		// If the response is an error response with an error code of 401 (Unauthorized), 
-		// the client SHOULD retry the request with a new transaction.
-
-		struct stun_request_t* req;
-		req = stun_agent_find(stun, &resp->msg);
-		if (!req || STUN_CREDENTIAL_LONG_TERM != req->auth.credential || 0 != req->auth.realm[0] || 0 != req->auth.nonce[0])
-			return 0; // discard
-
-		memcpy(req->auth.realm, resp->auth.realm, sizeof(req->auth.realm));
-		memcpy(req->auth.nonce, resp->auth.nonce, sizeof(req->auth.nonce));
-		stun_message_send(stun, &req->msg, req->addr.protocol, &req->addr.host, &req->addr.peer);
-		return 0;
-	}
-	else if (error && 438 == error->v.errcode.code)
-	{
-		// If the response is an error response with an error code of 438 (Stale Nonce), 
-		// the client MUST retry the request, using the new NONCE supplied in the 438 (Stale Nonce) response.
-		return 438;
-	}
-
+    struct stun_request_t* req;
+    const struct stun_attr_t* integrity;
+    const struct stun_attr_t* fingerprint;
+    integrity = stun_message_attr_find(&resp->msg, STUN_ATTR_MESSAGE_INTEGRITY);
+    fingerprint = stun_message_attr_find(&resp->msg, STUN_ATTR_FINGERPRINT);
+    
+    req = stun_agent_find(stun, &resp->msg);
+    
 	// If the value does not match, or if MESSAGE-INTEGRITY was absent, the response MUST be discarded,
 	// as if it was never received.
-	if (!integrity)
+	if (integrity && (!req || 0 != stun_message_check_integrity(data, bytes, &resp->msg, &req->auth)))
 		return -1;
 
-	return stun_message_check_integrity(data, bytes, &resp->msg, &resp->auth);
+    return fingerprint ? stun_message_check_fingerprint(data, bytes, &resp->msg) : 0;
 }
 
 int stun_agent_auth(stun_agent_t* stun, struct stun_request_t* req, const void* data, int bytes)
@@ -192,6 +181,9 @@ int stun_agent_auth(stun_agent_t* stun, struct stun_request_t* req, const void* 
 	{
 	case STUN_METHOD_CLASS_REQUEST:
 	case STUN_METHOD_CLASS_INDICATION:
+        if(STUN_METHOD_DATA == STUN_MESSAGE_METHOD(req->msg.header.msgtype) || STUN_METHOD_BIND == STUN_MESSAGE_METHOD(req->msg.header.msgtype))
+           return 0;
+           
 		if (STUN_RFC_3489 == stun->rfc)
 			return stun_request_rfc3489_auth_check(stun, req, data, bytes);
 		else

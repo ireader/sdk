@@ -3,7 +3,7 @@
 #include "sys/system.h"
 #include <stdlib.h>
 
-struct turn_allocation_t* turn_allocation_create()
+struct turn_allocation_t* turn_allocation_create(void)
 {
 	struct turn_allocation_t* allocate;
 	allocate = (struct turn_allocation_t*)calloc(1, sizeof(*allocate));
@@ -105,5 +105,6 @@ int turn_allocation_add_channel(struct turn_allocation_t* allocate, const struct
 	memset(&c, 0, sizeof(struct turn_channel_t));
 	memcpy(&c.addr, addr, socket_addr_len(addr));
 	c.expired = system_clock() + TURN_PERMISSION_LIFETIME * 1000;
+    c.channel = channel;
 	return darray_push_back(&allocate->channels, &c, 1);
 }

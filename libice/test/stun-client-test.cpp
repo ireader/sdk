@@ -19,6 +19,8 @@ struct stun_client_test_context_t
 	stun_agent_t* stun;
 	char usr[512];
 	char pwd[512];
+    char realm[128];
+    char nonce[128];
 };
 
 static int stun_send(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
@@ -32,9 +34,11 @@ static int stun_send(void* param, int protocol, const struct sockaddr* local, co
 	}
 	else if (STUN_PROTOCOL_UDP == protocol)
 	{
-		assert(AF_INET == local->sa_family && AF_INET == remote->sa_family);
-		socket_bind(ctx->udp, local, socket_addr_len(local));
-		socket_sendto(ctx->udp, data, bytes, 0, remote, socket_addr_len(remote));
+		assert(AF_INET == remote->sa_family || AF_INET6 == remote->sa_family);
+        if(AF_INET == local->sa_family || AF_INET6 == local->sa_family)
+            socket_bind(ctx->udp, local, socket_addr_len(local));
+		int r = socket_sendto(ctx->udp, data, bytes, 0, remote, socket_addr_len(remote));
+        assert(r == bytes);
 	}
 	else
 	{
@@ -47,8 +51,8 @@ static int stun_onshared_secret(void* param, const stun_request_t* req, int code
 {
 	struct stun_client_test_context_t* ctx = (struct stun_client_test_context_t*)param;
 	if (0 == code)
-	{
-		stun_request_getauth(req, ctx->usr, ctx->pwd);
+    {
+        stun_request_getauth(req, ctx->usr, ctx->pwd, ctx->realm, ctx->nonce);
 	}
 	return 0;
 }
@@ -76,9 +80,9 @@ extern "C" void stun_client_test()
     sockaddr_in host, server;
 	socklen_t addrlen = sizeof(struct sockaddr_in);
 	//r = socket_addr_from_ipv4(&server, "stunserver.org", 3478); assert(0 == r);
-	//r = socket_addr_from_ipv4(&server, "stun.stunprotocol.org", STUN_TLS_PORT); assert(0 == r);
-	//r = socket_addr_from_ipv4(&server, "numb.viagenie.ca", STUN_TLS_PORT); assert(0 == r);
-
+	//r = socket_addr_from_ipv4(&server, "stun.stunprotocol.org", STUN_PORT); assert(0 == r);
+	r = socket_addr_from_ipv4(&server, "numb.viagenie.ca", STUN_PORT); assert(0 == r);
+    
 	struct stun_client_test_context_t ctx;
 	memset(&ctx, 0, sizeof(ctx));
 
@@ -88,17 +92,17 @@ extern "C" void stun_client_test()
 	handler.send = stun_send;
 
 	ctx.udp = socket_udp();
-	ctx.ssl = tls_socket_connect2((const struct sockaddr*)&server, 5000);
+//	ctx.ssl = tls_socket_connect2((const struct sockaddr*)&server, 5000);
 	ctx.stun = stun_agent_create(STUN_RFC_3489, &handler, &ctx);
 
-	stun_request_t* req = stun_request_create(ctx.stun, STUN_RFC_3489, stun_onshared_secret, &ctx);
-	stun_request_setaddr(req, STUN_PROTOCOL_TLS, NULL, (const struct sockaddr*)&server);
-	r = stun_agent_shared_secret(req); assert(0 == r);
-	r = tls_socket_read(ctx.ssl, data, sizeof(data)); assert(r > 0);
-	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TLS, NULL, (const struct sockaddr*)&server, data, r);
+//    stun_request_t* req = stun_request_create(ctx.stun, STUN_RFC_3489, stun_onshared_secret, &ctx);
+//    stun_request_setaddr(req, STUN_PROTOCOL_TLS, NULL, (const struct sockaddr*)&server);
+//    r = stun_agent_shared_secret(req); assert(0 == r);
+//    r = tls_socket_read(ctx.ssl, data, sizeof(data)); assert(r > 0);
+//    r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TLS, NULL, (const struct sockaddr*)&server, data, r);
 
 	r = socket_addr_from_ipv4(&server, "stun.stunprotocol.org", STUN_PORT); assert(0 == r);
-	stun_request_t* req2 = stun_request_create(ctx.stun, STUN_RFC_3489, stun_onbind, &ctx);
+    stun_request_t* req2 = stun_request_create(ctx.stun, STUN_RFC_3489, stun_onbind, &ctx);
 	stun_request_setaddr(req2, STUN_PROTOCOL_UDP, NULL, (const struct sockaddr*)&server);
 	r = stun_agent_bind(req2); assert(0 == r);
     addrlen = sizeof(host);
@@ -106,7 +110,7 @@ extern "C" void stun_client_test()
 	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, NULL, (const struct sockaddr*)&server, data, r);
 
 	stun_agent_destroy(&ctx.stun);
-	tls_socket_close(ctx.ssl);
+    if(ctx.ssl) tls_socket_close(ctx.ssl);
 	socket_close(ctx.udp);
     tls_socket_cleanup();
 	socket_cleanup();

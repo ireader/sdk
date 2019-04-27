@@ -8,12 +8,6 @@
 
 #define STUN_ATTR_N 32
 
-enum
-{
-	STUN_CREDENTIAL_SHORT_TERM = 1,
-	STUN_CREDENTIAL_LONG_TERM,
-};
-
 // rfc5389 19. Changes since RFC 3489 (46)
 // REALM, SERVER, reason phrases, and NONCE limited to 127 characters. USERNAME to 513 bytes
 struct stun_credential_t

@@ -1,6 +1,24 @@
 #include "stun-internal.h"
 #include "turn-internal.h"
 
+// for RESERVATION-TOKEN
+struct turn_allocation_t* turn_agent_allocation_find_by_token(struct list_head* root, const void* token)
+{
+	const uint8_t invalid[8] = { 0 };
+
+	struct list_head* pos;
+	struct turn_allocation_t* allocate;
+	list_for_each(pos, root)
+	{
+		allocate = list_entry(pos, struct turn_allocation_t, link);
+		assert(sizeof(allocate->token) == sizeof(invalid));
+		if (0 != memcmp(allocate->token, invalid, sizeof(invalid))
+			&& 0 == memcmp(allocate->token, token, sizeof(allocate->token)))
+			return allocate;
+	}
+	return NULL;
+}
+
 struct turn_allocation_t* turn_agent_allocation_find_by_relay(struct list_head* root, const struct sockaddr* relayed)
 {
 	struct list_head* pos;
@@ -8,7 +26,7 @@ struct turn_allocation_t* turn_agent_allocation_find_by_relay(struct list_head* 
 	list_for_each(pos, root)
 	{
 		allocate = list_entry(pos, struct turn_allocation_t, link);
-		if (0 == turn_sockaddr_cmp((const struct sockaddr*)&allocate->addr.relay, relayed))
+		if (0 == socket_addr_compare((const struct sockaddr*)&allocate->addr.relay, relayed))
 			return allocate;
 	}
 	return NULL;
@@ -21,25 +39,51 @@ struct turn_allocation_t* turn_agent_allocation_find_by_address(struct list_head
 	list_for_each(pos, root)
 	{
 		allocate = list_entry(pos, struct turn_allocation_t, link);
-		if (0 == turn_sockaddr_cmp((const struct sockaddr*)&allocate->addr.host, host) || 0 == turn_sockaddr_cmp((const struct sockaddr*)&allocate->addr.peer, peer))
+		if (0 == socket_addr_compare((const struct sockaddr*)&allocate->addr.host, host) && 0 == socket_addr_compare((const struct sockaddr*)&allocate->addr.peer, peer))
 			return allocate;
 	}
 	return NULL;
 }
 
-int turn_agent_allocation_insert(struct stun_agent_t* turn, struct turn_allocation_t* allocate)
+int turn_agent_allocation_insert(struct stun_agent_t* turn, struct list_head* root, struct turn_allocation_t* allocate)
 {
 	locker_lock(&turn->locker);
-	assert(NULL == turn_agent_allocation_find_by_address(&turn->turnclients, (const struct sockaddr*)&allocate->addr.host, (const struct sockaddr*)&allocate->addr.peer));
-	list_insert_after(&allocate->link, &turn->turnclients);
+	assert(NULL == turn_agent_allocation_find_by_address(root, (const struct sockaddr*)&allocate->addr.host, (const struct sockaddr*)&allocate->addr.peer));
+	list_insert_after(&allocate->link, root);
 	locker_unlock(&turn->locker);
 	return 0;
 }
 
-int turn_agent_allocation_remove(struct stun_agent_t* turn, struct turn_allocation_t* allocate)
+int turn_agent_allocation_remove(struct stun_agent_t* turn, struct list_head* root, struct turn_allocation_t* allocate)
 {
 	locker_lock(&turn->locker);
 	list_remove(&allocate->link);
 	locker_unlock(&turn->locker);
+	return 0; (void)root;
+}
+
+int turn_agent_allocation_reservation_token(struct stun_agent_t* turn, struct turn_allocation_t* from)
+{
+	struct turn_allocation_t* next;
+	next = turn_allocation_create();
+	if (!next)
+		return -1;
+
+	next->expire = from->expire;
+	next->dontfragment = from->dontfragment;
+	next->peertransport = from->peertransport;
+	memcpy(&next->addr, &from->addr, sizeof(next->addr));
+	memcpy(&next->auth, &from->auth, sizeof(next->auth));
+	next->ondata = from->ondata;
+	next->ondataparam = from->ondataparam;
+	// next higher port
+	if (AF_INET == from->addr.relay.ss_family)
+		((struct sockaddr_in*)&next->addr.relay)->sin_port = htons(ntohs(((struct sockaddr_in*)&from->addr.relay)->sin_port) + 1);
+	if (AF_INET6 == from->addr.relay.ss_family)
+		((struct sockaddr_in6*)&next->addr.relay)->sin6_port = htons(ntohs(((struct sockaddr_in6*)&from->addr.relay)->sin6_port) + 1);
+
+	// save to reservation token
+	assert(sizeof(intptr_t) <= sizeof(from->token));
+	*(intptr_t*)from->token = (intptr_t)next;
 	return 0;
 }
