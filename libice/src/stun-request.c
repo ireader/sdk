@@ -1,6 +1,7 @@
 #include "stun-agent.h"
 #include "stun-internal.h"
 #include "sys/atomic.h"
+#include <stdlib.h>
 #include <assert.h>
 
 stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_handler handler, void* param)
@@ -144,9 +145,11 @@ int stun_request_setauth(stun_request_t* req, int credential, const char* usr, c
 	return 0;
 }
 
-int stun_request_getauth(const stun_request_t* req, char usr[512], char pwd[512])
+int stun_request_getauth(const stun_request_t* req, char usr[512], char pwd[512], char realm[128], char nonce[128])
 {
 	if (usr) snprintf(usr, 512, "%s", req->auth.usr);
-	if (pwd) snprintf(usr, 512, "%s", req->auth.pwd);
+	if (pwd) snprintf(pwd, 512, "%s", req->auth.pwd);
+    if (realm) snprintf(realm, 128, "%s", req->auth.realm);
+    if (nonce) snprintf(nonce, 128, "%s", req->auth.nonce);
 	return 0;
 }

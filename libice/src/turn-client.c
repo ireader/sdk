@@ -7,7 +7,6 @@
 // rfc3489 9.3 Formulating the Binding Request (p17)
 int turn_agent_allocate(stun_request_t* req, turn_agent_ondata ondata, void* param)
 {
-	int r;
 	struct stun_message_t* msg;
 	struct turn_allocation_t* allocate;
 	msg = &req->msg;
@@ -25,18 +24,18 @@ int turn_agent_allocate(stun_request_t* req, turn_agent_ondata ondata, void* par
 	{
 		allocate = turn_allocation_create();
 		if (!allocate) return -1;
-		turn_agent_allocation_insert(req->stun, allocate);
+		turn_agent_allocation_insert(req->stun, &req->stun->turnclients, allocate);
 	}
 
 	msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_REQUEST, STUN_METHOD_ALLOCATE);
-	r = stun_message_add_uint32(msg, STUN_ATTR_REQUESTED_TRANSPORT, TURN_TRANSPORT_UDP << 24);
-	r = 0 == r ? stun_message_add_uint32(msg, STUN_ATTR_LIFETIME, TURN_LIFETIME) : r;
-	r = 0 == r ? stun_message_add_flag(msg, STUN_ATTR_DONT_FRAGMENT) : r;
-	//	r = 0 == r ? stun_message_add_uint8(msg, STUN_ATTR_EVEN_PORT, 0x80) : r;
+	stun_message_add_uint32(msg, STUN_ATTR_REQUESTED_TRANSPORT, TURN_TRANSPORT_UDP << 24);
+	stun_message_add_uint32(msg, STUN_ATTR_LIFETIME, TURN_LIFETIME);
+	//stun_message_add_flag(msg, STUN_ATTR_DONT_FRAGMENT);
+	//stun_message_add_uint8(msg, STUN_ATTR_EVEN_PORT, 0x80);
 
-	r = 0 == r ? stun_message_add_credentials(msg, &req->auth) : r;
-	r = 0 == r ? stun_message_add_fingerprint(msg) : r;
-	return 0 == r ? stun_request_send(req->stun, req) : r;
+	stun_message_add_credentials(msg, &req->auth);
+	stun_message_add_fingerprint(msg);
+	return stun_request_send(req->stun, req);
 }
 
 int turn_client_allocate_onresponse(struct stun_request_t* req, const struct stun_request_t* resp)
@@ -51,7 +50,7 @@ int turn_client_allocate_onresponse(struct stun_request_t* req, const struct stu
 	{
 		allocate = turn_allocation_create();
 		if (!allocate) return -1;
-		turn_agent_allocation_insert(stun, allocate);
+		turn_agent_allocation_insert(stun, &stun->turnclients, allocate);
 	}
 
 	memcpy(&allocate->auth, &req->auth, sizeof(struct stun_credential_t));
@@ -72,23 +71,22 @@ int turn_client_allocate_onresponse(struct stun_request_t* req, const struct stu
 
 	return 0;
 FAILED:
-	turn_agent_allocation_remove(stun, allocate);
+	turn_agent_allocation_remove(stun, &stun->turnclients, allocate);
 	turn_allocation_destroy(&allocate);
 	return -1;
 }
 
 int turn_agent_refresh(stun_request_t* req, int expired)
 {
-	int r;
 	struct stun_message_t* msg;
 	msg = &req->msg;
 
 	msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_REQUEST, STUN_METHOD_REFRESH);
-	r = stun_message_add_uint32(msg, STUN_ATTR_LIFETIME, expired);
+	stun_message_add_uint32(msg, STUN_ATTR_LIFETIME, expired);
 
-	r = 0 == r ? stun_message_add_credentials(msg, &req->auth) : r;
-	r = 0 == r ? stun_message_add_fingerprint(msg) : r;
-	return 0 == r ? stun_request_send(req->stun, req) : r;
+	stun_message_add_credentials(msg, &req->auth);
+	stun_message_add_fingerprint(msg);
+	return stun_request_send(req->stun, req);
 }
 
 int turn_client_refresh_onresponse(struct stun_request_t* req, const struct stun_request_t* resp)
@@ -106,7 +104,7 @@ int turn_client_refresh_onresponse(struct stun_request_t* req, const struct stun
 
 	if (!attr || 0 == attr->v.u32)
 	{
-		turn_agent_allocation_remove(stun, allocate);
+		turn_agent_allocation_remove(stun, &stun->turnclients, allocate);
 		turn_allocation_destroy(&allocate);
 		return 0;
 	}
@@ -118,7 +116,6 @@ int turn_client_refresh_onresponse(struct stun_request_t* req, const struct stun
 //int turn_agent_create_permission(stun_request_t* req, const struct sockaddr_storage* peers[], int n)
 int turn_agent_create_permission(stun_request_t* req, const struct sockaddr* peer)
 {
-	int r;
 	struct stun_message_t* msg;
 	msg = &req->msg;
 
@@ -126,11 +123,11 @@ int turn_agent_create_permission(stun_request_t* req, const struct sockaddr* pee
 	
 	if (AF_INET != peer->sa_family && AF_INET6 != peer->sa_family)
 		return -1;
-	r = stun_message_add_address(msg, STUN_ATTR_XOR_PEER_ADDRESS, peer);
+	stun_message_add_address(msg, STUN_ATTR_XOR_PEER_ADDRESS, peer);
 	
-	r = 0 == r ? stun_message_add_credentials(msg, &req->auth) : r;
-	r = 0 == r ? stun_message_add_fingerprint(msg) : r;
-	return 0 == r ? stun_request_send(req->stun, req) : r;
+	stun_message_add_credentials(msg, &req->auth);
+	stun_message_add_fingerprint(msg);
+	return stun_request_send(req->stun, req);
 }
 
 static int turn_client_add_permission(void* param, const struct stun_attr_t* attr)
@@ -154,7 +151,6 @@ int turn_client_create_permission_onresponse(struct stun_request_t* req, const s
 
 int turn_agent_channel_bind(stun_request_t* req, const struct sockaddr* peer, uint16_t channel)
 {
-	int r;
 	struct stun_message_t* msg;
 	msg = &req->msg;
 
@@ -164,12 +160,12 @@ int turn_agent_channel_bind(stun_request_t* req, const struct sockaddr* peer, ui
 		return -1;
 
 	msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_REQUEST, STUN_METHOD_CHANNEL_BIND);
-	r = stun_message_add_address(msg, STUN_ATTR_XOR_PEER_ADDRESS, peer);
-	r = 0 == r ? stun_message_add_uint32(msg, STUN_ATTR_CHANNEL_NUMBER, channel << 16) : r;
+	stun_message_add_address(msg, STUN_ATTR_XOR_PEER_ADDRESS, peer);
+	stun_message_add_uint32(msg, STUN_ATTR_CHANNEL_NUMBER, channel << 16);
 
-	r = 0 == r ? stun_message_add_credentials(msg, &req->auth) : r;
-	r = 0 == r ? stun_message_add_fingerprint(msg) : r;
-	return 0 == r ? stun_request_send(req->stun, req) : r;
+	stun_message_add_credentials(msg, &req->auth);
+	stun_message_add_fingerprint(msg);
+	return stun_request_send(req->stun, req);
 }
 
 int turn_client_channel_bind_onresponse(struct stun_request_t* req, const struct stun_request_t* resp)
@@ -194,23 +190,52 @@ int turn_client_channel_bind_onresponse(struct stun_request_t* req, const struct
 	return r;
 }
 
+static int turn_client_send_channel_data(struct stun_agent_t* turn, const struct turn_allocation_t* allocate, const struct turn_channel_t* channel, const void* data, int bytes)
+{
+    uint8_t ptr[1600];
+    
+    if (channel->expired < system_clock())
+        return 0; // expired
+    
+    if (bytes + 4 > sizeof(ptr))
+        return -1; // MTU too long
+    
+    ptr[0] = (uint8_t)(channel->channel >> 8);
+    ptr[1] = (uint8_t)(channel->channel);
+    ptr[2] = (uint8_t)(bytes >> 8);
+    ptr[3] = (uint8_t)(bytes);
+    memcpy(ptr + 4, data, bytes);
+    
+    return turn->handler.send(turn->param, allocate->addr.protocol, (const struct sockaddr*)&allocate->addr.host, (const struct sockaddr*)&allocate->addr.peer, ptr, bytes+4);
+}
+
 int turn_agent_send(stun_request_t* req, const struct sockaddr* peer, const void* data, int bytes)
 {
 	int r;
 	struct stun_message_t* msg;
-	msg = &req->msg;
+    struct turn_allocation_t* allocate;
+    const struct turn_channel_t* channel;
+    msg = &req->msg;
 
+    allocate = turn_agent_allocation_find_by_address(&req->stun->turnclients, (const struct sockaddr*)&req->addr.host, (const struct sockaddr*)&req->addr.peer);
+    if (allocate)
+    {
+        channel = turn_allocation_find_channel_by_peer(allocate, peer);
+        if(channel)
+            return turn_client_send_channel_data(req->stun, allocate, channel, data, bytes);
+    }
+    
 	msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_INDICATION, STUN_METHOD_SEND);
-	r = stun_message_add_flag(msg, STUN_ATTR_DONT_FRAGMENT);
-	r = 0 == r ? stun_message_add_address(msg, STUN_ATTR_XOR_PEER_ADDRESS, peer) : r;
-	r = 0 == r ? stun_message_add_data(msg, STUN_ATTR_DATA, data, bytes) : r;
+	//stun_message_add_flag(msg, STUN_ATTR_DONT_FRAGMENT);
+	stun_message_add_address(msg, STUN_ATTR_XOR_PEER_ADDRESS, peer);
+	stun_message_add_data(msg, STUN_ATTR_DATA, data, bytes);
 
-	r = 0 == r ? stun_message_add_credentials(msg, &req->auth) : r;
-	r = 0 == r ? stun_message_add_fingerprint(msg) : r;
+	stun_message_add_credentials(msg, &req->auth);
+	stun_message_add_fingerprint(msg);
 
 	// STUN indications are not retransmitted
-	r = 0 == r ? stun_message_send(req->stun, &req->msg, req->addr.protocol, &req->addr.host, &req->addr.peer) : r;;
-	stun_agent_remove(req->stun, req);
+	r = stun_message_send(req->stun, &req->msg, req->addr.protocol, &req->addr.host, &req->addr.peer);
+	stun_request_release(req);
 	return r;
 }
 
@@ -234,7 +259,7 @@ int turn_client_ondata(struct stun_agent_t* turn, const struct stun_request_t* r
 }
 
 // ChannelData from server
-int turn_client_onchannel_data(struct stun_agent_t* stun, struct turn_allocation_t* allocate, const uint8_t* data, int bytes)
+int turn_client_onchannel_data(struct stun_agent_t* turn, struct turn_allocation_t* allocate, const uint8_t* data, int bytes)
 {
 	uint16_t number;
 	uint16_t length;

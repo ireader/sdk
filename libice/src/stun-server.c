@@ -1,7 +1,7 @@
 #include "stun-message.h"
 #include "stun-internal.h"
 
-int stun_server_onbind(const struct stun_request_t* req, struct stun_response_t* resp)
+int stun_server_onbind(struct stun_agent_t* stun, const struct stun_request_t* req, struct stun_response_t* resp)
 {
 	const struct stun_attr_t* attr;
 	attr = stun_message_attr_find(&req->msg, STUN_ATTR_RESPONSE_ADDRESS);
@@ -18,39 +18,47 @@ int stun_server_onbind(const struct stun_request_t* req, struct stun_response_t*
 		//memcpy(&resp->remote, &attr->v.addr, sizeof(resp->remote));
 		//stun_message_add_address(&resp->msg, STUN_ATTR_CHANGED_ADDRESS, &resp->C);
 	}
+    
+    // rfc5780 7.5. RESPONSE-PORT
+    attr = stun_message_attr_find(&req->msg, STUN_ATTR_RESPONSE_PORT);
+    if(attr && (attr->v.u32 >> 16) > 0)
+    {
+        socket_addr_setport((const struct sockaddr*)&resp->addr.peer, socket_addr_len((const struct sockaddr*)&resp->addr.peer), (u_short)(attr->v.u32 >> 16));
+    }
 
 	stun_message_add_address(&resp->msg, STUN_ATTR_SOURCE_ADDRESS, (const struct sockaddr*)&resp->addr.host);
 	stun_message_add_address(&resp->msg, STUN_ATTR_MAPPED_ADDRESS, (const struct sockaddr*)&resp->addr.peer);
 	stun_message_add_address(&resp->msg, STUN_ATTR_XOR_MAPPED_ADDRESS, (const struct sockaddr*)&resp->addr.peer);
-	return req->stun->handler.onbind(req->stun->param, resp, req);
+    stun_message_add_address(&resp->msg, STUN_ATTR_RESPONSE_ORIGIN, (const struct sockaddr*)&resp->addr.host);
+	return req->stun->handler.onbind(stun->param, resp, req);
 }
 
 int stun_agent_bind_response(struct stun_response_t* resp, int code, const char* pharse)
 {
-	int r;
 	struct stun_message_t* msg;
 	msg = &resp->msg;
 
-	r = 0;
 	if (code < 300)
 	{
 		msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_SUCCESS_RESPONSE, STUN_METHOD_BIND);
-		r = 0 == r ? stun_message_add_credentials(msg, &resp->auth) : r;
-		r = 0 == r ? stun_message_add_fingerprint(msg) : r;
+		assert(msg->header.msgtype == 0x0101);
+        stun_message_add_credentials(msg, &resp->auth);
+		stun_message_add_fingerprint(msg);
 	}
 	else
 	{
 		msg->nattrs = 0; // reset attributes
 		msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_FAILURE_RESPONSE, STUN_METHOD_BIND);
-		r = 0 == r ? stun_message_add_error(&resp->msg, code, pharse) : r;
+		assert(msg->header.msgtype == 0x0111);
+        stun_message_add_error(&resp->msg, code, pharse);
 	}
 
-	return 0 == r ? stun_response_send(resp->stun, resp) : r;
+	return stun_response_send(resp->stun, resp);
 }
 
-int stun_server_onshared_secret(const struct stun_request_t* req, struct stun_response_t* resp)
+int stun_server_onshared_secret(struct stun_agent_t* stun, const struct stun_request_t* req, struct stun_response_t* resp)
 {
-	return req->stun->handler.onsharedsecret(req->stun->param, resp, req);
+	return req->stun->handler.onsharedsecret(stun->param, resp, req);
 }
 
 // the username MUST be valid for a period of at least 10 minutes.
@@ -58,7 +66,6 @@ int stun_server_onshared_secret(const struct stun_request_t* req, struct stun_re
 // The password MUST have at least 128 bits
 int stun_agent_shared_secret_response(struct stun_response_t* resp, int code, const char* pharse, const char* usr, const char* pwd)
 {
-	int r;
 	struct stun_message_t* msg;
 	msg = &resp->msg;
 
@@ -68,23 +75,29 @@ int stun_agent_shared_secret_response(struct stun_response_t* resp, int code, co
 		return -1; // invalid code
 	}
 
-	r = 0;
 	if (code < 300)
 	{
 		msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_SUCCESS_RESPONSE, STUN_METHOD_SHARED_SECRET);
-		r = 0 == r ? stun_message_add_string(msg, STUN_ATTR_USERNAME, usr) : r;
-		r = 0 == r ? stun_message_add_string(msg, STUN_ATTR_PASSWORD, pwd) : r;
+		assert(msg->header.msgtype == 0x0102);
+		stun_message_add_string(msg, STUN_ATTR_USERNAME, usr);
+		stun_message_add_string(msg, STUN_ATTR_PASSWORD, pwd);
 	}
 	else
 	{
 		msg->nattrs = 0; // reset attributes
 		msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_FAILURE_RESPONSE, STUN_METHOD_SHARED_SECRET);
+		assert(msg->header.msgtype == 0x0112);
 		assert(0x0112 == msg->header.msgtype);
 
 		// TODO:
-		//r = 0 == r ? stun_message_add_error(&resp->msg, 433, "request over TLS") : r;
-		r = 0 == r ? stun_message_add_error(&resp->msg, code, pharse) : r;
+		//stun_message_add_error(&resp->msg, 433, "request over TLS");
+		stun_message_add_error(&resp->msg, code, pharse);
 	}
 
-	return 0 == r ? stun_response_send(resp->stun, resp) : r;
+	return stun_response_send(resp->stun, resp);
+}
+
+int stun_server_onbindindication(struct stun_agent_t* stun, const struct stun_request_t* req)
+{
+    return req->stun->handler.onbindindication(stun->param, req);
 }

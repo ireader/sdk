@@ -18,7 +18,6 @@ enum { STUN_RFC_3489, STUN_RFC_5389, };
 enum { STUN_PROTOCOL_UDP, STUN_PROTOCOL_TCP, STUN_PROTOCOL_TLS, };
 
 /// @param[in] req transaction request
-/// @param[in] resp transaction response, NULL if timeout
 /// @param[in] code http like code, 2xx-ok, 4xx/5xx-error
 /// @param[in] phrase error code phrase
 /// @return 0-ok, other-error
@@ -38,7 +37,7 @@ int stun_request_getaddr(const stun_request_t* req, int* protocol, struct sockad
 int stun_request_setauth(stun_request_t* req, int credential, const char* usr, const char* pwd, const char* realm, const char* nonce);
 /// stun_agent_shared_secret response username/password
 /// @return 0-ok, other-error
-int stun_request_getauth(const stun_request_t* req, char usr[512], char pwd[512]);
+int stun_request_getauth(const stun_request_t* req, char usr[512], char pwd[512], char realm[128], char nonce[128]);
 
 struct stun_agent_handler_t
 {
@@ -58,14 +57,15 @@ struct stun_agent_handler_t
 	// stun
 	int (*onbind)(void* param, stun_response_t* resp, const stun_request_t* req);
 	int (*onsharedsecret)(void* param, stun_response_t* resp, const stun_request_t* req);
-	int (*onindication)(void* param, stun_response_t* resp, const stun_request_t* req);
+	int (*onbindindication)(void* param, const stun_request_t* req);
 
-	// turn
-	int (*onallocate)(void* param, stun_response_t* resp, const stun_request_t* req);
+	// TURN allocation
+	/// @param[in] evenport 1-event port, other-nothing
+	/// @param[in] nextport 1-reserve next higher port, other-nothing
+	int (*onallocate)(void* param, stun_response_t* resp, const stun_request_t* req, int evenport, int nextport);
 	int (*onrefresh)(void* param, stun_response_t* resp, const stun_request_t* req, int lifetime);
 	int (*onpermission)(void* param, stun_response_t* resp, const stun_request_t* req, const struct sockaddr* peer);
 	int (*onchannel)(void* param, stun_response_t* resp, const stun_request_t* req, const struct sockaddr* peer, uint16_t channel);
-	int (*onsend)(void* param, stun_response_t* resp, const stun_request_t* req, const struct sockaddr* peer, const void* data, int bytes);
 };
 
 stun_agent_t* stun_agent_create(int rfc, struct stun_agent_handler_t* handler, void* param);

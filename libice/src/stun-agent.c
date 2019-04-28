@@ -14,6 +14,7 @@ struct stun_agent_t* stun_agent_create(int rfc, struct stun_agent_handler_t* han
 	if (stun)
 	{
 		stun->rfc = rfc;
+		stun->auth_term = STUN_RFC_3489 == rfc ? 0 : 1;
 		LIST_INIT_HEAD(&stun->requests);
 		LIST_INIT_HEAD(&stun->turnclients);
 		LIST_INIT_HEAD(&stun->turnservers);
@@ -59,7 +60,7 @@ int stun_agent_destroy(stun_agent_t** pp)
 	return 0;
 }
 
-struct stun_request_t* stun_agent_find(stun_agent_t* stun, const struct stun_message_t* msg)
+struct stun_request_t* stun_agent_find(struct stun_agent_t* stun, const struct stun_message_t* msg)
 {
 	struct list_head *ptr, *next;
 	struct stun_request_t* entry;
@@ -72,7 +73,7 @@ struct stun_request_t* stun_agent_find(stun_agent_t* stun, const struct stun_mes
 	return NULL;
 }
 
-int stun_agent_insert(stun_agent_t* stun, stun_request_t* req)
+int stun_agent_insert(struct stun_agent_t* stun, stun_request_t* req)
 {
 	stun_request_addref(req);
 	locker_lock(&stun->locker);
@@ -81,7 +82,7 @@ int stun_agent_insert(stun_agent_t* stun, stun_request_t* req)
 	return 0;
 }
 
-int stun_agent_remove(stun_agent_t* stun, stun_request_t* req)
+int stun_agent_remove(struct stun_agent_t* stun, stun_request_t* req)
 {
 	locker_lock(&stun->locker);
 	list_remove(&req->link);
@@ -90,7 +91,7 @@ int stun_agent_remove(stun_agent_t* stun, stun_request_t* req)
 	return 0;
 }
 
-int stun_message_send(stun_agent_t* stun, struct stun_message_t* msg, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote)
+int stun_message_send(struct stun_agent_t* stun, struct stun_message_t* msg, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote)
 {
 	int r, bytes;
 	uint8_t data[1600];
@@ -121,11 +122,11 @@ static void stun_request_ontimer(void* param)
 	stun_agent_remove(req->stun, req);
 }
 
-int stun_request_send(stun_agent_t* stun, stun_request_t* req)
+int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req)
 {
 	int r;
 	assert(stun && req);
-
+    
 	stun_agent_insert(stun, req);
 	req->timeout = STUN_RETRANSMISSION_INTERVAL_MIN;
 	req->timer = stun_timer_start(STUN_RETRANSMISSION_INTERVAL_MIN, stun_request_ontimer, req);
@@ -140,7 +141,7 @@ int stun_request_send(stun_agent_t* stun, stun_request_t* req)
 	return r;
 }
 
-int stun_response_send(stun_agent_t* stun, stun_response_t* resp)
+int stun_response_send(struct stun_agent_t* stun, struct stun_response_t* resp)
 {
 	int r;
 	r = stun_message_send(stun, &resp->msg, resp->addr.protocol, &resp->addr.host, &resp->addr.peer);
@@ -148,7 +149,7 @@ int stun_response_send(stun_agent_t* stun, stun_response_t* resp)
 	return r;
 }
 
-static int stun_agent_onrequest(stun_agent_t* stun, struct stun_request_t* req)
+static int stun_agent_onrequest(struct stun_agent_t* stun, struct stun_request_t* req)
 {
 	struct stun_response_t* resp;
 	resp = stun_response_create(req);
@@ -158,22 +159,22 @@ static int stun_agent_onrequest(stun_agent_t* stun, struct stun_request_t* req)
 	switch (STUN_MESSAGE_METHOD(req->msg.header.msgtype))
 	{
 	case STUN_METHOD_BIND:
-		return stun_server_onbind(req, resp);
+		return stun_server_onbind(stun, req, resp);
 
 	case STUN_METHOD_SHARED_SECRET:
-		return stun_server_onshared_secret(req, resp);
+		return stun_server_onshared_secret(stun, req, resp);
 
 	case STUN_METHOD_ALLOCATE:
-		return turn_server_onallocate(req, resp);
+		return turn_server_onallocate(stun, req, resp);
 
 	case STUN_METHOD_REFRESH:
-		return turn_server_onrefresh(req, resp);
+		return turn_server_onrefresh(stun, req, resp);
 
 	case STUN_METHOD_CREATE_PERMISSION:
-		return turn_server_oncreate_permission(req, resp);
+		return turn_server_oncreate_permission(stun, req, resp);
 
 	case STUN_METHOD_CHANNEL_BIND:
-		return turn_server_onchannel_bind(req, resp);
+		return turn_server_onchannel_bind(stun, req, resp);
 
 	default:
 		assert(0);
@@ -185,11 +186,14 @@ static int stun_agent_onindication(stun_agent_t* stun, const struct stun_request
 {
 	switch (STUN_MESSAGE_METHOD(req->msg.header.msgtype))
 	{
+    case STUN_METHOD_BIND: // client -> stun server, refresh
+        return stun_server_onbindindication(stun, req);
+            
 	case STUN_METHOD_SEND: // client -> turn server
-		return turn_server_onsend(req->stun, req);
+		return turn_server_onsend(stun, req);
 
 	case STUN_METHOD_DATA: // turn server -> client
-		return turn_client_ondata(req->stun, req);
+		return turn_client_ondata(stun, req);
 
 	default:
 		assert(0);
@@ -206,8 +210,8 @@ static int stun_agent_onsuccess(stun_agent_t* stun, const struct stun_request_t*
 		return 0; // discard
 
 	// fill reflexive/relayed address
-	memcpy(&req->addr.reflexive, &resp->addr.peer, sizeof(struct stun_address_t));
-	
+	memcpy(&req->addr.reflexive, &resp->addr.reflexive, sizeof(struct sockaddr_storage));
+    
 	r = 0;
 	switch (STUN_MESSAGE_METHOD(req->msg.header.msgtype))
 	{
@@ -250,7 +254,7 @@ static int stun_agent_onfailure(stun_agent_t* stun, const struct stun_request_t*
 {
 	int r;
 	struct stun_request_t* req;
-	const struct stun_attr_t* attr;
+	const struct stun_attr_t* error;
 	req = stun_agent_find(stun, &resp->msg);
 	if (!req)
 		return 0; // discard
@@ -258,11 +262,43 @@ static int stun_agent_onfailure(stun_agent_t* stun, const struct stun_request_t*
 	r = 0;
 	if (0 == stun_timer_stop(req->timer))
 	{
-		attr = stun_message_attr_find(&resp->msg, STUN_ATTR_ERROR_CODE);
-		if (attr)
-			r = req->handler(req->param, req, attr->v.errcode.code, attr->v.errcode.reason_phrase);
+        req->timer = NULL;
+		error = stun_message_attr_find(&resp->msg, STUN_ATTR_ERROR_CODE);
+		if (error)
+        {
+            if (STUN_CREDENTIAL_LONG_TERM == req->auth.credential && 401 == error->v.errcode.code)
+            {
+                // If the response is an error response with an error code of 401 (Unauthorized),
+                // the client SHOULD retry the request with a new transaction.
+                stun_transaction_id(req->msg.header.tid, sizeof(req->msg.header.tid));
+                memcpy(req->auth.realm, resp->auth.realm, sizeof(req->auth.realm));
+                memcpy(req->auth.nonce, resp->auth.nonce, sizeof(req->auth.nonce));
+                stun_message_add_credentials(&req->msg, &req->auth);
+                stun_message_add_fingerprint(&req->msg);
+//                req2 = stun_request_create(stun, req->rfc, req->handler, req->param);
+//                stun_request_setaddr(req2, req->addr.protocol, (const struct sockaddr*)&req->addr.host, (const struct sockaddr*)&req->addr.peer);
+//                stun_request_setauth(req2, req->auth.credential, req->auth.usr, req->auth.pwd, resp->auth.realm, resp->auth.nonce);
+                if(0 == stun_request_send(req->stun, req))
+                    return 0; // TODO: timer/reference
+            }
+            else if (STUN_CREDENTIAL_LONG_TERM == req->auth.credential && 438 == error->v.errcode.code)
+            {
+                // If the response is an error response with an error code of 438 (Stale Nonce),
+                // the client MUST retry the request, using the new NONCE supplied in the 438 (Stale Nonce) response.
+                stun_transaction_id(req->msg.header.tid, sizeof(req->msg.header.tid));
+                memcpy(req->auth.nonce, resp->auth.nonce, sizeof(req->auth.nonce));
+                stun_message_add_credentials(&req->msg, &req->auth);
+                stun_message_add_fingerprint(&req->msg);
+                if(0 == stun_request_send(req->stun, req))
+                    return 0; // TODO: timer/reference
+            }
+            
+			r = req->handler(req->param, req, error->v.errcode.code, error->v.errcode.reason_phrase);
+        }
 		else
+        {
 			r = req->handler(req->param, req, 500, "Server internal error");
+        }
 	}
 
 	stun_agent_remove(stun, req);
@@ -271,7 +307,7 @@ static int stun_agent_onfailure(stun_agent_t* stun, const struct stun_request_t*
 
 static int stun_server_response_unknown_attribute(stun_agent_t* stun, struct stun_request_t* req)
 {
-	int i, j, r;
+	int i, j;
 	uint16_t unknowns[STUN_ATTR_N];
 	struct stun_message_t msg;
 
@@ -285,13 +321,14 @@ static int stun_server_response_unknown_attribute(stun_agent_t* stun, struct stu
 
 	memset(&msg, 0, sizeof(struct stun_message_t));
 	memcpy(&msg.header, &req->msg.header, sizeof(struct stun_header_t));
+    msg.header.length = 0;
 	msg.header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_FAILURE_RESPONSE, STUN_MESSAGE_METHOD(req->msg.header.msgtype));
 
-	r = stun_message_add_error(&msg, 420, "Unknown Attribute");
-	r = 0 == r ? stun_message_add_data(&msg, STUN_ATTR_UNKNOWN_ATTRIBUTES, unknowns, j * sizeof(unknowns[0])) : r;
-	r = 0 == r && stun_message_has_integrity(&req->msg) ? stun_message_add_credentials(&msg, &req->auth) : r;
-	r = 0 == r && stun_message_has_fingerprint(&req->msg) ? stun_message_add_fingerprint(&msg) : r;
-	return 0 == r ? stun_message_send(stun, &msg, req->addr.protocol, &req->addr.host, &req->addr.peer) : r;
+	stun_message_add_error(&msg, 420, "Unknown Attribute");
+	stun_message_add_data(&msg, STUN_ATTR_UNKNOWN_ATTRIBUTES, unknowns, j * sizeof(unknowns[0]));
+	stun_message_add_credentials(&msg, &req->auth);
+	stun_message_add_fingerprint(&msg);
+	return stun_message_send(stun, &msg, req->addr.protocol, &req->addr.host, &req->addr.peer);
 }
 
 static int stun_agent_parse_attr(stun_agent_t* stun, struct stun_request_t* req)
@@ -300,7 +337,7 @@ static int stun_agent_parse_attr(stun_agent_t* stun, struct stun_request_t* req)
 	struct stun_message_t* msg;
 	struct stun_address_t* addr;
 	struct stun_credential_t* auth;
-
+    
 	msg = &req->msg;
 	addr = &req->addr;
 	auth = &req->auth;
@@ -328,6 +365,12 @@ static int stun_agent_parse_attr(stun_agent_t* stun, struct stun_request_t* req)
 		case STUN_ATTR_SOURCE_ADDRESS:
 			// server response address, deprecated
 			break;
+
+        case STUN_ATTR_MAPPED_ADDRESS:
+            // don't overwrite STUN_ATTR_XOR_MAPPED_ADDRESS
+            if(AF_INET != addr->reflexive.ss_family && AF_INET6 != addr->reflexive.ss_family)
+                memcpy(&addr->reflexive, &msg->attrs[i].v.addr, sizeof(struct sockaddr_storage));
+            break;
 
 		case STUN_ATTR_XOR_MAPPED_ADDRESS:
 			memcpy(&addr->reflexive, &msg->attrs[i].v.addr, sizeof(struct sockaddr_storage));

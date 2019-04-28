@@ -57,6 +57,37 @@ int tls_socket_close(struct tls_socket_t* tls)
     return 0;
 }
 
+int tls_socket_getfd(tls_socket_t* tls)
+{
+    return SSL_get_fd(tls->ssl);
+}
+
+tls_socket_t* tls_socket_bind(const char* ip, unsigned int port)
+{
+    struct tls_socket_t* tls;
+    tls = (struct tls_socket_t*)calloc(1, sizeof(*tls));
+    
+    tls->tcp = socket_tcp_listen(ip, (unsigned short)port, 64);
+    if(socket_invalid == tls->tcp)
+    {
+        tls_socket_close(tls);
+        return NULL;
+    }
+    
+    tls->ctx = SSL_CTX_new(SSLv23_client_method());
+    if (!tls->ctx)
+    {
+        tls_socket_close(tls);
+        return NULL;
+    }
+    
+    socket_setnonblock(tls->tcp, 0);
+    tls->ssl = SSL_new(tls->ctx);
+    SSL_set_fd(tls->ssl, tls->tcp);
+    //r = SSL_accept(tls->ssl);
+    return tls;
+}
+
 static int tls_connect(struct tls_socket_t* tls)
 {
 	int r;
@@ -107,6 +138,46 @@ tls_socket_t* tls_socket_connect2(const struct sockaddr* addr, int timeout)
 
 	if(0 == tls_connect(tls))
 		return tls;
+    
+    ERR_print_errors_fp(stderr);
+    tls_socket_close(tls);
+    return NULL;
+}
+
+tls_socket_t* tls_socket_connect3(int fd)
+{
+    struct tls_socket_t* tls;
+    tls = (struct tls_socket_t*)calloc(1, sizeof(*tls));
+    tls->tcp = fd;
+    if(0 == tls_connect(tls))
+        return tls;
+    
+    ERR_print_errors_fp(stderr);
+    tls_socket_close(tls);
+    return NULL;
+}
+
+static int tls_accept(struct tls_socket_t* tls)
+{
+    int r;
+    tls->ctx = SSL_CTX_new(SSLv23_client_method());
+    if (!tls->ctx)
+        return -1;
+    
+    socket_setnonblock(tls->tcp, 0);
+    tls->ssl = SSL_new(tls->ctx);
+    SSL_set_fd(tls->ssl, tls->tcp);
+    r = SSL_accept(tls->ssl);
+    return 1 == r ? 0 : -1;
+}
+
+tls_socket_t* tls_socket_accept(int fd)
+{
+    struct tls_socket_t* tls;
+    tls = (struct tls_socket_t*)calloc(1, sizeof(*tls));
+    tls->tcp = fd;
+    if(0 == tls_accept(tls))
+        return tls;
     
     ERR_print_errors_fp(stderr);
     tls_socket_close(tls);

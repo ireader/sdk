@@ -35,8 +35,8 @@ struct turn_allocation_t
 	// timer to the default lifetime value of 600 seconds (10 minutes)
 	uint64_t expire; // time-to-expiry
 
-	int event_port;
-	uint8_t reservation_token[64];
+	int reserve_next_higher_port; // EVEN-PORT
+	uint8_t token[8];
 	uint32_t dontfragment;
 
 	// authentication;
@@ -54,16 +54,16 @@ struct turn_allocation_t
 static inline int turn_sockaddr_cmp(const struct sockaddr* l, const struct sockaddr* r)
 {
 	if (AF_INET == l->sa_family && AF_INET == r->sa_family)
-		return memcmp(&((struct sockaddr_in*)l)->sin_addr, &((struct sockaddr_in*)r)->sin_addr, sizeof(IN_ADDR));
+		return memcmp(&((struct sockaddr_in*)l)->sin_addr, &((struct sockaddr_in*)r)->sin_addr, sizeof(((struct sockaddr_in*)r)->sin_addr));
 	if (AF_INET6 == l->sa_family && AF_INET6 == r->sa_family)
-		return memcmp(&((struct sockaddr_in6*)l)->sin6_addr, &((struct sockaddr_in6*)r)->sin6_addr, sizeof(IN6_ADDR));
+		return memcmp(&((struct sockaddr_in6*)l)->sin6_addr, &((struct sockaddr_in6*)r)->sin6_addr, sizeof(((struct sockaddr_in6*)r)->sin6_addr));
 	return -1;
 }
 
-int turn_server_onallocate(const struct stun_request_t* req, struct stun_response_t* resp);
-int turn_server_onrefresh(const struct stun_request_t* req, struct stun_response_t* resp);
-int turn_server_oncreate_permission(const struct stun_request_t* req, struct stun_response_t* resp);
-int turn_server_onchannel_bind(const struct stun_request_t* req, struct stun_response_t* resp);
+int turn_server_onallocate(struct stun_agent_t* turn, const struct stun_request_t* req, struct stun_response_t* resp);
+int turn_server_onrefresh(struct stun_agent_t* turn, const struct stun_request_t* req, struct stun_response_t* resp);
+int turn_server_oncreate_permission(struct stun_agent_t* turn, const struct stun_request_t* req, struct stun_response_t* resp);
+int turn_server_onchannel_bind(struct stun_agent_t* turn, const struct stun_request_t* req, struct stun_response_t* resp);
 
 int turn_client_allocate_onresponse(struct stun_request_t* req, const struct stun_request_t* resp);
 int turn_client_refresh_onresponse(struct stun_request_t* req, const struct stun_request_t* resp);
@@ -79,9 +79,9 @@ int turn_server_onchannel_data(struct stun_agent_t* turn, struct turn_allocation
 /// DATA indication: from turn server to client
 int turn_client_ondata(struct stun_agent_t* turn, const struct stun_request_t* resp);
 /// ChannelData: from turn server to client
-int turn_client_onchannel_data(struct stun_agent_t* stun, struct turn_allocation_t* allocate, const uint8_t* data, int bytes);
+int turn_client_onchannel_data(struct stun_agent_t* turn, struct turn_allocation_t* allocate, const uint8_t* data, int bytes);
 
-struct turn_allocation_t* turn_allocation_create();
+struct turn_allocation_t* turn_allocation_create(void);
 int turn_allocation_destroy(struct turn_allocation_t** pp);
 const struct turn_permission_t* turn_allocation_find_permission(const struct turn_allocation_t* allocate, const struct sockaddr* addr);
 int turn_allocation_add_permission(struct turn_allocation_t* allocate, const struct sockaddr* addr);
@@ -89,9 +89,11 @@ const struct turn_channel_t* turn_allocation_find_channel(const struct turn_allo
 const struct turn_channel_t* turn_allocation_find_channel_by_peer(const struct turn_allocation_t* allocate, const struct sockaddr* addr);
 int turn_allocation_add_channel(struct turn_allocation_t* allocate, const struct sockaddr* addr, uint16_t channel);
 
+struct turn_allocation_t* turn_agent_allocation_find_by_token(struct list_head* root, const void* token);
 struct turn_allocation_t* turn_agent_allocation_find_by_relay(struct list_head* root, const struct sockaddr* relayed);
 struct turn_allocation_t* turn_agent_allocation_find_by_address(struct list_head* root, const struct sockaddr* host, const struct sockaddr* peer);
-int turn_agent_allocation_insert(struct stun_agent_t* turn, struct turn_allocation_t* allocate);
-int turn_agent_allocation_remove(struct stun_agent_t* turn, struct turn_allocation_t* allocate);
+int turn_agent_allocation_insert(struct stun_agent_t* turn, struct list_head* root, struct turn_allocation_t* allocate);
+int turn_agent_allocation_remove(struct stun_agent_t* turn, struct list_head* root, struct turn_allocation_t* allocate);
+int turn_agent_allocation_reservation_token(struct stun_agent_t* turn, struct turn_allocation_t* from);
 
 #endif /* _turn_internal_h_ */
