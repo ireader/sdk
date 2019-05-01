@@ -18,6 +18,7 @@ struct stun_agent_t* stun_agent_create(int rfc, struct stun_agent_handler_t* han
 		LIST_INIT_HEAD(&stun->requests);
 		LIST_INIT_HEAD(&stun->turnclients);
 		LIST_INIT_HEAD(&stun->turnservers);
+        LIST_INIT_HEAD(&stun->turnreserved);
 		locker_create(&stun->locker);
 		memcpy(&stun->handler, handler, sizeof(stun->handler));
 		stun->param = param;
@@ -53,6 +54,12 @@ int stun_agent_destroy(stun_agent_t** pp)
 		allocate = list_entry(pos, struct turn_allocation_t, link);
 		turn_allocation_destroy(&allocate);
 	}
+    
+    list_for_each_safe(pos, next, &stun->turnreserved)
+    {
+        allocate = list_entry(pos, struct turn_allocation_t, link);
+        turn_allocation_destroy(&allocate);
+    }
 
 	locker_destroy(&stun->locker);
 	free(stun);
@@ -400,6 +407,13 @@ int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* lo
 	struct stun_message_t *msg;
 	struct turn_allocation_t* allocate;
 
+    if (local)
+    {
+        allocate = turn_agent_allocation_find_by_relay(&stun->turnservers, local);
+        if (allocate)
+            return turn_server_relay(stun, allocate, remote, data, bytes);
+    }
+    
 	// 0x4000 ~ 0x7FFFF
 	if (bytes > 0 && 0x40 == (0xC0 & ((const uint8_t*)data)[0]) && local && remote)
 	{
@@ -416,13 +430,6 @@ int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* lo
 		}
 
 		return 0;
-	}
-
-	if (local)
-	{
-		allocate = turn_agent_allocation_find_by_relay(&stun->turnservers, local);
-		if (allocate)
-			return turn_server_relay(stun, allocate, remote, data, bytes);
 	}
 
 	memset(&req, 0, sizeof(req));

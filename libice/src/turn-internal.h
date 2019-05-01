@@ -94,6 +94,8 @@ struct turn_allocation_t* turn_agent_allocation_find_by_relay(struct list_head* 
 struct turn_allocation_t* turn_agent_allocation_find_by_address(struct list_head* root, const struct sockaddr* host, const struct sockaddr* peer);
 int turn_agent_allocation_insert(struct stun_agent_t* turn, struct list_head* root, struct turn_allocation_t* allocate);
 int turn_agent_allocation_remove(struct stun_agent_t* turn, struct list_head* root, struct turn_allocation_t* allocate);
-int turn_agent_allocation_reservation_token(struct stun_agent_t* turn, struct turn_allocation_t* from);
+struct turn_allocation_t* turn_agent_allocation_reservation_token(struct stun_agent_t* turn, struct turn_allocation_t* from);
+
+int turn_agent_allocation_cleanup(struct stun_agent_t* turn);
 
 #endif /* _turn_internal_h_ */

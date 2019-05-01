@@ -19,8 +19,9 @@ int turn_server_onallocate(struct stun_agent_t* turn, const struct stun_request_
 {
 	uint32_t lifetime;
 	const struct stun_attr_t* attr;
-	const struct stun_attr_t* evenport;
-	struct turn_allocation_t* allocate, *token;
+    const struct stun_attr_t* evenport;
+	struct turn_allocation_t* allocate;
+    struct sockaddr_storage relay;
 
 	// 1. long-term credential auth
 
@@ -38,28 +39,29 @@ int turn_server_onallocate(struct stun_agent_t* turn, const struct stun_request_
 		if (evenport)
 			return stun_server_response_failure(resp, 400, "Bad Request");
 
-		allocate = turn_agent_allocation_find_by_token(&turn->turnservers, (void*)(intptr_t)attr->v.ptr);
+		allocate = turn_agent_allocation_find_by_token(&turn->turnreserved, (void*)*(intptr_t*)attr->v.ptr);
 		if(!allocate || allocate->expire < system_clock())
 			return stun_server_response_failure(resp, 508, "Insufficient Capacity");
-		//TODO: add allocation reference count(concurrent use reservation token)
-		token = (struct turn_allocation_t*)(intptr_t)allocate->token;
-		memset(allocate->token, 0, sizeof(allocate->token));
-		allocate = token;
+		memcpy(&relay, &allocate->addr.relay, sizeof(struct sockaddr_storage)); // don't overwrite addr.relay
 	}
 	else
 	{
 		allocate = turn_allocation_create();
 		if (!allocate)
 			return stun_server_response_failure(resp, 486, "Allocation Quota Reached");
+		turn_agent_allocation_insert(turn, &turn->turnreserved, allocate);
+		memset(&relay, 0, sizeof(struct sockaddr_storage));
 	}
-	turn_agent_allocation_insert(turn, &turn->turnservers, allocate);
-	
+    
+    memcpy(&allocate->addr, &req->addr, sizeof(struct stun_address_t));
+    memcpy(&allocate->auth, &req->auth, sizeof(struct stun_credential_t));
+    
 	// 3. check REQUESTED-TRANSPORT
 	attr = stun_message_attr_find(&req->msg, STUN_ATTR_REQUESTED_TRANSPORT);
 	allocate->peertransport = !attr || TURN_TRANSPORT_UDP == (attr->v.u32 >> 24) ? STUN_PROTOCOL_UDP : STUN_PROTOCOL_TCP;
 	if (STUN_PROTOCOL_UDP != allocate->peertransport)
-		return stun_server_response_failure(resp, 442, "Unsupported Transport Protocol");
-
+        return stun_server_response_failure(resp, 442, "Unsupported Transport Protocol");
+		
 	attr = stun_message_attr_find(&req->msg, STUN_ATTR_LIFETIME);
 	lifetime = attr ? attr->v.u32 : TURN_LIFETIME;
 	lifetime = lifetime > TURN_LIFETIME ? lifetime : TURN_LIFETIME;
@@ -71,11 +73,7 @@ int turn_server_onallocate(struct stun_agent_t* turn, const struct stun_request_
 
 	// 6. check EVEN-PORT
 	if (evenport)
-	{
 		allocate->reserve_next_higher_port = evenport->v.u8 & 0x80;
-		// TODO: event-port support
-		//return stun_server_response_failure(resp, 508, "Insufficient Capacity");
-	}
 
 	// 7.
 	//stun_message_add_error(&resp->msg, 486, "Allocation Quota Reached");
@@ -88,9 +86,6 @@ int turn_server_onallocate(struct stun_agent_t* turn, const struct stun_request_
             return stun_server_response_failure(resp, 440, "Address Family not Supported");
     }
     
-	memcpy(&allocate->auth, &req->auth, sizeof(struct stun_credential_t));
-	memcpy(&allocate->addr, &req->addr, sizeof(struct stun_address_t));
-	
 	// In all cases, the server SHOULD only allocate ports from the range
 	// 49152 - 65535 (the Dynamic and/or Private Port range [Port-Numbers]),
 	// https://www.ncftp.com/ncftpd/doc/misc/ephemeral_ports.html
@@ -99,7 +94,11 @@ int turn_server_onallocate(struct stun_agent_t* turn, const struct stun_request_
 	// reply
 	stun_message_add_uint32(&resp->msg, STUN_ATTR_LIFETIME, lifetime);
 	stun_message_add_address(&resp->msg, STUN_ATTR_XOR_MAPPED_ADDRESS, (const struct sockaddr*)&allocate->addr.peer);
-	return turn->handler.onallocate(turn->param, resp, req, evenport ? 1 : 0, allocate->reserve_next_higher_port);
+
+    if(AF_INET == relay.ss_family || AF_INET6 == relay.ss_family)
+        return turn_agent_allocate_response(resp, (const struct sockaddr*)&relay, 200, "OK");
+    else
+        return turn->handler.onallocate(turn->param, resp, req, evenport ? 1 : 0, allocate->reserve_next_higher_port);
 }
 
 int turn_agent_allocate_response(struct stun_response_t* resp, const struct sockaddr* relay, int code, const char* pharse)
@@ -108,18 +107,20 @@ int turn_agent_allocate_response(struct stun_response_t* resp, const struct sock
 	struct turn_allocation_t* allocate;
 
 	msg = &resp->msg;
-	allocate = turn_agent_allocation_find_by_address(&resp->stun->turnservers, (const struct sockaddr*)&resp->addr.host, (const struct sockaddr*)&resp->addr.peer);
+	allocate = turn_agent_allocation_find_by_address(&resp->stun->turnreserved, (const struct sockaddr*)&resp->addr.host, (const struct sockaddr*)&resp->addr.peer);
 	if (!allocate)
 		return stun_server_response_failure(resp, 437, "Allocation Mismatch");
 	assert(NULL == turn_agent_allocation_find_by_relay(&resp->stun->turnservers, relay));
+	turn_agent_allocation_remove(resp->stun, &resp->stun->turnreserved, allocate);
+	turn_agent_allocation_insert(resp->stun, &resp->stun->turnservers, allocate);
 
 	if (code < 300)
 	{
 		// alloc relayed transport address
 		allocate->expire += system_clock();
-		memcpy(&allocate->addr.relay, relay, socket_addr_len(relay));
+		memmove(&allocate->addr.relay, relay, socket_addr_len(relay)); // token relay address overwrite
 		stun_message_add_address(&resp->msg, STUN_ATTR_XOR_RELAYED_ADDRESS, (const struct sockaddr*)&allocate->addr.relay);
-		if (allocate->reserve_next_higher_port && 0 == turn_agent_allocation_reservation_token(resp->stun, allocate))
+		if (allocate->reserve_next_higher_port && NULL != turn_agent_allocation_reservation_token(resp->stun, allocate))
 			stun_message_add_data(&resp->msg, STUN_ATTR_RESERVATION_TOKEN, allocate->token, sizeof(allocate->token));
 		msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_SUCCESS_RESPONSE, STUN_METHOD_ALLOCATE);
 		stun_message_add_credentials(msg, &resp->auth);
