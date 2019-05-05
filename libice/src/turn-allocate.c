@@ -81,7 +81,7 @@ const struct turn_channel_t* turn_allocation_find_channel_by_peer(const struct t
 	for (i = 0; i < darray_count(&allocate->channels); i++)
 	{
 		p = (const struct turn_channel_t*)darray_get(&allocate->channels, i);
-		if (0 == turn_sockaddr_cmp((const struct sockaddr*)&p->addr, addr))
+		if (0 == socket_addr_compare((const struct sockaddr*)&p->addr, addr))
 			return p;
 	}
 	return NULL;
@@ -89,13 +89,16 @@ const struct turn_channel_t* turn_allocation_find_channel_by_peer(const struct t
 
 int turn_allocation_add_channel(struct turn_allocation_t* allocate, const struct sockaddr* addr, uint16_t channel)
 {
-	struct turn_channel_t c, *p;
+    int r;
+	struct turn_channel_t c, *p, *p2;
 	p = (struct turn_channel_t*)turn_allocation_find_channel(allocate, channel);
 	if (p)
 	{
 		// 1. The channel number is not currently bound to a different transport address
 		// 2. The transport address is not currently bound to a different channel number
-		if (0 != turn_sockaddr_cmp((const struct sockaddr*)&p->addr, addr) || turn_allocation_find_channel_by_peer(allocate, addr))
+        r =turn_sockaddr_cmp((const struct sockaddr*)&p->addr, addr);
+        p2 =turn_allocation_find_channel_by_peer(allocate, addr);
+		if (0 != socket_addr_compare((const struct sockaddr*)&p->addr, addr) || p != turn_allocation_find_channel_by_peer(allocate, addr))
 			return -1; // channel in-use
 
 		p->expired = system_clock() + TURN_PERMISSION_LIFETIME * 1000;

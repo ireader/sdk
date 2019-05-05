@@ -15,6 +15,13 @@ static inline char HEX(char c)
 	return char_isnum(c) ? c-'0' : (char)tolower(c)-'a'+10;
 }
 
+// RFC3986
+// 2.2 Reserved Characters
+// reserved    = gen-delims / sub-delims
+// gen-delims  = ":" / "/" / "?" / "#" / "[" / "]" / "@"
+// sub-delims  = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
+// 2.3.  Unreserved Characters
+// unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
 int url_encode(const char* source, int srcBytes, char* target, int tgtBytes)
 {
 	int i, r;
@@ -60,10 +67,16 @@ int url_decode(const char* source, int srcBytes, char* target, int tgtBytes)
 	{
 		if('+' == *p)
 		{
+            // query '+' -> ' '
+            // other '+' -> '+'
 			target[i] = ' ';
 		}
 		else if('%' == *p)
 		{
+            // https://tools.ietf.org/html/rfc3986#page-21
+            // in the host component %-encoding can only be used for non-ASCII bytes.
+            // https://tools.ietf.org/html/rfc6874#section-2
+            // introduces %25 being allowed to escape a percent sign in IPv6 scoped-address literals
 			if(!char_ishex(p[1]) || !char_ishex(p[2]) || (-1!=srcBytes && p+2>=source+srcBytes))
 			{
 				r = -1;

@@ -1,19 +1,16 @@
 #include "stun-internal.h"
 #include "turn-internal.h"
+#include "sys/system.h"
 
 // for RESERVATION-TOKEN
 struct turn_allocation_t* turn_agent_allocation_find_by_token(struct list_head* root, const void* token)
 {
-	const uint8_t invalid[8] = { 0 };
-
 	struct list_head* pos;
 	struct turn_allocation_t* allocate;
 	list_for_each(pos, root)
 	{
 		allocate = list_entry(pos, struct turn_allocation_t, link);
-		assert(sizeof(allocate->token) == sizeof(invalid));
-		if (0 != memcmp(allocate->token, invalid, sizeof(invalid))
-			&& 0 == memcmp(allocate->token, token, sizeof(allocate->token)))
+		if (allocate == token)
 			return allocate;
 	}
 	return NULL;
@@ -62,12 +59,12 @@ int turn_agent_allocation_remove(struct stun_agent_t* turn, struct list_head* ro
 	return 0; (void)root;
 }
 
-int turn_agent_allocation_reservation_token(struct stun_agent_t* turn, struct turn_allocation_t* from)
+struct turn_allocation_t* turn_agent_allocation_reservation_token(struct stun_agent_t* turn, struct turn_allocation_t* from)
 {
 	struct turn_allocation_t* next;
 	next = turn_allocation_create();
 	if (!next)
-		return -1;
+		return NULL;
 
 	next->expire = from->expire;
 	next->dontfragment = from->dontfragment;
@@ -83,7 +80,57 @@ int turn_agent_allocation_reservation_token(struct stun_agent_t* turn, struct tu
 		((struct sockaddr_in6*)&next->addr.relay)->sin6_port = htons(ntohs(((struct sockaddr_in6*)&from->addr.relay)->sin6_port) + 1);
 
 	// save to reservation token
-	assert(sizeof(intptr_t) <= sizeof(from->token));
+    turn_agent_allocation_insert(turn, &turn->turnreserved, next);
+    assert(sizeof(intptr_t) <= sizeof(from->token));
 	*(intptr_t*)from->token = (intptr_t)next;
-	return 0;
+    return next;
+}
+
+int turn_agent_allocation_cleanup(struct stun_agent_t* turn)
+{
+    uint64_t now;
+    struct turn_allocation_t* allocate;
+    struct list_head* pos, *next;
+    
+    now = system_clock();
+    locker_lock(&turn->locker);
+    
+    list_for_each_safe(pos, next, &turn->turnclients)
+    {
+        allocate = list_entry(pos, struct turn_allocation_t, link);
+        // TODO: check permission/channel expire
+
+        if(allocate->expire < now)
+            continue;
+        
+        list_remove(pos);
+        turn_allocation_destroy(&allocate);
+    }
+    
+    list_for_each_safe(pos, next, &turn->turnservers)
+    {
+        allocate = list_entry(pos, struct turn_allocation_t, link);
+        // TODO: check permission/channel expire
+        
+        if(allocate->expire < now)
+            continue;
+        
+        list_remove(pos);
+        turn_allocation_destroy(&allocate);
+    }
+    
+    list_for_each_safe(pos, next, &turn->turnreserved)
+    {
+        allocate = list_entry(pos, struct turn_allocation_t, link);
+        // TODO: check permission/channel expire
+        
+        if(allocate->expire < now)
+            continue;
+        
+        list_remove(pos);
+        turn_allocation_destroy(&allocate);
+    }
+    
+    locker_unlock(&turn->locker);
+    return 0;
 }

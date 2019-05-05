@@ -4,6 +4,7 @@
 #include "sockutil.h"
 #include "aio-timeout.h"
 #include <stdlib.h>
+#include <time.h>
 #include <string>
 #include <map>
 
@@ -24,6 +25,8 @@ struct stun_server_test_context_t
     char realm[128];
     char nonce[128];
 };
+
+static int rtp_socket_create(struct sockaddr_in* addr, socket_t rtp[2], unsigned short port[2]);
 
 inline std::string socket_addr_to(const struct sockaddr* addr)
 {
@@ -70,6 +73,7 @@ static int stun_send(void* param, int protocol, const struct sockaddr* local, co
         {
             if(0 == socket_addr_compare((const struct sockaddr*)&it->second, local))
             {
+                printf("udp relay addr: %s, local: %s ==> remote: %s, bytes: %d\n", socket_addr_to(&it->second).c_str(), socket_addr_to(local).c_str(), socket_addr_to(remote).c_str(), bytes);
                 int r = socket_sendto(it->first, data, bytes, 0, remote, socket_addr_len(remote));
                 assert(r == bytes);
                 return 0;
@@ -174,27 +178,28 @@ static int stun_onallocate(void* param, stun_response_t* resp, const stun_reques
     stun_request_getaddr(req, &protocol, &local, &remote, NULL);
     printf("stun_onallocate: client(%s) -> server(%s), protocol: %d\n", socket_addr_to(&remote).c_str(), socket_addr_to(&local).c_str(), protocol);
     
-    socket_t udp = socket_udp();
+    socket_t udp[2];
+    u_short port[2];
     memcpy(&relay, &local, sizeof(relay));
-    socket_addr_setport((struct sockaddr*)&local, socket_addr_len((struct sockaddr*)&local), 0); // bind any port
-    int r = socket_bind(udp, (const struct sockaddr*)&local, socket_addr_len((struct sockaddr*)&local));
+    int r = rtp_socket_create((struct sockaddr_in*)&local, udp, port);
     if(0 != r)
     {
         printf("stun_onallocate: client(%s) -> server(%s), protocol: %d, bind failed: %d\n", socket_addr_to(&remote).c_str(), socket_addr_to(&local).c_str(), protocol, r);
-        socket_close(udp);
         return turn_agent_allocate_response(resp, NULL, 508, "Insufficient Capacity");
     }
     
     socklen_t addrlen = sizeof(struct sockaddr_storage);
-    if(socket_error == getsockname(udp, (struct sockaddr*)&local, &addrlen))
-        return socket_error;
-    
-    std::pair<TSockets::iterator, bool> pr = ctx->udprelays.insert(std::make_pair(udp, local));
+    getsockname(udp[1], (struct sockaddr*)&local, &addrlen);
+    std::pair<TSockets::iterator, bool> pr1 = ctx->udprelays.insert(std::make_pair(udp[1], local));
+    getsockname(udp[0], (struct sockaddr*)&local, &addrlen);
+    std::pair<TSockets::iterator, bool> pr0 = ctx->udprelays.insert(std::make_pair(udp[0], local));
+    printf("stun_onallocate: pair: %s / %s\n", socket_addr_to(&pr0.first->second).c_str(), socket_addr_to(&pr1.first->second).c_str(), protocol, r);
     r = turn_agent_allocate_response(resp, (const struct sockaddr*)&local, 200, "OK");
     if(0 != r)
     {
-        ctx->udprelays.erase(pr.second);
-        socket_close(udp);
+        ctx->udprelays.erase(pr0.second);
+        ctx->udprelays.erase(pr1.second);
+        socket_close(udp[0]);
     }
     else
     {
@@ -230,7 +235,7 @@ static int stun_onchannel(void* param, stun_response_t* resp, const stun_request
     struct stun_server_test_context_t* ctx = (struct stun_server_test_context_t*)param;
     stun_request_getaddr(req, &protocol, &local, &remote, NULL);
     printf("stun_onchannel: client(%s) -> server(%s), protocol: %d, peer: %s, channel: 0x%x\n", socket_addr_to(&remote).c_str(), socket_addr_to(&local).c_str(), protocol, socket_addr_to(peer).c_str(), channel);
-    return turn_agent_refresh_response(resp, 200, "OK");
+    return turn_agent_channel_bind_response(resp, 200, "OK");
 }
 
 extern "C" void stun_server_test()
@@ -473,7 +478,7 @@ extern "C" void stun_server_test()
                 r = socket_recvfrom(fds[i].fd, data, sizeof(data), 0, (struct sockaddr*)&from, &fromlen);
                 if(r > 0)
                 {
-                    socklen_t addrlen = sizeof(struct sockaddr_storage);
+                    addrlen = sizeof(struct sockaddr_storage);
                     getsockname(fds[i].fd, (struct sockaddr*)&local, &addrlen);
                     r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr *)&local, (const struct sockaddr *)&from, data, r);
                     assert(0 == r);
@@ -514,7 +519,7 @@ extern "C" void stun_server_test()
                 r = socket_recvfrom(fds[i].fd, data, sizeof(data), 0, (struct sockaddr*)&from, &fromlen);
                 if(r > 0)
                 {
-                    socklen_t addrlen = sizeof(struct sockaddr_storage);
+                    addrlen = sizeof(struct sockaddr_storage);
                     getsockname(fds[i].fd, (struct sockaddr*)&local, &addrlen);
                     r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr *)&local, (const struct sockaddr *)&from, data, r);
                     assert(0 == r);
@@ -524,13 +529,13 @@ extern "C" void stun_server_test()
             {
                 // stun/turn protocol
                 struct sockaddr_storage local;
-                socklen_t addrlen = sizeof(struct sockaddr_storage);
+                addrlen = sizeof(struct sockaddr_storage);
                 TSockets::iterator it = ctx.tcpclients.find(fds[i].fd);
                 assert(it != ctx.tcpclients.end());
                 r = socket_recv(fds[i].fd, data, sizeof(data), 0);
                 if(r > 0)
                 {
-                    socklen_t addrlen = sizeof(struct sockaddr_storage);
+                    addrlen = sizeof(struct sockaddr_storage);
                     getsockname(fds[i].fd, (struct sockaddr*)&local, &addrlen);
                     r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TCP, (const struct sockaddr *)&local, (const struct sockaddr *)&(it->second), data, r);
                     assert(0 == r);
@@ -540,7 +545,7 @@ extern "C" void stun_server_test()
             {
                 // stun/turn protocol
                 struct sockaddr_storage local;
-                socklen_t addrlen = sizeof(struct sockaddr_storage);
+                addrlen = sizeof(struct sockaddr_storage);
                 TLSSockets::iterator it;
                 for(it = ctx.tlsclients.begin(); it != ctx.tlsclients.end(); it++)
                 {
@@ -552,7 +557,7 @@ extern "C" void stun_server_test()
                 r = tls_socket_read(it->first, data, sizeof(data));
                 if(r > 0)
                 {
-                    socklen_t addrlen = sizeof(struct sockaddr_storage);
+                    addrlen = sizeof(struct sockaddr_storage);
                     getsockname(fds[i].fd, (struct sockaddr*)&local, &addrlen);
                     r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TLS, (const struct sockaddr *)&local, (const struct sockaddr *)&(it->second), data, r);
                     assert(0 == r);
@@ -573,4 +578,40 @@ extern "C" void stun_server_test()
     socket_close(ctx.udp);
     tls_socket_cleanup();
     socket_cleanup();
+}
+
+// In all cases, the server SHOULD only allocate ports from the range 49152 - 65535
+static int rtp_socket_create(struct sockaddr_in* addr, socket_t rtp[2], unsigned short port[2])
+{
+    unsigned short i;
+    socket_t sock[2];
+    srand((unsigned int)time(NULL));
+    
+    do
+    {
+        i = rand() % 10000;
+        i = i/2*2 + 49152;
+        
+        addr->sin_port = htons(i);
+        sock[0] = socket_bind_addr((const struct sockaddr*)addr, SOCK_DGRAM);
+        if(socket_invalid == sock[0])
+            continue;
+        
+        addr->sin_port = htons(i + 1);
+        sock[1] = socket_bind_addr((const struct sockaddr*)addr, SOCK_DGRAM);
+        if(socket_invalid == sock[1])
+        {
+            socket_close(sock[0]);
+            continue;
+        }
+        
+        rtp[0] = sock[0];
+        rtp[1] = sock[1];
+        port[0] = i;
+        port[1] = i+1;
+        return 0;
+        
+    } while(socket_invalid==sock[0] || socket_invalid==sock[1]);
+    
+    return -1;
 }

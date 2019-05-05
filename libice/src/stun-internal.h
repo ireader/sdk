@@ -70,6 +70,7 @@ struct stun_agent_t
 	struct list_head requests; // stun/turn requests
 	struct list_head turnclients; // client allocations
 	struct list_head turnservers; // server allocations
+    struct list_head turnreserved; // reserved allocations
 
 	int rfc; // rfc version
 	int auth_term; // 0-short term, 1-long term

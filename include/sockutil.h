@@ -165,6 +165,25 @@ static inline int socket_bind_any(IN socket_t sock, IN u_short port)
 /// TCP/UDP server socket
 //////////////////////////////////////////////////////////////////////////
 
+/// TCP/UDP socket bind to address(IPv4/IPv6)
+/// @param[in] socktype SOCK_DGRAM/SOCK_STREAM
+static inline socket_t socket_bind_addr(const struct sockaddr* addr, int socktype)
+{
+	socket_t s;
+
+	s = socket(addr->sa_family, socktype, 0);
+	if (socket_invalid == s)
+		return socket_invalid;
+
+	if (0 != socket_bind(s, addr, socket_addr_len(addr)))
+	{
+		socket_close(s);
+		return socket_invalid;
+	}
+
+	return s;
+}
+
 /// create a new TCP socket, bind, and listen
 /// @param[in] ip socket bind local address, NULL-bind any address
 /// @param[in] port bind local port
