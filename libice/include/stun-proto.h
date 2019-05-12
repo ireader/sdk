@@ -2,7 +2,7 @@
 #define _stun_proto_h_
 
 #define STUN_PORT        3478 // both TCP and UDP, rfc3489 8.1 Binding Requests (p10)
-#define STUN_TLS_PORT    5349 // The default port for STUN over TLS is 5349 (p22)
+#define STUN_TLS_PORT    5349 // The default port for STUN over TLS/DTLS is 5349 (p22)
 
 #define STUN_HEADER_SIZE 20
 #define STUN_SOFTWARE    "libice"

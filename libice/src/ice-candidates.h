@@ -78,7 +78,7 @@ static inline void ice_candidate_pairs_free(ice_candidate_pairs_t* arr)
 	darray_free(arr);
 }
 
-static inline int ice_candidate_pairs_count(ice_candidate_pairs_t* arr)
+static inline int ice_candidate_pairs_count(const ice_candidate_pairs_t* arr)
 {
 	return darray_count(arr);
 }
@@ -90,7 +90,7 @@ static inline struct ice_candidate_pair_t* ice_candidate_pairs_get(ice_candidate
 
 static int ice_candidate_pair_compare_foundation(const struct ice_candidate_pair_t* l, const struct ice_candidate_pair_t* r)
 {
-	return 0 == memcmp(l->local.foundation, r->local.foundation, sizeof(ice_foundation_t)) ? 0 : -1;
+	return 0 == strcmp(l->foundation, r->foundation) ? 0 : -1;
 }
 
 static int ice_candidate_pair_compare(const struct ice_candidate_pair_t* l, const struct ice_candidate_pair_t* r)
@@ -158,15 +158,15 @@ static inline ice_candidate_pairs_t* ice_candidate_components_get(ice_candidate_
 	return (ice_candidate_pairs_t*)darray_get(components, i);
 }
 
-static int ice_candidate_component_compare(const ice_candidate_pairs_t* component, const ice_component_t *id)
+static int ice_candidate_component_compare(const ice_candidate_pairs_t* component, const uint16_t *id)
 {
-	struct ice_candidate_pair_t* pair;
+	const struct ice_candidate_pair_t* pair;
 	assert(ice_candidate_pairs_count(component) > 0);
-	pair = ice_candidate_pairs_get(component, 0);
-	return (int)(pair->local.componentId - *id);
+	pair = ice_candidate_pairs_get((ice_candidate_pairs_t*)component, 0);
+	return (int)(pair->local.component - *id);
 }
 
-static ice_candidate_pairs_t* ice_candidate_components_fetch(ice_candidate_components_t* components, ice_component_t id)
+static ice_candidate_pairs_t* ice_candidate_components_fetch(ice_candidate_components_t* components, uint16_t id)
 {
 	int pos;
 	ice_candidate_pairs_t arr, *component;

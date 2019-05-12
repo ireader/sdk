@@ -90,7 +90,8 @@ const struct turn_channel_t* turn_allocation_find_channel_by_peer(const struct t
 int turn_allocation_add_channel(struct turn_allocation_t* allocate, const struct sockaddr* addr, uint16_t channel)
 {
     int r;
-	struct turn_channel_t c, *p, *p2;
+	struct turn_channel_t c, *p;
+	const struct turn_channel_t *p2;
 	p = (struct turn_channel_t*)turn_allocation_find_channel(allocate, channel);
 	if (p)
 	{

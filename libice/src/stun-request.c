@@ -110,12 +110,13 @@ int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockadd
 	return 0;
 }
 
-int stun_request_getaddr(const stun_request_t* req, int* protocol, struct sockaddr_storage* local, struct sockaddr_storage* remote, struct sockaddr_storage* reflexive)
+int stun_request_getaddr(const stun_request_t* req, int* protocol, struct sockaddr_storage* local, struct sockaddr_storage* remote, struct sockaddr_storage* reflexive, struct sockaddr_storage* relay)
 {
 	if(protocol) *protocol = req->addr.protocol;
 	if (local) memcpy(local, &req->addr.host, sizeof(struct sockaddr_storage));
 	if (remote) memcpy(remote, &req->addr.peer, sizeof(struct sockaddr_storage));
 	if (reflexive) memcpy(reflexive, &req->addr.reflexive, sizeof(struct sockaddr_storage));
+	if (relay) memcpy(relay, &req->addr.relay, sizeof(struct sockaddr_storage));
 	return 0;
 }
 

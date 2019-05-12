@@ -82,8 +82,8 @@ static int stun_send(void* param, int protocol, const struct sockaddr* local, co
         
         // stun/turn protocol
         assert(AF_INET == remote->sa_family || AF_INET6 == remote->sa_family);
-        if(AF_INET == local->sa_family || AF_INET6 == local->sa_family)
-            socket_bind(ctx->udp, local, socket_addr_len(local));
+		assert(AF_INET == local->sa_family || AF_INET6 == local->sa_family);
+        assert(0 == socket_bind(ctx->udp, local, socket_addr_len(local)));
         int r = socket_sendto(ctx->udp, data, bytes, 0, remote, socket_addr_len(remote));
         assert(r == bytes);
     }
@@ -106,6 +106,10 @@ static int stun_send(void* param, int protocol, const struct sockaddr* local, co
         int n = socket_send(it->first, data, bytes, 0);
         assert(bytes == n);
     }
+	else if (STUN_PROTOCOL_DTLS == protocol)
+	{
+		assert(0);
+	}
     else
     {
         assert(0);

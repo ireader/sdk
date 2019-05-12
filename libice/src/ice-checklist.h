@@ -49,9 +49,9 @@ int ice_checklist_list_local_candidate(struct ice_checklist_t* l, ice_agent_onca
 int ice_checklist_list_remote_candidate(struct ice_checklist_t* l, ice_agent_oncandidate oncand, void* param);
 
 /// Choosing default candidates
-int ice_checklist_get_default_candidate(struct ice_checklist_t* l, ice_component_t component, struct ice_candidate_t* c);
+int ice_checklist_get_default_candidate(struct ice_checklist_t* l, uint16_t component, struct ice_candidate_t* c);
 
-int ice_checklist_gather_stun_candidate(struct ice_checklist_t* l, ice_agent_ongather ongather, void* param);
+int ice_checklist_gather_stun_candidate(struct ice_checklist_t* l, const struct sockaddr* addr, int turn, ice_agent_ongather ongather, void* param, turn_agent_ondata ondata, void* ondataparam);
 
 int ice_checklist_build(struct ice_checklist_t* l);
 
