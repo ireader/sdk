@@ -7,28 +7,51 @@ static int ice_gather_onbind(void* param, const stun_request_t* req, int code, c
 	int i, r, protocol;
 	struct ice_checklist_t* l;
 	struct ice_candidate_t c, *local;
+	struct sockaddr_storage host, remote, reflexive, relay;
 
 	l = (struct ice_checklist_t*)param;
 
 	if (code >= 200 && code < 300)
 	{
-		memset(&c, 0, sizeof(struct ice_candidate_t));
-		c.type = ICE_CANDIDATE_SERVER_REFLEXIVE;
-		stun_request_getaddr(req, &protocol, &c.base, &c.stun, &c.addr);
-		ice_candidate_priority(&c);
-		ice_candidate_foundation(&c);
+		stun_request_getaddr(req, &protocol, &host, &remote, &reflexive, &relay);
 
 		for (i = 0; i < ice_candidates_count(&l->locals); i++)
 		{
 			local = ice_candidates_get(&l->locals, i);
-			if (0 == socket_addr_compare((const struct sockaddr*)&local->addr, (const struct sockaddr*)&c.base) && 0 == socket_addr_compare((const struct sockaddr*)&local->stun, (const struct sockaddr*)&c.stun))
-			{
-				c.componentId = local->componentId;
+			if (ICE_CANDIDATE_HOST == local->type && 0 == socket_addr_compare((const struct sockaddr*)&local->addr, (const struct sockaddr*)&host))
 				break;
+		}
+		
+		if (i < ice_candidates_count(&l->locals))
+		{
+			assert(AF_INET == reflexive.ss_family || AF_INET6 == reflexive.ss_family);
+			memset(&c, 0, sizeof(struct ice_candidate_t));
+			c.type = ICE_CANDIDATE_SERVER_REFLEXIVE;
+			c.component = local->component;
+			c.protocol = local->protocol;
+			memcpy(&c.raddr, &host, sizeof(c.raddr));
+			memcpy(&c.addr, &reflexive, sizeof(c.addr));
+			ice_candidate_priority(&c);
+			ice_candidate_foundation(&c, (struct sockaddr*)&remote);
+			r = ice_checklist_add_local_candidate(l, &c);
+
+			if (AF_INET == relay.ss_family || AF_INET6 == relay.ss_family)
+			{
+				memset(&c, 0, sizeof(struct ice_candidate_t));
+				c.type = ICE_CANDIDATE_RELAYED;
+				c.component = local->component;
+				c.protocol = local->protocol;
+				memcpy(&c.raddr, &host, sizeof(c.raddr));
+				memcpy(&c.addr, &reflexive, sizeof(c.addr));
+				ice_candidate_priority(&c);
+				ice_candidate_foundation(&c, (struct sockaddr*)&remote);
+				r = ice_checklist_add_local_candidate(l, &c);
 			}
 		}
-
-		r = ice_checklist_add_local_candidate(l, &c);
+		else
+		{
+			assert(0);
+		}
 	}
 	else
 	{
@@ -43,7 +66,7 @@ static int ice_gather_onbind(void* param, const stun_request_t* req, int code, c
 }
 
 /// Gather server reflexive and relayed candidates
-int ice_checklist_gather_stun_candidate(struct ice_checklist_t* l, ice_agent_ongather ongather, void* param)
+int ice_checklist_gather_stun_candidate(struct ice_checklist_t* l, const struct sockaddr* addr, int turn, ice_agent_ongather ongather, void* param, turn_agent_ondata ondata, void* ondataparam)
 {
 	int i, r;
 	struct stun_request_t* req;
@@ -56,15 +79,15 @@ int ice_checklist_gather_stun_candidate(struct ice_checklist_t* l, ice_agent_ong
 	for (i = 0; i < ice_candidates_count(&l->locals); i++)
 	{
 		p = ice_candidates_get(&l->locals, i);
-		if (p->type != ICE_CANDIDATE_HOST || 0 == p->stun.ss_family)
+		if (ICE_CANDIDATE_HOST != p->type)
 			continue;
 
 		req = stun_request_create(l->stun, STUN_RFC_5389, ice_gather_onbind, l);
 		if (!req) continue;
 
-		stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&p->addr, (const struct sockaddr*)&p->stun);
+		stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&p->addr, addr);
 		stun_request_setauth(req, l->auth->credential, l->auth->usr, l->auth->pwd, l->auth->realm, l->auth->nonce);
-		r = stun_agent_bind(req);
+		r = 0 == turn ? stun_agent_bind(req) : turn_agent_allocate(req, ondata, ondataparam);
 		if (0 != r)
 		{
 			stun_request_destroy(&req);

@@ -15,7 +15,7 @@ typedef struct stun_response_t stun_response_t;
 
 enum { STUN_RFC_3489, STUN_RFC_5389, };
 
-enum { STUN_PROTOCOL_UDP, STUN_PROTOCOL_TCP, STUN_PROTOCOL_TLS, };
+enum { STUN_PROTOCOL_UDP, STUN_PROTOCOL_TCP, STUN_PROTOCOL_TLS, STUN_PROTOCOL_DTLS };
 
 /// @param[in] req transaction request
 /// @param[in] code http like code, 2xx-ok, 4xx/5xx-error
@@ -28,7 +28,7 @@ stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_ha
 
 /// @param[in] protocol 1-UDP, 2-TCP
 int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockaddr* local, const struct sockaddr* remote);
-int stun_request_getaddr(const stun_request_t* req, int* protocol, struct sockaddr_storage* local, struct sockaddr_storage* remote, struct sockaddr_storage* reflexive);
+int stun_request_getaddr(const stun_request_t* req, int* protocol, struct sockaddr_storage* local, struct sockaddr_storage* remote, struct sockaddr_storage* reflexive, struct sockaddr_storage* relayed);
 
 /// @param[in] credential 0-Short-Term Credential Mechanism, 1-Long-Term Credential Mechanism
 /// @param[in] realm Long-Term Credential only

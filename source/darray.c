@@ -121,7 +121,7 @@ void* darray_find(const struct darray_t* arr, const void* item, int *pos, darray
 	int i, r;
 	void* v;
 	pos = pos ? pos : &i;
-	for (*pos = 0; *pos < darray_count(arr); *pos++)
+	for (*pos = 0; *pos < darray_count(arr); *pos += 1)
 	{
 		v = darray_get((struct darray_t*)arr, *pos);
 		r = compare(v, item);
@@ -139,7 +139,7 @@ int darray_insert2(struct darray_t* arr, const void* item, darray_compare compar
 	int pos;
 	if (NULL != darray_find(arr, item, &pos, compare))
 		return -1; // EEXIST
-	return darray_insert(arr, pos, &item, 1);
+	return darray_insert(arr, pos, item, 1);
 }
 
 int darray_erase2(struct darray_t* arr, const void* item, darray_compare compare)

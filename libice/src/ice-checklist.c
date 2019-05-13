@@ -46,9 +46,9 @@ int ice_checklist_add_local_candidate(struct ice_checklist_t* l, const struct ic
 {
 	if (AF_INET != c->addr.ss_family && AF_INET6 != c->addr.ss_family)
 		return -1;
-	if (0 != c->stun.ss_family && c->addr.ss_family != c->stun.ss_family)
+	if (0 != c->raddr.ss_family && c->addr.ss_family != c->raddr.ss_family)
 		return -1;
-	if (0 == c->priority || 0 == c->componentId || 0 == c->foundation[0])
+	if (0 == c->priority || 0 == c->component || 0 == c->foundation[0])
 		return -1;
 	if (ice_candidates_count(&l->locals) > ICE_CANDIDATE_LIMIT)
 		return -1;
@@ -61,7 +61,7 @@ int ice_checklist_add_remote_candidate(struct ice_checklist_t* l, const struct i
 		return -1;
 	//if (0 != c->stun.ss_family && c->addr.ss_family != c->stun.ss_family)
 	//	return -1;
-	if (0 == c->priority || 0 == c->componentId)
+	if (0 == c->priority || 0 == c->component)
 		return -1;
 	if (ice_candidates_count(&l->remotes) > ICE_CANDIDATE_LIMIT)
 		return -1;
@@ -78,14 +78,14 @@ int ice_checklist_list_remote_candidate(struct ice_checklist_t* l, ice_agent_onc
 	return ice_candidates_list(&l->remotes, oncand, param);
 }
 
-int ice_checklist_get_default_candidate(struct ice_checklist_t* l, ice_component_t component, struct ice_candidate_t* c)
+int ice_checklist_get_default_candidate(struct ice_checklist_t* l, uint16_t component, struct ice_candidate_t* c)
 {
 	int i;
 	struct ice_candidate_t *p, *pc = NULL;
 	for (i = 0; i < ice_candidates_count(&l->locals); i++)
 	{
 		p = ice_candidates_get(&l->locals, i);
-		if(p->componentId != component)
+		if(p->component != component)
 			continue;
 
 		// rfc5245 4.1.4. Choosing Default Candidates (p25)
@@ -125,14 +125,14 @@ int ice_checklist_build(struct ice_checklist_t* l)
 		if(ICE_CANDIDATE_HOST != local->type && ICE_CANDIDATE_RELAYED != local->type)
 			continue;
 
-		component = ice_candidate_components_fetch(&l->components, local->componentId);
+		component = ice_candidate_components_fetch(&l->components, local->component);
 		if (!component)
 			return -1;
 
 		for (j = 0; j < ice_candidates_count(&l->remotes); j++)
 		{
 			remote = ice_candidates_get(&l->remotes, j);
-			if(local->componentId != remote->componentId)
+			if(local->component != remote->component)
 				continue;
 
 			// agent MUST limit the total number of connectivity checks the agent  
@@ -142,6 +142,7 @@ int ice_checklist_build(struct ice_checklist_t* l)
 			memset(&pair, 0, sizeof(pair));
 			pair.state = ICE_CANDIDATE_PAIR_FROZEN;
 			ice_candidate_pair_priority(&pair);
+			snprintf(pair.foundation, sizeof(pair.foundation), "%s:%s", local->foundation, remote->foundation);
 			memcpy(&pair.local, local, sizeof(struct ice_candidate_t));
 			memcpy(&pair.remote, remote, sizeof(struct ice_candidate_t));
 			ice_candidate_pairs_insert(component, &pair);
@@ -192,18 +193,19 @@ static void ice_checlist_add_peer_reflexive(struct ice_checklist_t* l, const stu
 {
 	struct ice_candidate_t c, *local;
 	const struct stun_attr_t* priority;
+	struct sockaddr_storage remote;
 
 	memset(&c, 0, sizeof(struct ice_candidate_t));
-	stun_request_getaddr(resp, &c.protocol, &c.base, &c.stun, &c.addr);
+	stun_request_getaddr(resp, &c.protocol, &c.raddr, &remote, &c.addr, NULL);
 	priority = stun_message_attr_find(&resp->msg, STUN_ATTR_PRIORITY);
 
-	local = darray_find(&l->locals, &c.base, NULL, ice_candidate_compare_host_addr);
+	local = darray_find(&l->locals, &c.raddr, NULL, ice_candidate_compare_host_addr);
 	if (NULL == local)
 		return; // local not found, new request ???
 
 	c.type = ICE_CANDIDATE_PEER_REFLEXIVE; 
-	c.componentId = local->componentId;
-	ice_candidate_foundation(&c);
+	c.component = local->component;
+	ice_candidate_foundation(&c, (struct sockaddr*)&c.addr);
 	ice_candidate_priority(&c);
 	if (priority)
 		c.priority = priority->v.u32;
@@ -222,7 +224,7 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 	l = (struct ice_checklist_t*)param;
 
 	// ice agent callback
-	r = stun_request_getaddr(req, &protocol, &local, &remote, &reflexive);
+	r = stun_request_getaddr(req, &protocol, &local, &remote, &reflexive, NULL);
 	if (0 != r)
 		return r;
 
@@ -238,7 +240,8 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 		{
 			pair = ice_candidate_pairs_get(component, j);
 			assert(ICE_CANDIDATE_PAIR_INPROGRESS == pair->state);
-			if (0 == socket_addr_compare((const struct sockaddr*)&pair->local.addr, (const struct sockaddr*)&local) && 0 == socket_addr_compare((const struct sockaddr*)&pair->remote.addr, (const struct sockaddr*)&remote))
+			if (0 == socket_addr_compare((const struct sockaddr*)&pair->local.raddr, (const struct sockaddr*)&local) 
+				&& 0 == socket_addr_compare((const struct sockaddr*)&pair->remote.addr, (const struct sockaddr*)&remote))
 			{
 				if (0 == code)
 				{
@@ -260,13 +263,13 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 	return 0;
 }
 
-static int ice_checklist_bind(struct ice_checklist_t* l, struct ice_candidate_t *c)
+static int ice_checklist_bind(struct ice_checklist_t* l, struct ice_candidate_pair_t *pair)
 {
 	struct stun_request_t* req;
 	req = stun_request_create(l->stun, STUN_RFC_5389, ice_checklist_onbind, l);
-	stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&c->addr, (const struct sockaddr*)&c->stun);
+	stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&pair->local.raddr, (const struct sockaddr*)&pair->remote.addr);
 	stun_request_setauth(req, req->auth.credential, req->auth.usr, req->auth.pwd, req->auth.realm, req->auth.nonce);
-	stun_message_add_uint32(&req->msg, STUN_ATTR_PRIORITY, c->priority);
+	stun_message_add_uint32(&req->msg, STUN_ATTR_PRIORITY, pair->local.priority);
 	if(l->nomination != ICE_REGULAR_NOMINATION) stun_message_add_flag(&req->msg, STUN_ATTR_USE_CANDIDATE);
 	stun_message_add_uint64(&req->msg, l->controlling ? STUN_ATTR_ICE_CONTROLLING : STUN_ATTR_ICE_CONTROLLED, rand() * rand());
 	return stun_agent_bind(req);
@@ -336,7 +339,7 @@ static int ice_checklist_ontimer(void* param)
 	if (waiting)
 	{
 		waiting->state = ICE_CANDIDATE_PAIR_INPROGRESS;
-		ice_checklist_bind(l, &waiting->local);
+		ice_checklist_bind(l, waiting);
 	}
 	else
 	{
@@ -377,9 +380,9 @@ static void ice_checklist_foundation_group(struct ice_checklist_t* l, struct dar
 			}
 			
 			// update
-			if (pair->local.componentId < (*pp)->local.componentId)
+			if (pair->local.component < (*pp)->local.component)
 				*pp = pair;
-			else if(pair->local.componentId == (*pp)->local.componentId && pair->local.priority >(*pp)->local.priority)
+			else if(pair->local.component == (*pp)->local.component && pair->local.priority >(*pp)->local.priority)
 				*pp = pair;
 		}
 	}

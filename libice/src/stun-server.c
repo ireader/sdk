@@ -23,7 +23,7 @@ int stun_server_onbind(struct stun_agent_t* stun, const struct stun_request_t* r
     attr = stun_message_attr_find(&req->msg, STUN_ATTR_RESPONSE_PORT);
     if(attr && (attr->v.u32 >> 16) > 0)
     {
-        socket_addr_setport((const struct sockaddr*)&resp->addr.peer, socket_addr_len((const struct sockaddr*)&resp->addr.peer), (u_short)(attr->v.u32 >> 16));
+        socket_addr_setport((struct sockaddr*)&resp->addr.peer, socket_addr_len((const struct sockaddr*)&resp->addr.peer), (u_short)(attr->v.u32 >> 16));
     }
 
 	stun_message_add_address(&resp->msg, STUN_ATTR_SOURCE_ADDRESS, (const struct sockaddr*)&resp->addr.host);
