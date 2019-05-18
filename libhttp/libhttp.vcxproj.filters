@@ -75,6 +75,9 @@
     <ClCompile Include="source\http-header-expires.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\http-header-auth.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\http-client.h">

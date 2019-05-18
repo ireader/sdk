@@ -137,6 +137,7 @@
     <ClCompile Include="source\http-client-connection.c" />
     <ClCompile Include="source\http-client.c" />
     <ClCompile Include="source\http-cookie.c" />
+    <ClCompile Include="source\http-header-auth.c" />
     <ClCompile Include="source\http-header-authorization.c" />
     <ClCompile Include="source\http-header-content-type.c" />
     <ClCompile Include="source\http-header-expires.c" />
