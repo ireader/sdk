@@ -150,13 +150,13 @@ static void	md5_entity(char r[33], const uint8_t* entity, int bytes)
 	base16(r, md5, 16);
 }
 
-int http_header_auth(const struct http_header_authorization_t* auth, const char* pwd, const char* method, const char* content, int length, char* authenrization, int bytes)
+int http_header_auth(const struct http_header_www_authenticate_t* auth, const char* pwd, const char* method, const char* content, int length, char* authenrization, int bytes)
 {
 	int n;
 	char A1[33];
 	char A2[33];
 	char entity[33];
-	struct http_header_authorization_t auth2;
+	struct http_header_www_authenticate_t auth2;
 
 	memcpy(&auth2, auth, sizeof(auth2));
 	if (HTTP_AUTHENTICATION_BASIC == auth->scheme)
@@ -190,7 +190,7 @@ int http_header_auth(const struct http_header_authorization_t* auth, const char*
 void http_header_auth_test(void)
 {
 	char buffer[1024];
-	struct http_header_authorization_t auth;
+	struct http_header_www_authenticate_t auth;
 	memset(&auth, 0, sizeof(auth));
 	auth.scheme = HTTP_AUTHENTICATION_DIGEST;
 	strcpy(auth.username, "Mufasa");

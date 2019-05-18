@@ -1,4 +1,5 @@
 #include "http-header-auth.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -64,7 +65,7 @@ static int s_strcpy(char* dst, size_t size, const char* src, size_t bytes)
 	return 0;
 }
 
-static int http_header_authorization_param(struct http_header_authorization_t* auth, const char* name, size_t bytes, const char* value, size_t bytes2)
+static int http_header_authorization_param(struct http_header_www_authenticate_t* auth, const char* name, size_t bytes, const char* value, size_t bytes2)
 {
 	if (0 == strncasecmp(name, "username", bytes))
 	{
@@ -116,7 +117,7 @@ static int http_header_authorization_param(struct http_header_authorization_t* a
 	return 0;
 }
 
-int http_header_authorization(const char* field, struct http_header_authorization_t* auth)
+int http_header_authorization(const char* field, struct http_header_www_authenticate_t* auth)
 {
 	const char* name;
 	const char* value;
@@ -172,7 +173,7 @@ int http_header_authorization(const char* field, struct http_header_authorizatio
 	return 0;
 }
 
-int http_header_authorization_write(const struct http_header_authorization_t* auth, char* ptr, int len)
+int http_header_authorization_write(const struct http_header_www_authenticate_t* auth, char* ptr, int len)
 {
 	int n;
 	switch (auth->scheme)
@@ -203,7 +204,7 @@ int http_header_authorization_write(const struct http_header_authorization_t* au
 #if defined(_DEBUG) || defined(DEBUG)
 void http_header_authorization_test(void)
 {
-	struct http_header_authorization_t authorization;
+	struct http_header_www_authenticate_t authorization;
 
 	http_header_authorization("Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==", &authorization);
 	assert(HTTP_AUTHENTICATION_BASIC == authorization.scheme);
