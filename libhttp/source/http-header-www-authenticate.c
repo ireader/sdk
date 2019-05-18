@@ -82,6 +82,7 @@ static int http_header_authorization_param(struct http_header_www_authenticate_t
 	}
 	else if (0 == strncasecmp(name, "qop", bytes))
 	{
+		// TODO: split qop-options
 		return s_strcpy(auth->qop, sizeof(auth->qop), value, bytes2);
 	}
 	else
