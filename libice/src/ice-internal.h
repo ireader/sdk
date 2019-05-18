@@ -68,14 +68,25 @@ static inline void ice_candidate_priority(struct ice_candidate_t* c)
 	// 1. multihomed and has multiple IP addresses, the local preference for host
 	// candidates from a VPN interface SHOULD have a priority of 0.
 	// 2. IPv6 > 6to4 > IPv4
-	v = (1 << 10) * c->addr.ss_family;
+	v = (1 << 10) * c->host.ss_family;
 
 	c->priority = (1 << 24) * c->type + (1 << 8) * v + (256 - c->component);
+}
+
+static inline const struct sockaddr_storage* ice_candidate_base(const struct ice_candidate_t* c)
+{
+	// The base of a server reflexive candidate is the host candidate
+	// from which it was derived. A host candidate is also said to have
+	// a base, equal to that candidate itself. Similarly, the base of a
+	// relayed candidate is that candidate itself.
+	return ICE_CANDIDATE_RELAYED != c->type ? &c->host : &c->reflexive;
 }
 
 // RFC5245 4.1.1.3. Computing Foundations (p22)
 static inline void ice_candidate_foundation(struct ice_candidate_t* c, const struct sockaddr* stun)
 {
+	// An arbitrary string that is the same for two candidates that have the same type, 
+	// base IP address, protocol (UDP, TCP, etc.), and STUN or TURN server.
 	// 1. they are of the same type (host, relayed, server reflexive, or peer reflexive).
 	// 2. their bases have the same IP address (the ports can be different).
 	// 3. for reflexive and relayed candidates, the STUN or TURN servers used to obtain them have the same IP address.
@@ -84,7 +95,10 @@ static inline void ice_candidate_foundation(struct ice_candidate_t* c, const str
 	int i;
 	MD5_CTX ctx;
 	unsigned char md5[16];
+	const struct sockaddr_storage* base;
 	static const char* s_base16_enc = "0123456789ABCDEF";
+
+	base = ice_candidate_base(c);
 
 	MD5Init(&ctx);
 	MD5Update(&ctx, (unsigned char*)&c->type, sizeof(c->type));
@@ -92,17 +106,17 @@ static inline void ice_candidate_foundation(struct ice_candidate_t* c, const str
 	MD5Update(&ctx, (unsigned char*)&c->protocol, sizeof(c->protocol));
 	MD5Update(&ctx, (unsigned char*)":", 1);
 	
-	MD5Update(&ctx, (unsigned char*)&c->raddr.ss_family, sizeof(c->raddr.ss_family));
-	if (AF_INET == c->raddr.ss_family)
-		MD5Update(&ctx, (unsigned char*)&((struct sockaddr_in*)&c->raddr)->sin_addr, 4);
-	else if (AF_INET6 == c->raddr.ss_family)
-		MD5Update(&ctx, (unsigned char*)&((struct sockaddr_in6*)&c->raddr)->sin6_addr, 8);
+	MD5Update(&ctx, (unsigned char*)&base->ss_family, sizeof(base->ss_family));
+	if (AF_INET == base->ss_family)
+		MD5Update(&ctx, (unsigned char*)&((struct sockaddr_in*)base)->sin_addr, 4);
+	else if (AF_INET6 == base->ss_family)
+		MD5Update(&ctx, (unsigned char*)&((struct sockaddr_in6*)base)->sin6_addr, 8);
 
 	MD5Update(&ctx, (unsigned char*)":", 1);
-	if (ICE_CANDIDATE_HOST != c->type)
+	if (ICE_CANDIDATE_HOST != c->type && stun)
 		MD5Update(&ctx, (unsigned char*)stun, socket_addr_len(stun));
 	else
-		MD5Update(&ctx, (unsigned char*)&c->raddr, socket_addr_len((struct sockaddr*)&c->raddr));
+		MD5Update(&ctx, (unsigned char*)&c->addr, socket_addr_len((struct sockaddr*)&c->addr));
 	MD5Final(md5, &ctx);
 
 	assert(sizeof(c->foundation) >= 2 * sizeof(md5));

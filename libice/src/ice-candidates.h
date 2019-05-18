@@ -25,20 +25,21 @@ static inline struct ice_candidate_t* ice_candidates_get(ice_candidates_t* arr, 
 	return (struct ice_candidate_t*)darray_get(arr, i);
 }
 
-static int ice_candidate_compare_addr(const struct ice_candidate_t* l, const struct sockaddr_storage* addr)
-{
-	return 0 == socket_addr_compare((const struct sockaddr*)&l->addr, (const struct sockaddr*)addr) ? 0 : -1;
-}
-
 static int ice_candidate_compare_host_addr(const struct ice_candidate_t* l, const struct sockaddr_storage* addr)
 {
-	return ICE_CANDIDATE_HOST == l->type && 0 == socket_addr_compare((const struct sockaddr*)&l->addr, (const struct sockaddr*)addr) ? 0 : -1;
+	return ICE_CANDIDATE_HOST == l->type && 0 == socket_addr_compare((const struct sockaddr*)&l->host, (const struct sockaddr*)addr) ? 0 : -1;
+}
+
+static int ice_candidate_compare_base_addr(const struct ice_candidate_t* l, const struct ice_candidate_t* r)
+{
+	// rfc5245 B.2. Candidates with Multiple Bases (p109)
+	return l->type == r->type && 0 == socket_addr_compare((const struct sockaddr*)ice_candidate_base(l), (const struct sockaddr*)ice_candidate_base(r)) ? 0 : -1;
 }
 
 static int ice_candidate_compare(const struct ice_candidate_t* l, const struct ice_candidate_t* r)
 {
-	// rfc5245 B.2. Candidates with Multiple Bases (p109)
-	return l->type == r->type && 0 == socket_addr_compare((const struct sockaddr*)&l->addr, (const struct sockaddr*)&r->addr) ? 0 : -1;
+	return (0 == socket_addr_compare((const struct sockaddr*)&l->host, (const struct sockaddr*)&r->host)
+		&& 0 == socket_addr_compare((const struct sockaddr*)&l->addr, (const struct sockaddr*)&r->addr)) ? 0 : -1;
 }
 
 static inline int ice_candidates_insert(ice_candidates_t* arr, const struct ice_candidate_t* c)

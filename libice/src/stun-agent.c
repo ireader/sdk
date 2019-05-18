@@ -6,6 +6,7 @@
 #include "sockutil.h"
 #include "list.h"
 #include <stdlib.h>
+#include <assert.h>
 
 struct stun_agent_t* stun_agent_create(int rfc, struct stun_agent_handler_t* handler, void* param)
 {
@@ -92,13 +93,14 @@ int stun_agent_insert(struct stun_agent_t* stun, stun_request_t* req)
 int stun_agent_remove(struct stun_agent_t* stun, stun_request_t* req)
 {
 	locker_lock(&stun->locker);
-	list_remove(&req->link);
+	if(req->link.next != NULL && req->link.prev != NULL)
+		list_remove(&req->link);
 	locker_unlock(&stun->locker);
 	stun_request_release(req);
 	return 0;
 }
 
-int stun_message_send(struct stun_agent_t* stun, struct stun_message_t* msg, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote)
+int stun_message_send(struct stun_agent_t* stun, struct stun_message_t* msg, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote, const struct sockaddr_storage* relay)
 {
 	int r, bytes;
 	uint8_t data[1600];
@@ -108,7 +110,10 @@ int stun_message_send(struct stun_agent_t* stun, struct stun_message_t* msg, int
 	if (0 != r) return r;
 
 	bytes = msg->header.length + STUN_HEADER_SIZE;
-	return stun->handler.send(stun->param, protocol, (const struct sockaddr*)local, (const struct sockaddr*)remote, data, bytes);
+	if (relay && (AF_INET == relay->ss_family || AF_INET6 == relay->ss_family))
+		return turn_agent_send(stun, (const struct sockaddr*)local, (const struct sockaddr*)remote, (const struct sockaddr*)relay, data, bytes);
+	else
+		return stun->handler.send(stun->param, protocol, (const struct sockaddr*)local, (const struct sockaddr*)remote, data, bytes);
 }
 
 // rfc5389 7.2.1. Sending over UDP (p13)
@@ -138,7 +143,7 @@ int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req)
 	req->timeout = STUN_RETRANSMISSION_INTERVAL_MIN;
 	req->timer = stun_timer_start(STUN_RETRANSMISSION_INTERVAL_MIN, stun_request_ontimer, req);
 
-	r = stun_message_send(stun, &req->msg, req->addr.protocol, &req->addr.host, &req->addr.peer);
+	r = stun_message_send(stun, &req->msg, req->addr.protocol, &req->addr.host, &req->addr.peer, &req->addr.relay);
 	if (0 != r)
 	{
 		stun_timer_stop(req->timer);
@@ -151,7 +156,7 @@ int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req)
 int stun_response_send(struct stun_agent_t* stun, struct stun_response_t* resp)
 {
 	int r;
-	r = stun_message_send(stun, &resp->msg, resp->addr.protocol, &resp->addr.host, &resp->addr.peer);
+	r = stun_message_send(stun, &resp->msg, resp->addr.protocol, &resp->addr.host, &resp->addr.peer, &resp->addr.relay);
 	stun_response_destroy(&resp);
 	return r;
 }
@@ -216,7 +221,8 @@ static int stun_agent_onsuccess(stun_agent_t* stun, const struct stun_request_t*
 	if (!req)
 		return 0; // discard
 
-	// fill reflexive/relayed address
+	// fill reflexive address
+	assert(0 == req->addr.reflexive.ss_family);
 	memcpy(&req->addr.reflexive, &resp->addr.reflexive, sizeof(struct sockaddr_storage));
     
 	r = 0;
@@ -335,7 +341,7 @@ static int stun_server_response_unknown_attribute(stun_agent_t* stun, struct stu
 	stun_message_add_data(&msg, STUN_ATTR_UNKNOWN_ATTRIBUTES, unknowns, j * sizeof(unknowns[0]));
 	stun_message_add_credentials(&msg, &req->auth);
 	stun_message_add_fingerprint(&msg);
-	return stun_message_send(stun, &msg, req->addr.protocol, &req->addr.host, &req->addr.peer);
+	return stun_message_send(stun, &msg, req->addr.protocol, &req->addr.host, &req->addr.peer, &req->addr.relay);
 }
 
 static int stun_agent_parse_attr(stun_agent_t* stun, struct stun_request_t* req)
@@ -400,21 +406,22 @@ static int stun_agent_parse_attr(stun_agent_t* stun, struct stun_request_t* req)
 	return 0;
 }
 
-int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
+int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, const void* data, int bytes)
 {
 	int r;
 	struct stun_request_t req;
 	struct stun_message_t *msg;
 	struct turn_allocation_t* allocate;
 
-    if (local)
-    {
-        allocate = turn_agent_allocation_find_by_relay(&stun->turnservers, local);
-        if (allocate)
-            return turn_server_relay(stun, allocate, remote, data, bytes);
-    }
+	if (local)
+	{
+		// 1. turn server receive relay data ?
+		allocate = turn_agent_allocation_find_by_relay(&stun->turnservers, local);
+		if (allocate)
+			return turn_server_relay(stun, allocate, remote, data, bytes);
+	}
     
-	// 0x4000 ~ 0x7FFFF
+	// 2. turn server/client receive channel data ? (channel range: 0x4000 ~ 0x7FFFF)
 	if (bytes > 0 && 0x40 == (0xC0 & ((const uint8_t*)data)[0]) && local && remote)
 	{
 		allocate = turn_agent_allocation_find_by_address(&stun->turnclients, local, remote);
@@ -429,9 +436,11 @@ int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* lo
 				return turn_server_onchannel_data(stun, allocate, (const uint8_t*)data, bytes);
 		}
 
+		assert(0); // allocation expired ?
 		return 0;
 	}
 
+	// 3. stun/turn request/response
 	memset(&req, 0, sizeof(req));
 	req.stun = stun;
 	msg = &req.msg;
@@ -439,7 +448,7 @@ int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* lo
 	if (0 != r)
 		return r;
 	
-	stun_request_setaddr(&req, protocol, local, remote);
+	stun_request_setaddr(&req, protocol, local, remote, relay);
 
 	if (0 != stun_agent_parse_attr(stun, &req) || 0 != stun_agent_auth(stun, &req, data, bytes))
 		return 0; // discard

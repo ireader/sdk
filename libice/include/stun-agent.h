@@ -27,7 +27,10 @@ typedef int (*stun_request_handler)(void* param, const stun_request_t* req, int 
 stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_handler handler, void* param);
 
 /// @param[in] protocol 1-UDP, 2-TCP
-int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockaddr* local, const struct sockaddr* remote);
+/// @param[in] local local host address
+/// @param[in] remote peer address
+/// @param[in] relayed OPTIONAL turn relay address, NULL if don't use turn
+int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relayed);
 int stun_request_getaddr(const stun_request_t* req, int* protocol, struct sockaddr_storage* local, struct sockaddr_storage* remote, struct sockaddr_storage* reflexive, struct sockaddr_storage* relayed);
 
 /// @param[in] credential 0-Short-Term Credential Mechanism, 1-Long-Term Credential Mechanism
@@ -71,7 +74,10 @@ struct stun_agent_handler_t
 stun_agent_t* stun_agent_create(int rfc, struct stun_agent_handler_t* handler, void* param);
 int stun_agent_destroy(stun_agent_t** stun);
 
-int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes);
+/// @param[in] local local host address
+/// @param[in] remote peer host address
+/// @param[in] relay data received from turn server relay address, NULL if don't relay by turn server (turn client only)
+int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, const void* data, int bytes);
 
 // STUN
 int stun_agent_bind(stun_request_t* req);
@@ -79,7 +85,7 @@ int stun_agent_shared_secret(stun_request_t* req);
 
 /// TURN data callback
 /// @param[in] param user-defined parameter form turn_agent_allocate
-typedef void (*turn_agent_ondata)(void* param, const void* data, int byte, int protocol, const struct sockaddr* local, const struct sockaddr* remote);
+typedef void (*turn_agent_ondata)(void* param, const void* data, int byte, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay);
 
 // TURN
 int turn_agent_allocate(stun_request_t* req, turn_agent_ondata ondata, void* param);
@@ -88,7 +94,10 @@ int turn_agent_create_permission(stun_request_t* req, const struct sockaddr* pee
 /// @param[in] channel valid range: [0x4000, 0x7FFE]
 int turn_agent_channel_bind(stun_request_t* req, const struct sockaddr* peer, uint16_t channel);
 /// Send data from client to turn server(and forward to peer)
-int turn_agent_send(stun_request_t* req, const struct sockaddr* peer, const void* data, int bytes);
+/// @param[in] local local host address
+/// @param[in] peer remote host address
+/// @param[in] relay turn server relayed address
+int turn_agent_send(stun_agent_t* stun, const struct sockaddr* local, const struct sockaddr* peer, const struct sockaddr* relay, const void* data, int bytes);
 
 // RESPONSE
 

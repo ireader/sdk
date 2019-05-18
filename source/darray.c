@@ -124,7 +124,7 @@ void* darray_find(const struct darray_t* arr, const void* item, int *pos, darray
 	for (*pos = 0; *pos < darray_count(arr); *pos += 1)
 	{
 		v = darray_get((struct darray_t*)arr, *pos);
-		r = compare(v, item);
+		r = compare ? compare(v, item) : (0 == memcmp(v, item, arr->size) ? 0 : -1);
 		if (0 == r)
 			return v;
 		else if (r > 0)
