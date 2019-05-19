@@ -16,11 +16,15 @@ enum ice_candidate_type_t
 	ICE_CANDIDATE_HOST = 126,
 };
 
+// ice candidate rel-addr/rel-port
+#define ICE_CANDIDATE_RELADDR(c) (ICE_CANDIDATE_RELAYED == (c)->type ? &(c)->reflexive : &(c)->host)
+
 struct ice_candidate_t
 {
 	enum ice_candidate_type_t type; // candidate type, e.g. ICE_CANDIDATE_HOST
-	struct sockaddr_storage addr; // candidate address for peer connection
-	struct sockaddr_storage raddr; // candidate local host address
+	struct sockaddr_storage addr; // ICE_CANDIDATE_RELAYED: relayed address, other: server reflexive address(NAT/Router address)
+	struct sockaddr_storage host; // local host address
+	struct sockaddr_storage reflexive; // stun/turn reflexive address
 
 	uint16_t component; // rtp/rtcp component id, [1, 256]
 	uint32_t priority; // [1, 2**31 - 1]
@@ -37,7 +41,8 @@ struct ice_agent_handler_t
 	/// @return 0-ok, other-error
 	int (*auth)(void* param, const char* usr, char pwd[256]);
 
-	void (*ondata)(void* param, const void* data, int byte, int protocol, const struct sockaddr* local, const struct sockaddr* remote);
+	/// turn callback
+	void (*ondata)(void* param, const void* data, int bytes, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay);
 };
 
 struct ice_agent_t;
@@ -46,7 +51,7 @@ int ice_destroy(struct ice_agent_t* ice);
 
 int ice_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd);
 
-int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes);
+int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, const void* data, int bytes);
 
 /// Add host candidate
 /// @param[in] stream audio/video stream id, base 0

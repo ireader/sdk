@@ -146,16 +146,16 @@ int ice_destroy(struct ice_agent_t* ice)
 	return 0;
 }
 
-int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
+int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, const void* data, int bytes)
 {
-	return ice && ice->stun ? stun_agent_input(ice->stun, protocol, local, remote, data, bytes) : -1;
+	return ice && ice->stun ? stun_agent_input(ice->stun, protocol, local, remote, relay, data, bytes) : -1;
 }
 
-void ice_ondata(void* param, const void* data, int byte, int protocol, const struct sockaddr* local, const struct sockaddr* remote)
+void ice_ondata(void* param, const void* data, int byte, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay)
 {
 	struct ice_agent_t* ice = (struct ice_agent_t*)param;
 	if (ice && ice->handler.ondata)
-		ice->handler.ondata(ice->param, data, byte, protocol, local, remote);
+		ice->handler.ondata(ice->param, data, byte, protocol, local, remote, relay);
 }
 
 int ice_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd)
@@ -176,8 +176,9 @@ int ice_add_local_candidate(struct ice_agent_t* ice, int stream, const struct ic
 	if ( !cand || 0 == cand->foundation[0] || cand->component < 1 || cand->component > 256
 		||(ICE_CANDIDATE_HOST != cand->type && ICE_CANDIDATE_SERVER_REFLEXIVE != cand->type && ICE_CANDIDATE_RELAYED != cand->type && ICE_CANDIDATE_PEER_REFLEXIVE != cand->type)
 		|| (STUN_PROTOCOL_UDP != cand->protocol && STUN_PROTOCOL_TCP != cand->protocol && STUN_PROTOCOL_TLS != cand->protocol && STUN_PROTOCOL_DTLS != cand->protocol)
+		|| (AF_INET != cand->reflexive.ss_family && AF_INET6 != cand->reflexive.ss_family)
 		|| (AF_INET != cand->addr.ss_family && AF_INET6 != cand->addr.ss_family)
-		|| (AF_INET != cand->raddr.ss_family && AF_INET6 != cand->raddr.ss_family))
+		|| (AF_INET != cand->host.ss_family && AF_INET6 != cand->host.ss_family))
 	{
 		assert(0);
 		return -1;
@@ -208,8 +209,7 @@ int ice_add_remote_candidate(struct ice_agent_t* ice, int stream, const struct i
 	if (!cand || 0 == cand->foundation[0] || cand->component < 1 || cand->component > 256
 		|| (ICE_CANDIDATE_HOST != cand->type && ICE_CANDIDATE_SERVER_REFLEXIVE != cand->type && ICE_CANDIDATE_RELAYED != cand->type && ICE_CANDIDATE_PEER_REFLEXIVE != cand->type)
 		|| (STUN_PROTOCOL_UDP != cand->protocol && STUN_PROTOCOL_TCP != cand->protocol && STUN_PROTOCOL_TLS != cand->protocol && STUN_PROTOCOL_DTLS != cand->protocol)
-		|| (AF_INET != cand->addr.ss_family && AF_INET6 != cand->addr.ss_family)
-		|| (AF_INET != cand->raddr.ss_family && AF_INET6 != cand->raddr.ss_family))
+		|| (AF_INET != cand->addr.ss_family && AF_INET6 != cand->addr.ss_family))
 	{
 		assert(0);
 		return -1;
@@ -226,7 +226,7 @@ int ice_gather_stun_candidate(struct ice_agent_t* ice, const struct sockaddr* ad
 	int i;
 	struct ice_stream_t *s;
 
-	if (!addr || (AF_INET6 != addr->sa_family && AF_INET6 != addr->sa_family))
+	if (!addr || (AF_INET != addr->sa_family && AF_INET6 != addr->sa_family))
 		return -1;
 
 	for (i = 0; i < darray_count(&ice->streams); i++)
@@ -237,7 +237,8 @@ int ice_gather_stun_candidate(struct ice_agent_t* ice, const struct sockaddr* ad
 	}
 
 	// TODO:
-	return ongather(param, -1);
+	//return ongather(param, -1);
+	return 0;
 }
 
 int ice_get_default_candidate(struct ice_agent_t* ice, int stream, uint16_t component, struct ice_candidate_t* c)

@@ -17,7 +17,7 @@ static int stun_auth_response(stun_agent_t* stun, struct stun_request_t* req, in
 		r = 0 == r ? stun_message_add_string(&msg, STUN_ATTR_NONCE, nonce) : r;
 	}
 	
-	return 0 == r ? stun_message_send(stun, &msg, req->addr.protocol, &req->addr.host, &req->addr.peer) : r;
+	return 0 == r ? stun_message_send(stun, &msg, req->addr.protocol, &req->addr.host, &req->addr.peer, &req->addr.relay) : r;
 }
 
 static int stun_request_rfc3489_auth_check(stun_agent_t* stun, struct stun_request_t* req, const void* data, int bytes)

@@ -316,7 +316,7 @@ static int turn_server_relay_data(struct stun_agent_t* turn, const struct turn_a
 	stun_message_add_fingerprint(&msg);
 
 	// STUN indications are not retransmitted
-	return stun_message_send(turn, &msg, allocate->addr.protocol, &allocate->addr.host, &allocate->addr.peer);
+	return stun_message_send(turn, &msg, allocate->addr.protocol, &allocate->addr.host, &allocate->addr.peer, NULL);
 }
 
 /// turn server relay peer to client by ChannelData(peer -> server -> client)

@@ -149,7 +149,7 @@ static int stun_onshared_secret(void* param, stun_response_t* resp, const stun_r
     int protocol;
     struct sockaddr_storage local, remote;
     struct stun_server_test_context_t* ctx = (struct stun_server_test_context_t*)param;
-    stun_request_getaddr(req, &protocol, &local, &remote, NULL);
+    stun_request_getaddr(req, &protocol, &local, &remote, NULL, NULL);
     printf("stun_onshared_secret: client(%s) -> server(%s), protocol: %d\n", socket_addr_to(&remote).c_str(), socket_addr_to(&local).c_str(), protocol);
     return stun_agent_shared_secret_response(resp, 200, "OK", "demo", "demo");
 }
@@ -159,7 +159,7 @@ static int stun_onbind(void* param, stun_response_t* resp, const stun_request_t*
     int protocol;
     struct sockaddr_storage local, remote;
     struct stun_server_test_context_t* ctx = (struct stun_server_test_context_t*)param;
-    stun_request_getaddr(req, &protocol, &local, &remote, NULL);
+    stun_request_getaddr(req, &protocol, &local, &remote, NULL, NULL);
     printf("stun_onbind: client(%s) -> server(%s), protocol: %d\n", socket_addr_to(&remote).c_str(), socket_addr_to(&local).c_str(), protocol);
     return stun_agent_bind_response(resp, 200, "OK");
 }
@@ -169,7 +169,7 @@ static int stun_onbindindication(void* param, const stun_request_t* req)
     int protocol;
     struct sockaddr_storage local, remote;
     struct stun_server_test_context_t* ctx = (struct stun_server_test_context_t*)param;
-    stun_request_getaddr(req, &protocol, &local, &remote, NULL);
+    stun_request_getaddr(req, &protocol, &local, &remote, NULL, NULL);
     printf("stun_onbindindication: client(%s) -> server(%s), protocol: %d\n", socket_addr_to(&remote).c_str(), socket_addr_to(&local).c_str(), protocol);
     return 0;
 }
@@ -179,7 +179,7 @@ static int stun_onallocate(void* param, stun_response_t* resp, const stun_reques
     int protocol;
     struct sockaddr_storage local, remote, relay;
     struct stun_server_test_context_t* ctx = (struct stun_server_test_context_t*)param;
-    stun_request_getaddr(req, &protocol, &local, &remote, NULL);
+    stun_request_getaddr(req, &protocol, &local, &remote, NULL, NULL);
     printf("stun_onallocate: client(%s) -> server(%s), protocol: %d\n", socket_addr_to(&remote).c_str(), socket_addr_to(&local).c_str(), protocol);
     
     socket_t udp[2];
@@ -217,7 +217,7 @@ static int stun_onrefresh(void* param, stun_response_t* resp, const stun_request
     int protocol;
     struct sockaddr_storage local, remote;
     struct stun_server_test_context_t* ctx = (struct stun_server_test_context_t*)param;
-    stun_request_getaddr(req, &protocol, &local, &remote, NULL);
+    stun_request_getaddr(req, &protocol, &local, &remote, NULL, NULL);
     printf("stun_onrefresh: client(%s) -> server(%s), protocol: %d, lifetime: %d\n", socket_addr_to(&remote).c_str(), socket_addr_to(&local).c_str(), protocol, lifetime);
     return turn_agent_refresh_response(resp, 200, "OK");
 }
@@ -227,7 +227,7 @@ static int stun_onpermission(void* param, stun_response_t* resp, const stun_requ
     int protocol;
     struct sockaddr_storage local, remote;
     struct stun_server_test_context_t* ctx = (struct stun_server_test_context_t*)param;
-    stun_request_getaddr(req, &protocol, &local, &remote, NULL);
+    stun_request_getaddr(req, &protocol, &local, &remote, NULL, NULL);
     printf("stun_onpermission: client(%s) -> server(%s), protocol: %d, peer: %s\n", socket_addr_to(&remote).c_str(), socket_addr_to(&local).c_str(), protocol, socket_addr_to(peer).c_str());
     return turn_agent_refresh_response(resp, 200, "OK");
 }
@@ -237,7 +237,7 @@ static int stun_onchannel(void* param, stun_response_t* resp, const stun_request
     int protocol;
     struct sockaddr_storage local, remote;
     struct stun_server_test_context_t* ctx = (struct stun_server_test_context_t*)param;
-    stun_request_getaddr(req, &protocol, &local, &remote, NULL);
+    stun_request_getaddr(req, &protocol, &local, &remote, NULL, NULL);
     printf("stun_onchannel: client(%s) -> server(%s), protocol: %d, peer: %s, channel: 0x%x\n", socket_addr_to(&remote).c_str(), socket_addr_to(&local).c_str(), protocol, socket_addr_to(peer).c_str(), channel);
     return turn_agent_channel_bind_response(resp, 200, "OK");
 }
@@ -319,7 +319,7 @@ extern "C" void stun_server_test()
 				{
 					addrlen = sizeof(struct sockaddr_storage);
 					getsockname(ctx.udp, (struct sockaddr*)&local, &addrlen);
-					r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr *)&local, (const struct sockaddr *)&from, data, r);
+					r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr *)&local, (const struct sockaddr *)&from, NULL, data, r);
 					assert(0 == r);
 				}
 			}
@@ -365,7 +365,7 @@ extern "C" void stun_server_test()
 					{
 						addrlen = sizeof(struct sockaddr_storage);
 						getsockname(it->first, (struct sockaddr*)&local, &addrlen);
-						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr *)&local, (const struct sockaddr *)&from, data, r);
+						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr *)&local, (const struct sockaddr *)&from, NULL, data, r);
 						assert(0 == r);
 					}
 				}
@@ -384,7 +384,7 @@ extern "C" void stun_server_test()
 						struct sockaddr_storage local;
 						addrlen = sizeof(struct sockaddr_storage);
 						getsockname(it->first, (struct sockaddr*)&local, &addrlen);
-						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TCP, (const struct sockaddr *)&local, (const struct sockaddr *)&(it->second), data, r);
+						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TCP, (const struct sockaddr *)&local, (const struct sockaddr *)&(it->second), NULL, data, r);
 						assert(0 == r);
 					}
 				}
@@ -406,7 +406,7 @@ extern "C" void stun_server_test()
 					{
 						addrlen = sizeof(struct sockaddr_storage);
 						getsockname(s, (struct sockaddr*)&local, &addrlen);
-						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TLS, (const struct sockaddr *)&local, (const struct sockaddr *)&(it->second), data, r);
+						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TLS, (const struct sockaddr *)&local, (const struct sockaddr *)&(it->second), NULL, data, r);
 						assert(0 == r);
 					}
 				}

@@ -64,7 +64,7 @@ static int stun_onbind(void* param, const stun_request_t* req, int code, const c
 	struct stun_client_test_context_t* ctx = (struct stun_client_test_context_t*)param;
 	if (0 == code)
 	{
-		stun_request_getaddr(req, &protocol, NULL, NULL, &reflexive);
+		stun_request_getaddr(req, &protocol, NULL, NULL, &reflexive, NULL);
 	}
 	return 0;
 }
@@ -103,11 +103,11 @@ extern "C" void stun_client_test()
 
 	r = socket_addr_from_ipv4(&server, "stun.stunprotocol.org", STUN_PORT); assert(0 == r);
     stun_request_t* req2 = stun_request_create(ctx.stun, STUN_RFC_3489, stun_onbind, &ctx);
-	stun_request_setaddr(req2, STUN_PROTOCOL_UDP, NULL, (const struct sockaddr*)&server);
+	stun_request_setaddr(req2, STUN_PROTOCOL_UDP, NULL, (const struct sockaddr*)&server, NULL);
 	r = stun_agent_bind(req2); assert(0 == r);
     addrlen = sizeof(host);
 	r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen);
-	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, NULL, (const struct sockaddr*)&server, data, r);
+	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, NULL, (const struct sockaddr*)&server, NULL, data, r);
 
 	stun_agent_destroy(&ctx.stun);
     if(ctx.ssl) tls_socket_close(ctx.ssl);

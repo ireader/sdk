@@ -5,6 +5,7 @@
 #include "sys/system.h"
 #include "sockutil.h"
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -14,9 +15,38 @@ typedef std::map<socket_t, struct sockaddr_storage> TICESockets;
 
 struct ice_agent_test_t
 {
+	int foundation;
+
 	struct ice_agent_t* ice;
 	TICESockets udps;
 };
+
+// candidate-attribute = "candidate" ":" foundation SP component-id SP transport SP priority SP connection-address SP port SP cand-type [SP rel-addr] [SP rel-port] *(SP extension-att-name SP extension-att-value)
+// a=candidate:1 1 UDP 2130706431 $L-PRIV-1.IP $L-PRIV-1.PORT typ host
+// a=candidate:2 1 UDP 1694498815 $NAT-PUB-1.IP $NAT-PUB-1.PORT typ srflx raddr $L-PRIV-1.IP rport $L-PRIV-1.PORT
+static int ice_candidate_attribute(const struct ice_candidate_t* c, char* buf, int len)
+{
+	static const char* s_transport[] = { "UDP", "TCP", "TLS", "DTLS", };
+	static const char* s_candtype[] = { "host", "srflx", "prflx", "relay", };
+	char addr[SOCKET_ADDRLEN], raddr[SOCKET_ADDRLEN];
+	u_short addrport, raddrport;
+	int candtype;
+	assert(c->protocol <= 0 && c->protocol < sizeof(s_transport) / sizeof(s_transport[0]));
+	candtype = ICE_CANDIDATE_SERVER_REFLEXIVE == c->type ? 1 : (ICE_CANDIDATE_RELAYED == c->type ? 3 : 2);
+	socket_addr_to((const struct sockaddr*)&c->addr, socket_addr_len((const struct sockaddr*)&c->addr), addr, &addrport);
+	socket_addr_to((const struct sockaddr*)ICE_CANDIDATE_RELADDR(c), socket_addr_len((const struct sockaddr*)ICE_CANDIDATE_RELADDR(c)), raddr, &raddrport);
+	if(ICE_CANDIDATE_HOST == c->type)
+		return snprintf(buf, len, "%s %hu %s %u %s %hu typ host", c->foundation, c->component, s_transport[c->protocol], c->priority, addr, addrport);
+	else
+		return snprintf(buf, len, "%s %hu %s %u %s %hu typ %s raddr %s rport %hu", c->foundation, c->component, s_transport[c->protocol], c->priority, addr, addrport, s_candtype[c->type], raddr, raddrport);
+}
+
+static void ice_agent_test_ondata(void* param, const void* data, int bytes, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay)
+{
+	struct ice_agent_test_t* ctx = (struct ice_agent_test_t*)param;
+	/// TODO: check data format(stun/turn)
+	ice_input(ctx->ice, protocol, local, remote, relay, data, bytes);
+}
 
 static int ice_agent_test_send(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
@@ -30,11 +60,12 @@ static int ice_agent_test_send(void* param, int protocol, const struct sockaddr*
 			if (0 == socket_addr_compare((const struct sockaddr*)&it->second, local))
 			{
 				int r = socket_sendto(it->first, data, bytes, 0, remote, socket_addr_len(remote));
-				assert(r == bytes);
-				return 0;
+				assert(r == bytes || socket_geterror() == ENETUNREACH || socket_geterror() == 10051/*WSAENETUNREACH*/);
+				return r == bytes ? 0 : socket_geterror();
 			}
 		}
 
+		assert(0);
 		// stun/turn protocol
 		socket_t udp = socket_udp();
 		struct sockaddr_storage addr;
@@ -78,13 +109,11 @@ static void ice_agent_test_gather_local_candidates(void* param, const char* mac,
 		return; // ignore
 	printf("gather local candidate: name: %s, mac: %s, ip: %s, netmask: %s, gateway: %s\n", name, mac, ip, netmask, gateway);
 
-	static int foundation = 0;
-	foundation++;
-
 	struct sockaddr_storage stun;
 	memset(&stun, 0, sizeof(stun));
 	assert(0 == socket_addr_from_ipv4((struct sockaddr_in*)&stun, "10.224.9.246", STUN_PORT));
 
+	++ctx->foundation;
 	for (int stream = 0; stream < 2; stream++)
 	{
 		struct ice_candidate_t c;
@@ -92,20 +121,24 @@ static void ice_agent_test_gather_local_candidates(void* param, const char* mac,
 		c.type = ICE_CANDIDATE_HOST;
 		c.protocol = STUN_PROTOCOL_UDP;
 		c.component = stream + 1;
-		snprintf((char*)c.foundation, sizeof(c.foundation), "%d", foundation);
+		snprintf((char*)c.foundation, sizeof(c.foundation), "%d", ctx->foundation);
 
-		socklen_t addrlen = sizeof(c.addr);
-		socket_addr_from(&c.addr, &addrlen, ip, 0);
-		socket_t udp = socket_bind_addr((struct sockaddr*)&c.addr, SOCK_DGRAM);
+		socklen_t addrlen = sizeof(c.host);
+		socket_addr_from(&c.host, &addrlen, ip, 0);
+		socket_t udp = socket_bind_addr((struct sockaddr*)&c.host, SOCK_DGRAM);
 		assert(socket_invalid != udp);
-		addrlen = sizeof(c.addr);
-		getsockname(udp, (struct sockaddr*)&c.addr, &addrlen);
-		ctx->udps.insert(std::make_pair(udp, c.addr));
-
-		ice_candidate_priority(&c);
-		memcpy(&c.stun, &stun, sizeof(c.stun));
-		memcpy(&c.base, &c.addr, sizeof(c.base));
+		addrlen = sizeof(c.host);
+		getsockname(udp, (struct sockaddr*)&c.host, &addrlen);
+		ctx->udps.insert(std::make_pair(udp, c.host));
+		
+		//ice_candidate_priority(&c);
+		memcpy(&c.addr, &c.host, sizeof(c.addr));
+		memcpy(&c.reflexive, &c.host, sizeof(c.reflexive));
 		assert(0 == ice_add_local_candidate(ctx->ice, stream, &c));
+
+		char attr[128] = { 0 };
+		ice_candidate_attribute(&c, attr, sizeof(attr));
+		printf("candidate[%u]: %s\n", (unsigned int)udp, attr);
 	}
 }
 
@@ -133,12 +166,18 @@ extern "C" void ice_agent_test(void)
 	struct ice_agent_handler_t handler;
 	
 	memset(&handler, 0, sizeof(handler));
+	handler.ondata = ice_agent_test_ondata;
 	handler.send = ice_agent_test_send;
 	handler.auth = ice_agent_test_auth;
 	ctx.ice = ice_create(&handler, &ctx);
+	ctx.foundation = 0;
 
+	struct sockaddr_storage stun;
+	socklen_t len = sizeof(stun);
+	//assert(0 == socket_addr_from(&stun, &len, "numb.viagenie.ca", STUN_PORT));
+	assert(0 == socket_addr_from(&stun, &len, "stun.linphone.org", STUN_PORT));
 	network_getip(ice_agent_test_gather_local_candidates, &ctx);
-	ice_gather_stun_candidate(ctx.ice, "numb.viagenie.ca", 1, ice_agent_test_ongather, &ctx);
+	ice_gather_stun_candidate(ctx.ice, (const sockaddr*)&stun, 0, ice_agent_test_ongather, &ctx);
 
 	while (1)
 	{
@@ -171,7 +210,7 @@ extern "C" void ice_agent_test(void)
 			r = socket_recvfrom(it->first, data, sizeof(data), 0, (struct sockaddr*)&from, &addrlen);
 			if (r > 0)
 			{
-				r = ice_input(ctx.ice, STUN_PROTOCOL_UDP, (const struct sockaddr *)&it->second, (const struct sockaddr *)&from, data, r);
+				r = ice_input(ctx.ice, STUN_PROTOCOL_UDP, (const struct sockaddr *)&it->second, (const struct sockaddr *)&from, NULL, data, r);
 				assert(0 == r);
 			}
 		}

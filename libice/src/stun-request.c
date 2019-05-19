@@ -16,6 +16,7 @@ stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_ha
 	req->stun = stun;
 	req->param = param;
 	req->handler = handler;
+	//LIST_INIT_HEAD(&req->link);
 
 	msg = &req->msg;
 //	memset(msg, 0, sizeof(struct stun_message_t));
@@ -36,7 +37,8 @@ int stun_request_destroy(struct stun_request_t** pp)
 	req = *pp;
 
 	// delete link
-	stun_agent_remove(req->stun, req);
+	//stun_agent_remove(req->stun, req);
+	assert(NULL == req->link.prev && NULL == req->link.next);
 
 	free(req);
 	*pp = NULL;
@@ -57,7 +59,7 @@ int stun_request_addref(struct stun_request_t* req)
 int stun_request_release(struct stun_request_t* req)
 {
 	if (0 == atomic_decrement32(&req->ref))
-		free(req);
+		stun_request_destroy(&req);
 	return 0;
 }
 
@@ -72,9 +74,11 @@ struct stun_response_t* stun_response_create(struct stun_request_t* req)
 	resp->msg.header.length = 0;
 	
 	resp->stun = req->stun;
-	resp->addr.protocol = req->addr.protocol;
-	memcpy(&resp->addr.host, &req->addr.host, sizeof(struct sockaddr_storage));
-	memcpy(&resp->addr.peer, &req->addr.peer, sizeof(struct sockaddr_storage));
+	//resp->addr.protocol = req->addr.protocol;
+	//memcpy(&resp->addr.host, &req->addr.host, sizeof(struct sockaddr_storage));
+	//memcpy(&resp->addr.peer, &req->addr.peer, sizeof(struct sockaddr_storage));
+	//memcpy(&resp->addr.relay, &req->addr.relay, sizeof(struct sockaddr_storage));
+	memcpy(&resp->addr, &req->addr, sizeof(struct stun_address_t));
 	memcpy(&resp->auth, &req->auth, sizeof(struct stun_credential_t));
 	return resp;
 }
@@ -96,7 +100,7 @@ int stun_agent_discard(struct stun_response_t* resp)
 	return stun_response_destroy(&resp);
 }
 
-int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockaddr* local, const struct sockaddr* remote)
+int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relayed)
 {
 	if (!remote || (STUN_PROTOCOL_UDP != protocol && STUN_PROTOCOL_TCP != protocol && STUN_PROTOCOL_TLS != protocol))
 	{
@@ -107,6 +111,7 @@ int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockadd
 	req->addr.protocol = protocol;
 	memcpy(&req->addr.host, local, local ? socket_addr_len(local) : 0);
 	memcpy(&req->addr.peer, remote, remote ? socket_addr_len(remote) : 0);
+	memcpy(&req->addr.relay, relayed, relayed ? socket_addr_len(relayed) : 0);
 	return 0;
 }
 

@@ -15,7 +15,7 @@ struct ice_checklist_t* ice_checklist_create(stun_agent_t* stun, const struct st
 		l->auth = auth;
 		l->state = ICE_CHECKLIST_FROZEN;
 		l->nomination = ICE_REGULAR_NOMINATION;
-		darray_init(&l->gathers, sizeof(struct ice_candidate_t), 4);
+		darray_init(&l->gathers, sizeof(struct sockaddr_storage), 4);
 		ice_candidates_init(&l->locals);
 		ice_candidates_init(&l->remotes);
 		ice_candidate_pairs_init(&l->trigger);
@@ -44,9 +44,9 @@ int ice_checklist_destroy(struct ice_checklist_t** pl)
 
 int ice_checklist_add_local_candidate(struct ice_checklist_t* l, const struct ice_candidate_t* c)
 {
-	if (AF_INET != c->addr.ss_family && AF_INET6 != c->addr.ss_family)
+	if (AF_INET != c->host.ss_family && AF_INET6 != c->host.ss_family)
 		return -1;
-	if (0 != c->raddr.ss_family && c->addr.ss_family != c->raddr.ss_family)
+	if (0 != c->addr.ss_family && c->host.ss_family != c->addr.ss_family)
 		return -1;
 	if (0 == c->priority || 0 == c->component || 0 == c->foundation[0])
 		return -1;
@@ -196,16 +196,17 @@ static void ice_checlist_add_peer_reflexive(struct ice_checklist_t* l, const stu
 	struct sockaddr_storage remote;
 
 	memset(&c, 0, sizeof(struct ice_candidate_t));
-	stun_request_getaddr(resp, &c.protocol, &c.raddr, &remote, &c.addr, NULL);
+	stun_request_getaddr(resp, &c.protocol, &c.host, &remote, &c.addr, NULL);
 	priority = stun_message_attr_find(&resp->msg, STUN_ATTR_PRIORITY);
 
-	local = darray_find(&l->locals, &c.raddr, NULL, ice_candidate_compare_host_addr);
+	local = darray_find(&l->locals, &c.host, NULL, ice_candidate_compare_host_addr);
 	if (NULL == local)
 		return; // local not found, new request ???
 
 	c.type = ICE_CANDIDATE_PEER_REFLEXIVE; 
 	c.component = local->component;
-	ice_candidate_foundation(&c, (struct sockaddr*)&c.addr);
+	memcpy(&c.reflexive, &c.addr, sizeof(c.reflexive));
+	ice_candidate_foundation(&c, (struct sockaddr*)&remote);
 	ice_candidate_priority(&c);
 	if (priority)
 		c.priority = priority->v.u32;
@@ -240,7 +241,7 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 		{
 			pair = ice_candidate_pairs_get(component, j);
 			assert(ICE_CANDIDATE_PAIR_INPROGRESS == pair->state);
-			if (0 == socket_addr_compare((const struct sockaddr*)&pair->local.raddr, (const struct sockaddr*)&local) 
+			if (0 == socket_addr_compare((const struct sockaddr*)&pair->local.host, (const struct sockaddr*)&local) 
 				&& 0 == socket_addr_compare((const struct sockaddr*)&pair->remote.addr, (const struct sockaddr*)&remote))
 			{
 				if (0 == code)
@@ -267,7 +268,7 @@ static int ice_checklist_bind(struct ice_checklist_t* l, struct ice_candidate_pa
 {
 	struct stun_request_t* req;
 	req = stun_request_create(l->stun, STUN_RFC_5389, ice_checklist_onbind, l);
-	stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&pair->local.raddr, (const struct sockaddr*)&pair->remote.addr);
+	stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&pair->local.host, (const struct sockaddr*)&pair->remote.addr, ICE_CANDIDATE_RELAYED == pair->local.type ? (const struct sockaddr*)&pair->local.addr : NULL);
 	stun_request_setauth(req, req->auth.credential, req->auth.usr, req->auth.pwd, req->auth.realm, req->auth.nonce);
 	stun_message_add_uint32(&req->msg, STUN_ATTR_PRIORITY, pair->local.priority);
 	if(l->nomination != ICE_REGULAR_NOMINATION) stun_message_add_flag(&req->msg, STUN_ATTR_USE_CANDIDATE);
@@ -406,6 +407,7 @@ int ice_checklist_init(struct ice_checklist_t* l)
 	l->state = ICE_CHECKLIST_RUNNING;
 	
 	// group with foundation
+	memset(&foundations, 0, sizeof(foundations));
 	darray_init(&foundations, sizeof(struct ice_candidate_pair_t*), 4);
 	ice_checklist_foundation_group(l, &foundations);
 
@@ -495,7 +497,7 @@ int ice_checklist_trigger(struct ice_checklist_t* l, int protocol, const struct 
 	struct ice_candidate_t *lo, *ro;
 	struct ice_candidate_pair_t pair;
 	lo = darray_find(&l->locals, local, NULL, ice_candidate_compare_host_addr);
-	ro = darray_find(&l->remotes, remote, NULL, ice_candidate_compare_addr);
+	ro = darray_find(&l->remotes, remote, NULL, ice_candidate_compare);
 	if (NULL == lo || NULL == ro)
 		return -1;
 
