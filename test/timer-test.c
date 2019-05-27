@@ -1,73 +1,108 @@
 #include "twtimer.h"
+#include "sys/atomic.h"
+#include "sys/thread.h"
+#include "sys/system.h"
 #include <time.h>
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
 
-#define TIMER 1000
-#define TOTAL 10000000
-#define TIMER_RESOLUTION 64
+#define TIMER 0x3FFFFF
+#define TIMER_RESOLUTION 16
+#define WORKER 3
 
-static uint64_t now;
-static time_wheel_t* wheel;
-static struct twtimer_t* s_timer;
-static int s_started = 0;
-static int s_stoped = 0;
 static int s_cancel = 0;
 
-static void ontimer(void* param)
+static void ontimer1(void* param)
 {
-	struct twtimer_t* timer = (struct twtimer_t*)param;
-	assert(timer->expire / TIMER_RESOLUTION <= now / TIMER_RESOLUTION);
-	timer->param = NULL;
-	++s_stoped;
+    int* counter = (int*)param;
+    *counter += 1;
 }
 
-static void timer_stop(void)
+static void timer_check_cascade(time_wheel_t* wheel, struct twtimer_t* timers, uint64_t now)
 {
-	struct twtimer_t* t;
-	t = &s_timer[now % TIMER];
-	if (t->param)
-	{
-		twtimer_stop(wheel, t);
-		t->param = NULL;
-		++s_stoped;
-		++s_cancel;
-	}
+    int i, counter;
+    for(i = 0; i < TIMER; i++)
+    {
+        timers[i].ontimeout = ontimer1;
+        timers[i].param = &counter;
+        timers[i].expire = now + (i << 4);
+        twtimer_start(wheel, &timers[i]);
+    }
+    
+    for(counter = i = 0; i < TIMER + 1; i++)
+    {
+        twtimer_process(wheel, now + (i << 4));
+        assert(counter == i);
+    }
+    assert(counter == TIMER);
+}
+
+static int STDCALL timer_worker(void* param)
+{
+    struct time_wheel_t* tw;
+    tw = (struct time_wheel_t*)param;
+
+    while(0 == s_cancel)
+    {
+        twtimer_process(tw, system_clock());
+        system_sleep(10);
+    }
+    
+    return 0;
+}
+
+static void ontimer2(void* param)
+{
+}
+
+static void timer_check_remove(time_wheel_t* wheel, struct twtimer_t* timers, uint64_t now)
+{
+    int i, j;
+    pthread_t worker[WORKER];
+    
+    s_cancel = 0;
+    for(i = 0; i < WORKER; i++)
+        thread_create(&worker[i], timer_worker, wheel);
+    
+    for(j = 0; j < 100; j++)
+    {
+        for(i = 0; i < TIMER; i++)
+        {
+            timers[i].ontimeout = ontimer2;
+            timers[i].param = NULL;
+            timers[i].expire = now + rand() % 4096;
+            twtimer_start(wheel, &timers[i]);
+        }
+        
+        system_sleep(10);
+        for(i = 0; i < TIMER; i++)
+            twtimer_stop(wheel, &timers[i]);
+    }
+    
+    s_cancel = 1;
+    for(i = 0; i < WORKER; i++)
+        thread_destroy(worker[i]);
 }
 
 void timer_test(void)
 {
-	int i;
+    uint64_t now;
+    time_wheel_t* wheel;
+    struct twtimer_t* timers;
+    
+    now = system_clock();
+    srand((unsigned int)now);
+    wheel = time_wheel_create(now);
+	timers = (struct twtimer_t*)calloc(TIMER, sizeof(struct twtimer_t));
 
-	s_timer = (struct twtimer_t*)calloc(TIMER, sizeof(*s_timer));
-	assert(s_timer);
-
-	now = time(NULL);
-	srand((int)now);
-	wheel = time_wheel_create(now);
-
-	while (s_stoped < TOTAL)
-	{
-		for(i = 0; i < TIMER && s_started < TOTAL; i++)
-		{
-			if (s_timer[i].param)
-				continue;
-			
-			++s_started;
-			s_timer[i].ontimeout = ontimer;
-			s_timer[i].param = &s_timer[i];
-			s_timer[i].expire = now + rand() % 4096;
-			twtimer_start(wheel, &s_timer[i]);
-		}
-
-		twtimer_process(wheel, now);
-		now += rand() % 256;
-
-		timer_stop();
-	}
-
-	free(s_timer);
+    // 1. test cascade
+    timer_check_cascade(wheel, timers, now);
+    
+    // 2. dynamic add/delete timer
+    timer_check_remove(wheel, timers, now);
+    
 	time_wheel_destroy(wheel);
-	printf("timer(total: %d, cancel: %d) test ok.\n", TOTAL, s_cancel);
+    free(timers);
+    printf("timer test ok.\n");
 }

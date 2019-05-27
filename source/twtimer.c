@@ -4,13 +4,14 @@
 
 #include "twtimer.h"
 #include "sys/spinlock.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <assert.h>
 #include <errno.h>
 
-#define TIME_RESOLUTION 6
-#define TIME(clock) ((clock) >> TIME_RESOLUTION) // per 64ms
+#define TIME_RESOLUTION 4
+#define TIME(clock) ((clock) >> TIME_RESOLUTION) // per 16ms
 
 #define TVR_BITS 8
 #define TVN_BITS 6
@@ -19,6 +20,7 @@
 #define TVR_MASK (TVR_SIZE - 1)
 #define TVN_MASK (TVN_SIZE - 1)
 
+#define TVR_INDEX(clock)    ((int)((clock >> TIME_RESOLUTION) & TVR_MASK))
 #define TVN_INDEX(clock, n) ((int)((clock >> (TIME_RESOLUTION + TVR_BITS + (n * TVN_BITS))) & TVN_MASK))
 
 struct time_bucket_t
@@ -93,12 +95,12 @@ int twtimer_process(struct time_wheel_t* tm, uint64_t clock)
 {
 	int index;
 	struct twtimer_t* timer;
-	struct time_bucket_t bucket;
+    struct time_bucket_t bucket;
 
 	spinlock_lock(&tm->locker);
-	while(tm->clock < clock)
+	while(TIME(tm->clock) < TIME(clock))
 	{
-		index = (int)(TIME(tm->clock) & TVR_MASK);
+		index = TVR_INDEX(tm->clock);
 
 		if (0 == index 
 			&& 0 == twtimer_cascade(tm, tm->tv2, TVN_INDEX(tm->clock, 0))
@@ -110,29 +112,30 @@ int twtimer_process(struct time_wheel_t* tm, uint64_t clock)
 
 		// move bucket
 		bucket.first = tm->tv1[index].first;
-		if (bucket.first)
-			bucket.first->pprev = &bucket.first;
 		tm->tv1[index].first = NULL; // clear
 		tm->clock += (1 << TIME_RESOLUTION);
 
 		// trigger timer
-		while (bucket.first)
+        while (bucket.first)
 		{
-			timer = bucket.first;
-			bucket.first = timer->next;
+            timer = bucket.first;
 			if (timer->next)
-				timer->pprev = &bucket.first;
+				timer->next->pprev = &bucket.first;
+            bucket.first = timer->next;
+            
 			timer->next = NULL;
 			timer->pprev = NULL;
 			--tm->count;
 			if (timer->ontimeout)
 			{
 				spinlock_unlock(&tm->locker);
+                //assert(timer->expire >= clock - 2 * (1<<TIME_RESOLUTION));
+                //assert(timer->expire <= clock + 2 * (1<<TIME_RESOLUTION));
 				timer->ontimeout(timer->param);
 				spinlock_lock(&tm->locker);
 			}
 		}	
-	}
+    }
 
 	spinlock_unlock(&tm->locker);
 	return (int)(tm->clock - clock);
@@ -142,11 +145,10 @@ static int twtimer_cascade(struct time_wheel_t* tm, struct time_bucket_t* tv, in
 {
 	struct twtimer_t* timer;
 	struct twtimer_t* next;
-	struct time_bucket_t bucket;
-	bucket.first = tv[index].first;
+	next = tv[index].first;
 	tv[index].first = NULL; // clear
 
-	for (timer = bucket.first; timer; timer = next)
+	for (timer = next; timer; timer = next)
 	{
 		--tm->count; // start will add count
 		next = timer->next;
@@ -160,7 +162,6 @@ static int twtimer_cascade(struct time_wheel_t* tm, struct time_bucket_t* tv, in
 
 static int twtimer_add(struct time_wheel_t* tm, struct twtimer_t* timer)
 {
-	int i;
 	uint64_t diff;
 	struct time_bucket_t* tv;
 
@@ -175,33 +176,27 @@ static int twtimer_add(struct time_wheel_t* tm, struct twtimer_t* timer)
 
 	if (timer->expire < tm->clock)
 	{
-		i = TIME(tm->clock) & TVR_MASK;
-		tv = tm->tv1 + i;
+		tv = tm->tv1 + TVR_INDEX(tm->clock);
 	}
 	else if (diff < (1 << TVR_BITS))
 	{
-		i = TIME(timer->expire) & TVR_MASK;
-		tv = tm->tv1 + i;
+		tv = tm->tv1 + TVR_INDEX(timer->expire);
 	}
 	else if (diff < (1 << (TVR_BITS + TVN_BITS)))
 	{
-		i = (TIME(timer->expire) >> TVR_BITS) & TVN_MASK;
-		tv = tm->tv2 + i;
+		tv = tm->tv2 + TVN_INDEX(timer->expire, 0);
 	}
 	else if (diff < (1 << (TVR_BITS + 2 * TVN_BITS)))
 	{
-		i = (TIME(timer->expire) >> (TVR_BITS + TVN_BITS)) & TVN_MASK;
-		tv = tm->tv3 + i;
+		tv = tm->tv3 + TVN_INDEX(timer->expire, 1);
 	}
 	else if (diff < (1 << (TVR_BITS + 3 * TVN_BITS)))
 	{
-		i = (TIME(timer->expire) >> (TVR_BITS + 2 * TVN_BITS)) & TVN_MASK;
-		tv = tm->tv4 + i;
+		tv = tm->tv4 + TVN_INDEX(timer->expire, 2);
 	}
 	else if (diff < (1ULL << (TVR_BITS + 4 * TVN_BITS)))
 	{
-		i = (TIME(timer->expire) >> (TVR_BITS + 3 * TVN_BITS)) & TVN_MASK;
-		tv = tm->tv5 + i;
+		tv = tm->tv5 + TVN_INDEX(timer->expire, 3);
 	}
 	else
 	{
