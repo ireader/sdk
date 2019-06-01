@@ -2,7 +2,21 @@
 #include "ice-candidates.h"
 #include "stun-internal.h"
 
-struct ice_checklist_t* ice_checklist_create(stun_agent_t* stun, const struct stun_credential_t* auth, struct ice_checklist_handler_t* handler, void* param)
+struct ice_checklist_t
+{
+	struct ice_agent_t* ice;
+	enum ice_checklist_state_t state;
+	int nominated;
+
+	void* timer;
+	ice_candidate_pairs_t trigger; // trigger check list
+	ice_candidate_components_t components; // ordinary check, pairs base on component
+
+	struct ice_checklist_handler_t handler;
+	void* param;
+};
+
+struct ice_checklist_t* ice_checklist_create(struct ice_agent_t* ice, struct ice_checklist_handler_t* handler, void* param)
 {
 	struct ice_checklist_t* l;
 	l = (struct ice_checklist_t*)calloc(1, sizeof(struct ice_checklist_t));
@@ -11,13 +25,8 @@ struct ice_checklist_t* ice_checklist_create(stun_agent_t* stun, const struct st
 		memcpy(&l->handler, handler, sizeof(l->handler));
 		l->param = param;
 		l->timer = NULL;
-		l->stun = stun;
-		l->auth = auth;
+		l->ice = ice;
 		l->state = ICE_CHECKLIST_FROZEN;
-		l->nomination = ICE_REGULAR_NOMINATION;
-		darray_init(&l->gathers, sizeof(struct sockaddr_storage), 4);
-		ice_candidates_init(&l->locals);
-		ice_candidates_init(&l->remotes);
 		ice_candidate_pairs_init(&l->trigger);
 		ice_candidate_components_init(&l->components);
 	}
@@ -32,8 +41,6 @@ int ice_checklist_destroy(struct ice_checklist_t** pl)
 	
 	l = *pl;
 	stun_timer_stop(l->timer);
-	ice_candidates_free(&l->locals);
-	ice_candidates_free(&l->remotes);
 	ice_candidate_pairs_free(&l->trigger);
 	ice_candidate_components_free(&l->components);
 
@@ -42,70 +49,7 @@ int ice_checklist_destroy(struct ice_checklist_t** pl)
 	return 0;
 }
 
-int ice_checklist_add_local_candidate(struct ice_checklist_t* l, const struct ice_candidate_t* c)
-{
-	if (AF_INET != c->host.ss_family && AF_INET6 != c->host.ss_family)
-		return -1;
-	if (0 != c->addr.ss_family && c->host.ss_family != c->addr.ss_family)
-		return -1;
-	if (0 == c->priority || 0 == c->component || 0 == c->foundation[0])
-		return -1;
-	if (ice_candidates_count(&l->locals) > ICE_CANDIDATE_LIMIT)
-		return -1;
-	return ice_candidates_insert(&l->locals, c);
-}
-
-int ice_checklist_add_remote_candidate(struct ice_checklist_t* l, const struct ice_candidate_t* c)
-{
-	if (AF_INET != c->addr.ss_family && AF_INET6 != c->addr.ss_family)
-		return -1;
-	//if (0 != c->stun.ss_family && c->addr.ss_family != c->stun.ss_family)
-	//	return -1;
-	if (0 == c->priority || 0 == c->component)
-		return -1;
-	if (ice_candidates_count(&l->remotes) > ICE_CANDIDATE_LIMIT)
-		return -1;
-	return ice_candidates_insert(&l->remotes, c);
-}
-
-int ice_checklist_list_local_candidate(struct ice_checklist_t* l, ice_agent_oncandidate oncand, void* param)
-{
-	return ice_candidates_list(&l->locals, oncand, param);
-}
-
-int ice_checklist_list_remote_candidate(struct ice_checklist_t* l, ice_agent_oncandidate oncand, void* param)
-{
-	return ice_candidates_list(&l->remotes, oncand, param);
-}
-
-int ice_checklist_get_default_candidate(struct ice_checklist_t* l, uint16_t component, struct ice_candidate_t* c)
-{
-	int i;
-	struct ice_candidate_t *p, *pc = NULL;
-	for (i = 0; i < ice_candidates_count(&l->locals); i++)
-	{
-		p = ice_candidates_get(&l->locals, i);
-		if(p->component != component)
-			continue;
-
-		// rfc5245 4.1.4. Choosing Default Candidates (p25)
-		// 1. It is RECOMMENDED that default candidates be chosen based on the likelihood 
-		//    of those candidates to work with the peer that is being contacted. 
-		// 2. It is RECOMMENDED that the default candidates are the relayed candidates 
-		//    (if relayed candidates are available), server reflexive candidates 
-		//    (if server reflexive candidates are available), and finally host candidates.
-		if (NULL == pc || pc->priority > p->priority)
-			pc = p;
-	}
-
-	if (NULL == pc || NULL == c)
-		return -1; // not found local candidate
-
-	memcpy(c, pc, sizeof(struct ice_candidate_t));
-	return 0;
-}
-
-int ice_checklist_build(struct ice_checklist_t* l)
+int ice_checklist_build(struct ice_checklist_t* l, int stream, const ice_candidates_t* locals, const ice_candidates_t* remotes)
 {
 	int i, j;
 	ice_candidate_pairs_t *component;
@@ -115,9 +59,11 @@ int ice_checklist_build(struct ice_checklist_t* l)
 	// reset components
 	ice_candidate_components_reset(&l->components);
 	
-	for (i = 0; i < ice_candidates_count(&l->locals); i++)
+	for (i = 0; i < ice_candidates_count(locals); i++)
 	{
-		local = ice_candidates_get(&l->locals, i);
+		local = ice_candidates_get(locals, i);
+		if(local->stream != stream)
+			continue;
 
 		// rfc5245 5.7.3. Pruning the Pairs (p34)
 		// For each pair where the local candidate is server reflexive, 
@@ -129,10 +75,10 @@ int ice_checklist_build(struct ice_checklist_t* l)
 		if (!component)
 			return -1;
 
-		for (j = 0; j < ice_candidates_count(&l->remotes); j++)
+		for (j = 0; j < ice_candidates_count(remotes); j++)
 		{
-			remote = ice_candidates_get(&l->remotes, j);
-			if(local->component != remote->component)
+			remote = ice_candidates_get(remotes, j);
+			if(local->stream != remote->stream || local->component != remote->component)
 				continue;
 
 			// agent MUST limit the total number of connectivity checks the agent  
@@ -193,41 +139,46 @@ static void ice_checlist_add_peer_reflexive(struct ice_checklist_t* l, const stu
 {
 	struct ice_candidate_t c, *local;
 	const struct stun_attr_t* priority;
-	struct sockaddr_storage remote;
 
 	memset(&c, 0, sizeof(struct ice_candidate_t));
-	stun_request_getaddr(resp, &c.protocol, &c.host, &remote, &c.addr, NULL);
+	stun_request_getaddr(resp, &c.protocol, &c.host, &c.stun, &c.reflexive, &c.relay);
 	priority = stun_message_attr_find(&resp->msg, STUN_ATTR_PRIORITY);
 
-	local = darray_find(&l->locals, &c.host, NULL, ice_candidate_compare_host_addr);
+	local = darray_find(&l->ice->locals, &c.host, NULL, ice_candidate_compare_host_addr);
 	if (NULL == local)
 		return; // local not found, new request ???
 
 	c.type = ICE_CANDIDATE_PEER_REFLEXIVE; 
 	c.component = local->component;
-	memcpy(&c.reflexive, &c.addr, sizeof(c.reflexive));
-	ice_candidate_foundation(&c, (struct sockaddr*)&remote);
+	ice_candidate_foundation(&c);
 	ice_candidate_priority(&c);
 	if (priority)
 		c.priority = priority->v.u32;
-
-	ice_checklist_add_local_candidate(l, &c);
+	ice_add_local_candidate(l->ice, &c);
 }
 
 static int ice_checklist_onbind(void* param, const stun_request_t* req, int code, const char* phrase)
 {
-	int i, j, r, protocol, failed;
+	int i, j, r, failed;
 	struct darray_t* component;
 	struct ice_checklist_t* l;
 	struct ice_candidate_pair_t *pair;
-	struct sockaddr_storage local, remote, reflexive;
+	struct stun_address_t addr;
+	struct stun_attr_t *nominated, *priority;
+	struct stun_attr_t *controlled, *controlling;
 
 	l = (struct ice_checklist_t*)param;
 
 	// ice agent callback
-	r = stun_request_getaddr(req, &protocol, &local, &remote, &reflexive, NULL);
+	memset(&addr, 0, sizeof(addr));
+	r = stun_request_getaddr(req, &addr.protocol, &addr.host, &addr.peer, &addr.reflexive, &addr.relay);
 	if (0 != r)
 		return r;
+
+	priority = stun_message_attr_find(&req->msg, STUN_ATTR_PRIORITY);
+	nominated = stun_message_attr_find(&req->msg, STUN_ATTR_USE_CANDIDATE);
+	controlled = stun_message_attr_find(&req->msg, STUN_ATTR_ICE_CONTROLLED);
+	controlling = stun_message_attr_find(&req->msg, STUN_ATTR_ICE_CONTROLLING);
 
 	// Discovering Peer Reflexive Candidates
 	ice_checlist_add_peer_reflexive(l, req);
@@ -241,13 +192,23 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 		{
 			pair = ice_candidate_pairs_get(component, j);
 			assert(ICE_CANDIDATE_PAIR_INPROGRESS == pair->state);
-			if (0 == socket_addr_compare((const struct sockaddr*)&pair->local.host, (const struct sockaddr*)&local) 
-				&& 0 == socket_addr_compare((const struct sockaddr*)&pair->remote.addr, (const struct sockaddr*)&remote))
+			if (0 == socket_addr_compare((const struct sockaddr*)&pair->local.host, (const struct sockaddr*)&addr.host)
+				&& socket_addr_compare((const struct sockaddr*)ice_candidate_addr(&pair->remote), (const struct sockaddr*)&addr.peer)) 
 			{
 				if (0 == code)
 				{
 					pair->state = ICE_CANDIDATE_PAIR_SUCCEEDED;
-					l->handler.onvalid(l->param, l, pair);
+					l->handler.onvalidpair(l->param, l, pair);
+				}
+				else if (ICE_ROLE_CONFLICT == code)
+				{
+					// rfc5245 7.1.3.1. Failure Cases (p42)
+					if ((l->ice->controlling && controlling) || (0 == l->ice->controlling && controlled))
+					{
+						l->ice->controlling = l->ice->controlling ? 0 : 1;
+						l->handler.onrolechanged(l->param, l, l->ice->controlling);
+					}
+					// else ignore
 				}
 				else
 				{
@@ -262,18 +223,6 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 
 	// stream done callback
 	return 0;
-}
-
-static int ice_checklist_bind(struct ice_checklist_t* l, struct ice_candidate_pair_t *pair)
-{
-	struct stun_request_t* req;
-	req = stun_request_create(l->stun, STUN_RFC_5389, ice_checklist_onbind, l);
-	stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&pair->local.host, (const struct sockaddr*)&pair->remote.addr, ICE_CANDIDATE_RELAYED == pair->local.type ? (const struct sockaddr*)&pair->local.addr : NULL);
-	stun_request_setauth(req, req->auth.credential, req->auth.usr, req->auth.pwd, req->auth.realm, req->auth.nonce);
-	stun_message_add_uint32(&req->msg, STUN_ATTR_PRIORITY, pair->local.priority);
-	if(l->nomination != ICE_REGULAR_NOMINATION) stun_message_add_flag(&req->msg, STUN_ATTR_USE_CANDIDATE);
-	stun_message_add_uint64(&req->msg, l->controlling ? STUN_ATTR_ICE_CONTROLLING : STUN_ATTR_ICE_CONTROLLED, rand() * rand());
-	return stun_agent_bind(req);
 }
 
 // When a check list is first constructed as the consequence of an
@@ -340,7 +289,7 @@ static int ice_checklist_ontimer(void* param)
 	if (waiting)
 	{
 		waiting->state = ICE_CANDIDATE_PAIR_INPROGRESS;
-		ice_checklist_bind(l, waiting);
+		ice_agent_connect(l->ice, waiting, l->nominated, ice_checklist_onbind, l);
 	}
 	else
 	{
@@ -492,26 +441,41 @@ int ice_checklist_update(struct ice_checklist_t* l, const ice_candidate_pairs_t*
 	return 0;
 }
 
-int ice_checklist_trigger(struct ice_checklist_t* l, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote)
+int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t* addr, int nominated)
 {
-	struct ice_candidate_t *lo, *ro;
-	struct ice_candidate_pair_t pair;
-	lo = darray_find(&l->locals, local, NULL, ice_candidate_compare_host_addr);
-	ro = darray_find(&l->remotes, remote, NULL, ice_candidate_compare);
-	if (NULL == lo || NULL == ro)
-		return -1;
+	int i, j;
+	struct darray_t* component;
+	struct ice_candidate_pair_t *pr, reflexsive;
+	
+	// 1. unfreeze pair with same foundation
+	for (i = 0; i < ice_candidate_components_count(&l->components); i++)
+	{
+		component = ice_candidate_components_get(&l->components, i);
+		for (j = 0; j < ice_candidate_pairs_count(component); j++)
+		{
+			pr = ice_candidate_pairs_get(component, j);
+			if (0 == socket_addr_compare((const struct sockaddr*)&pr->local.host, (const struct sockaddr*)&addr->host)
+				&& socket_addr_compare((const struct sockaddr*)ice_candidate_addr(&pr->remote), (const struct sockaddr*)&addr->peer))
+			{
+				pr->nominated = pr->nominated ? 1 : nominated;
+				return ice_candidate_pairs_insert(&l->trigger, pr);
+			}
+		}
+	}
 
-	memset(&pair, 0, sizeof(pair));
-	pair.state = ICE_CANDIDATE_PAIR_WAITING;
-	ice_candidate_pair_priority(&pair);
-	memcpy(&pair.local, lo, sizeof(struct ice_candidate_t));
-	memcpy(&pair.remote, ro, sizeof(struct ice_candidate_t));
+	// TODO: peer reflexive address
+	assert(0);
+	memset(&reflexsive, 0, sizeof(reflexsive));
+	reflexsive.state = ICE_CANDIDATE_PAIR_WAITING;
+	reflexsive.nominated = nominated;
+	ice_candidate_pair_priority(&reflexsive);
+	//memcpy(&reflexsive.local, local, sizeof(struct ice_candidate_t));
+	//memcpy(&reflexsive.remote, remote, sizeof(struct ice_candidate_t));
 	//ice_candidate_pairs_insert(&l->components, &pair);
-
-	return ice_candidate_pairs_insert(&l->trigger, &pair);
+	return ice_candidate_pairs_insert(&l->trigger, &reflexsive);
 }
 
-int ice_checklist_stream_valid(struct ice_checklist_t* l, struct darray_t* valids)
+int ice_checklist_stream_valid(struct ice_checklist_t* l, const ice_candidate_pairs_t* valids)
 {
 	int i, j, waiting;
 	struct darray_t* component;
@@ -533,4 +497,10 @@ int ice_checklist_stream_valid(struct ice_checklist_t* l, struct darray_t* valid
 	}
 
 	return waiting == ice_candidate_components_count(&l->components) ? 1 : 0;
+}
+
+int ice_checklist_conclude(struct ice_checklist_t* l)
+{
+	// bind with nominated
+	return 0;
 }

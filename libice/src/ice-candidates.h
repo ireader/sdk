@@ -1,9 +1,7 @@
 #ifndef _ice_candidates_h_
 #define _ice_candidates_h_
 
-#include "darray.h"
-
-typedef struct darray_t ice_candidates_t;
+#include "ice-internal.h"
 
 static inline void ice_candidates_init(ice_candidates_t* arr)
 {
@@ -25,6 +23,8 @@ static inline struct ice_candidate_t* ice_candidates_get(ice_candidates_t* arr, 
 	return (struct ice_candidate_t*)darray_get(arr, i);
 }
 
+/// Compare candidate host address with addr
+/// @return 0-equal
 static int ice_candidate_compare_host_addr(const struct ice_candidate_t* l, const struct sockaddr_storage* addr)
 {
 	return ICE_CANDIDATE_HOST == l->type && 0 == socket_addr_compare((const struct sockaddr*)&l->host, (const struct sockaddr*)addr) ? 0 : -1;
@@ -38,8 +38,9 @@ static int ice_candidate_compare_base_addr(const struct ice_candidate_t* l, cons
 
 static int ice_candidate_compare(const struct ice_candidate_t* l, const struct ice_candidate_t* r)
 {
-	return (0 == socket_addr_compare((const struct sockaddr*)&l->host, (const struct sockaddr*)&r->host)
-		&& 0 == socket_addr_compare((const struct sockaddr*)&l->addr, (const struct sockaddr*)&r->addr)) ? 0 : -1;
+	return l->stream == r->stream && l->component == r->component && l->type == r->type 
+		&& (0 == socket_addr_compare((const struct sockaddr*)ice_candidate_addr(l), (const struct sockaddr*)ice_candidate_addr(r))
+		&& 0 == socket_addr_compare((const struct sockaddr*)ice_candidate_base(l), (const struct sockaddr*)ice_candidate_base(r))) ? 0 : -1;
 }
 
 static inline int ice_candidates_insert(ice_candidates_t* arr, const struct ice_candidate_t* c)
@@ -52,7 +53,7 @@ static inline int ice_candidates_erase(ice_candidates_t* arr, const struct ice_c
 	return darray_erase2(arr, c, ice_candidate_compare);
 }
 
-static inline int ice_candidates_list(ice_candidates_t* arr, int (*oncandidate)(void*, const struct ice_candidate_t*), void* param)
+static inline int ice_candidates_list(ice_candidates_t* arr, int (*oncandidate)(const struct ice_candidate_t*, void*), void* param)
 {
 	int i, r;
 	struct ice_candidate_t* c;
@@ -66,8 +67,20 @@ static inline int ice_candidates_list(ice_candidates_t* arr, int (*oncandidate)(
 	return 0;
 }
 
+static inline struct ice_candidate_t* ice_candidates_find(ice_candidates_t* arr, int (*oncandidate)(const struct ice_candidate_t*, void*), void* param)
+{
+	int i;
+	struct ice_candidate_t* c;
+	for (i = 0; i < darray_count(arr); i++)
+	{
+		c = ice_candidates_get(arr, i);
+		if (0 == oncandidate(param, c))
+			return c;
+	}
+	return NULL;
+}
+
 //////////////////////////////////////////////////////////////////////////
-typedef struct darray_t ice_candidate_pairs_t;
 
 static inline void ice_candidate_pairs_init(ice_candidate_pairs_t* arr)
 {
