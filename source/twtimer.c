@@ -10,8 +10,8 @@
 #include <assert.h>
 #include <errno.h>
 
-#define TIME_RESOLUTION 4
-#define TIME(clock) ((clock) >> TIME_RESOLUTION) // per 16ms
+#define TIME_RESOLUTION 3 // (0xFFFFFFFF << 3) / (24 * 3600 * 1000) ~= 397day
+#define TIME(clock) ((clock) >> TIME_RESOLUTION) // per 8ms
 
 #define TVR_BITS 8
 #define TVN_BITS 6
