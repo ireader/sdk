@@ -1,101 +1,150 @@
-#include "ice-checklist.h"
+#include "ice-internal.h"
 #include "ice-candidates.h"
 #include "stun-internal.h"
+#include <stdlib.h>
+#include <string.h>
+
+struct ice_gather_t
+{
+	struct ice_agent_t* ice;
+	ice_candidates_t candidates;
+	ice_agent_ongather ongather;
+	void* param;
+};
+
+static struct ice_gather_t* ice_gather_create(struct ice_agent_t* ice, ice_agent_ongather ongather, void* param)
+{
+	struct ice_gather_t* g;
+	g = (struct ice_gather_t*)calloc(1, sizeof(*g));
+	if (g)
+	{
+		g->ice = ice;
+		ice_agent_addref(ice);
+
+		ice_candidates_init(&g->candidates);
+		g->ongather = ongather;
+		g->param = param;
+	}
+	return g;
+}
+
+static void ice_gather_destroy(struct ice_gather_t* g)
+{
+	if (g)
+	{
+		ice_candidates_free(&g->candidates);
+		ice_agent_release(g->ice);
+		free(g);
+	}
+}
+
+static int ice_gather_callback(struct ice_gather_t* g)
+{
+	int r;
+	if (0 != ice_candidates_count(&g->candidates))
+		return 0;
+
+	r = g->ongather(g->param, 0);
+	ice_gather_destroy(g);
+	return r;
+}
 
 static int ice_gather_onbind(void* param, const stun_request_t* req, int code, const char* phrase)
 {
-	int i, r;
-	struct ice_checklist_t* l;
+	int r;
+	struct ice_gather_t* g;
 	struct ice_candidate_t c, *local;
 	struct stun_address_t addr;
 	
 	memset(&addr, 0, sizeof(addr));
-	l = (struct ice_checklist_t*)param;
+	g = (struct ice_gather_t*)param;
 	r = stun_request_getaddr(req, &addr.protocol, &addr.host, &addr.peer, &addr.reflexive, &addr.relay);
-
+	local = ice_candidates_find(&g->candidates, ice_candidate_compare_host_addr, &addr.host);
+	if (!local)
+	{
+		assert(0);
+		return -1;
+	}
+	
 	if (0 == code)
 	{
-		for (i = 0; i < ice_candidates_count(&l->locals); i++)
-		{
-			local = ice_candidates_get(&l->locals, i);
-			if (ICE_CANDIDATE_HOST == local->type && 0 == socket_addr_compare((const struct sockaddr*)&local->host, (const struct sockaddr*)&addr.host))
-			{
-				assert(AF_INET == addr.reflexive.ss_family || AF_INET6 == addr.reflexive.ss_family);
-				memset(&c, 0, sizeof(struct ice_candidate_t));
-				c.type = ICE_CANDIDATE_SERVER_REFLEXIVE;
-				c.component = local->component;
-				c.protocol = local->protocol;
-				memcpy(&c.host, &addr.host, sizeof(c.host));
-				memcpy(&c.addr, &addr.reflexive, sizeof(c.addr));
-				memcpy(&c.reflexive, &addr.reflexive, sizeof(c.reflexive));
-				ice_candidate_priority(&c);
-				ice_candidate_foundation(&c, (struct sockaddr*)&addr.peer);
-				r = ice_checklist_add_local_candidate(l, &c);
+		assert(AF_INET == addr.reflexive.ss_family || AF_INET6 == addr.reflexive.ss_family);
+		memset(&c, 0, sizeof(struct ice_candidate_t));
+		c.type = ICE_CANDIDATE_SERVER_REFLEXIVE;
+		c.component = local->component;
+		c.protocol = local->protocol;
+		memcpy(&c.stun, &addr.peer, sizeof(c.stun));
+		memcpy(&c.host, &addr.host, sizeof(c.host));
+		//memcpy(&c.relay, &addr.relay, sizeof(c.relay));
+		memcpy(&c.reflexive, &addr.reflexive, sizeof(c.reflexive));
+		ice_candidate_priority(&c);
+		ice_candidate_foundation(&c);
+		r = ice_add_local_candidate(g->ice, &c);
 
-				if (AF_INET == addr.relay.ss_family || AF_INET6 == addr.relay.ss_family)
-				{
-					memset(&c, 0, sizeof(struct ice_candidate_t));
-					c.type = ICE_CANDIDATE_RELAYED;
-					c.component = local->component;
-					c.protocol = local->protocol;
-					memcpy(&c.host, &addr.host, sizeof(c.host));
-					memcpy(&c.addr, &addr.relay, sizeof(c.addr));
-					memcpy(&c.reflexive, &addr.reflexive, sizeof(c.reflexive));
-					ice_candidate_priority(&c);
-					ice_candidate_foundation(&c, (struct sockaddr*)&addr.peer);
-					r = ice_checklist_add_local_candidate(l, &c);
-				}
-				break;
-			}
+		if (AF_INET == addr.relay.ss_family || AF_INET6 == addr.relay.ss_family)
+		{
+			memset(&c, 0, sizeof(struct ice_candidate_t));
+			c.type = ICE_CANDIDATE_RELAYED;
+			c.component = local->component;
+			c.protocol = local->protocol;
+			memcpy(&c.stun, &addr.peer, sizeof(c.stun));
+			memcpy(&c.host, &addr.host, sizeof(c.host));
+			memcpy(&c.relay, &addr.relay, sizeof(c.relay));
+			memcpy(&c.reflexive, &addr.reflexive, sizeof(c.reflexive));
+			ice_candidate_priority(&c);
+			ice_candidate_foundation(&c);
+			r = ice_add_local_candidate(g->ice, &c);
 		}
-		assert(i < ice_candidates_count(&l->locals));
 	}
 	else
 	{
-		r = 0; // ignore gather error
+		r = 0; // ignore g error
 		printf("ice_checklist_ongather code: %d, phrase: %s\n", code, phrase);
 	}
 
-	darray_erase2(&l->gathers, &addr.host, NULL);
-	if (0 == darray_count(&l->gathers))
-		return l->ongather(l->ongatherparam, 0);
-	return 0;
+	ice_candidates_erase(&g->candidates, local);
+	return ice_gather_callback(g);
 }
 
-/// Gather server reflexive and relayed candidates
-int ice_checklist_gather_stun_candidate(struct ice_checklist_t* l, const struct sockaddr* addr, int turn, ice_agent_ongather ongather, void* param, turn_agent_ondata ondata, void* ondataparam)
+int ice_gather_candidate(struct ice_agent_t* ice, const struct sockaddr* addr, int turn, ice_agent_ongather ongather, void* param)
 {
 	int i, r;
-	struct stun_request_t* req;
-	struct ice_candidate_t *p;
-	
-	l->gathers.count = 0; // reset gather array
-	l->ongatherparam = param;
-	l->ongather = ongather;
+	struct ice_gather_t* g;
+	struct ice_candidate_t *c;
 
-	for (i = 0; i < ice_candidates_count(&l->locals); i++)
+	if (!addr || (AF_INET != addr->sa_family && AF_INET6 != addr->sa_family))
+		return -1;
+
+	g = ice_gather_create(ice, ongather, param);
+	if (!g)
+		return -1;
+
+	locker_lock(&ice->locker);
+	for (i = 0; i < ice_candidates_count(&ice->locals); i++)
 	{
-		p = ice_candidates_get(&l->locals, i);
-		if (ICE_CANDIDATE_HOST != p->type)
+		c = ice_candidates_get(&ice->locals, i);
+		if (ICE_CANDIDATE_HOST != c->type)
 			continue;
 
-		req = stun_request_create(l->stun, STUN_RFC_5389, ice_gather_onbind, l);
-		if (!req) continue;
+		r = ice_candidates_insert(&g->candidates, c);
+		assert(0 == r);
+	}
+	locker_unlock(&ice->locker);
 
-		stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&p->host, addr, NULL);
-		stun_request_setauth(req, l->auth->credential, l->auth->usr, l->auth->pwd, l->auth->realm, l->auth->nonce);
-		r = 0 == turn ? stun_agent_bind(req) : turn_agent_allocate(req, ondata, ondataparam);
+	for (i = 0; i < ice_candidates_count(&g->candidates); i++)
+	{
+		c = ice_candidates_get(&g->candidates, i);
+		if (0 == turn)
+			r = ice_agent_bind(ice, (const struct sockaddr*)&c->host, addr, NULL, ice_gather_onbind, g);
+		else
+			r = ice_agent_allocate(ice, (const struct sockaddr*)&c->host, addr, NULL, ice_gather_onbind, g);
+
 		if (0 != r)
 		{
-			stun_request_destroy(&req);
-			continue;
+			// TODO: notify
+			ice_candidates_erase(&g->candidates, c);
 		}
-
-		darray_push_back(&l->gathers, &p->host, 1);
 	}
 
-	// empty?
-	if (0 == darray_count(&l->gathers))
-		return l->ongather(l->ongatherparam, 0);
-	return 0;
+	return ice_gather_callback(g);
 }

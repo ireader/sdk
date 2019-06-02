@@ -2,160 +2,60 @@
 #include "ice-internal.h"
 #include "stun-agent.h"
 #include "stun-internal.h"
-#include "ice-streams.h"
 #include "ice-checklist.h"
 #include "ice-candidates.h"
 
-struct ice_agent_t
-{
-	stun_agent_t* stun;
-	ice_streams_t streams;
-	ice_candidate_pairs_t valids; // valid list
-
-	struct stun_credential_t auth; // local auth
-	struct ice_agent_handler_t handler;
-	void* param;
-};
-
-static int ice_stun_send(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
+struct ice_agent_t* ice_create(int controlling, struct ice_agent_handler_t* handler, void* param)
 {
 	struct ice_agent_t* ice;
-	ice = (struct ice_agent_t*)param;
-	return ice->handler.send(ice->param, protocol, local, remote, data, bytes);
-}
-
-static int ice_stun_auth(void* param, int cred, const char* usr, const char* realm, const char* nonce, char pwd[512])
-{
-	// rfc5245 7.1.2. Sending the Request
-	// A connectivity check MUST utilize the STUN short-term credential mechanism
-
-	struct ice_agent_t* ice;
-	(void)realm, (void)nonce;
-	ice = (struct ice_agent_t*)param;
-	assert(STUN_CREDENTIAL_SHORT_TERM == cred);
-	return ice->handler.auth(ice->param, usr, pwd);
-}
-
-static int ice_stun_getnonce(void* param, char realm[128], char nonce[128])
-{
-	assert(0);
-	realm[0] = nonce[0] = 0;
-	return -1; (void)param;
-}
-
-static int ice_stun_onbind(void* param, stun_response_t* resp, const stun_request_t* req)
-{
-	int i, r;
-	int protocol;
-	struct ice_agent_t* ice;
-	struct ice_stream_t* stream;
-	struct sockaddr_storage local, remote, reflexive, relay;
-
-	ice = (struct ice_agent_t*)param;
-	r = stun_request_getaddr(req, &protocol, &local, &remote, &reflexive, &relay);
-	if (0 != r)
-		return r;
-
-	// try trigger check
-	for (i = 0; i < ice_streams_count(&ice->streams); i++)
-	{
-		stream = ice_streams_get(&ice->streams, i);
-		ice_checklist_trigger(stream->checks, protocol, &local, &remote);
-	}
-
-	return stun_agent_bind_response(resp, 200, "OK");
-}
-
-static int ice_stun_onvalid(void* param, struct ice_checklist_t* l, const struct ice_candidate_pair_t* pair)
-{
-	int i;
-	struct ice_agent_t* ice;
-	struct ice_stream_t* stream;
-	ice = (struct ice_agent_t*)param;
-
-	if (0 != ice_candidate_pairs_insert(&ice->valids, pair))
-		return -1;
-
-	if (!ice_checklist_stream_valid(l, &ice->valids))
-		return 0;
-	
-	// sync the other streams
-	for (i = 0; i < ice_streams_count(&ice->streams); i++)
-	{
-		stream = ice_streams_get(&ice->streams, i);
-		if (l == stream->checks)
-			continue;
-
-		ice_checklist_update(stream->checks, &ice->valids);
-	}
-
-	return 0;
-}
-
-static int ice_stun_onfinish(void* param, struct ice_checklist_t* l, int code)
-{
-	int i;
-	struct ice_agent_t* ice;
-	ice = (struct ice_agent_t*)param;
-
-	for (i = 0; i < ice_streams_count(&ice->streams); i++)
-	{
-		if (!ice_checklist_stream_valid(l, &ice->valids))
-			return 0;
-	}
-
-	// all stream finish
-	// TODO: callback/notify
-
-	return 0;
-}
-
-struct ice_agent_t* ice_create(struct ice_agent_handler_t* handler, void* param)
-{
-	struct ice_agent_t* ice;
-	struct stun_agent_handler_t stun;
-
-	memset(&stun, 0, sizeof(stun));
-	stun.send = ice_stun_send;
-	stun.auth = ice_stun_auth;
-	stun.onbind = ice_stun_onbind;
-	stun.getnonce = ice_stun_getnonce;
-
 	ice = (struct ice_agent_t*)calloc(1, sizeof(struct ice_agent_t));
 	if (ice)
 	{
-		ice_streams_init(&ice->streams);
-		ice_candidate_pairs_init(&ice->valids);
-		ice->stun = stun_agent_create(STUN_RFC_5389, &stun, ice);
-		memcpy(&ice->handler, handler, sizeof(ice->handler));
+		locker_create(&ice->locker);
+		ice->ref = 1;
 		ice->param = param;
+		ice->nomination = ICE_REGULAR_NOMINATION;
+		ice->controlling = controlling;
+		ice->tiebreaking = (intptr_t)ice * rand();
+		memcpy(&ice->handler, handler, sizeof(ice->handler));
+		ice_candidate_pairs_init(&ice->valids);
+		ice_agent_init(ice);
 	}
-	
+
 	return ice;
 }
 
 int ice_destroy(struct ice_agent_t* ice)
 {
-	if (ice)
-	{
-		ice_candidate_pairs_free(&ice->valids);
-		stun_agent_destroy(&ice->stun);
-		ice_streams_free(&ice->streams);
-		free(ice);
-	}
+	return ice_agent_release(ice);
+}
+
+int ice_agent_addref(struct ice_agent_t* ice)
+{
+	assert(ice->ref > 0);
+	return atomic_increment32(&ice->ref);
+}
+
+int ice_agent_release(struct ice_agent_t* ice)
+{
+	int ref;
+	ref = atomic_decrement32(&ice->ref);
+	assert(ref >= 0);
+	if (0 != ref)
+		return 0;
+
+	ice_candidate_pairs_free(&ice->valids);
+	ice_candidates_free(&ice->remotes);
+	ice_candidates_free(&ice->locals);
+	stun_agent_destroy(&ice->stun);
+	locker_destroy(&ice->locker);
+	free(ice);
 	return 0;
 }
 
 int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, const void* data, int bytes)
 {
 	return ice && ice->stun ? stun_agent_input(ice->stun, protocol, local, remote, relay, data, bytes) : -1;
-}
-
-void ice_ondata(void* param, const void* data, int byte, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay)
-{
-	struct ice_agent_t* ice = (struct ice_agent_t*)param;
-	if (ice && ice->handler.ondata)
-		ice->handler.ondata(ice->param, data, byte, protocol, local, remote, relay);
 }
 
 int ice_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd)
@@ -167,131 +67,111 @@ int ice_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd
 	return 0;
 }
 
-int ice_add_local_candidate(struct ice_agent_t* ice, int stream, const struct ice_candidate_t* cand)
+int ice_add_local_candidate(struct ice_agent_t* ice, const struct ice_candidate_t* cand)
 {
-	struct ice_stream_t *s;
-	struct ice_candidate_t c;
 	struct ice_checklist_handler_t h;
 
-	if ( !cand || 0 == cand->foundation[0] || cand->component < 1 || cand->component > 256
+	if ( !cand || 0 == cand->priority || 0 == cand->foundation[0] || cand->component < 1 || cand->component > 256
 		||(ICE_CANDIDATE_HOST != cand->type && ICE_CANDIDATE_SERVER_REFLEXIVE != cand->type && ICE_CANDIDATE_RELAYED != cand->type && ICE_CANDIDATE_PEER_REFLEXIVE != cand->type)
 		|| (STUN_PROTOCOL_UDP != cand->protocol && STUN_PROTOCOL_TCP != cand->protocol && STUN_PROTOCOL_TLS != cand->protocol && STUN_PROTOCOL_DTLS != cand->protocol)
-		|| (AF_INET != cand->reflexive.ss_family && AF_INET6 != cand->reflexive.ss_family)
-		|| (AF_INET != cand->addr.ss_family && AF_INET6 != cand->addr.ss_family)
+		//|| (AF_INET != cand->reflexive.ss_family && AF_INET6 != cand->reflexive.ss_family)
+		//|| (AF_INET != cand->relay.ss_family && AF_INET6 != cand->relay.ss_family)
 		|| (AF_INET != cand->host.ss_family && AF_INET6 != cand->host.ss_family))
 	{
 		assert(0);
 		return -1;
 	}
 
-	memcpy(&c, cand, sizeof(c));
-	if(0 == c.priority)
-		ice_candidate_priority(&c);
-
-	s = ice_streams_fetch(&ice->streams, stream);
-	if (!s) return -1;
-
-	if (!s->checks)
-	{
-		memset(&h, 0, sizeof(h));
-		h.onvalid = ice_stun_onvalid;
-		h.onfinish = ice_stun_onfinish;
-		s->checks = ice_checklist_create(ice->stun, &ice->auth, &h, ice);
-	}
-
-	return ice_checklist_add_local_candidate(s->checks, &c);
+	if (ice_candidates_count(&ice->locals) > ICE_CANDIDATE_LIMIT)
+		return -1;
+	return ice_candidates_insert(&ice->locals, cand);
 }
 
-int ice_add_remote_candidate(struct ice_agent_t* ice, int stream, const struct ice_candidate_t* cand)
+int ice_add_remote_candidate(struct ice_agent_t* ice, const struct ice_candidate_t* cand)
 {
-	struct ice_stream_t *s;
-	
-	if (!cand || 0 == cand->foundation[0] || cand->component < 1 || cand->component > 256
+	if (!cand || 0 == cand->priority || 0 == cand->foundation[0] || cand->component < 1 || cand->component > 256
 		|| (ICE_CANDIDATE_HOST != cand->type && ICE_CANDIDATE_SERVER_REFLEXIVE != cand->type && ICE_CANDIDATE_RELAYED != cand->type && ICE_CANDIDATE_PEER_REFLEXIVE != cand->type)
 		|| (STUN_PROTOCOL_UDP != cand->protocol && STUN_PROTOCOL_TCP != cand->protocol && STUN_PROTOCOL_TLS != cand->protocol && STUN_PROTOCOL_DTLS != cand->protocol)
-		|| (AF_INET != cand->addr.ss_family && AF_INET6 != cand->addr.ss_family))
+		|| NULL == ice_candidate_addr(cand) || (AF_INET != ice_candidate_addr(cand)->ss_family && AF_INET6 != ice_candidate_addr(cand)->ss_family))
 	{
 		assert(0);
 		return -1;
 	}
 
-	s = ice_streams_fetch(&ice->streams, stream);
-	if (!s) return -1;
-
-	return ice_checklist_add_remote_candidate(s->checks, cand);
+	if (ice_candidates_count(&ice->remotes) > ICE_CANDIDATE_LIMIT)
+		return -1;
+	return ice_candidates_insert(&ice->remotes, cand);
 }
 
-int ice_gather_stun_candidate(struct ice_agent_t* ice, const struct sockaddr* addr, int turn, ice_agent_ongather ongather, void* param)
+int ice_list_local_candidate(struct ice_agent_t* ice, ice_agent_oncandidate oncand, void* param)
+{
+	return ice_candidates_list(&ice->locals, oncand, param);
+}
+
+int ice_list_remote_candidate(struct ice_agent_t* ice, ice_agent_oncandidate oncand, void* param)
+{
+	return ice_candidates_list(&ice->remotes, oncand, param);
+}
+
+int ice_get_default_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t component, struct ice_candidate_t* c)
 {
 	int i;
-	struct ice_stream_t *s;
-
-	if (!addr || (AF_INET != addr->sa_family && AF_INET6 != addr->sa_family))
-		return -1;
-
-	for (i = 0; i < darray_count(&ice->streams); i++)
+	struct ice_candidate_t *p, *pc = NULL;
+	for (i = 0; i < ice_candidates_count(&ice->locals); i++)
 	{
-		s = (struct ice_stream_t *)darray_get(&ice->streams, i);
-		if (s && s->checks)
-			ice_checklist_gather_stun_candidate(s->checks, addr, turn, ongather, param, ice_ondata, ice);
+		p = ice_candidates_get(&ice->locals, i);
+		if (p->stream != stream || p->component != component)
+			continue;
+
+		// rfc5245 4.1.4. Choosing Default Candidates (p25)
+		// 1. It is RECOMMENDED that default candidates be chosen based on the likelihood 
+		//    of those candidates to work with the peer that is being contacted. 
+		// 2. It is RECOMMENDED that the default candidates are the relayed candidates 
+		//    (if relayed candidates are available), server reflexive candidates 
+		//    (if server reflexive candidates are available), and finally host candidates.
+		if (NULL == pc || pc->priority > p->priority)
+			pc = p;
 	}
 
-	// TODO:
-	//return ongather(param, -1);
+	if (NULL == pc || NULL == c)
+		return -1; // not found local candidate
+
+	memcpy(c, pc, sizeof(struct ice_candidate_t));
 	return 0;
 }
 
-int ice_get_default_candidate(struct ice_agent_t* ice, int stream, uint16_t component, struct ice_candidate_t* c)
+static void ice_agent_clear_checklist(struct ice_agent_t* ice)
 {
-	struct ice_stream_t* s;
-	
-	s = ice_streams_find(&ice->streams, stream);
-	if (NULL == s)
-		return -1;
-
-	return ice_checklist_get_default_candidate(s->checks, component, c);
-}
-
-int ice_list_local_candidate(struct ice_agent_t* ice, int stream, ice_agent_oncandidate oncand, void* param)
-{
-	struct ice_stream_t* s;
-
-	s = ice_streams_find(&ice->streams, stream);
-	if (NULL == s)
-		return -1;
-
-	return ice_checklist_list_local_candidate(s->checks, oncand, param);
-}
-
-int ice_list_remote_candidate(struct ice_agent_t* ice, int stream, ice_agent_oncandidate oncand, void* param)
-{
-	struct ice_stream_t* s;
-
-	s = ice_streams_find(&ice->streams, stream);
-	if (NULL == s)
-		return -1;
-
-	return ice_checklist_list_remote_candidate(s->checks, oncand, param);
+	int i;
+	for (i = 0; i < sizeof(ice->list) / sizeof(ice->list[0]); i++)
+	{
+		if (ice->list[i])
+			ice_checklist_destroy(&ice->list[i]);
+	}
 }
 
 int ice_start(struct ice_agent_t* ice)
 {
-	int i;
-	struct ice_stream_t* stream;
-	
-	if (ice_streams_count(&ice->streams) < 1)
-		return -1;
-	
-	for (i = 0; i < ice_streams_count(&ice->streams); i++)
+	int i, r;
+	struct ice_checklist_t* check;
+	struct ice_candidate_t *local;
+	struct ice_candidate_pair_t pair;
+
+	ice_agent_clear_checklist(ice);
+	for (r = i = 0; 0 == r && i < ice_candidates_count(&ice->locals); i++)
 	{
-		stream = ice_streams_get(&ice->streams, i);
-		if (stream->first)
-			break;
+		local = ice_candidates_get(&ice->locals, i);
+		check = ice->list[local->stream];
+		if (check)
+			continue;
+
+		check = ice_agent_checklist_create(ice, local->stream);
+		ice->list[local->stream] = check;
+		if (local->stream == ice->stream)
+			r = ice_checklist_start(check);
 	}
 
-	assert(i < ice_streams_count(&ice->streams));
-	i = i % ice_streams_count(&ice->streams);
-	stream = ice_streams_get(&ice->streams, i);
-
-	return ice_checklist_init(stream->checks);
+	if (0 != r)
+		ice_agent_clear_checklist(ice);	
+	return r;
 }

@@ -2,9 +2,12 @@
 #define _ice_internal_h_
 
 #include "ice-agent.h"
-#include <stdint.h>
+#include "stun-internal.h"
+#include "sys/atomic.h"
 #include "sockutil.h"
-#include "md5.h"
+#include "darray.h"
+#include <stdint.h>
+#include <assert.h>
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -16,6 +19,8 @@
 // performs across all check lists to a specific value.
 // A default of 100 is RECOMMENDED.
 #define ICE_CANDIDATE_LIMIT 10
+
+#define ICE_ROLE_CONFLICT 487
 
 enum ice_checklist_state_t
 {
@@ -57,75 +62,29 @@ struct ice_candidate_pair_t
 	char foundation[66];
 };
 
-// RFC5245 4.1.2. Prioritizing Candidates (p23)
-// priority = (2^24)*(type preference) + (2^8)*(local preference) + (2^0)*(256 - component ID)
-static inline void ice_candidate_priority(struct ice_candidate_t* c)
+typedef struct darray_t ice_candidates_t;
+typedef struct darray_t ice_candidate_pairs_t;
+
+struct ice_agent_t
 {
-	uint16_t v;
-	assert(c->type >= 0 && c->type <= 126);
-	assert(c->component > 0 && c->component <= 256);
+	int32_t ref;
+	locker_t locker;
 
-	// 1. multihomed and has multiple IP addresses, the local preference for host
-	// candidates from a VPN interface SHOULD have a priority of 0.
-	// 2. IPv6 > 6to4 > IPv4
-	v = (1 << 10) * c->host.ss_family;
+	void* timer; // bind/refresh timer
+	stun_agent_t* stun;
+	ice_candidates_t locals;
+	ice_candidates_t remotes;
+	ice_candidate_pairs_t valids; // valid list
+	enum ice_nomination_t nomination;
+	uint64_t tiebreaking; // role conflicts(network byte-order)
+	uint8_t stream; // default stream
+	int controlling;
 
-	c->priority = (1 << 24) * c->type + (1 << 8) * v + (256 - c->component);
-}
-
-static inline const struct sockaddr_storage* ice_candidate_base(const struct ice_candidate_t* c)
-{
-	// The base of a server reflexive candidate is the host candidate
-	// from which it was derived. A host candidate is also said to have
-	// a base, equal to that candidate itself. Similarly, the base of a
-	// relayed candidate is that candidate itself.
-	return ICE_CANDIDATE_RELAYED != c->type ? &c->host : &c->reflexive;
-}
-
-// RFC5245 4.1.1.3. Computing Foundations (p22)
-static inline void ice_candidate_foundation(struct ice_candidate_t* c, const struct sockaddr* stun)
-{
-	// An arbitrary string that is the same for two candidates that have the same type, 
-	// base IP address, protocol (UDP, TCP, etc.), and STUN or TURN server.
-	// 1. they are of the same type (host, relayed, server reflexive, or peer reflexive).
-	// 2. their bases have the same IP address (the ports can be different).
-	// 3. for reflexive and relayed candidates, the STUN or TURN servers used to obtain them have the same IP address.
-	// 4. they were obtained using the same transport protocol (TCP, UDP, etc.).
-
-	int i;
-	MD5_CTX ctx;
-	unsigned char md5[16];
-	const struct sockaddr_storage* base;
-	static const char* s_base16_enc = "0123456789ABCDEF";
-
-	base = ice_candidate_base(c);
-
-	MD5Init(&ctx);
-	MD5Update(&ctx, (unsigned char*)&c->type, sizeof(c->type));
-	MD5Update(&ctx, (unsigned char*)":", 1);
-	MD5Update(&ctx, (unsigned char*)&c->protocol, sizeof(c->protocol));
-	MD5Update(&ctx, (unsigned char*)":", 1);
-	
-	MD5Update(&ctx, (unsigned char*)&base->ss_family, sizeof(base->ss_family));
-	if (AF_INET == base->ss_family)
-		MD5Update(&ctx, (unsigned char*)&((struct sockaddr_in*)base)->sin_addr, 4);
-	else if (AF_INET6 == base->ss_family)
-		MD5Update(&ctx, (unsigned char*)&((struct sockaddr_in6*)base)->sin6_addr, 8);
-
-	MD5Update(&ctx, (unsigned char*)":", 1);
-	if (ICE_CANDIDATE_HOST != c->type && stun)
-		MD5Update(&ctx, (unsigned char*)stun, socket_addr_len(stun));
-	else
-		MD5Update(&ctx, (unsigned char*)&c->addr, socket_addr_len((struct sockaddr*)&c->addr));
-	MD5Final(md5, &ctx);
-
-	assert(sizeof(c->foundation) >= 2 * sizeof(md5));
-	for (i = 0; i < sizeof(md5) && i < sizeof(c->foundation); i++)
-	{
-		c->foundation[i * 2] = s_base16_enc[(md5[i] >> 4) & 0x0F];
-		c->foundation[i * 2 + 1] = s_base16_enc[md5[i] & 0x0F];
-	}
-}
+	struct ice_checklist_t* list[256];
+	struct stun_credential_t auth; // local auth
+	struct ice_agent_handler_t handler;
+	void* param;
+};
 
 // RFC5245 5.7.2. Computing Pair Priority and Ordering Pairs
 // pair priority = 2^32*MIN(G,D) + 2*MAX(G,D) + (G>D?1:0)
@@ -136,5 +95,16 @@ static inline void ice_candidate_pair_priority(struct ice_candidate_pair_t* pair
 	D = pair->controlling ? pair->remote.priority : pair->local.priority;
 	pair->priority = ((uint64_t)1 << 32) * MIN(G, D) + 2 * MAX(G, D) + (G > D ? 1 : 0);
 }
+
+struct ice_checklist_t* ice_agent_checklist_create(struct ice_agent_t* ice, int stream);
+
+int ice_agent_init(struct ice_agent_t* ice);
+int ice_agent_addref(struct ice_agent_t* ice);
+int ice_agent_release(struct ice_agent_t* ice);
+
+int ice_agent_bind(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param);
+int ice_agent_allocate(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param);
+int ice_agent_refresh(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param);
+int ice_agent_connect(struct ice_agent_t* ice, const struct ice_candidate_pair_t* pr, int nominated, stun_request_handler handler, void* param);
 
 #endif /* !_ice_internal_h_ */
