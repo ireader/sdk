@@ -54,7 +54,6 @@ struct ice_candidate_pair_t
 	struct ice_candidate_t local;
 	struct ice_candidate_t remote;
 	enum ice_candidate_pair_state_t state;
-	int valid;
 	int nominated;
 	int controlling;
 
@@ -94,6 +93,11 @@ static inline void ice_candidate_pair_priority(struct ice_candidate_pair_t* pair
 	G = pair->controlling ? pair->local.priority : pair->remote.priority;
 	D = pair->controlling ? pair->remote.priority : pair->local.priority;
 	pair->priority = ((uint64_t)1 << 32) * MIN(G, D) + 2 * MAX(G, D) + (G > D ? 1 : 0);
+}
+
+static inline void ice_candidate_pair_foundation(struct ice_candidate_pair_t* pair)
+{
+	snprintf(pair->foundation, sizeof(pair->foundation), "%s\n%s", pair->local.foundation, pair->remote.foundation);
 }
 
 struct ice_checklist_t* ice_agent_checklist_create(struct ice_agent_t* ice, int stream);

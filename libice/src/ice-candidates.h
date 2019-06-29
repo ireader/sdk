@@ -13,7 +13,12 @@ static inline void ice_candidates_free(ice_candidates_t* arr)
 	darray_free(arr);
 }
 
-static inline int ice_candidates_count(ice_candidates_t* arr)
+static inline void ice_candidates_clear(ice_candidates_t* arr)
+{
+	darray_clear(arr);
+}
+
+static inline int ice_candidates_count(const ice_candidates_t* arr)
 {
 	return darray_count(arr);
 }
@@ -67,17 +72,9 @@ static inline int ice_candidates_list(ice_candidates_t* arr, int (*oncandidate)(
 	return 0;
 }
 
-static inline struct ice_candidate_t* ice_candidates_find(ice_candidates_t* arr, int (*oncandidate)(const struct ice_candidate_t*, void*), void* param)
+static inline struct ice_candidate_t* ice_candidates_find(ice_candidates_t* arr, int (*oncandidate)(const struct ice_candidate_t*, const void*), const void* param)
 {
-	int i;
-	struct ice_candidate_t* c;
-	for (i = 0; i < darray_count(arr); i++)
-	{
-		c = ice_candidates_get(arr, i);
-		if (0 == oncandidate(param, c))
-			return c;
-	}
-	return NULL;
+	return (struct ice_candidate_t*)darray_find(arr, param, NULL, oncandidate);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -90,6 +87,11 @@ static inline void ice_candidate_pairs_init(ice_candidate_pairs_t* arr)
 static inline void ice_candidate_pairs_free(ice_candidate_pairs_t* arr)
 {
 	darray_free(arr);
+}
+
+static inline void ice_candidate_pairs_clear(ice_candidate_pairs_t* arr)
+{
+	darray_clear(arr);
 }
 
 static inline int ice_candidate_pairs_count(const ice_candidate_pairs_t* arr)
@@ -118,6 +120,19 @@ static int ice_candidate_pair_compare(const struct ice_candidate_pair_t* l, cons
 		return 0;
 	}
 	return (int)(l->priority - r->priority);
+}
+
+static int ice_candidate_pair_compare_addr(const struct ice_candidate_pair_t* pair, const struct stun_address_t* addr)
+{
+	if (0 == socket_addr_compare((const struct sockaddr*)&pair->local.host, (const struct sockaddr*)&addr->host)
+		&& socket_addr_compare((const struct sockaddr*)ice_candidate_addr(&pair->remote), (const struct sockaddr*)&addr->peer))
+		return 0;
+	return -1;
+}
+
+static inline struct ice_candidate_pair_t* ice_candidate_pairs_find(ice_candidate_pairs_t* arr, int (*onpair)(const struct ice_candidate_pair_t*, const void*), const void* param)
+{
+	return (struct ice_candidate_pair_t*)darray_find(arr, param, NULL, onpair);
 }
 
 static inline int ice_candidate_pairs_insert(ice_candidate_pairs_t* arr, const struct ice_candidate_pair_t* pair)
@@ -150,16 +165,16 @@ static inline void ice_candidate_components_free(ice_candidate_components_t* com
 	darray_free(components);
 }
 
-static inline void ice_candidate_components_reset(ice_candidate_components_t* components)
+static inline void ice_candidate_components_clear(ice_candidate_components_t* components)
 {
 	int i;
 	ice_candidate_pairs_t* component;
 	for (i = 0; i < darray_count(components); i++)
 	{
 		component = (ice_candidate_pairs_t*)darray_get(components, i);
-		component->count = 0;
+		darray_clear(component);
 	}
-	components->count = 0; // reset pairs size
+	darray_clear(components); // reset pairs size
 }
 
 static inline int ice_candidate_components_count(ice_candidate_components_t* components)
@@ -170,6 +185,21 @@ static inline int ice_candidate_components_count(ice_candidate_components_t* com
 static inline ice_candidate_pairs_t* ice_candidate_components_get(ice_candidate_components_t* components, int i)
 {
 	return (ice_candidate_pairs_t*)darray_get(components, i);
+}
+
+static inline struct ice_candidate_pair_t* ice_candidate_components_find(ice_candidate_components_t* components, const struct stun_address_t* addr)
+{
+	int i;
+	struct ice_candidate_pair_t *pair;
+	ice_candidate_pairs_t* component;
+
+	pair = NULL;
+	for (i = 0; i < ice_candidate_components_count(components) && NULL == pair; i++)
+	{
+		component = ice_candidate_components_get(components, i);
+		pair = ice_candidate_pairs_find(component, ice_candidate_pair_compare_addr, addr);
+	}
+	return pair;
 }
 
 static int ice_candidate_component_compare(const ice_candidate_pairs_t* component, const uint16_t *id)

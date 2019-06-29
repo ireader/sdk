@@ -17,7 +17,7 @@ struct ice_candidate_t
 	enum ice_candidate_type_t type;	// candidate type, e.g. ICE_CANDIDATE_HOST
 	//struct sockaddr_storage addr; // ICE_CANDIDATE_RELAYED: relayed address, other: server reflexive address(NAT/Router address)
 	struct sockaddr_storage host; // local host address
-	struct sockaddr_storage reflexive; // stun/turn reflexive address
+	struct sockaddr_storage reflexive; // stun/turn reflexive address(NAT/Router address)
 	struct sockaddr_storage relay; // relayed address(ICE_CANDIDATE_RELAYED only)
 	struct sockaddr_storage stun; // stun/turn server address
 

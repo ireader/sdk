@@ -51,11 +51,12 @@ int ice_gather_candidate(struct ice_agent_t* ice, const struct sockaddr* addr, i
 int ice_get_default_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t component, struct ice_candidate_t* cand);
 
 /// @return 0-continue, other-abort
-typedef int (*ice_agent_oncandidate)(void* param, const struct ice_candidate_t* c);
+typedef int (*ice_agent_oncandidate)(const struct ice_candidate_t* c, const void* param);
 int ice_list_local_candidate(struct ice_agent_t* ice, ice_agent_oncandidate oncand, void* param);
 int ice_list_remote_candidate(struct ice_agent_t* ice, ice_agent_oncandidate oncand, void* param);
 
 int ice_start(struct ice_agent_t* ice);
+int ice_stop(struct ice_agent_t* ice);
 
 #if defined(__cplusplus)
 }

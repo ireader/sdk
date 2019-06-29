@@ -98,7 +98,7 @@ static int ice_gather_onbind(void* param, const stun_request_t* req, int code, c
 	}
 	else
 	{
-		r = 0; // ignore g error
+		r = 0; // ignore error
 		printf("ice_checklist_ongather code: %d, phrase: %s\n", code, phrase);
 	}
 
@@ -120,7 +120,7 @@ int ice_gather_candidate(struct ice_agent_t* ice, const struct sockaddr* addr, i
 		return -1;
 
 	locker_lock(&ice->locker);
-	for (i = 0; i < ice_candidates_count(&ice->locals); i++)
+	for (r = i = 0; 0 == r && i < ice_candidates_count(&ice->locals); i++)
 	{
 		c = ice_candidates_get(&ice->locals, i);
 		if (ICE_CANDIDATE_HOST != c->type)
@@ -130,6 +130,8 @@ int ice_gather_candidate(struct ice_agent_t* ice, const struct sockaddr* addr, i
 		assert(0 == r);
 	}
 	locker_unlock(&ice->locker);
+	if (0 != r)
+		return r;
 
 	for (i = 0; i < ice_candidates_count(&g->candidates); i++)
 	{
