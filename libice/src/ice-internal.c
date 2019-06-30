@@ -17,8 +17,8 @@ static int ice_stun_onbind(void* param, stun_response_t* resp, const stun_reques
 	struct ice_agent_t* ice;
 	struct ice_candidate_t* c;
 	struct stun_address_t addr;
-	struct stun_attr_t *nominated, *priority;
-	struct stun_attr_t *controlled, *controlling;
+	const struct stun_attr_t *nominated, *priority;
+	const struct stun_attr_t *controlled, *controlling;
 	
 	memset(&addr, 0, sizeof(addr));
 	ice = (struct ice_agent_t*)param;
@@ -65,6 +65,7 @@ static int ice_stun_onbind(void* param, stun_response_t* resp, const stun_reques
 	}
 
 	// try trigger check
+	assert(c->stream < sizeof(ice->list) / sizeof(ice->list[0]));
 	if(ice->list[c->stream])
 		ice_checklist_trigger(ice->list[c->stream], &addr, nominated ? 1 : 0);
 
@@ -73,6 +74,16 @@ static int ice_stun_onbind(void* param, stun_response_t* resp, const stun_reques
 
 static int ice_agent_onrole(void* param, struct ice_checklist_t* l, int controlling)
 {
+	int i, r;
+	struct ice_agent_t* ice;
+
+	ice = (struct ice_agent_t*)param;
+	for (r = i = 0; 0 == r && i < sizeof(ice->list) / sizeof(ice->list[0]); i++)
+	{
+		if (ice->list[i])
+			r = ice_checklist_onrolechanged(ice->list[i], ice->controlling);
+	}
+	return r;
 }
 
 static int ice_agent_onvalid(void* param, struct ice_checklist_t* l, const struct ice_candidate_pair_t* pair)
@@ -129,6 +140,17 @@ static int ice_agent_refresh_response(void* param, const stun_request_t* req, in
 	return 0;
 }
 
+static int ice_agent_active_checklist_count(struct ice_agent_t* ice)
+{
+	int i, n;
+	for (n = i = 0; i < sizeof(ice->list) / sizeof(ice->list[0]); i++)
+	{
+		if (ice->list[i] && ice_checklist_running(ice->list[i]))
+			n++;
+	}
+	return n;
+}
+
 static void ice_agent_onrefresh(void* param)
 {
 	int i;
@@ -144,9 +166,9 @@ static void ice_agent_onrefresh(void* param)
 	{
 		c = ice_candidates_get(&ice->locals, i);
 		if(ICE_CANDIDATE_SERVER_REFLEXIVE == c->type || ICE_CANDIDATE_PEER_REFLEXIVE == c->type)
-			ice_agent_bind(ice, &c->host, &c->stun, NULL, ice_agent_refresh_response, ice);
+			ice_agent_bind(ice, (const struct sockaddr*)&c->host, (const struct sockaddr*)&c->stun, NULL, ice_agent_refresh_response, ice);
 		else if(ICE_CANDIDATE_RELAYED == c->type)
-			ice_agent_refresh(ice, &c->host, &c->stun, NULL, ice_agent_refresh_response, ice);
+			ice_agent_refresh(ice, (const struct sockaddr*)&c->host, (const struct sockaddr*)&c->stun, NULL, ice_agent_refresh_response, ice);
 	}
 
 	// 2. valid list
@@ -154,16 +176,20 @@ static void ice_agent_onrefresh(void* param)
 	{
 		pr = ice_candidate_pairs_get(&ice->valids, i);
 		if (ICE_CANDIDATE_SERVER_REFLEXIVE == pr->local.type || ICE_CANDIDATE_PEER_REFLEXIVE == pr->local.type)
-			ice_agent_bind(ice, &pr->local.host, ice_candidate_addr(&pr->remote), NULL, ice_agent_refresh_response, ice);
+			ice_agent_bind(ice, (const struct sockaddr*)&pr->local.host, (const struct sockaddr*)ice_candidate_addr(&pr->remote), NULL, ice_agent_refresh_response, ice);
 		else if (ICE_CANDIDATE_RELAYED == pr->local.type)
-			ice_agent_refresh(ice, &pr->local.host, ice_candidate_addr(&pr->remote), &pr->local.relay, ice_agent_refresh_response, ice);
+			ice_agent_refresh(ice, (const struct sockaddr*)&pr->local.host, (const struct sockaddr*)ice_candidate_addr(&pr->remote), (const struct sockaddr*)&pr->local.relay, ice_agent_refresh_response, ice);
 	}
-
-	if (ice)
+	
+//	if (ice->running)
 	{
-		ice->timer = stun_timer_start(ICE_BINDING_TIMEOUT, ice_agent_onrefresh, ice);
+		ice->timer = stun_timer_start(ICE_TIMER_INTERVAL * ice_agent_active_checklist_count(ice), ice_agent_onrefresh, ice);
 		if (ice->timer)
+		{
+			locker_unlock(&ice->locker);
 			return;
+		}
+
 		// TODO: notify start timer error
 	}
 	locker_unlock(&ice->locker);
@@ -209,6 +235,13 @@ int ice_agent_init(struct ice_agent_t* ice)
 	ice->timer = stun_timer_start(ICE_BINDING_TIMEOUT, ice_agent_onrefresh, ice);
 	return 0;
 }
+
+//void ice_agent_clear(struct ice_agent_t* ice)
+//{
+//	ice_candidate_pairs_clear(&ice->valids);
+//	ice_candidates_clear(&ice->remotes);
+//	ice_candidates_clear(&ice->locals);
+//}
 
 struct ice_checklist_t* ice_agent_checklist_create(struct ice_agent_t* ice, int stream)
 {

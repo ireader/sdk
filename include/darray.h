@@ -21,6 +21,7 @@ struct darray_t
 
 void darray_init(struct darray_t* arr, int size, int capacity);
 void darray_free(struct darray_t* arr);
+void darray_clear(struct darray_t* arr);
 
 /// @param[in] index delete item at index
 int darray_erase(struct darray_t* arr, int index);

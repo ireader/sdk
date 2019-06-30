@@ -53,6 +53,12 @@ void darray_free(struct darray_t* arr)
     arr->count = 0;
 }
 
+void darray_clear(struct darray_t* arr)
+{
+	assert(arr->count >= 0);
+	arr->count = 0;
+}
+
 int darray_erase(struct darray_t* arr, int index)
 {
     if (index < 0 || index >= arr->count)
