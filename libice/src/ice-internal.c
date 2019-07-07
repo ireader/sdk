@@ -11,6 +11,34 @@ static int ice_stun_getnonce(void* param, char realm[128], char nonce[128])
 	return -1; (void)param;
 }
 
+// rfc5245 7.2.1.3. Learning Peer Reflexive Candidates (p49)
+static void ice_agent_server_add_peer_reflexive(struct ice_agent_t* ice, const stun_request_t* req)
+{
+	struct ice_candidate_t c, *local;
+	const struct stun_attr_t* priority;
+
+	memset(&c, 0, sizeof(struct ice_candidate_t));
+	stun_request_getaddr(req, &c.protocol, &c.host, &c.stun, &c.reflexive, &c.relay);
+	priority = stun_message_attr_find(&req->msg, STUN_ATTR_PRIORITY);
+
+	local = ice_candidates_find(&ice->locals, ice_candidate_compare_host_addr, &c.host);
+	if (NULL == local)
+		return; // local not found, new request ???
+
+	assert(0 == c.relay.ss_family);
+	c.type = ICE_CANDIDATE_PEER_REFLEXIVE;
+	c.stream = local->stream;
+	c.component = local->component;
+	// The foundation of the candidate is set to an arbitrary value,
+	// different from the foundation for all other remote candidates.
+	c.foundation[0] = '\0'; // ice_candidate_foundation(&c);
+	ice_candidate_priority(&c);
+	if (priority)
+		c.priority = priority->v.u32;
+	ice_add_remote_candidate(ice, &c);
+}
+
+// 7.2. STUN Server Procedures
 static int ice_stun_onbind(void* param, stun_response_t* resp, const stun_request_t* req)
 {
 	int r;
@@ -37,6 +65,10 @@ static int ice_stun_onbind(void* param, stun_response_t* resp, const stun_reques
 	if (controlled && controlling)
 		return 0; // invalid ignore
 
+	// add remote candidates. 
+	// However, the agent does not pair this candidate with any local candidates.
+	ice_agent_server_add_peer_reflexive(ice, req);
+
 	// rfc5245 7.2.1.1. Detecting and Repairing Role Conflicts (p47)
 	// If the agent is in the controlling role:
 	// 1. If the agent's tie-breaker is larger than or equal to the contents of the 
@@ -61,7 +93,7 @@ static int ice_stun_onbind(void* param, stun_response_t* resp, const stun_reques
 		// switch role
 		ice->controlling = ice->controlling ? 0 : 1;
 
-		// TODO: checklist rebuild
+		ice_agent_onrole(ice, NULL, ice->controlling);
 	}
 
 	// try trigger check
@@ -140,7 +172,7 @@ static int ice_agent_refresh_response(void* param, const stun_request_t* req, in
 	return 0;
 }
 
-static int ice_agent_active_checklist_count(struct ice_agent_t* ice)
+int ice_agent_active_checklist_count(struct ice_agent_t* ice)
 {
 	int i, n;
 	for (n = i = 0; i < sizeof(ice->list) / sizeof(ice->list[0]); i++)
@@ -301,18 +333,27 @@ int ice_agent_refresh(struct ice_agent_t* ice, const struct sockaddr* local, con
 
 int ice_agent_connect(struct ice_agent_t* ice, const struct ice_candidate_pair_t* pr, int nominated, stun_request_handler handler, void* param)
 {
+	char user[512];
 	struct stun_request_t* req;
 	req = stun_request_create(ice->stun, STUN_RFC_5389, handler, param);
 	if (!req) return -1;
 
-	// rfc5245 4.1.1.2. Server Reflexive and Relayed Candidates (p20)
-	// Allocate requests SHOULD be authenticated using a longterm
-	// credential obtained by the client through some other means.
 	stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&pr->local.host, (const struct sockaddr*)ice_candidate_addr(&pr->remote), ICE_CANDIDATE_RELAYED == pr->local.type ? (const struct sockaddr*)&pr->local.relay : NULL);
-	stun_request_setauth(req, ice->auth.credential, ice->auth.usr, ice->auth.pwd, ice->auth.realm, ice->auth.nonce);
+	// rfc5245 7.1.2. Sending the Request (p40)
+	// 1. A connectivity check MUST utilize the STUN short-term credential mechanism
+	// 2. The FINGERPRINT mechanism MUST be used for connectivity checks.
+	// * The username for the credential is formed by concatenating the username fragment provided by the peer with 
+	//   the username fragment of the agent sending the request, separated by a colon (":"). 
+	// * The password is equal to the password provided by the peer.
+	// * L -> R: A connectivity check from L to R utilizes the username RFRAG:LFRAG and a password of RPASS.
+	snprintf(user, sizeof(user), "%s:%s", ice->rauth.usr, ice->auth.usr);
+	stun_request_setauth(req, ice->auth.credential, user, ice->rauth.pwd, ice->auth.realm, ice->auth.nonce);
+	// 3. An agent MUST include the PRIORITY attribute in its Binding request
 	stun_message_add_uint32(&req->msg, STUN_ATTR_PRIORITY, pr->local.priority);
-	if (nominated || ice->nomination == ICE_AGGRESSIVE_NOMINATION)
+	// 4. The controlling agent MAY include the USE-CANDIDATE attribute in the Binding request. The controlled agent MUST NOT include it in its Binding request.
+	if (ice->controlling && (nominated || ice->nomination == ICE_AGGRESSIVE_NOMINATION))
 		stun_message_add_flag(&req->msg, STUN_ATTR_USE_CANDIDATE);
+	// 5. The agent MUST include the ICE-CONTROLLED attribute in the request if it is in the controlled role, and MUST include the ICE-CONTROLLING attribute in the request if it is in the controlling role.
 	stun_message_add_uint64(&req->msg, ice->controlling ? STUN_ATTR_ICE_CONTROLLING : STUN_ATTR_ICE_CONTROLLED, ice->tiebreaking);
 	return stun_agent_bind(req);
 }
