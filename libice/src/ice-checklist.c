@@ -172,8 +172,8 @@ static int ice_checklist_status(struct ice_checklist_t* l)
 	ice_candidate_pairs_t* component;
 	struct ice_candidate_pair_t* pair;
 
-	if (ICE_CHECKLIST_FROZEN == l->state)
-		return ICE_CHECKLIST_FROZEN;
+	if (ICE_CHECKLIST_RUNNING != l->state)
+		return l->state;
 
 	// 1. unfreeze pair with same foundation
 	for (i = 0; i < ice_candidate_components_count(&l->components); i++)
@@ -265,6 +265,7 @@ static void ice_checlist_add_peer_reflexive(struct ice_checklist_t* l, const stu
 	ice_add_local_candidate(l->ice, &c);
 }
 
+static void ice_checklist_update_same_stream(struct ice_checklist_t* l, const struct ice_candidate_pair_t* pr);
 static int ice_checklist_onbind(void* param, const stun_request_t* req, int code, const char* phrase)
 {
 	int r;
@@ -298,9 +299,11 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 		return 0; // ignore
 	}
 
-	assert(ICE_CANDIDATE_PAIR_INPROGRESS == pair->state);
+	assert(ICE_CANDIDATE_PAIR_INPROGRESS == pair->state || ICE_CANDIDATE_PAIR_SUCCEEDED == pair->state /*norminated*/);
 	if (0 == code)
 	{
+		ice_checklist_update_same_stream(l, pair);
+
 		pair->nominated = nominated ? 1 : 0;
 		pair->state = ICE_CANDIDATE_PAIR_SUCCEEDED;
 		l->handler.onvalidpair(l->param, l, pair, ice_checklist_stream_status(l));
@@ -314,6 +317,9 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 			l->handler.onrolechanged(l->param, l, l->ice->controlling);
 		}
 		// else ignore
+
+		// redo connectivity check
+		ice_candidate_pairs_insert(&l->trigger, pair);
 	}
 	else
 	{
@@ -365,7 +371,7 @@ static int ice_checklist_ontimer(void* param)
 				pair = ice_candidate_pairs_get(component, j);
 				if (ICE_CANDIDATE_PAIR_WAITING != pair->state)
 					continue;
-				if (NULL == waiting || pair->local.priority > waiting->local.priority)
+				if (NULL == waiting || pair->priority > waiting->priority)
 					waiting = pair;
 			}
 		}
@@ -381,7 +387,7 @@ static int ice_checklist_ontimer(void* param)
 					pair = ice_candidate_pairs_get(component, j);
 					if(ICE_CANDIDATE_PAIR_FROZEN != pair->state)
 						continue;
-					if (NULL == waiting || pair->local.priority > waiting->local.priority)
+					if (NULL == waiting || pair->priority > waiting->priority)
 						waiting = pair;
 				}
 			}
@@ -393,16 +399,21 @@ static int ice_checklist_ontimer(void* param)
 		assert(ICE_CANDIDATE_PAIR_FAILED != waiting->state);
 		nominated = ICE_CANDIDATE_PAIR_SUCCEEDED == waiting->state ? l->nominated : 0;
 		waiting->state = ICE_CANDIDATE_PAIR_SUCCEEDED == waiting->state ? ICE_CANDIDATE_PAIR_SUCCEEDED : ICE_CANDIDATE_PAIR_INPROGRESS;
-		ice_agent_connect(l->ice, waiting, nominated, ice_checklist_onbind, l);
+		if (0 != ice_agent_connect(l->ice, waiting, nominated, ice_checklist_onbind, l))
+		{
+			waiting->state = ICE_CANDIDATE_PAIR_FAILED;
+			ice_checlist_update_state(l);
+		}
 	}
 	else
 	{
-		// terminate timer
-		stun_timer_stop(l->timer);
-		l->timer = NULL;
+		// nothing to do, waiting for bind response or trigger check
+	}
 
-//		l->state = ICE_CHECKLIST_COMPLETED;
-//		l->state = ICE_CHECKLIST_FAILED;
+	if (ICE_CHECKLIST_RUNNING == l->state)
+	{
+		// timer continue
+		l->timer = stun_timer_start(ICE_TIMER_INTERVAL * ice_agent_active_checklist_count(l->ice), ice_checklist_ontimer, l);
 	}
 
 	return 0;
@@ -436,7 +447,7 @@ static void ice_checklist_foundation_group(struct ice_checklist_t* l, struct dar
 			// update
 			if (pair->local.component < (*pp)->local.component)
 				*pp = pair;
-			else if(pair->local.component == (*pp)->local.component && pair->local.priority >(*pp)->local.priority)
+			else if(pair->local.component == (*pp)->local.component && pair->priority >(*pp)->priority)
 				*pp = pair;
 		}
 	}
@@ -473,7 +484,7 @@ int ice_checklist_start(struct ice_checklist_t* l)
 
 	// start timer
 	assert(NULL == l->timer);
-	l->timer = stun_timer_start(ICE_TIMER_INTERVAL, ice_checklist_ontimer, l);
+	l->timer = stun_timer_start(ICE_TIMER_INTERVAL * ice_agent_active_checklist_count(l->ice), ice_checklist_ontimer, l);
 	return 0;
 }
 
@@ -522,7 +533,7 @@ int ice_checklist_update(struct ice_checklist_t* l, const ice_candidate_pairs_t*
 		for (j = 0; j < ice_candidate_pairs_count(component); j++)
 		{
 			pair = ice_candidate_pairs_get(component, j);
-			if (ICE_CANDIDATE_PAIR_FROZEN == pair->state
+			if ( ICE_CANDIDATE_PAIR_FROZEN == pair->state
 				&& NULL != darray_find(valids, pair, NULL, ice_candidate_pair_compare_foundation))
 			{
 				pair->state = ICE_CANDIDATE_PAIR_WAITING;
@@ -531,18 +542,41 @@ int ice_checklist_update(struct ice_checklist_t* l, const ice_candidate_pairs_t*
 		}
 	}
 
+	// 1. running checklist
 	if (ICE_CHECKLIST_RUNNING == l->state)
 		return 0;
 
-	// 2. at least one waiting state
-	if (0 == waiting)
+	// 2. active frozen checklist(0 == waiting or not)
+	if (ICE_CHECKLIST_FROZEN == l->state)
 		return ice_checklist_start(l);
 
-	// start timer
-	assert(NULL == l->timer);
-	l->timer = stun_timer_start(ICE_TIMER_INTERVAL, ice_checklist_ontimer, l);
-	l->state = ICE_CHECKLIST_RUNNING;
+	//ICE_CHECKLIST_COMPLETED, ICE_CHECKLIST_FAILED;
+	assert(0 == waiting);
 	return 0;
+}
+
+// rfc5245 7.1.3.2.3. Updating Pair States (45)
+// 1. The agent changes the states for all other Frozen pairs for the
+//    same media stream and same foundation to Waiting. Typically, but
+//    not always, these other pairs will have different component IDs.
+static void ice_checklist_update_same_stream(struct ice_checklist_t* l, const struct ice_candidate_pair_t* pr)
+{
+	int i, j;
+	struct darray_t* component;
+	struct ice_candidate_pair_t* frozen;
+
+	// 1. unfreeze pair with same foundation
+	for (i = 0; i < ice_candidate_components_count(&l->components); i++)
+	{
+		component = ice_candidate_components_get(&l->components, i);
+		for (j = 0; j < ice_candidate_pairs_count(component); j++)
+		{
+			frozen = ice_candidate_pairs_get(component, j);
+			assert(0 != strcmp(frozen->foundation, pr->foundation) || ICE_CANDIDATE_PAIR_FAILED != frozen->state);
+			if (ICE_CANDIDATE_PAIR_FROZEN == frozen->state && 0 == strcmp(frozen->foundation, pr->foundation))
+				frozen->state = ICE_CANDIDATE_PAIR_WAITING;
+		}
+	}
 }
 
 int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t* addr, int nominated)
@@ -560,8 +594,59 @@ int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t
 		return 0;
 	}
 
-	pair->nominated = pair->nominated ? 1 : nominated;
-	ice_candidate_pairs_insert(&l->trigger, pair);
+	// 7.2. STUN Server Procedures
+	// 7.2.1.4. Triggered Checks (p49)
+	// 1. If the state of that pair is Waiting or Frozen, a check for that pair is 
+	//    enqueued into the triggered check queue if not already present.
+	// 2. If the state of that pair is In-Progress, the agent cancels the in-progress transaction.
+	//    In addition, the agent MUST create a new connectivity check for that pair
+	// 3. If the state of the pair is Failed, it is changed to Waiting and the agent 
+	//    MUST create a new connectivity check for that pair
+	// 4. If the state of that pair is Succeeded, nothing further is done.
+	if(ICE_CANDIDATE_PAIR_SUCCEEDED != pair->state)
+		ice_candidate_pairs_insert(&l->trigger, pair);
+	
+	// 7.2.1.5. Updating the Nominated Flag (p50)
+	// 1. If the state of this pair is Succeeded, The agent now sets the nominated flag in the valid pair to true.
+	// 2. If the state of this pair is In-Progress, if its check produces a successful result, 
+	//    the resulting valid pair has its nominated flag set when the response arrives.
+	if(!l->ice->controlling)
+		pair->nominated = pair->nominated ? 1 : nominated;
+
+	// 8.1.2. Updating States (p53)
+	// 1. If there are no nominated pairs in the valid list for a media stream and the state 
+	//    of the check list is Running, ICE processing continues.
+	// 2. If there is at least one nominated pair in the valid list for a media stream and 
+	//    the state of the check list is Running :
+	//    * The agent MUST remove all Waiting and Frozen pairs in the check list and triggered 
+	//      check queue for the same component as the nominated pairs for that media stream.
+	//    * If an In-Progress pair in the check list is for the same component as a nominated pair, 
+	//      the agent SHOULD cease retransmissions for its check if its pair priority is lower
+	//      than the lowest-priority nominated pair for that component.
+	// 3. Once there is at least one nominated pair in the valid list for every component of at 
+	//    least one media stream and the state of the check list is Running:
+	//    * The agent MUST change the state of processing for its check list for that media stream to Completed.
+	//    * The agent MUST continue to respond to any checks it may still receive for that media stream, 
+	//      and MUST perform triggered checks if required by the processing of Section 7.2.
+	//    * The agent MUST continue retransmitting any In-Progress checks for that check list.
+	//    * The agent MAY begin transmitting media for this media stream as described in Section 11.1.
+	// 4. Once the state of each check list is Completed:
+	//    * The agent sets the state of ICE processing overall to Completed.
+	//    * If an agent is controlling, it examines the highest-priority nominated candidate pair for each 
+	//      component of each media stream. If any of those candidate pairs differ from the default candidate 
+	//      pairs in the most recent offer/answer exchange, the controlling agent MUST generate an updated offer
+	//      as described in Section 9. If the controlling agent is using an aggressive nomination algorithm, 
+	//      this may result in several updated offers as the pairs selected for media change. An agent MAY delay 
+	//      sending the offer for a brief interval (one second is RECOMMENDED) in order to allow the selected pairs to stabilize.
+	// 5. If the state of the check list is Failed, ICE has not been able to complete for this media stream. 
+	//    The correct behavior depends on the state of the check lists for other media streams:
+	//    * If all check lists are Failed, ICE processing overall is considered to be in the Failed state, 
+	//      and the agent SHOULD consider the session a failure, SHOULD NOT restart ICE, and the controlling 
+	//      agent SHOULD terminate the entire session.
+	//    * If at least one of the check lists for other media streams is Completed, the controlling agent 
+	//      SHOULD remove the failed media stream from the session in its updated offer.
+	//    * If none of the check lists for other media streams are Completed, but at least one is Running, 
+	//      the agent SHOULD let ICE continue
 	ice_checlist_update_state(l);
 	return 0;
 }

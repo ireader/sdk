@@ -67,8 +67,17 @@ int ice_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd
 {
 	memset(&ice->auth, 0, sizeof(ice->auth));
 	ice->auth.credential = STUN_CREDENTIAL_SHORT_TERM;
-	snprintf(ice->auth.usr, sizeof(ice->auth.usr) , "%s", usr);
-	snprintf(ice->auth.pwd, sizeof(ice->auth.pwd), "%s", pwd);
+	snprintf(ice->auth.usr, sizeof(ice->auth.usr) , "%s", usr ? usr : "");
+	snprintf(ice->auth.pwd, sizeof(ice->auth.pwd), "%s", pwd ? pwd : "");
+	return 0;
+}
+
+int ice_set_remote_auth(struct ice_agent_t* ice, const char* usr, const char* pwd)
+{
+	memset(&ice->rauth, 0, sizeof(ice->rauth));
+	ice->rauth.credential = STUN_CREDENTIAL_SHORT_TERM;
+	snprintf(ice->rauth.usr, sizeof(ice->rauth.usr), "%s", usr ? usr : "");
+	snprintf(ice->rauth.pwd, sizeof(ice->rauth.pwd), "%s", pwd ? pwd : "");
 	return 0;
 }
 

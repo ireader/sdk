@@ -81,6 +81,7 @@ struct ice_agent_t
 
 	struct ice_checklist_t* list[256];
 	struct stun_credential_t auth; // local auth
+	struct stun_credential_t rauth; // remote auth
 	struct ice_agent_handler_t handler;
 	void* param;
 };
@@ -101,6 +102,7 @@ static inline void ice_candidate_pair_foundation(struct ice_candidate_pair_t* pa
 }
 
 struct ice_checklist_t* ice_agent_checklist_create(struct ice_agent_t* ice, int stream);
+int ice_agent_active_checklist_count(struct ice_agent_t* ice);
 
 int ice_agent_init(struct ice_agent_t* ice);
 int ice_agent_addref(struct ice_agent_t* ice);

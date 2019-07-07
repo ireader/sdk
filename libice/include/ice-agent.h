@@ -28,6 +28,7 @@ struct ice_agent_t* ice_create(int controlling, struct ice_agent_handler_t* hand
 int ice_destroy(struct ice_agent_t* ice);
 
 int ice_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd);
+int ice_set_remote_auth(struct ice_agent_t* ice, const char* usr, const char* pwd);
 
 int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, const void* data, int bytes);
 
