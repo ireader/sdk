@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <signal.h>
+
 typedef void* async_pipe_t;
 typedef void (*async_pipe_onread)(void* param, int code, int bytes);
 typedef void (*async_pipe_onwrite)(void* param, int code, int bytes);
@@ -24,6 +26,10 @@ int async_pipe_read(async_pipe_t pipe, void* msg, int len, async_pipe_onread cal
 // msg must be valid until callback be called
 // return: 0-success, other-error
 int async_pipe_write(async_pipe_t pipe, const void* msg, int len, async_pipe_onwrite callback, void* param);
+
+static void aio_onread(sigval_t sigval);
+
+static void aio_onwrite(sigval_t sigval);
 
 #ifdef __cplusplus
 }
