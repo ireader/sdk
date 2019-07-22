@@ -85,6 +85,12 @@ int stun_agent_insert(struct stun_agent_t* stun, stun_request_t* req)
 {
 	stun_request_addref(req);
 	locker_lock(&stun->locker);
+	if (req->link.next || req->link.prev)
+	{
+		locker_unlock(&stun->locker);
+		stun_request_release(req);
+		return -1;
+	}
 	list_insert_after(&req->link, &stun->requests);
 	locker_unlock(&stun->locker);
 	return 0;
@@ -114,51 +120,6 @@ int stun_message_send(struct stun_agent_t* stun, struct stun_message_t* msg, int
 		return turn_agent_send(stun, (const struct sockaddr*)local, (const struct sockaddr*)remote, (const struct sockaddr*)relay, data, bytes);
 	else
 		return stun->handler.send(stun->param, protocol, (const struct sockaddr*)local, (const struct sockaddr*)remote, data, bytes);
-}
-
-// rfc5389 7.2.1. Sending over UDP (p13)
-static void stun_request_ontimer(void* param)
-{
-	stun_request_t* req;
-	req = (stun_request_t*)param;
-	req->timeout = req->timeout * 2 + STUN_RETRANSMISSION_INTERVAL_MIN;
-	if (req->timeout <= STUN_RETRANSMISSION_INTERVAL_MAX)
-	{
-		// 11000 = STUN_TIMEOUT - (500 + 1500 + 3500 + 7500 + 15500)
-		req->timer = stun_timer_start(req->timeout <= STUN_RETRANSMISSION_INTERVAL_MAX ? req->timeout : 11000, stun_request_ontimer, req);
-		if(req->timer)
-			return;
-	}
-
-	req->handler(req->param, req, 408, "Request Timeout");
-	stun_agent_remove(req->stun, req);
-}
-
-int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req)
-{
-	int r;
-	assert(stun && req);
-    
-	stun_agent_insert(stun, req);
-	req->timeout = STUN_RETRANSMISSION_INTERVAL_MIN;
-	req->timer = stun_timer_start(STUN_RETRANSMISSION_INTERVAL_MIN, stun_request_ontimer, req);
-
-	r = stun_message_send(stun, &req->msg, req->addr.protocol, &req->addr.host, &req->addr.peer, &req->addr.relay);
-	if (0 != r)
-	{
-		stun_timer_stop(req->timer);
-		stun_agent_remove(stun, req);
-	}
-	
-	return r;
-}
-
-int stun_response_send(struct stun_agent_t* stun, struct stun_response_t* resp)
-{
-	int r;
-	r = stun_message_send(stun, &resp->msg, resp->addr.protocol, &resp->addr.host, &resp->addr.peer, &resp->addr.relay);
-	stun_response_destroy(&resp);
-	return r;
 }
 
 static int stun_agent_onrequest(struct stun_agent_t* stun, struct stun_request_t* req)
@@ -256,8 +217,10 @@ static int stun_agent_onsuccess(stun_agent_t* stun, const struct stun_request_t*
 		return -1;
 	}
 
+	locker_lock(&req->locker);
 	if(0 == stun_timer_stop(req->timer))
 		r = req->handler(req->param, req, 0, "OK");
+	locker_unlock(&req->locker);
 
 	stun_agent_remove(stun, req);
 	return r;
@@ -306,11 +269,15 @@ static int stun_agent_onfailure(stun_agent_t* stun, const struct stun_request_t*
                     return 0; // TODO: timer/reference
             }
             
+			locker_lock(&req->locker);
 			r = req->handler(req->param, req, error->v.errcode.code, error->v.errcode.reason_phrase);
+			locker_unlock(&req->locker);
         }
 		else
         {
+			locker_lock(&req->locker);
 			r = req->handler(req->param, req, 500, "Server internal error");
+			locker_unlock(&req->locker);
         }
 	}
 
@@ -406,7 +373,7 @@ static int stun_agent_parse_attr(stun_agent_t* stun, struct stun_request_t* req)
 	return 0;
 }
 
-int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, const void* data, int bytes)
+int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
 	int r;
 	struct stun_request_t req;
@@ -448,7 +415,7 @@ int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* lo
 	if (0 != r)
 		return r;
 	
-	stun_request_setaddr(&req, protocol, local, remote, relay);
+	stun_request_setaddr(&req, protocol, local, remote, NULL);
 
 	if (0 != stun_agent_parse_attr(stun, &req) || 0 != stun_agent_auth(stun, &req, data, bytes))
 		return 0; // discard

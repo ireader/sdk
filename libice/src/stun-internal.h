@@ -40,6 +40,7 @@ struct stun_request_t
 	int rfc; // version
 	int timeout;
 	void* timer;
+	locker_t locker;
 	stun_agent_t* stun;
 
 	void* param;
@@ -88,7 +89,6 @@ int stun_agent_remove(struct stun_agent_t* stun, struct stun_request_t* req);
 
 int stun_request_addref(struct stun_request_t* req);
 int stun_request_release(struct stun_request_t* req);
-int stun_request_destroy(struct stun_request_t** preq);
 int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req);
 int stun_response_send(struct stun_agent_t* stun, struct stun_response_t* resp);
 int stun_message_send(struct stun_agent_t* stun, struct stun_message_t* msg, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote, const struct sockaddr_storage* relay);

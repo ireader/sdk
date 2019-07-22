@@ -17,6 +17,7 @@ stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_ha
 	req->param = param;
 	req->handler = handler;
 	//LIST_INIT_HEAD(&req->link);
+	locker_create(&req->locker);
 
 	msg = &req->msg;
 //	memset(msg, 0, sizeof(struct stun_message_t));
@@ -29,20 +30,16 @@ stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_ha
 	return req;
 }
 
-int stun_request_destroy(struct stun_request_t** pp)
+int stun_request_destroy(struct stun_request_t* req)
 {
-	struct stun_request_t* req;
-	if (!pp || !*pp)
-		return -1;
-	req = *pp;
+	// wait for handler callback
+	locker_lock(&req->locker);
+	if (req->timer)
+		stun_timer_stop(req->timer);
+	req->handler = NULL;
+	locker_unlock(&req->locker);
 
-	// delete link
-	//stun_agent_remove(req->stun, req);
-	assert(NULL == req->link.prev && NULL == req->link.next);
-
-	free(req);
-	*pp = NULL;
-	return 0;
+	return stun_request_release(req);
 }
 
 int stun_request_addref(struct stun_request_t* req)
@@ -59,45 +56,15 @@ int stun_request_addref(struct stun_request_t* req)
 int stun_request_release(struct stun_request_t* req)
 {
 	if (0 == atomic_decrement32(&req->ref))
-		stun_request_destroy(&req);
+	{
+		// delete link
+		//stun_agent_remove(req->stun, req);
+		assert(NULL == req->link.prev && NULL == req->link.next);
+
+		locker_destroy(&req->locker);
+		free(req);
+	}
 	return 0;
-}
-
-struct stun_response_t* stun_response_create(struct stun_request_t* req)
-{
-	stun_response_t* resp;
-	resp = (stun_response_t*)calloc(1, sizeof(stun_response_t));
-	if (!resp) return NULL;
-
-	memcpy(&resp->msg.header, &req->msg.header, sizeof(struct stun_header_t));
-	resp->msg.header.msgtype = STUN_MESSAGE_METHOD(req->msg.header.msgtype);
-	resp->msg.header.length = 0;
-	
-	resp->stun = req->stun;
-	//resp->addr.protocol = req->addr.protocol;
-	//memcpy(&resp->addr.host, &req->addr.host, sizeof(struct sockaddr_storage));
-	//memcpy(&resp->addr.peer, &req->addr.peer, sizeof(struct sockaddr_storage));
-	//memcpy(&resp->addr.relay, &req->addr.relay, sizeof(struct sockaddr_storage));
-	memcpy(&resp->addr, &req->addr, sizeof(struct stun_address_t));
-	memcpy(&resp->auth, &req->auth, sizeof(struct stun_credential_t));
-	return resp;
-}
-
-int stun_response_destroy(struct stun_response_t** pp)
-{
-	struct stun_response_t* resp;
-	if (!pp || !*pp)
-		return -1;
-
-	resp = *pp;
-	free(resp);
-	*pp = NULL;
-	return 0;
-}
-
-int stun_agent_discard(struct stun_response_t* resp)
-{
-	return stun_response_destroy(&resp);
 }
 
 int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relayed)
@@ -158,4 +125,65 @@ int stun_request_getauth(const stun_request_t* req, char usr[512], char pwd[512]
     if (realm) snprintf(realm, 128, "%s", req->auth.realm);
     if (nonce) snprintf(nonce, 128, "%s", req->auth.nonce);
 	return 0;
+}
+
+// rfc5389 7.2.1. Sending over UDP (p13)
+static void stun_request_ontimer(void* param)
+{
+	stun_request_t* req;
+	req = (stun_request_t*)param;
+	locker_lock(&req->locker);
+	if (req->handler /*running*/)
+	{
+		req->timeout = req->timeout * 2 + STUN_RETRANSMISSION_INTERVAL_MIN;
+		if (req->timeout <= STUN_RETRANSMISSION_INTERVAL_MAX)
+		{
+			// 11000 = STUN_TIMEOUT - (500 + 1500 + 3500 + 7500 + 15500)
+			req->timer = stun_timer_start(req->timeout <= STUN_RETRANSMISSION_INTERVAL_MAX ? req->timeout : 11000, stun_request_ontimer, req);
+			if (req->timer)
+			{
+				locker_unlock(&req->locker);
+				return;
+			}
+		}
+
+		req->handler(req->param, req, 408, "Request Timeout");
+	}
+	locker_unlock(&req->locker);
+
+	stun_agent_remove(req->stun, req);
+}
+
+int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req)
+{
+	int r;
+	assert(stun && req);
+
+	if (0 != stun_agent_insert(stun, req))
+		return -1;
+
+	locker_lock(&req->locker);
+	if (NULL != req->timer)
+	{
+		locker_unlock(&req->locker);
+		return -1; // exist
+	}
+
+	req->timeout = STUN_RETRANSMISSION_INTERVAL_MIN;
+	req->timer = stun_timer_start(STUN_RETRANSMISSION_INTERVAL_MIN, stun_request_ontimer, req);
+	locker_unlock(&req->locker);
+
+	r = stun_message_send(stun, &req->msg, req->addr.protocol, &req->addr.host, &req->addr.peer, &req->addr.relay);
+	if (0 != r)
+	{
+		locker_lock(&req->locker);
+		if(req->timer)
+			stun_timer_stop(req->timer);
+		req->timer = NULL;
+		locker_unlock(&req->locker);
+
+		stun_agent_remove(stun, req);
+	}
+
+	return r;
 }
