@@ -12,10 +12,6 @@ struct ice_agent_handler_t
 	/// @return 0-ok, other-error
 	int (*send)(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes);
 
-	/// @param[out] pwd password of the usr
-	/// @return 0-ok, other-error
-	int (*auth)(void* param, const char* usr, char pwd[256]);
-
 	/// turn callback
 	void (*ondata)(void* param, const void* data, int bytes, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay);
 };

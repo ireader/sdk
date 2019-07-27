@@ -6,6 +6,7 @@
 #include "sys/atomic.h"
 #include "sockutil.h"
 #include "darray.h"
+#include "list.h"
 #include <stdint.h>
 #include <assert.h>
 
@@ -55,7 +56,6 @@ struct ice_candidate_pair_t
 	struct ice_candidate_t remote;
 	enum ice_candidate_pair_state_t state;
 	int nominated;
-	int controlling;
 
 	uint64_t priority;
 	char foundation[66];
@@ -64,22 +64,28 @@ struct ice_candidate_pair_t
 typedef struct darray_t ice_candidates_t;
 typedef struct darray_t ice_candidate_pairs_t;
 
+struct ice_stream_t
+{
+	struct list_head link;
+	int stream; // stream id
+	int status;
+
+	ice_candidates_t locals;
+	ice_candidates_t remotes;
+	struct ice_checklist_t* checklist;
+};
+
 struct ice_agent_t
 {
 	int32_t ref;
 	locker_t locker;
 
-	void* timer; // bind/refresh timer
 	stun_agent_t* stun;
-	ice_candidates_t locals;
-	ice_candidates_t remotes;
-	ice_candidate_pairs_t valids; // valid list
+	struct list_head streams;
 	enum ice_nomination_t nomination;
 	uint64_t tiebreaking; // role conflicts(network byte-order)
-	uint8_t stream; // default stream
 	int controlling;
 
-	struct ice_checklist_t* list[256];
 	struct stun_credential_t auth; // local auth
 	struct stun_credential_t rauth; // remote auth
 	struct ice_agent_handler_t handler;
@@ -88,11 +94,11 @@ struct ice_agent_t
 
 // RFC5245 5.7.2. Computing Pair Priority and Ordering Pairs
 // pair priority = 2^32*MIN(G,D) + 2*MAX(G,D) + (G>D?1:0)
-static inline void ice_candidate_pair_priority(struct ice_candidate_pair_t* pair)
+static inline void ice_candidate_pair_priority(struct ice_candidate_pair_t* pair, int controlling)
 {
 	uint32_t G, D;
-	G = pair->controlling ? pair->local.priority : pair->remote.priority;
-	D = pair->controlling ? pair->remote.priority : pair->local.priority;
+	G = controlling ? pair->local.priority : pair->remote.priority;
+	D = controlling ? pair->remote.priority : pair->local.priority;
 	pair->priority = ((uint64_t)1 << 32) * MIN(G, D) + 2 * MAX(G, D) + (G > D ? 1 : 0);
 }
 
@@ -100,9 +106,6 @@ static inline void ice_candidate_pair_foundation(struct ice_candidate_pair_t* pa
 {
 	snprintf(pair->foundation, sizeof(pair->foundation), "%s\n%s", pair->local.foundation, pair->remote.foundation);
 }
-
-struct ice_checklist_t* ice_agent_checklist_create(struct ice_agent_t* ice, int stream);
-int ice_agent_active_checklist_count(struct ice_agent_t* ice);
 
 int ice_agent_init(struct ice_agent_t* ice);
 int ice_agent_addref(struct ice_agent_t* ice);
@@ -112,5 +115,8 @@ int ice_agent_bind(struct ice_agent_t* ice, const struct sockaddr* local, const 
 int ice_agent_allocate(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param);
 int ice_agent_refresh(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param);
 int ice_agent_connect(struct ice_agent_t* ice, const struct ice_candidate_pair_t* pr, int nominated, stun_request_handler handler, void* param);
+
+struct ice_stream_t* ice_agent_find_stream(struct ice_agent_t* ice, int stream);
+struct ice_candidate_t* ice_agent_find_local_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr);
 
 #endif /* !_ice_internal_h_ */
