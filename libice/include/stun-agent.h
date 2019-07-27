@@ -12,7 +12,6 @@ extern "C" {
 typedef struct stun_agent_t stun_agent_t;
 typedef struct stun_request_t stun_request_t;
 typedef struct stun_response_t stun_response_t;
-typedef struct stun_allocate_t stun_allocate_t;
 
 enum { STUN_RFC_3489, STUN_RFC_5389, };
 
@@ -26,10 +25,10 @@ typedef int (*stun_request_handler)(void* param, const stun_request_t* req, int 
 
 /// @param[in] rfc STUN rfc version: STUN_RFC_3489/STUN_RFC_5389
 stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_handler handler, void* param);
-/// destroy/cancel a stun request
+/// cancel a stun request, MUST make sure cancel before handler callback
 /// @param[in] req create by stun_request_create
 /// @return 0-ok, other-error
-int stun_request_destroy(stun_request_t* req);
+int stun_request_cancel(stun_request_t* req);
 
 /// @param[in] protocol 1-UDP, 2-TCP
 /// @param[in] local local host address
@@ -96,18 +95,18 @@ int stun_agent_shared_secret(stun_request_t* req);
 /// @param[in] param user-defined parameter form turn_agent_allocate
 typedef void (*turn_agent_ondata)(void* param, const void* data, int byte, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay);
 
-// TURN
+/// TURN
 int turn_agent_allocate(stun_request_t* req, turn_agent_ondata ondata, void* param);
-int turn_agent_free (stun_allocate_t* allocate);
-int turn_agent_create_permission(stun_allocate_t* allocate, const struct sockaddr* peer);
+/// @param[in] expired 0-free allocate, >0-update expired time(current + expired)
+int turn_agent_refresh(stun_request_t* req, int expired);
+int turn_agent_create_permission(stun_request_t* req, const struct sockaddr* peer);
 /// @param[in] channel valid range: [0x4000, 0x7FFE]
-int turn_agent_channel_bind(stun_allocate_t* allocate, const struct sockaddr* peer, uint16_t channel);
-/// Send data from client to turn server, and forward to peer
+int turn_agent_channel_bind(stun_request_t* req, const struct sockaddr* peer, uint16_t channel);
+/// Send data from client to turn server(and forward to peer)
 /// @param[in] local local host address
 /// @param[in] peer remote host address
 /// @param[in] relay turn server relayed address
-/// @return 0-ok, other-error
-int turn_agent_send(stun_agent_t* stun, stun_allocate_t* allocate, const struct sockaddr* peer, const void* data, int bytes);
+int turn_agent_send(stun_agent_t* stun, const struct sockaddr* local, const struct sockaddr* peer, const struct sockaddr* relay, const void* data, int bytes);
 
 // RESPONSE
 
