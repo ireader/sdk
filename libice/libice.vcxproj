@@ -37,6 +37,7 @@
     <ClCompile Include="src\ice-gather.c" />
     <ClCompile Include="src\ice-internal.c" />
     <ClCompile Include="src\ice-agent.c" />
+    <ClCompile Include="src\ice-stream.c" />
     <ClCompile Include="src\stun-agent.c" />
     <ClCompile Include="src\stun-attr.c" />
     <ClCompile Include="src\stun-auth.c" />
@@ -54,7 +55,7 @@
     <ProjectGuid>{F565E04B-1E19-47F3-8923-36479C5CAE4D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>libice</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

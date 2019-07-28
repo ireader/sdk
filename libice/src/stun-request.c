@@ -16,7 +16,7 @@ stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_ha
 	req->stun = stun;
 	req->param = param;
 	req->handler = handler;
-	//LIST_INIT_HEAD(&req->link);
+	LIST_INIT_HEAD(&req->link);
 	locker_create(&req->locker);
 
 	msg = &req->msg;
@@ -30,16 +30,21 @@ stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_ha
 	return req;
 }
 
-int stun_request_destroy(struct stun_request_t* req)
+int stun_request_cancel(struct stun_request_t* req)
 {
-	// wait for handler callback
+	// lock for handler callback
 	locker_lock(&req->locker);
-	if (req->timer)
-		stun_timer_stop(req->timer);
-	req->handler = NULL;
-	locker_unlock(&req->locker);
+	if (!req->running || 0 == stun_timer_stop(req->timer))
+	{
+		req->timer = NULL;
+		req->running = 0;
+		locker_unlock(&req->locker);
+		stun_request_release(req);
+		return 0;
+	}
 
-	return stun_request_release(req);
+	locker_unlock(&req->locker);
+	return -1;
 }
 
 int stun_request_addref(struct stun_request_t* req)
@@ -132,8 +137,9 @@ static void stun_request_ontimer(void* param)
 {
 	stun_request_t* req;
 	req = (stun_request_t*)param;
+	
 	locker_lock(&req->locker);
-	if (req->handler /*running*/)
+	if (req->running)
 	{
 		req->timeout = req->timeout * 2 + STUN_RETRANSMISSION_INTERVAL_MIN;
 		if (req->timeout <= STUN_RETRANSMISSION_INTERVAL_MAX)
@@ -148,6 +154,7 @@ static void stun_request_ontimer(void* param)
 		}
 
 		req->handler(req->param, req, 408, "Request Timeout");
+		stun_request_release(req);
 	}
 	locker_unlock(&req->locker);
 
@@ -163,12 +170,14 @@ int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req)
 		return -1;
 
 	locker_lock(&req->locker);
-	if (NULL != req->timer)
+	if (req->running)
 	{
+		assert(0);
 		locker_unlock(&req->locker);
 		return -1; // exist
 	}
 
+	req->running = 1;
 	req->timeout = STUN_RETRANSMISSION_INTERVAL_MIN;
 	req->timer = stun_timer_start(STUN_RETRANSMISSION_INTERVAL_MIN, stun_request_ontimer, req);
 	locker_unlock(&req->locker);

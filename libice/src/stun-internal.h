@@ -39,6 +39,7 @@ struct stun_request_t
 	int ref;
 	int rfc; // version
 	int timeout;
+	int running;
 	void* timer;
 	locker_t locker;
 	stun_agent_t* stun;

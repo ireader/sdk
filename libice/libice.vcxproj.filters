@@ -66,6 +66,9 @@
     <ClCompile Include="src\ice-candidate.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\ice-stream.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\ice-agent.h">
