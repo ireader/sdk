@@ -610,16 +610,18 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO && *locallen >= sizeof(struct sockaddr_in))
 		{
 			pktinfo = (struct in_pktinfo*)WSA_CMSG_DATA(cmsg);
+			*locallen = sizeof(struct sockaddr_in);
 			memset(local, 0, sizeof(struct sockaddr_in));
-			((struct sockaddr_in*)local)->sin_family = IPPROTO_IP;
+			((struct sockaddr_in*)local)->sin_family = AF_INET;
 			memcpy(&((struct sockaddr_in*)local)->sin_addr, &pktinfo->ipi_addr, sizeof(pktinfo->ipi_addr));
 			break;
 		}
 		else if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO && *locallen >= sizeof(struct sockaddr_in6))
 		{
 			pktinfo6 = (struct in6_pktinfo*)WSA_CMSG_DATA(cmsg);
+			*locallen = sizeof(struct sockaddr_in6);
 			memset(local, 0, sizeof(struct sockaddr_in6));
-			((struct sockaddr_in6*)local)->sin6_family = IPPROTO_IPV6;
+			((struct sockaddr_in6*)local)->sin6_family = AF_INET6;
 			memcpy(&((struct sockaddr_in6*)local)->sin6_addr, &pktinfo6->ipi6_addr, sizeof(pktinfo6->ipi6_addr));
 			break;
 		}
@@ -649,8 +651,9 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 		{
 			struct in_pktinfo* pktinfo;
 			pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
+			*locallen = sizeof(struct sockaddr_in);
 			memset(local, 0, sizeof(struct sockaddr_in));
-			((struct sockaddr_in*)local)->sin_family = IPPROTO_IP;
+			((struct sockaddr_in*)local)->sin_family = AF_INET;
 			memcpy(&((struct sockaddr_in*)local)->sin_addr, &pktinfo->ipi_addr, sizeof(pktinfo->ipi_addr));
 			break;
 		}
@@ -659,8 +662,9 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 		{
 			struct in6_pktinfo* pktinfo6;
 			pktinfo6 = (struct in6_pktinfo*)CMSG_DATA(cmsg);
+			*locallen = sizeof(struct sockaddr_in6);
 			memset(local, 0, sizeof(struct sockaddr_in6));
-			((struct sockaddr_in6*)local)->sin6_family = IPPROTO_IPV6;
+			((struct sockaddr_in6*)local)->sin6_family = AF_INET6;
 			memcpy(&((struct sockaddr_in6*)local)->sin6_addr, &pktinfo6->ipi6_addr, sizeof(pktinfo6->ipi6_addr));
 			break;
 		}
