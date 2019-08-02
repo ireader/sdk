@@ -44,18 +44,14 @@ struct turn_allocation_t* turn_agent_allocation_find_by_address(struct list_head
 
 int turn_agent_allocation_insert(struct stun_agent_t* turn, struct list_head* root, struct turn_allocation_t* allocate)
 {
-	locker_lock(&turn->locker);
 	assert(NULL == turn_agent_allocation_find_by_address(root, (const struct sockaddr*)&allocate->addr.host, (const struct sockaddr*)&allocate->addr.peer));
-	list_insert_after(&allocate->link, root);
-	locker_unlock(&turn->locker);
+	list_insert_after(&allocate->link, root->prev);
 	return 0;
 }
 
 int turn_agent_allocation_remove(struct stun_agent_t* turn, struct list_head* root, struct turn_allocation_t* allocate)
 {
-	locker_lock(&turn->locker);
 	list_remove(&allocate->link);
-	locker_unlock(&turn->locker);
 	return 0; (void)root;
 }
 
@@ -93,7 +89,6 @@ int turn_agent_allocation_cleanup(struct stun_agent_t* turn)
     struct list_head* pos, *next;
     
     now = system_clock();
-    locker_lock(&turn->locker);
     
     list_for_each_safe(pos, next, &turn->turnclients)
     {
@@ -130,7 +125,6 @@ int turn_agent_allocation_cleanup(struct stun_agent_t* turn)
         list_remove(pos);
         turn_allocation_destroy(&allocate);
     }
-    
-    locker_unlock(&turn->locker);
+
     return 0;
 }

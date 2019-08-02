@@ -34,6 +34,7 @@ struct turn_allocation_t
 	// By default, each Allocate or Refresh transaction resets this
 	// timer to the default lifetime value of 600 seconds (10 minutes)
 	uint64_t expire; // time-to-expiry
+	uint64_t lifetime; // seconds
 
 	int reserve_next_higher_port; // EVEN-PORT
 	uint8_t token[8];

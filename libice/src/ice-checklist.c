@@ -39,6 +39,27 @@ struct ice_checklist_t* ice_checklist_create(struct ice_agent_t* ice, struct ice
 	return l;
 }
 
+static int ice_checklist_addref(struct ice_checklist_t* l)
+{
+	assert(l->ref > 0);
+	return atomic_increment32(&l->ref);
+}
+
+static int ice_checklist_release(struct ice_checklist_t* l)
+{
+	int32_t ref;
+	ref = atomic_decrement32(&l->ref);
+	if (0 != ref)
+		return ref;
+
+	ice_candidate_pairs_free(&l->valids);
+	ice_candidate_pairs_free(&l->trigger);
+	ice_candidate_components_free(&l->components);
+	locker_destroy(&l->locker);
+	free(l);
+	return 0;
+}
+
 int ice_checklist_destroy(struct ice_checklist_t** pl)
 {
 	int32_t ref;
@@ -55,32 +76,26 @@ int ice_checklist_destroy(struct ice_checklist_t** pl)
 		assert(ref > 0);
 	}
 
-	ref = atomic_decrement32(&l->ref);
-	if (0 != ref)
-		return ref;
-
-	ice_candidate_pairs_free(&l->valids);
-	ice_candidate_pairs_free(&l->trigger);
-	ice_candidate_components_free(&l->components);
-	locker_destroy(&l->locker);
-	free(l);
-	return 0;
+	return ice_checklist_release(l);
 }
 
 int ice_checklist_reset(struct ice_checklist_t* l, const ice_candidates_t* locals, const ice_candidates_t* remotes)
 {
-	int i, j;
+	int r, i, j;
 	ice_candidate_pairs_t *component;
 	struct ice_candidate_t *local, *remote;
 	struct ice_candidate_pair_t pair;
 
+	locker_lock(&l->locker);
+	if (ICE_CHECKLIST_FROZEN != l->state)
+		stun_timer_stop(l->timer);
 	l->conclude = 0;
 	l->state = ICE_CHECKLIST_FROZEN;
 	ice_candidate_pairs_clear(&l->valids);
 	ice_candidate_pairs_clear(&l->trigger);
 	ice_candidate_components_clear(&l->components); // reset components
 
-	for (i = 0; i < ice_candidates_count(locals); i++)
+	for (r = i = 0; i < ice_candidates_count(locals); i++)
 	{
 		local = ice_candidates_get(locals, i);
 
@@ -92,7 +107,10 @@ int ice_checklist_reset(struct ice_checklist_t* l, const ice_candidates_t* local
 
 		component = ice_candidate_components_fetch(&l->components, local->component);
 		if (!component)
-			return -1;
+		{
+			r = -1;
+			break;
+		}
 
 		for (j = 0; j < ice_candidates_count(remotes); j++)
 		{
@@ -114,7 +132,8 @@ int ice_checklist_reset(struct ice_checklist_t* l, const ice_candidates_t* local
 		}
 	}
 
-	return 0;
+	locker_unlock(&l->locker);
+	return r;
 }
 
 int ice_checklist_onrolechanged(struct ice_checklist_t* l, int controlling)
@@ -222,13 +241,13 @@ static void ice_checlist_update_state(struct ice_checklist_t* l)
 		if (ICE_CANDIDATE_PAIR_SUCCEEDED == state)
 		{
 			// callback/notify ok
-			l->handler.onvalidpair(l->param, l, &l->valids);
+			l->handler.onvalid(l->param, l, &l->valids);
 		}
 		else if (ICE_CANDIDATE_PAIR_FAILED == state)
 		{
 			l->state = ICE_CHECKLIST_FAILED;
 			// callback/notify ok
-			l->handler.onfinish(l->param, l, l->state);
+			l->handler.onfinish(l->param, l);
 		}
 		else
 		{
@@ -240,7 +259,7 @@ static void ice_checlist_update_state(struct ice_checklist_t* l)
 		l->state = ICE_CHECKLIST_COMPLETED;
 
 		// callback/notify ok
-		l->handler.onfinish(l->param, l, l->state);
+		l->handler.onfinish(l->param, l);
 	}
 }
 
@@ -268,7 +287,7 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 	controlling = stun_message_attr_find(&req->msg, STUN_ATTR_ICE_CONTROLLING);
 
 	// rfc5245 7.1.3.2.1. Discovering Peer Reflexive Candidates
-	ice_agent_add_peer_reflexive_candidate(l, &addr, priority);
+	ice_agent_add_peer_reflexive_candidate(l->ice, &addr, priority);
 
 	// completed
 	pair = ice_candidate_components_find(&l->components, &addr);
@@ -294,7 +313,7 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 		if ((l->ice->controlling && controlling) || (0 == l->ice->controlling && controlled))
 		{
 			l->ice->controlling = l->ice->controlling ? 0 : 1;
-			l->handler.onrolechanged(l->param, l, l->ice->controlling);
+			l->handler.onrolechanged(l->param);
 		}
 		// else ignore
 
@@ -333,16 +352,21 @@ static int ice_checklist_ontimer(void* param)
 	struct ice_checklist_t* l;
 	
 	l = (struct ice_checklist_t*)param;
-	assert(ICE_CHECKLIST_RUNNING == l->state);
+	locker_lock(&l->locker);
+	if (ICE_CHECKLIST_FROZEN == l->state)
+	{
+		locker_unlock(&l->locker);
+		return 0;
+	}
+
+	waiting = NULL;
 	if(ice_candidate_pairs_count(&l->trigger) > 0)
 	{
 		waiting = ice_candidate_pairs_get(&l->trigger, 0);
 		darray_pop_front(&l->trigger);
 	}
-	else
+	else if(0 == l->conclude)
 	{
-		waiting = NULL;
-
 		// Find the highest-priority pair in that check list that is in the Waiting state.
 		for (i = 0; i < ice_candidate_components_count(&l->components); i++)
 		{
@@ -377,13 +401,15 @@ static int ice_checklist_ontimer(void* param)
 
 	if (waiting)
 	{
+		ice_checklist_addref(l);
 		assert(ICE_CANDIDATE_PAIR_FAILED != waiting->state);
-		nominated = ICE_CANDIDATE_PAIR_SUCCEEDED == waiting->state ? l->nominated : 0;
+		nominated = ICE_CANDIDATE_PAIR_SUCCEEDED == waiting->state ? l->conclude : 0;
 		waiting->state = ICE_CANDIDATE_PAIR_SUCCEEDED == waiting->state ? ICE_CANDIDATE_PAIR_SUCCEEDED : ICE_CANDIDATE_PAIR_INPROGRESS;
 		if (0 != ice_agent_connect(l->ice, waiting, nominated, ice_checklist_onbind, l))
 		{
 			waiting->state = ICE_CANDIDATE_PAIR_FAILED;
 			ice_checlist_update_state(l);
+			ice_checklist_release(l);
 		}
 	}
 	else
@@ -397,6 +423,8 @@ static int ice_checklist_ontimer(void* param)
 		l->timer = stun_timer_start(ICE_TIMER_INTERVAL * ice_agent_active_checklist_count(l->ice), ice_checklist_ontimer, l);
 	}
 
+	locker_unlock(&l->locker);
+	ice_checklist_release(l);
 	return 0;
 }
 
@@ -467,6 +495,12 @@ int ice_checklist_start(struct ice_checklist_t* l)
 	assert(NULL == l->timer);
 	l->timer = stun_timer_start(ICE_TIMER_INTERVAL * ice_agent_active_checklist_count(l->ice), ice_checklist_ontimer, l);
 	return 0;
+}
+
+int ice_checklist_cancel(struct ice_checklist_t* l)
+{
+	assert(0);
+	return -1;
 }
 
 // rfc5245 7.1.3.2.3. Updating Pair States (45)
@@ -562,8 +596,9 @@ static void ice_checklist_update_same_stream(struct ice_checklist_t* l, const st
 
 int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t* addr, int nominated)
 {
-	struct ice_candidate_pair_t *pair, *reflexive;
+	struct ice_candidate_pair_t *pair;
 	
+	locker_lock(&l->locker);
 	// 1. unfreeze pair with same foundation
 	pair = ice_candidate_components_find(&l->components, addr);
 	if (!pair)
@@ -571,6 +606,7 @@ int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t
 		// bind request from unknown internal NAT, response ok
 		// REMOTER: add peer reflexive address
 		// TODO: re-invite to update remote address(new peer reflexive address)???
+		locker_unlock(&l->locker);
 		assert(0);
 		return 0;
 	}
@@ -588,6 +624,8 @@ int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t
 	{
 		if (ICE_CHECKLIST_FAILED == l->state)
 			l->state = ICE_CHECKLIST_RUNNING;
+		//if (ICE_CANDIDATE_PAIR_INPROGRESS == pair->state)
+		//	stun_request_cancel(req);
 		ice_candidate_pairs_insert(&l->trigger, pair);
 	}
 	
@@ -595,7 +633,7 @@ int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t
 	// 1. If the state of this pair is Succeeded, The agent now sets the nominated flag in the valid pair to true.
 	// 2. If the state of this pair is In-Progress, if its check produces a successful result, 
 	//    the resulting valid pair has its nominated flag set when the response arrives.
-	if(!l->ice->controlling)
+	if(!l->ice->controlling && l->ice->nomination != ICE_AGGRESSIVE_NOMINATION)
 		pair->nominated = pair->nominated ? 1 : nominated;
 
 	// 8.1.2. Updating States (p53)
@@ -633,6 +671,7 @@ int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t
 	//    * If none of the check lists for other media streams are Completed, but at least one is Running, 
 	//      the agent SHOULD let ICE continue
 	ice_checlist_update_state(l);
+	locker_unlock(&l->locker);
 	return 0;
 }
 

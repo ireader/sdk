@@ -77,8 +77,7 @@ struct ice_stream_t
 
 struct ice_agent_t
 {
-	int32_t ref;
-	locker_t locker;
+	//locker_t locker;
 
 	stun_agent_t* stun;
 	struct list_head streams;
@@ -107,16 +106,18 @@ static inline void ice_candidate_pair_foundation(struct ice_candidate_pair_t* pa
 	snprintf(pair->foundation, sizeof(pair->foundation), "%s\n%s", pair->local.foundation, pair->remote.foundation);
 }
 
-int ice_agent_init(struct ice_agent_t* ice);
-int ice_agent_addref(struct ice_agent_t* ice);
-int ice_agent_release(struct ice_agent_t* ice);
-
 int ice_agent_bind(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param);
 int ice_agent_allocate(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param);
 int ice_agent_refresh(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param);
 int ice_agent_connect(struct ice_agent_t* ice, const struct ice_candidate_pair_t* pr, int nominated, stun_request_handler handler, void* param);
 
+int ice_stream_destroy(struct ice_stream_t** pp);
+int ice_agent_active_checklist_count(struct ice_agent_t* ice);
 struct ice_stream_t* ice_agent_find_stream(struct ice_agent_t* ice, int stream);
-struct ice_candidate_t* ice_agent_find_local_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr);
+struct ice_candidate_t* ice_agent_find_local_candidate(struct ice_agent_t* ice, const struct sockaddr_storage* host);
+
+int ice_agent_onrolechanged(void* param);
+int ice_agent_add_peer_reflexive_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr, const struct stun_attr_t* priority);
+int ice_agent_add_remote_peer_reflexive_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr, const struct stun_attr_t* priority);
 
 #endif /* !_ice_internal_h_ */

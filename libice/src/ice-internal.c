@@ -5,7 +5,7 @@
 #include <assert.h>
 
 // rfc5245 7.1.3.2.1. Discovering Peer Reflexive Candidates (p43)
-static int ice_agent_add_peer_reflexive_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr, const struct stun_attr_t* priority)
+int ice_agent_add_peer_reflexive_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr, const struct stun_attr_t* priority)
 {
 	struct ice_candidate_t c, *local;
 
@@ -16,7 +16,7 @@ static int ice_agent_add_peer_reflexive_candidate(struct ice_agent_t* ice, const
 	memcpy(&c.reflexive, &addr->reflexive, sizeof(c.reflexive));
 	memcpy(&c.relay, &addr->relay, sizeof(c.relay));
 	
-	local = ice_agent_find_local_candidate(ice, &c);
+	local = ice_agent_find_local_candidate(ice, &c.host);
 	if (NULL == local)
 		return -1; // local not found, new request ???
 
@@ -32,7 +32,7 @@ static int ice_agent_add_peer_reflexive_candidate(struct ice_agent_t* ice, const
 }
 
 // rfc5245 7.2.1.3. Learning Peer Reflexive Candidates (p49)
-static int ice_agent_add_remote_peer_reflexive_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr, const struct stun_attr_t* priority)
+int ice_agent_add_remote_peer_reflexive_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr, const struct stun_attr_t* priority)
 {
 	struct ice_candidate_t c, *local;
 
@@ -43,7 +43,7 @@ static int ice_agent_add_remote_peer_reflexive_candidate(struct ice_agent_t* ice
 	memcpy(&c.reflexive, &addr->reflexive, sizeof(c.reflexive));
 	memcpy(&c.relay, &addr->relay, sizeof(c.relay));
 
-	local = ice_agent_find_local_candidate(ice, &c);
+	local = ice_agent_find_local_candidate(ice, &addr->host);
 	if (NULL == local)
 		return -1; // local not found, new request ???
 

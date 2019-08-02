@@ -2,7 +2,7 @@
 #include "ice-checklist.h"
 #include "ice-candidates.h"
 
-static int ice_agent_onrole(void* param, int controlling)
+int ice_agent_onrolechanged(void* param)
 {
 	struct list_head* ptr;
 	struct ice_stream_t* s;
@@ -38,7 +38,6 @@ static int ice_agent_onvalid(void* param, struct ice_checklist_t* l, const ice_c
 
 static int ice_agent_onfinish(void* param, struct ice_checklist_t* l)
 {
-	int status;
 	struct list_head* ptr;
 	struct ice_stream_t* s;
 	struct ice_agent_t* ice;
@@ -47,6 +46,9 @@ static int ice_agent_onfinish(void* param, struct ice_checklist_t* l)
 	list_for_each(ptr, &ice->streams)
 	{
 		s = list_entry(ptr, struct ice_stream_t, link);
+		if(s->checklist == l)
+			continue;
+
 		switch (ice_checklist_getstatus(s->checklist))
 		{
 		case ICE_CHECKLIST_FAILED:
@@ -58,8 +60,6 @@ static int ice_agent_onfinish(void* param, struct ice_checklist_t* l)
 		}
 	}
 
-	// all stream finish
-	// TODO: callback/notify
 	ice->handler.onconnected(ice->param);
 	return 0;
 }
@@ -79,9 +79,9 @@ static struct ice_stream_t* ice_stream_create(struct ice_agent_t* ice, int strea
 		ice_candidates_init(&s->remotes);
 
 		memset(&h, 0, sizeof(h));
-		h.onrolechanged = ice_agent_onrole;
-		h.onvalidpair = ice_agent_onvalid;
+		h.onvalid = ice_agent_onvalid;
 		h.onfinish = ice_agent_onfinish;
+		h.onrolechanged = ice_agent_onrolechanged;
 		s->checklist = ice_checklist_create(ice, &h, ice);
 	}
 	return s;
@@ -101,7 +101,7 @@ int ice_stream_destroy(struct ice_stream_t** pp)
 	return 0;
 }
 
-struct ice_candidate_t* ice_agent_find_local_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr)
+struct ice_candidate_t* ice_agent_find_local_candidate(struct ice_agent_t* ice, const struct sockaddr_storage* host)
 {
 	struct list_head* ptr;
 	struct ice_stream_t* s;
@@ -109,17 +109,36 @@ struct ice_candidate_t* ice_agent_find_local_candidate(struct ice_agent_t* ice, 
 	list_for_each(ptr, &ice->streams)
 	{
 		s = list_entry(ptr, struct ice_stream_t, link);
-		c = ice_candidates_find(&s->locals, ice_candidate_compare_host_addr, &addr->host);
+		c = ice_candidates_find(&s->locals, ice_candidate_compare_host_addr, host);
 		if (NULL != c)
 			return c;
 	}
 	return NULL;
 }
 
+int ice_agent_active_checklist_count(struct ice_agent_t* ice)
+{
+	int n;
+	struct list_head* ptr;
+	struct ice_stream_t* s;
+
+	n = 0;
+	list_for_each(ptr, &ice->streams)
+	{
+		s = list_entry(ptr, struct ice_stream_t, link);
+		if (ICE_CHECKLIST_FROZEN != ice_checklist_getstatus(s->checklist))
+		{
+			n++;
+		}
+	}
+	return n;
+}
+
 struct ice_stream_t* ice_agent_find_stream(struct ice_agent_t* ice, int stream)
 {
 	struct list_head* ptr;
 	struct ice_stream_t* s;
+
 	list_for_each(ptr, &ice->streams)
 	{
 		s = list_entry(ptr, struct ice_stream_t, link);

@@ -5,6 +5,7 @@
 #include "stun-attr.h"
 #include "stun-proto.h"
 #include "stun-message.h"
+#include "sys/atomic.h"
 #include "sys/locker.h"
 #include "list.h"
 #include <stdint.h>
@@ -38,8 +39,8 @@ struct stun_request_t
 
 	int ref;
 	int rfc; // version
+	int state; // 0-init, 1-running, 2-done
 	int timeout;
-	int running;
 	void* timer;
 	locker_t locker;
 	stun_agent_t* stun;
@@ -84,10 +85,15 @@ struct stun_agent_t
 	void* param;
 };
 
-struct stun_request_t* stun_agent_find(struct stun_agent_t* stun, const struct stun_message_t* msg);
 int stun_agent_insert(struct stun_agent_t* stun, struct stun_request_t* req);
 int stun_agent_remove(struct stun_agent_t* stun, struct stun_request_t* req);
+int stun_agent_request_auth_check(stun_agent_t* stun, struct stun_request_t* req, const void* data, int bytes);
+int stun_agent_response_auth_check(stun_agent_t* stun, struct stun_request_t* resp, struct stun_request_t* req, const void* data, int bytes);
 
+/// cancel a stun request, MUST make sure cancel before handler callback
+/// @param[in] req create by stun_request_create
+/// @return 0-ok, other-error
+int stun_request_prepare(struct stun_request_t* req);
 int stun_request_addref(struct stun_request_t* req);
 int stun_request_release(struct stun_request_t* req);
 int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req);
@@ -97,7 +103,6 @@ int stun_message_send(struct stun_agent_t* stun, struct stun_message_t* msg, int
 struct stun_response_t* stun_response_create(struct stun_request_t* req);
 int stun_response_destroy(struct stun_response_t** pp);
 
-int stun_agent_auth(struct stun_agent_t* stun, struct stun_request_t* req, const void* data, int bytes);
 int stun_server_onbind(struct stun_agent_t* stun, const struct stun_request_t* req, struct stun_response_t* resp);
 int stun_server_onshared_secret(struct stun_agent_t* stun, const struct stun_request_t* req, struct stun_response_t* resp);
 int stun_server_onbindindication(struct stun_agent_t* stun, const struct stun_request_t* req);

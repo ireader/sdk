@@ -107,7 +107,7 @@ extern "C" void stun_client_test()
 	r = stun_agent_bind(req2); assert(0 == r);
     addrlen = sizeof(host);
 	r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen);
-	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, NULL, (const struct sockaddr*)&server, NULL, data, r);
+	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, NULL, (const struct sockaddr*)&server, data, r);
 
 	stun_agent_destroy(&ctx.stun);
     if(ctx.ssl) tls_socket_close(ctx.ssl);

@@ -88,23 +88,23 @@ extern "C" void turn_client_test()
 	r = turn_agent_allocate(req, turn_ondata, &ctx); assert(0 == r);
 	getsockname(ctx.udp, (struct sockaddr*)&host, &addrlen);
 	r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen); assert(r > 0);
-	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL, data, r); assert(0 == r);
+	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, data, r); assert(0 == r);
     r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen); assert(r > 0);
-    r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL, data, r); assert(0 == r);
+    r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, data, r); assert(0 == r);
 
 	stun_request_t* req2 = stun_request_create(ctx.stun, STUN_RFC_5389, turn_onrefresh, &ctx);
 	stun_request_setaddr(req2, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL);
     stun_request_setauth(req2, STUN_CREDENTIAL_LONG_TERM, ctx.usr, ctx.pwd, ctx.realm, ctx.nonce);
 	r = turn_agent_refresh(req2, 600); assert(0 == r);
 	r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen); assert(r > 0);
-	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL, data, r); assert(0 == r);
+	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, data, r); assert(0 == r);
 
 	stun_request_t* req3 = stun_request_create(ctx.stun, STUN_RFC_5389, turn_oncreate_permission, &ctx);
 	stun_request_setaddr(req3, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL);
     stun_request_setauth(req3, STUN_CREDENTIAL_LONG_TERM, ctx.usr, ctx.pwd, ctx.realm, ctx.nonce);
     r = turn_agent_create_permission(req3, (const struct sockaddr*)&peer); assert(0 == r);
 	r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen); assert(r > 0);
-	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL, data, r); assert(0 == r);
+	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, data, r); assert(0 == r);
 
 	stun_request_t* req4 = stun_request_create(ctx.stun, STUN_RFC_5389, NULL, &ctx);
 	stun_request_setaddr(req4, STUN_PROTOCOL_UDP, (sockaddr*)&host, (const struct sockaddr*)&server, NULL);
@@ -112,21 +112,21 @@ extern "C" void turn_client_test()
     r = turn_agent_send(ctx.stun, (sockaddr*)&host, (const struct sockaddr*)&peer, (sockaddr*)&server, "hello TURN", 10); assert(0 == r);
 	r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen);
     if(r < 0 && 4 == errno) r = r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen); assert(r > 0);
-	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL, data, r); assert(0 == r);
+	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, data, r); assert(0 == r);
 
 	stun_request_t* req5 = stun_request_create(ctx.stun, STUN_RFC_5389, turn_onchannel_bind, &ctx);
 	stun_request_setaddr(req5, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL);
     stun_request_setauth(req5, STUN_CREDENTIAL_LONG_TERM, ctx.usr, ctx.pwd, ctx.realm, ctx.nonce);
     r = turn_agent_channel_bind(req5, (const struct sockaddr*)&peer, 0x4000); assert(0 == r);
 	r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen);
-	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL, data, r); assert(0 == r);
+	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, data, r); assert(0 == r);
 
 	stun_request_t* req6 = stun_request_create(ctx.stun, STUN_RFC_5389, NULL, &ctx);
 	stun_request_setaddr(req6, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL);
     stun_request_setauth(req6, STUN_CREDENTIAL_LONG_TERM, ctx.usr, ctx.pwd, ctx.realm, ctx.nonce);
     r = turn_agent_send(ctx.stun, (const struct sockaddr*)&host, (const struct sockaddr*)&peer, (const struct sockaddr*)&server, "hello TURN channel", 18); assert(0 == r);
 	r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen);
-	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL, data, r); assert(0 == r);
+	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, data, r); assert(0 == r);
 
 	stun_agent_destroy(&ctx.stun);
 	socket_close(ctx.udp);

@@ -1,7 +1,7 @@
 #include "stun-agent.h"
 #include "stun-internal.h"
-#include "sys/atomic.h"
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 struct stun_response_t* stun_response_create(struct stun_request_t* req)

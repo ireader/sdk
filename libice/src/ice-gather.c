@@ -19,8 +19,6 @@ static struct ice_gather_t* ice_gather_create(struct ice_agent_t* ice, ice_agent
 	if (g)
 	{
 		g->ice = ice;
-		ice_agent_addref(ice);
-
 		ice_candidates_init(&g->candidates);
 		g->ongather = ongather;
 		g->param = param;
@@ -33,7 +31,6 @@ static void ice_gather_destroy(struct ice_gather_t* g)
 	if (g)
 	{
 		ice_candidates_free(&g->candidates);
-		ice_agent_release(g->ice);
 		free(g);
 	}
 }
@@ -109,6 +106,8 @@ static int ice_gather_onbind(void* param, const stun_request_t* req, int code, c
 int ice_gather_candidate(struct ice_agent_t* ice, const struct sockaddr* addr, int turn, ice_agent_ongather ongather, void* param)
 {
 	int i, r;
+	struct list_head *ptr, *next;
+	struct ice_stream_t* s;
 	struct ice_gather_t* g;
 	struct ice_candidate_t *c;
 
@@ -119,17 +118,20 @@ int ice_gather_candidate(struct ice_agent_t* ice, const struct sockaddr* addr, i
 	if (!g)
 		return -1;
 
-	locker_lock(&ice->locker);
-	for (r = i = 0; 0 == r && i < ice_candidates_count(&ice->locals); i++)
+	r = 0;
+	list_for_each_safe(ptr, next, &ice->streams)
 	{
-		c = ice_candidates_get(&ice->locals, i);
-		if (ICE_CANDIDATE_HOST != c->type)
-			continue;
+		s = list_entry(ptr, struct ice_stream_t, link);
+		for (i = 0; 0 == r && i < ice_candidates_count(&s->locals); i++)
+		{
+			c = ice_candidates_get(&s->locals, i);
+			if (ICE_CANDIDATE_HOST != c->type)
+				continue;
 
-		r = ice_candidates_insert(&g->candidates, c);
-		assert(0 == r);
+			r = ice_candidates_insert(&g->candidates, c);
+			assert(0 == r);
+		}
 	}
-	locker_unlock(&ice->locker);
 	if (0 != r)
 		return r;
 

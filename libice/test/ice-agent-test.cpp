@@ -31,10 +31,12 @@ static int ice_candidate_attribute(const struct ice_candidate_t* c, char* buf, i
 	char addr[SOCKET_ADDRLEN], raddr[SOCKET_ADDRLEN];
 	u_short addrport, raddrport;
 	int candtype;
+	const struct sockaddr* connaddr = (const struct sockaddr*)ice_candidate_addr(c);
+	const struct sockaddr* realaddr = (const struct sockaddr*)ice_candidate_realaddr(c);
 	assert(c->protocol <= 0 && c->protocol < sizeof(s_transport) / sizeof(s_transport[0]));
 	candtype = ICE_CANDIDATE_SERVER_REFLEXIVE == c->type ? 1 : (ICE_CANDIDATE_RELAYED == c->type ? 3 : 2);
-	socket_addr_to((const struct sockaddr*)&c->addr, socket_addr_len((const struct sockaddr*)&c->addr), addr, &addrport);
-	socket_addr_to((const struct sockaddr*)ICE_CANDIDATE_RELADDR(c), socket_addr_len((const struct sockaddr*)ICE_CANDIDATE_RELADDR(c)), raddr, &raddrport);
+	socket_addr_to(connaddr, socket_addr_len(connaddr), addr, &addrport);
+	socket_addr_to(realaddr, socket_addr_len(realaddr), raddr, &raddrport);
 	if(ICE_CANDIDATE_HOST == c->type)
 		return snprintf(buf, len, "%s %hu %s %u %s %hu typ host", c->foundation, c->component, s_transport[c->protocol], c->priority, addr, addrport);
 	else
@@ -45,7 +47,7 @@ static void ice_agent_test_ondata(void* param, const void* data, int bytes, int 
 {
 	struct ice_agent_test_t* ctx = (struct ice_agent_test_t*)param;
 	/// TODO: check data format(stun/turn)
-	ice_input(ctx->ice, protocol, local, remote, relay, data, bytes);
+	ice_input(ctx->ice, protocol, local, relay ? relay : remote, data, bytes);
 }
 
 static int ice_agent_test_send(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
@@ -66,16 +68,16 @@ static int ice_agent_test_send(void* param, int protocol, const struct sockaddr*
 		}
 
 		assert(0);
-		// stun/turn protocol
-		socket_t udp = socket_udp();
-		struct sockaddr_storage addr;
-		memcpy(&addr, local, socket_addr_len(local));
-		assert(AF_INET == remote->sa_family || AF_INET6 == remote->sa_family);
-		assert(AF_INET == local->sa_family || AF_INET6 == local->sa_family);
-		assert(0 == socket_bind(udp, local, socket_addr_len(local)));
-		ctx->udps.insert(std::make_pair(udp, addr));
-		int r = socket_sendto(udp, data, bytes, 0, remote, socket_addr_len(remote));
-		assert(r == bytes);
+		//// stun/turn protocol
+		//socket_t udp = socket_udp();
+		//struct sockaddr_storage addr;
+		//memcpy(&addr, local, socket_addr_len(local));
+		//assert(AF_INET == remote->sa_family || AF_INET6 == remote->sa_family);
+		//assert(AF_INET == local->sa_family || AF_INET6 == local->sa_family);
+		//assert(0 == socket_bind(udp, local, socket_addr_len(local)));
+		//ctx->udps.insert(std::make_pair(udp, addr));
+		//int r = socket_sendto(udp, data, bytes, 0, remote, socket_addr_len(remote));
+		//assert(r == bytes);
 	}
 	else if (STUN_PROTOCOL_TCP == protocol)
 	{
@@ -97,9 +99,8 @@ static int ice_agent_test_send(void* param, int protocol, const struct sockaddr*
 	return 0;
 }
 
-static int ice_agent_test_auth(void* param, const char* usr, char pwd[256])
+static void ice_agent_test_onconnected(void* param)
 {
-	return 0;
 }
 
 static void ice_agent_test_gather_local_candidates(void* param, const char* mac, const char* name, int /*dhcp*/, const char* ip, const char* netmask, const char* gateway)
@@ -119,6 +120,7 @@ static void ice_agent_test_gather_local_candidates(void* param, const char* mac,
 		struct ice_candidate_t c;
 		memset(&c, 0, sizeof(c));
 		c.type = ICE_CANDIDATE_HOST;
+		c.stream = stream;
 		c.protocol = STUN_PROTOCOL_UDP;
 		c.component = stream + 1;
 		snprintf((char*)c.foundation, sizeof(c.foundation), "%d", ctx->foundation);
@@ -129,12 +131,10 @@ static void ice_agent_test_gather_local_candidates(void* param, const char* mac,
 		assert(socket_invalid != udp);
 		addrlen = sizeof(c.host);
 		getsockname(udp, (struct sockaddr*)&c.host, &addrlen);
-		ctx->udps.insert(std::make_pair(udp, c.host));
+		assert(ctx->udps.insert(std::make_pair(udp, c.host)).second);
 		
-		//ice_candidate_priority(&c);
-		memcpy(&c.addr, &c.host, sizeof(c.addr));
-		memcpy(&c.reflexive, &c.host, sizeof(c.reflexive));
-		assert(0 == ice_add_local_candidate(ctx->ice, stream, &c));
+		ice_candidate_priority(&c);
+		assert(0 == ice_add_local_candidate(ctx->ice, &c));
 
 		char attr[128] = { 0 };
 		ice_candidate_attribute(&c, attr, sizeof(attr));
@@ -168,8 +168,8 @@ extern "C" void ice_agent_test(void)
 	memset(&handler, 0, sizeof(handler));
 	handler.ondata = ice_agent_test_ondata;
 	handler.send = ice_agent_test_send;
-	handler.auth = ice_agent_test_auth;
-	ctx.ice = ice_create(&handler, &ctx);
+	handler.onconnected = ice_agent_test_onconnected;
+	ctx.ice = ice_create(1, &handler, &ctx);
 	ctx.foundation = 0;
 
 	struct sockaddr_storage stun;
@@ -177,7 +177,7 @@ extern "C" void ice_agent_test(void)
 	//assert(0 == socket_addr_from(&stun, &len, "numb.viagenie.ca", STUN_PORT));
 	assert(0 == socket_addr_from(&stun, &len, "stun.linphone.org", STUN_PORT));
 	network_getip(ice_agent_test_gather_local_candidates, &ctx);
-	ice_gather_stun_candidate(ctx.ice, (const sockaddr*)&stun, 0, ice_agent_test_ongather, &ctx);
+	ice_gather_candidate(ctx.ice, (const sockaddr*)&stun, 0, ice_agent_test_ongather, &ctx);
 
 	while (1)
 	{
@@ -210,7 +210,7 @@ extern "C" void ice_agent_test(void)
 			r = socket_recvfrom(it->first, data, sizeof(data), 0, (struct sockaddr*)&from, &addrlen);
 			if (r > 0)
 			{
-				r = ice_input(ctx.ice, STUN_PROTOCOL_UDP, (const struct sockaddr *)&it->second, (const struct sockaddr *)&from, NULL, data, r);
+				r = ice_input(ctx.ice, STUN_PROTOCOL_UDP, (const struct sockaddr *)&it->second, (const struct sockaddr *)&from, data, r);
 				assert(0 == r);
 			}
 		}

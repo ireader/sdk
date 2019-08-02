@@ -38,11 +38,15 @@ int stun_agent_destroy(stun_agent_t** pp)
 		return 0;
 
 	stun = *pp;
+	locker_lock(&stun->locker);
 	list_for_each_safe(pos, next, &stun->requests)
 	{
 		req = list_entry(pos, struct stun_request_t, link);
-		free(req);
+		stun_request_addref(req);
+		stun_request_prepare(req);
+		stun_request_release(req);
 	}
+	locker_unlock(&stun->locker);
 
 	list_for_each_safe(pos, next, &stun->turnclients)
 	{
@@ -68,25 +72,13 @@ int stun_agent_destroy(stun_agent_t** pp)
 	return 0;
 }
 
-struct stun_request_t* stun_agent_find(struct stun_agent_t* stun, const struct stun_message_t* msg)
-{
-	struct list_head *ptr, *next;
-	struct stun_request_t* entry;
-	list_for_each_safe(ptr, next, &stun->requests)
-	{
-		entry = list_entry(ptr, struct stun_request_t, link);
-		if (0 == memcmp(entry->msg.header.tid, msg->header.tid, sizeof(msg->header.tid)))
-			return entry;
-	}
-	return NULL;
-}
-
 int stun_agent_insert(struct stun_agent_t* stun, stun_request_t* req)
 {
 	stun_request_addref(req);
 	locker_lock(&stun->locker);
 	if (req->link.next || req->link.prev)
 	{
+		assert(0);
 		locker_unlock(&stun->locker);
 		stun_request_release(req);
 		return -1;
@@ -99,11 +91,36 @@ int stun_agent_insert(struct stun_agent_t* stun, stun_request_t* req)
 int stun_agent_remove(struct stun_agent_t* stun, stun_request_t* req)
 {
 	locker_lock(&stun->locker);
-	if(req->link.next != NULL && req->link.prev != NULL)
-		list_remove(&req->link);
+	if (req->link.next == NULL || req->link.prev == NULL)
+	{
+		assert(0);
+		locker_unlock(&stun->locker);
+		return -1;
+	}
+	list_remove(&req->link);
 	locker_unlock(&stun->locker);
 	stun_request_release(req);
 	return 0;
+}
+
+static struct stun_request_t* stun_agent_fetch(struct stun_agent_t* stun, const struct stun_message_t* msg)
+{
+	struct list_head *ptr, *next;
+	struct stun_request_t* entry;
+
+	locker_lock(&stun->locker);
+	list_for_each_safe(ptr, next, &stun->requests)
+	{
+		entry = list_entry(ptr, struct stun_request_t, link);
+		if (0 == memcmp(entry->msg.header.tid, msg->header.tid, sizeof(msg->header.tid)))
+		{
+			stun_request_addref(entry);
+			locker_unlock(&stun->locker);
+			return entry;
+		}
+	}
+	locker_unlock(&stun->locker);
+	return NULL;
 }
 
 int stun_message_send(struct stun_agent_t* stun, struct stun_message_t* msg, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote, const struct sockaddr_storage* relay)
@@ -174,13 +191,9 @@ static int stun_agent_onindication(stun_agent_t* stun, const struct stun_request
 	}
 }
 
-static int stun_agent_onsuccess(stun_agent_t* stun, const struct stun_request_t* resp)
+static int stun_agent_onsuccess(stun_agent_t* stun, const struct stun_request_t* resp, struct stun_request_t* req)
 {
 	int r;
-	struct stun_request_t* req;
-	req = stun_agent_find(stun, &resp->msg);
-	if (!req)
-		return 0; // discard
 
 	// fill reflexive address
 	assert(0 == req->addr.reflexive.ss_family);
@@ -217,72 +230,38 @@ static int stun_agent_onsuccess(stun_agent_t* stun, const struct stun_request_t*
 		return -1;
 	}
 
-	locker_lock(&req->locker);
-	if(0 == stun_timer_stop(req->timer))
-		r = req->handler(req->param, req, 0, "OK");
-	locker_unlock(&req->locker);
-
-	stun_agent_remove(stun, req);
-	return r;
+	return req->handler(req->param, req, r, 0 == r ? "OK" : "Unknown Error");
 }
 
-static int stun_agent_onfailure(stun_agent_t* stun, const struct stun_request_t* resp)
+static int stun_agent_onfailure(stun_agent_t* stun, const struct stun_request_t* resp, struct stun_request_t* req)
 {
-	int r;
-	struct stun_request_t* req;
+	struct stun_request_t* req2;
 	const struct stun_attr_t* error;
-	req = stun_agent_find(stun, &resp->msg);
-	if (!req)
-		return 0; // discard
-
-	r = 0;
-	if (0 == stun_timer_stop(req->timer))
+	error = stun_message_attr_find(&resp->msg, STUN_ATTR_ERROR_CODE);
+	if (error)
 	{
-        req->timer = NULL;
-		error = stun_message_attr_find(&resp->msg, STUN_ATTR_ERROR_CODE);
-		if (error)
-        {
-            if (STUN_CREDENTIAL_LONG_TERM == req->auth.credential && 401 == error->v.errcode.code)
-            {
-                // If the response is an error response with an error code of 401 (Unauthorized),
-                // the client SHOULD retry the request with a new transaction.
-                stun_transaction_id(req->msg.header.tid, sizeof(req->msg.header.tid));
-                memcpy(req->auth.realm, resp->auth.realm, sizeof(req->auth.realm));
-                memcpy(req->auth.nonce, resp->auth.nonce, sizeof(req->auth.nonce));
-                stun_message_add_credentials(&req->msg, &req->auth);
-                stun_message_add_fingerprint(&req->msg);
-//                req2 = stun_request_create(stun, req->rfc, req->handler, req->param);
-//                stun_request_setaddr(req2, req->addr.protocol, (const struct sockaddr*)&req->addr.host, (const struct sockaddr*)&req->addr.peer);
-//                stun_request_setauth(req2, req->auth.credential, req->auth.usr, req->auth.pwd, resp->auth.realm, resp->auth.nonce);
-                if(0 == stun_request_send(req->stun, req))
-                    return 0; // TODO: timer/reference
-            }
-            else if (STUN_CREDENTIAL_LONG_TERM == req->auth.credential && 438 == error->v.errcode.code)
-            {
-                // If the response is an error response with an error code of 438 (Stale Nonce),
-                // the client MUST retry the request, using the new NONCE supplied in the 438 (Stale Nonce) response.
-                stun_transaction_id(req->msg.header.tid, sizeof(req->msg.header.tid));
-                memcpy(req->auth.nonce, resp->auth.nonce, sizeof(req->auth.nonce));
-                stun_message_add_credentials(&req->msg, &req->auth);
-                stun_message_add_fingerprint(&req->msg);
-                if(0 == stun_request_send(req->stun, req))
-                    return 0; // TODO: timer/reference
-            }
-            
-			locker_lock(&req->locker);
-			r = req->handler(req->param, req, error->v.errcode.code, error->v.errcode.reason_phrase);
-			locker_unlock(&req->locker);
-        }
-		else
-        {
-			locker_lock(&req->locker);
-			r = req->handler(req->param, req, 500, "Server internal error");
-			locker_unlock(&req->locker);
-        }
-	}
+		if (STUN_CREDENTIAL_LONG_TERM == req->auth.credential && (401 == error->v.errcode.code || 438 == error->v.errcode.code))
+		{
+			// 1. If the response is an error response with an error code of 401 (Unauthorized),
+			//    the client SHOULD retry the request with a new transaction.
+			// 2. If the response is an error response with an error code of 438 (Stale Nonce),
+			//    the client MUST retry the request, using the new NONCE supplied in the 438 (Stale Nonce) response.
+			req2 = stun_request_create(stun, req->rfc, req->handler, req->param);
+			memcpy(&req2->addr, &req->addr, sizeof(struct stun_address_t));
+			memcpy(&req2->msg, &req->msg, sizeof(struct stun_message_t));
+			stun_request_setauth(req2, req->auth.credential, req->auth.usr, req->auth.pwd, resp->auth.realm, resp->auth.nonce);
+			stun_message_add_credentials(&req2->msg, &req2->auth);
+			stun_message_add_fingerprint(&req2->msg);
+			if (0 == stun_request_send(stun, req2))
+				return 0;
+		}
 
-	stun_agent_remove(stun, req);
-	return r;
+		return req->handler(req->param, req, error->v.errcode.code, error->v.errcode.reason_phrase);
+	}
+	else
+	{
+		return req->handler(req->param, req, 500, "Server internal error");
+	}
 }
 
 static int stun_server_response_unknown_attribute(stun_agent_t* stun, struct stun_request_t* req)
@@ -377,6 +356,7 @@ int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* lo
 {
 	int r;
 	struct stun_request_t req;
+	struct stun_request_t *ptr;
 	struct stun_message_t *msg;
 	struct turn_allocation_t* allocate;
 
@@ -417,25 +397,39 @@ int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* lo
 	
 	stun_request_setaddr(&req, protocol, local, remote, NULL);
 
-	if (0 != stun_agent_parse_attr(stun, &req) || 0 != stun_agent_auth(stun, &req, data, bytes))
+	if (0 != stun_agent_parse_attr(stun, &req))
 		return 0; // discard
 
 	switch (STUN_MESSAGE_CLASS(req.msg.header.msgtype))
 	{
 	case STUN_METHOD_CLASS_REQUEST:
-		r = stun_agent_onrequest(stun, &req);
+		if(0 == stun_agent_request_auth_check(stun, &req, data, bytes))
+			r = stun_agent_onrequest(stun, &req);
 		break;
 
 	case STUN_METHOD_CLASS_INDICATION:
-		r = stun_agent_onindication(stun, &req);
+		if (0 == stun_agent_request_auth_check(stun, &req, data, bytes))
+			r = stun_agent_onindication(stun, &req);
 		break;
 
 	case STUN_METHOD_CLASS_SUCCESS_RESPONSE:
-		r = stun_agent_onsuccess(stun, &req);
+		ptr = stun_agent_fetch(stun, &req.msg);
+		if (ptr)
+		{
+			if (0 == stun_request_prepare(ptr) && 0 == stun_agent_response_auth_check(stun, &req, ptr, data, bytes))
+				r = stun_agent_onsuccess(stun, &req, ptr);
+			stun_request_release(ptr);
+		}
 		break;
 
 	case STUN_METHOD_CLASS_FAILURE_RESPONSE:
-		r = stun_agent_onfailure(stun, &req);
+		ptr = stun_agent_fetch(stun, &req.msg);
+		if (ptr)
+		{
+			if(0 == stun_request_prepare(ptr))
+				r = stun_agent_onfailure(stun, &req, ptr);
+			stun_request_release(ptr);
+		}
 		break;
 
 	default:

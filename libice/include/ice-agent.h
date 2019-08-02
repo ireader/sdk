@@ -14,6 +14,8 @@ struct ice_agent_handler_t
 
 	/// turn callback
 	void (*ondata)(void* param, const void* data, int bytes, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay);
+
+	void (*onconnected)(void* param);
 };
 
 struct ice_agent_t;
@@ -26,7 +28,7 @@ int ice_destroy(struct ice_agent_t* ice);
 int ice_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd);
 int ice_set_remote_auth(struct ice_agent_t* ice, const char* usr, const char* pwd);
 
-int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, const void* data, int bytes);
+int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes);
 
 /// Add host candidate
 /// @param[in] stream audio/video stream id, base 0

@@ -25,10 +25,6 @@ typedef int (*stun_request_handler)(void* param, const stun_request_t* req, int 
 
 /// @param[in] rfc STUN rfc version: STUN_RFC_3489/STUN_RFC_5389
 stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_handler handler, void* param);
-/// cancel a stun request, MUST make sure cancel before handler callback
-/// @param[in] req create by stun_request_create
-/// @return 0-ok, other-error
-int stun_request_cancel(stun_request_t* req);
 
 /// @param[in] protocol 1-UDP, 2-TCP
 /// @param[in] local local host address
@@ -121,6 +117,7 @@ int turn_agent_create_permission_response(struct stun_response_t* resp, int code
 int turn_agent_channel_bind_response(struct stun_response_t* resp, int code, const char* pharse);
 
 void* stun_timer_start(int ms, void(*ontimer)(void* param), void* param);
+/// @return  0-ok, other-timer can't be stop(timer have triggered or will be triggered)
 int stun_timer_stop(void* timer);
 
 #ifdef __cplusplus

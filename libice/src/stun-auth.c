@@ -138,15 +138,12 @@ static int stun_request_rfc5389_long_term_auth_check(stun_agent_t* stun, struct 
 }
 
 // rfc5389 10.1.3. Receiving a Response (p24)
-static int stun_response_rfc5389_short_term_auth_check(stun_agent_t* stun, struct stun_request_t* resp, const void* data, int bytes)
+static int stun_response_rfc5389_short_term_auth_check(stun_agent_t* stun, const struct stun_request_t* resp, const struct stun_request_t* req, const void* data, int bytes)
 {
-    struct stun_request_t* req;
     const struct stun_attr_t* integrity;
     const struct stun_attr_t* fingerprint;
     integrity = stun_message_attr_find(&resp->msg, STUN_ATTR_MESSAGE_INTEGRITY);
     fingerprint = stun_message_attr_find(&resp->msg, STUN_ATTR_FINGERPRINT);
-    
-    req = stun_agent_find(stun, &resp->msg);
     
     // If the value does not match, or if MESSAGE-INTEGRITY was absent, the response MUST be discarded,
     // as if it was never received.
@@ -157,17 +154,14 @@ static int stun_response_rfc5389_short_term_auth_check(stun_agent_t* stun, struc
 }
 
 // rfc5389 10.2.3. Receiving a Response (p27)
-static int stun_response_rfc5389_long_term_auth_check(stun_agent_t* stun, struct stun_request_t* resp, const void* data, int bytes)
+static int stun_response_rfc5389_long_term_auth_check(stun_agent_t* stun, const struct stun_request_t* resp, const struct stun_request_t* req, const void* data, int bytes)
 {
-    struct stun_request_t* req;
     const struct stun_attr_t* integrity;
     const struct stun_attr_t* fingerprint;
     integrity = stun_message_attr_find(&resp->msg, STUN_ATTR_MESSAGE_INTEGRITY);
     fingerprint = stun_message_attr_find(&resp->msg, STUN_ATTR_FINGERPRINT);
     
-    req = stun_agent_find(stun, &resp->msg);
-    
-	// If the value does not match, or if MESSAGE-INTEGRITY was absent, the response MUST be discarded,
+ 	// If the value does not match, or if MESSAGE-INTEGRITY was absent, the response MUST be discarded,
 	// as if it was never received.
 	if (integrity && (!req || 0 != stun_message_check_integrity(data, bytes, &resp->msg, &req->auth)))
 		return -1;
@@ -175,28 +169,18 @@ static int stun_response_rfc5389_long_term_auth_check(stun_agent_t* stun, struct
     return fingerprint ? stun_message_check_fingerprint(data, bytes, &resp->msg) : 0;
 }
 
-int stun_agent_auth(stun_agent_t* stun, struct stun_request_t* req, const void* data, int bytes)
+int stun_agent_request_auth_check(stun_agent_t* stun, struct stun_request_t* req, const void* data, int bytes)
 {
-	switch (STUN_MESSAGE_CLASS(req->msg.header.msgtype))
-	{
-	case STUN_METHOD_CLASS_REQUEST:
-	case STUN_METHOD_CLASS_INDICATION:
-        if(STUN_METHOD_DATA == STUN_MESSAGE_METHOD(req->msg.header.msgtype) || STUN_METHOD_BIND == STUN_MESSAGE_METHOD(req->msg.header.msgtype))
-           return 0;
-           
-		if (STUN_RFC_3489 == stun->rfc)
-			return stun_request_rfc3489_auth_check(stun, req, data, bytes);
-		else
-			return 0 == stun->auth_term ? stun_request_rfc5389_short_term_auth_check(stun, req, data, bytes) : stun_request_rfc5389_long_term_auth_check(stun, req, data, bytes);
+	if (STUN_METHOD_DATA == STUN_MESSAGE_METHOD(req->msg.header.msgtype) || STUN_METHOD_BIND == STUN_MESSAGE_METHOD(req->msg.header.msgtype))
+		return 0;
 
-	case STUN_METHOD_CLASS_SUCCESS_RESPONSE:
-		return (STUN_RFC_3489 == stun->rfc || 0 == stun->auth_term) ? stun_response_rfc5389_short_term_auth_check(stun, req, data, bytes) : stun_response_rfc5389_long_term_auth_check(stun, req, data, bytes);
+	if (STUN_RFC_3489 == stun->rfc)
+		return stun_request_rfc3489_auth_check(stun, req, data, bytes);
+	else
+		return 0 == stun->auth_term ? stun_request_rfc5389_short_term_auth_check(stun, req, data, bytes) : stun_request_rfc5389_long_term_auth_check(stun, req, data, bytes);
+}
 
-	case STUN_METHOD_CLASS_FAILURE_RESPONSE:
-		return 0; // don't need check
-
-	default:
-		assert(0);
-		return -1;
-	}
+int stun_agent_response_auth_check(stun_agent_t* stun, struct stun_request_t* resp, struct stun_request_t* req, const void* data, int bytes)
+{
+	return (STUN_RFC_3489 == stun->rfc || 0 == stun->auth_term) ? stun_response_rfc5389_short_term_auth_check(stun, resp, req, data, bytes) : stun_response_rfc5389_long_term_auth_check(stun, resp, req, data, bytes);
 }

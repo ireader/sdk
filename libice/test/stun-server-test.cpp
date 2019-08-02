@@ -83,7 +83,6 @@ static int stun_send(void* param, int protocol, const struct sockaddr* local, co
         // stun/turn protocol
         assert(AF_INET == remote->sa_family || AF_INET6 == remote->sa_family);
 		assert(AF_INET == local->sa_family || AF_INET6 == local->sa_family);
-        assert(0 == socket_bind(ctx->udp, local, socket_addr_len(local)));
         int r = socket_sendto(ctx->udp, data, bytes, 0, remote, socket_addr_len(remote));
         assert(r == bytes);
     }
@@ -197,7 +196,7 @@ static int stun_onallocate(void* param, stun_response_t* resp, const stun_reques
     std::pair<TSockets::iterator, bool> pr1 = ctx->udprelays.insert(std::make_pair(udp[1], local));
     getsockname(udp[0], (struct sockaddr*)&local, &addrlen);
     std::pair<TSockets::iterator, bool> pr0 = ctx->udprelays.insert(std::make_pair(udp[0], local));
-    printf("stun_onallocate: pair: %s / %s\n", socket_addr_to(&pr0.first->second).c_str(), socket_addr_to(&pr1.first->second).c_str(), protocol, r);
+    printf("stun_onallocate: pair: %s / %s, protocol: %d, r=%d\n", socket_addr_to(&pr0.first->second).c_str(), socket_addr_to(&pr1.first->second).c_str(), protocol, r);
     r = turn_agent_allocate_response(resp, (const struct sockaddr*)&local, 200, "OK");
     if(0 != r)
     {
@@ -244,8 +243,10 @@ static int stun_onchannel(void* param, stun_response_t* resp, const stun_request
 
 extern "C" void stun_server_test()
 {
-    uint8_t data[2000];
 	int timeout = 5000;
+	uint8_t data[2000];
+	socket_bufvec_t vec[1];
+	socket_setbufvec(vec, 0, data, sizeof(data));
     
     socket_init();
     tls_socket_init();
@@ -273,6 +274,7 @@ extern "C" void stun_server_test()
     handler.onchannel = stun_onchannel;
     
     ctx.udp = socket_udp_bind(NULL, STUN_PORT);
+	socket_setpktinfo(ctx.udp, 1);
     ctx.tcp = socket_tcp();
     ctx.tls = socket_tcp();
     socket_bind_any_ipv4(ctx.tcp, STUN_PORT);
@@ -314,12 +316,13 @@ extern "C" void stun_server_test()
 				// stun/turn protocol
 				struct sockaddr_storage local, from;
 				socklen_t fromlen = sizeof(struct sockaddr_storage);
-				r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&from, &fromlen);
+				socklen_t locallen = sizeof(struct sockaddr_storage);
+				r = socket_recvfrom_addr(ctx.udp, vec, sizeof(vec)/sizeof(vec[0]), 0, (struct sockaddr*)&from, &fromlen, (struct sockaddr*)&local, &locallen);
 				if (r > 0)
 				{
-					addrlen = sizeof(struct sockaddr_storage);
-					getsockname(ctx.udp, (struct sockaddr*)&local, &addrlen);
-					r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr *)&local, (const struct sockaddr *)&from, NULL, data, r);
+					// update local address port
+					socket_addr_setport((struct sockaddr*)&local, locallen, STUN_PORT);
+					r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr *)&local, (const struct sockaddr *)&from, data, r);
 					assert(0 == r);
 				}
 			}
@@ -365,7 +368,7 @@ extern "C" void stun_server_test()
 					{
 						addrlen = sizeof(struct sockaddr_storage);
 						getsockname(it->first, (struct sockaddr*)&local, &addrlen);
-						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr *)&local, (const struct sockaddr *)&from, NULL, data, r);
+						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr *)&local, (const struct sockaddr *)&from, data, r);
 						assert(0 == r);
 					}
 				}
@@ -384,7 +387,7 @@ extern "C" void stun_server_test()
 						struct sockaddr_storage local;
 						addrlen = sizeof(struct sockaddr_storage);
 						getsockname(it->first, (struct sockaddr*)&local, &addrlen);
-						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TCP, (const struct sockaddr *)&local, (const struct sockaddr *)&(it->second), NULL, data, r);
+						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TCP, (const struct sockaddr *)&local, (const struct sockaddr *)&(it->second), data, r);
 						assert(0 == r);
 					}
 				}
@@ -406,7 +409,7 @@ extern "C" void stun_server_test()
 					{
 						addrlen = sizeof(struct sockaddr_storage);
 						getsockname(s, (struct sockaddr*)&local, &addrlen);
-						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TLS, (const struct sockaddr *)&local, (const struct sockaddr *)&(it->second), NULL, data, r);
+						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TLS, (const struct sockaddr *)&local, (const struct sockaddr *)&(it->second), data, r);
 						assert(0 == r);
 					}
 				}

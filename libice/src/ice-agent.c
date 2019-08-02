@@ -5,15 +5,15 @@
 #include "ice-checklist.h"
 #include "ice-candidates.h"
 
+static int ice_agent_init(struct ice_agent_t* ice);
+
 struct ice_agent_t* ice_create(int controlling, struct ice_agent_handler_t* handler, void* param)
 {
 	struct ice_agent_t* ice;
 	ice = (struct ice_agent_t*)calloc(1, sizeof(struct ice_agent_t));
 	if (ice)
 	{
-		locker_create(&ice->locker);
 		LIST_INIT_HEAD(&ice->streams);
-		ice->ref = 1;
 		ice->param = param;
 		ice->nomination = ICE_REGULAR_NOMINATION;
 		ice->controlling = controlling;
@@ -27,25 +27,8 @@ struct ice_agent_t* ice_create(int controlling, struct ice_agent_handler_t* hand
 
 int ice_destroy(struct ice_agent_t* ice)
 {
-	return ice_agent_release(ice);
-}
-
-int ice_agent_addref(struct ice_agent_t* ice)
-{
-	assert(ice->ref > 0);
-	return atomic_increment32(&ice->ref);
-}
-
-int ice_agent_release(struct ice_agent_t* ice)
-{
-	int ref;
 	struct ice_stream_t* s;
 	struct list_head *ptr, *next;
-
-	ref = atomic_decrement32(&ice->ref);
-	assert(ref >= 0);
-	if (0 != ref)
-		return ref;
 
 	list_for_each_safe(ptr, next, &ice->streams)
 	{
@@ -54,14 +37,13 @@ int ice_agent_release(struct ice_agent_t* ice)
 	}
 
 	stun_agent_destroy(&ice->stun);
-	locker_destroy(&ice->locker);
 	free(ice);
 	return 0;
 }
 
-int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, const void* data, int bytes)
+int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
-	return ice && ice->stun ? stun_agent_input(ice->stun, protocol, local, remote, relay, data, bytes) : -1;
+	return ice && ice->stun ? stun_agent_input(ice->stun, protocol, local, remote, data, bytes) : -1;
 }
 
 int ice_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd)
@@ -85,15 +67,22 @@ int ice_set_remote_auth(struct ice_agent_t* ice, const char* usr, const char* pw
 int ice_start(struct ice_agent_t* ice)
 {
 	struct list_head* ptr, *next;
-	struct ice_stream_t* s, *active;
+	struct ice_stream_t* s;
+	struct ice_checklist_t *active;
 
 	active = NULL; // default stream
-	list_for_each(ptr, next, &ice->streams)
+	list_for_each_safe(ptr, next, &ice->streams)
 	{
 		s = list_entry(ptr, struct ice_stream_t, link);
+		if (ice_candidates_count(&s->locals) < 1 || ice_candidates_count(&s->remotes) < 1)
+		{
+			assert(0);
+			continue;
+		}
+
 		ice_checklist_reset(s->checklist, &s->locals, &s->remotes);
-		if (NULL == active && ice_candidates_count(&s->locals) > 0)
-			active = s;
+		if (NULL == active)
+			active = s->checklist;
 	}
 
 	if (NULL == active)
@@ -103,9 +92,15 @@ int ice_start(struct ice_agent_t* ice)
 
 int ice_stop(struct ice_agent_t* ice)
 {
-	// TODO
-	assert(0);
-	return -1;
+	struct list_head *ptr, *next;
+	struct ice_stream_t* s;
+
+	list_for_each_safe(ptr, next, &ice->streams)
+	{
+		s = list_entry(ptr, struct ice_stream_t, link);
+		ice_checklist_cancel(s->checklist);
+	}
+	return 0;
 }
 
 // 7.2. STUN Server Procedures
@@ -125,7 +120,7 @@ static int ice_agent_server_onbind(void* param, stun_response_t* resp, const stu
 	if (0 != r)
 		return r;
 
-	c = ice_agent_find_local_candidate(ice, &addr);
+	c = ice_agent_find_local_candidate(ice, &addr.host);
 	if (!c)
 		return -1; // not found
 
@@ -167,7 +162,7 @@ static int ice_agent_server_onbind(void* param, stun_response_t* resp, const stu
 		// switch role
 		ice->controlling = ice->controlling ? 0 : 1;
 
-		ice_agent_onrole(ice, ice->controlling);
+		ice_agent_onrolechanged(ice);
 	}
 
 	// try trigger check

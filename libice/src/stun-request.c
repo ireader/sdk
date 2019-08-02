@@ -1,8 +1,10 @@
 #include "stun-agent.h"
 #include "stun-internal.h"
-#include "sys/atomic.h"
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
+
+enum { STUN_REQUEST_INIT = 0, STUN_REQUEST_RUNNING, STUN_REQUEST_DONE };
 
 stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_handler handler, void* param)
 {
@@ -11,12 +13,13 @@ stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_ha
 	req = (stun_request_t*)calloc(1, sizeof(stun_request_t));
 	if (!req) return NULL;
 
-	req->ref = 1;
+	req->ref = 0;
 	req->rfc = rfc;
 	req->stun = stun;
+	req->state = STUN_REQUEST_INIT;
 	req->param = param;
 	req->handler = handler;
-	LIST_INIT_HEAD(&req->link);
+	//LIST_INIT_HEAD(&req->link);
 	locker_create(&req->locker);
 
 	msg = &req->msg;
@@ -27,45 +30,45 @@ stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_ha
 	stun_transaction_id(msg->header.tid, sizeof(msg->header.tid));
 
 	stun_message_add_string(msg, STUN_ATTR_SOFTWARE, STUN_SOFTWARE);
+	stun_agent_insert(stun, req);
 	return req;
 }
 
-int stun_request_cancel(struct stun_request_t* req)
+int stun_request_prepare(struct stun_request_t* req)
 {
 	// lock for handler callback
 	locker_lock(&req->locker);
-	if (!req->running || 0 == stun_timer_stop(req->timer))
+	if (STUN_REQUEST_DONE == req->state)
 	{
-		req->timer = NULL;
-		req->running = 0;
+		// don't need release
 		locker_unlock(&req->locker);
-		stun_request_release(req);
-		return 0;
+		return -1;
+	}
+
+	assert(req->ref >= 2);
+	req->state = STUN_REQUEST_DONE; // cancel
+	stun_agent_remove(req->stun, req); // delete link
+	if (req->timer && 0 == stun_timer_stop(req->timer))
+	{
+		assert(req->ref == 2);
+		stun_request_release(req); // for timer
 	}
 
 	locker_unlock(&req->locker);
-	return -1;
+	return 0;
 }
 
 int stun_request_addref(struct stun_request_t* req)
 {
-	assert(req->ref > 0);
-	if (atomic_increment32(&req->ref) <= 1)
-	{
-		//stun_request_release(req);
-		return -1;
-	}
-	return 0;
+	return atomic_increment32(&req->ref);
 }
 
 int stun_request_release(struct stun_request_t* req)
 {
 	if (0 == atomic_decrement32(&req->ref))
 	{
-		// delete link
-		//stun_agent_remove(req->stun, req);
-		assert(NULL == req->link.prev && NULL == req->link.next);
-
+		assert(STUN_REQUEST_DONE == req->state);
+		assert(req->link.next == NULL);
 		locker_destroy(&req->locker);
 		free(req);
 	}
@@ -139,26 +142,30 @@ static void stun_request_ontimer(void* param)
 	req = (stun_request_t*)param;
 	
 	locker_lock(&req->locker);
-	if (req->running)
+	if (STUN_REQUEST_DONE != req->state)
 	{
-		req->timeout = req->timeout * 2 + STUN_RETRANSMISSION_INTERVAL_MIN;
-		if (req->timeout <= STUN_RETRANSMISSION_INTERVAL_MAX)
+		if (0 == stun_message_send(req->stun, &req->msg, req->addr.protocol, &req->addr.host, &req->addr.peer, &req->addr.relay))
 		{
-			// 11000 = STUN_TIMEOUT - (500 + 1500 + 3500 + 7500 + 15500)
-			req->timer = stun_timer_start(req->timeout <= STUN_RETRANSMISSION_INTERVAL_MAX ? req->timeout : 11000, stun_request_ontimer, req);
-			if (req->timer)
+			req->timeout = req->timeout * 2 + STUN_RETRANSMISSION_INTERVAL_MIN;
+			if (req->timeout <= STUN_RETRANSMISSION_INTERVAL_MAX)
 			{
-				locker_unlock(&req->locker);
-				return;
+				// 11000 = STUN_TIMEOUT - (500 + 1500 + 3500 + 7500 + 15500)
+				req->timer = stun_timer_start(req->timeout <= STUN_RETRANSMISSION_INTERVAL_MAX ? req->timeout : 11000, stun_request_ontimer, req);
+				if (req->timer)
+				{
+					locker_unlock(&req->locker);
+					return;
+				}
 			}
 		}
 
+		assert(req->ref >= 2);
+		req->state = STUN_REQUEST_DONE;
+		stun_agent_remove(req->stun, req); // delete link
 		req->handler(req->param, req, 408, "Request Timeout");
-		stun_request_release(req);
 	}
 	locker_unlock(&req->locker);
-
-	stun_agent_remove(req->stun, req);
+	stun_request_release(req);
 }
 
 int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req)
@@ -166,33 +173,32 @@ int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req)
 	int r;
 	assert(stun && req);
 
-	if (0 != stun_agent_insert(stun, req))
-		return -1;
-
-	locker_lock(&req->locker);
-	if (req->running)
+	if (!atomic_cas32(&req->state, STUN_REQUEST_INIT, STUN_REQUEST_RUNNING))
 	{
 		assert(0);
-		locker_unlock(&req->locker);
-		return -1; // exist
+		return -1; // running;
 	}
-
-	req->running = 1;
-	req->timeout = STUN_RETRANSMISSION_INTERVAL_MIN;
-	req->timer = stun_timer_start(STUN_RETRANSMISSION_INTERVAL_MIN, stun_request_ontimer, req);
-	locker_unlock(&req->locker);
+	assert(1 == req->ref);
+	stun_request_addref(req);
 
 	r = stun_message_send(stun, &req->msg, req->addr.protocol, &req->addr.host, &req->addr.peer, &req->addr.relay);
-	if (0 != r)
+	if (0 == r)
 	{
 		locker_lock(&req->locker);
-		if(req->timer)
-			stun_timer_stop(req->timer);
-		req->timer = NULL;
+		if (STUN_REQUEST_RUNNING == req->state)
+		{
+			assert(2 == req->ref);
+			stun_request_addref(req);
+			req->timeout = STUN_RETRANSMISSION_INTERVAL_MIN;
+			req->timer = stun_timer_start(STUN_RETRANSMISSION_INTERVAL_MIN, stun_request_ontimer, req);
+		}
 		locker_unlock(&req->locker);
-
-		stun_agent_remove(stun, req);
+	}
+	else
+	{
+		stun_request_prepare(req);
 	}
 
+	stun_request_release(req);
 	return r;
 }
