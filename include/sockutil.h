@@ -45,6 +45,10 @@ static inline int socket_recv_by_time(IN socket_t sock, OUT void* buf, IN size_t
 static inline int socket_recv_all_by_time(IN socket_t sock, OUT void* buf, IN size_t len, IN int flags, IN int timeout);  // timeout: ms, <0-forever
 static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t* vec, IN int n, IN int flags, IN int timeout); // timeout: ms, <0-forever
 
+/// @param[out] local ip destination addr(local address) without port
+static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* vec, IN int n, IN int flags, OUT struct sockaddr* peer, OUT socklen_t* peerlen, OUT struct sockaddr* local, OUT socklen_t* locallen);
+static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t* vec, IN int n, IN int flags, IN const struct sockaddr* peer, IN socklen_t peerlen, IN const struct sockaddr* local, IN socklen_t locallen);
+
 //////////////////////////////////////////////////////////////////////////
 /// socket connect
 //////////////////////////////////////////////////////////////////////////
@@ -557,6 +561,217 @@ static inline int socket_sendto_v_by_time(IN socket_t sock, IN const socket_bufv
 
 	r = socket_sendto_v(sock, vec, n, flags, to, tolen);
 	return r;
+}
+
+#if defined(OS_WINDOWS) && _WIN32_WINNT >= 0x0600
+#include <Mswsock.h>
+static inline BOOL WINAPI wsarecvmsgcallback(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *sock)
+{
+	DWORD bytes;
+	GUID guid = WSAID_WSARECVMSG;
+	WSAIoctl(*(socket_t*)sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(GUID), Parameter, sizeof(LPFN_WSARECVMSG), &bytes, NULL, NULL);
+	(void)InitOnce;
+	return TRUE;
+}
+#endif
+
+/// @param[out] local ip destination addr(local address) without port
+static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* vec, IN int n, IN int flags, OUT struct sockaddr* peer, OUT socklen_t* peerlen, OUT struct sockaddr* local, OUT socklen_t* locallen)
+{
+	int r;
+	char control[64];
+	
+#if defined(OS_WINDOWS) && _WIN32_WINNT >= 0x0600
+	struct cmsghdr *cmsg;
+	struct in_pktinfo* pktinfo;
+	struct in6_pktinfo* pktinfo6;
+	static INIT_ONCE wsarecvmsgonce;
+	static LPFN_WSARECVMSG WSARecvMsg;
+
+	DWORD bytes;
+	WSAMSG wsamsg;
+	InitOnceExecuteOnce(&wsarecvmsgonce, wsarecvmsgcallback, &WSARecvMsg, (LPVOID*)&sock);
+	memset(&wsamsg, 0, sizeof(wsamsg));
+	wsamsg.name = peer;
+	wsamsg.namelen = *peerlen;
+	wsamsg.lpBuffers = vec;
+	wsamsg.dwBufferCount = n;
+	wsamsg.Control.buf = control;
+	wsamsg.Control.len = sizeof(control);
+	wsamsg.dwFlags = 0;
+	r = WSARecvMsg(sock, &wsamsg, &bytes, NULL, NULL);
+	if (0 != r)
+		return r;
+
+	(void)flags;
+	*peerlen = socket_addr_len(peer);
+	for (cmsg = CMSG_FIRSTHDR(&wsamsg); !!cmsg && local && locallen; cmsg = CMSG_NXTHDR(&wsamsg, cmsg))
+	{
+		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO && *locallen >= sizeof(struct sockaddr_in))
+		{
+			pktinfo = (struct in_pktinfo*)WSA_CMSG_DATA(cmsg);
+			memset(local, 0, sizeof(struct sockaddr_in));
+			((struct sockaddr_in*)local)->sin_family = IPPROTO_IP;
+			memcpy(&((struct sockaddr_in*)local)->sin_addr, &pktinfo->ipi_addr, sizeof(pktinfo->ipi_addr));
+			break;
+		}
+		else if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO && *locallen >= sizeof(struct sockaddr_in6))
+		{
+			pktinfo6 = (struct in6_pktinfo*)WSA_CMSG_DATA(cmsg);
+			memset(local, 0, sizeof(struct sockaddr_in6));
+			((struct sockaddr_in6*)local)->sin6_family = IPPROTO_IPV6;
+			memcpy(&((struct sockaddr_in6*)local)->sin6_addr, &pktinfo6->ipi6_addr, sizeof(pktinfo6->ipi6_addr));
+			break;
+		}
+	}
+
+	return bytes;
+	
+#elif defined(OS_LINUX)
+	struct msghdr hdr;
+	struct cmsghdr *cmsg;
+	memset(&hdr, 0, sizeof(hdr));
+	memset(control, 0, sizeof(control));
+	hdr.msg_name = &peer;
+	hdr.msg_namelen = *peerlen;
+	hdr.msg_iov = vec;
+	hdr.msg_iovlen = n;
+	hdr.msg_control = control;
+	hdr.msg_controllen = sizeof(control);
+	hdr.msg_flags = 0;
+	r = recvmsg(sock, &hdr, flags);
+	if (0 != r)
+		return r;
+
+	for (cmsg = CMSG_FIRSTHDR(&hdr); !!cmsg && local && locallen; cmsg = CMSG_NXTHDR(&hdr, cmsg))
+	{
+		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO && *locallen >= sizeof(struct sockaddr_in))
+		{
+			struct in_pktinfo* pktinfo;
+			pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
+			memset(local, 0, sizeof(struct sockaddr_in));
+			((struct sockaddr_in*)local)->sin_family = IPPROTO_IP;
+			memcpy(&((struct sockaddr_in*)local)->sin_addr, &pktinfo->ipi_addr, sizeof(pktinfo->ipi_addr));
+			break;
+		}
+#if defined(_GNU_SOURCE)
+		else if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO && *locallen >= sizeof(struct sockaddr_in6))
+		{
+			struct in6_pktinfo* pktinfo6;
+			pktinfo6 = (struct in6_pktinfo*)CMSG_DATA(cmsg);
+			memset(local, 0, sizeof(struct sockaddr_in6));
+			((struct sockaddr_in6*)local)->sin6_family = IPPROTO_IPV6;
+			memcpy(&((struct sockaddr_in6*)local)->sin6_addr, &pktinfo6->ipi6_addr, sizeof(pktinfo6->ipi6_addr));
+			break;
+		}
+#endif
+	}
+
+	return 0;
+#else
+#pragma error("xxxx\n");
+	return -1;
+#endif
+}
+
+static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t* vec, IN int n, IN int flags, IN const struct sockaddr* peer, IN socklen_t peerlen, IN const struct sockaddr* local, IN socklen_t locallen)
+{
+	char control[64];
+
+#if defined(OS_WINDOWS) && _WIN32_WINNT >= 0x0600
+	struct cmsghdr *cmsg;
+	struct in_pktinfo* pktinfo;
+	struct in6_pktinfo* pktinfo6;
+
+	DWORD bytes;
+	WSAMSG wsamsg;
+	wsamsg.name = (LPSOCKADDR)peer;
+	wsamsg.namelen = peerlen;
+	wsamsg.lpBuffers = (LPWSABUF)vec;
+	wsamsg.dwBufferCount = n;
+	wsamsg.Control.buf = control;
+	wsamsg.Control.len = 0;
+	wsamsg.dwFlags = 0;
+
+	cmsg = CMSG_FIRSTHDR(&wsamsg);
+	if (AF_INET == local->sa_family && locallen >= sizeof(struct sockaddr_in))
+	{
+		cmsg->cmsg_level = IPPROTO_IP;
+		cmsg->cmsg_type = IP_PKTINFO;
+		cmsg->cmsg_len = WSA_CMSG_LEN(sizeof(struct in_pktinfo));
+		pktinfo = (struct in_pktinfo*)WSA_CMSG_DATA(cmsg);
+		memset(pktinfo, 0, sizeof(struct in_pktinfo));
+		memcpy(&pktinfo->ipi_addr, &((struct sockaddr_in*)local)->sin_addr, sizeof(pktinfo->ipi_addr));
+		wsamsg.Control.len = CMSG_SPACE(sizeof(struct in_pktinfo));
+	}
+	else if (AF_INET6 == local->sa_family && locallen >= sizeof(struct sockaddr_in6))
+	{
+		cmsg->cmsg_level = IPPROTO_IPV6;
+		cmsg->cmsg_type = IPV6_PKTINFO;
+		cmsg->cmsg_len = WSA_CMSG_LEN(sizeof(struct in6_pktinfo));
+		pktinfo6 = (struct in6_pktinfo*)WSA_CMSG_DATA(cmsg);
+		memset(pktinfo6, 0, sizeof(struct in6_pktinfo));
+		memcpy(&pktinfo6->ipi6_addr, &((struct sockaddr_in6*)local)->sin6_addr, sizeof(pktinfo6->ipi6_addr));
+		wsamsg.Control.len = CMSG_SPACE(sizeof(struct in6_pktinfo));
+	}
+	else
+	{
+		assert(0);
+		return -1;
+	}
+
+	return 0 == WSASendMsg(sock, &wsamsg, flags, &bytes, NULL, NULL) ? bytes : SOCKET_ERROR;
+
+#elif defined(OS_LINUX)
+	struct msghdr hdr;
+	struct cmsghdr *cmsg;
+
+	memset(&hdr, 0, sizeof(hdr));
+	memset(control, 0, sizeof(control));
+	hdr.msg_name = &peer;
+	hdr.msg_namelen = peerlen;
+	hdr.msg_iov = (struct iovec*)vec;
+	hdr.msg_iovlen = n;
+	hdr.msg_control = control;
+	hdr.msg_controllen = 0;
+	hdr.msg_flags = 0;
+
+	cmsg = CMSG_FIRSTHDR(&hdr);
+	if (AF_INET == local->sa_family)
+	{
+		struct in_pktinfo* pktinfo;
+		cmsg->cmsg_level = SOL_IP;// IPPROTO_IP;
+		cmsg->cmsg_type = IP_PKTINFO;
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+		pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
+		memset(pktinfo, 0, sizeof(struct in_pktinfo));
+		memcpy(&pktinfo->ipi_spec_dst, &((struct sockaddr_in*)local)->sin_addr, sizeof(pktinfo->ipi_spec_dst));
+		hdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
+	}
+#if defined(_GNU_SOURCE)
+	else if (AF_INET6 == local->sa_family)
+	{
+		struct in6_pktinfo* pktinfo6;
+		cmsg->cmsg_level = IPPROTO_IPV6;
+		cmsg->cmsg_type = IPV6_PKTINFO;
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+		pktinfo6 = (struct in6_pktinfo*)CMSG_DATA(cmsg);
+		memset(pktinfo6, 0, sizeof(struct in6_pktinfo));
+		memcpy(&pktinfo6->ipi6_addr, &((struct sockaddr_in6*)local)->sin6_addr, sizeof(pktinfo6->ipi6_addr));
+		hdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+	}
+#endif
+	else
+	{
+		assert(0);
+		return -1;
+	}
+
+	return sendmsg(sock, &hdr, flags);
+#else
+#pragma error("xxxx\n");
+	return -1;
+#endif
 }
 
 #if defined(_MSC_VER)
