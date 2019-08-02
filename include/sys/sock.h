@@ -160,6 +160,8 @@ static inline int socket_setdontfrag(IN socket_t sock, IN int dontfrag); // ipv4
 static inline int socket_getdontfrag(IN socket_t sock, OUT int* dontfrag); // ipv4 udp only
 static inline int socket_setdontfrag6(IN socket_t sock, IN int dontfrag); // ipv6 udp only
 static inline int socket_getdontfrag6(IN socket_t sock, OUT int* dontfrag); // ipv6 udp only
+static inline int socket_setpktinfo(IN socket_t sock, IN int enable); // ipv4 udp only
+static inline int socket_setpktinfo6(IN socket_t sock, IN int enable); // ipv6 udp only
 
 // socket status
 // @return 0-ok, <0-socket_error(by socket_geterror())
@@ -402,8 +404,7 @@ static inline int socket_recvfrom_v(IN socket_t sock, IN socket_bufvec_t* vec, I
 {
 #if defined(OS_WINDOWS)
 	DWORD count = 0;
-	int r = WSARecvFrom(sock, vec, (DWORD)n, &count, (LPDWORD)&flags, from, fromlen, NULL, NULL);
-	return 0 == r ? (int)count : r;
+	return 0 == WSARecvFrom(sock, vec, (DWORD)n, &count, (LPDWORD)&flags, from, fromlen, NULL, NULL) ? (int)count : SOCKET_ERROR;
 #else
 	struct msghdr msg;
 	memset(&msg, 0, sizeof(msg));
@@ -898,6 +899,32 @@ static inline int socket_getdontfrag6(IN socket_t sock, OUT int* dontfrag)
 	*dontfrag = IP_PMTUDISC_DO == *dontfrag ? 1 : 0;
 #endif
 	return r;
+}
+
+// ipv4 udp only
+static inline int socket_setpktinfo(IN socket_t sock, IN int enable)
+{
+#if defined(OS_WINDOWS)
+	BOOL v = enable ? TRUE : FALSE;
+	return setsockopt(sock, IPPROTO_IP, IP_PKTINFO, (const char*)&v, sizeof(v));
+#elif defined(OS_LINUX)
+	return setsockopt(sock, IPPROTO_IP, IP_PKTINFO, &enable, sizeof(enable));
+#else
+	return -1;
+#endif
+}
+
+// ipv6 udp only
+static inline int socket_setpktinfo6(IN socket_t sock, IN int enable)
+{
+#if defined(OS_WINDOWS)
+	BOOL v = enable ? TRUE : FALSE;
+	return setsockopt(sock, IPPROTO_IPV6, IPV6_PKTINFO, (const char*)&v, sizeof(v));
+#elif defined(OS_LINUX)
+	return setsockopt(sock, IPPROTO_IPV6, IPV6_RECVPKTINFO, &enable, sizeof(enable));
+#else
+	return -1;
+#endif
 }
 
 static inline int socket_setttl(IN socket_t sock, IN int ttl)
