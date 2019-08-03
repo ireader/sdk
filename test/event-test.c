@@ -15,7 +15,7 @@ static int STDCALL thread0(void* param)
 	t1 = system_clock();
 	assert(WAIT_TIMEOUT == event_timewait(&ev1, 3000));
 	t2 = system_clock();
-	assert(t2 - t1 >= 3000);
+	assert(t2 - t1 >= 2999);
 	printf("thread0 - timewait ok\n");
 
 	assert(0 == event_signal(&ev1));

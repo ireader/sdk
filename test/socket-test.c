@@ -27,6 +27,7 @@ static void socket_ip_test(void)
 
 static void socket_name_ipv4_test(void)
 {
+    size_t size;
 	unsigned short port;
 	char ip[SOCKET_ADDRLEN];
 	socket_t socket;
@@ -35,6 +36,10 @@ static void socket_name_ipv4_test(void)
 	{
 		socket_getname(socket, ip, &port);
 		socket_getpeername(socket, ip, &port);
+        socket_getrecvbuf(socket, &size);
+        socket_getsendbuf(socket, &size);
+        socket_getrecvtimeout(socket, &size);
+        socket_getsendtimeout(socket, &size);
 	}
 	else
 	{
@@ -45,6 +50,7 @@ static void socket_name_ipv4_test(void)
 
 static void socket_name_ipv6_test(void)
 {
+    size_t size;
 	unsigned short port;
 	char ip[SOCKET_ADDRLEN];
 	socket_t socket;
@@ -53,6 +59,10 @@ static void socket_name_ipv6_test(void)
 	{
 		socket_getname(socket, ip, &port);
 		socket_getpeername(socket, ip, &port);
+        socket_getrecvbuf(socket, &size);
+        socket_getsendbuf(socket, &size);
+        socket_getrecvtimeout(socket, &size);
+        socket_getsendtimeout(socket, &size);
 	}
 	else
 	{
