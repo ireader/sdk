@@ -17,6 +17,7 @@ void aio_timeout_process(void);
 /// aio timer start/stop
 /// every start MUST call stop once
 int aio_timeout_start(struct aio_timeout_t* timeout, int timeoutMS, void(*notify)(void* param), void* param);
+/// @return  0-ok, other-timer can't be stop(timer have triggered or will be triggered)
 int aio_timeout_stop(struct aio_timeout_t* timeout);
 
 #ifdef __cplusplus

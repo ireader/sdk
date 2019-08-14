@@ -2,6 +2,8 @@
 #define _sockutil_h_
 
 #include "sys/sock.h"
+#include <stdlib.h>
+#include <stdarg.h>
 #include <assert.h>
 
 #if defined(OS_WINDOWS)
@@ -775,6 +777,87 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 #else
 #pragma error("xxxx\n");
 	return -1;
+#endif
+}
+
+/// @param[in] n total socket number, [1 ~ 31]
+/// @return <0-error, =0-timeout, >0-socket bitmask
+static inline int socket_poll_read(int timeout, int n, ...)
+{
+	int i, r;
+	socket_t fd;
+	va_list args;
+	
+#if defined(OS_WINDOWS)
+	fd_set rfds;
+	fd_set wfds;
+	fd_set efds;
+	struct timeval tv;
+
+	assert(n < 31);
+	FD_ZERO(&rfds);
+	FD_ZERO(&wfds);
+	FD_ZERO(&efds);
+	va_start(args, n);
+	for (i = 0; i < n && i < 31; i++)
+	{
+		fd = va_arg(args, socket_t);
+		if(socket_invalid == fd)
+			continue;
+		FD_SET(fd, &rfds);
+	}
+	va_end(args);
+
+	tv.tv_sec = timeout / 1000;
+	tv.tv_usec = (timeout % 1000) * 1000;
+	r = select(n, &rfds, &wfds, &efds, timeout < 0 ? NULL : &tv);
+	if (r <= 0)
+		return r;
+
+	va_start(args, n);
+	for (r = i = 0; i < n && i < 31; i++)
+	{
+		fd = va_arg(args, socket_t);
+		if (socket_invalid == fd)
+			continue;
+		if (FD_ISSET(fd, &rfds))
+			r |= 1 << i;
+	}
+	va_end(args);
+
+	return r;
+#else
+	int j;
+	struct pollfd fds[31];
+	assert(n < 31);
+	for (j = i = 0; i < n && i < 31; i++)
+	{
+		fd = va_arg(args, socket_t);
+		if (socket_invalid == fd)
+			continue;
+		fds[j].fd = fd;
+		fds[j].events = POLLIN;
+		fds[j].revents = 0;
+		j++;
+	}
+	va_end(args);
+
+	r = poll(fds, j, timeout);
+	while (-1 == r && EINTR == errno)
+		r = poll(fds, j, timeout);
+
+	va_start(args, n);
+	for (r = i = 0; i < n && i < 31; i++)
+	{
+		fd = va_arg(args, socket_t);
+		if (socket_invalid == fd)
+			continue;
+		if (fds[i].revents & POLLIN)
+			r |= 1 << i;
+	}
+	va_end(args);
+
+	return r;
 #endif
 }
 
