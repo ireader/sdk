@@ -293,13 +293,49 @@ static inline socket_t socket_tcp_listen_ipv6(IN const char* ipv4_or_ipv6_or_dns
 	return 0 == r ? sock : socket_invalid;
 }
 
+/// @param[in] reuse 1-enable reuse addr
+/// @param[in] dual 1-enable ipv6 dual stack
+/// @return socket_invalid-error, other-ok
+static inline socket_t socket_udp_bind_addr(IN const struct sockaddr* addr, int reuse, int dual)
+{
+	socket_t s;
+	
+	assert(AF_INET == addr->sa_family || AF_INET6 == addr->sa_family);
+	s = socket(addr->sa_family, SOCK_DGRAM, 0);
+	if (socket_invalid == s)
+		return socket_invalid;
+
+	// disable reuse addr(fixed rtp port reuse error)
+	if (reuse && 0 != socket_setreuseaddr(s, 1))
+	{
+		socket_close(s);
+		return socket_invalid;
+	}
+
+	// Dual-Stack Socket option
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb513665(v=vs.85).aspx
+	// By default, an IPv6 socket created on Windows Vista and later only operates over the IPv6 protocol.
+	if (AF_INET6 == addr->sa_family && 0 != socket_setipv6only(s, dual ? 1 : 0))
+	{
+		socket_close(s);
+		return socket_invalid;
+	}
+
+	if (0 != socket_bind(s, addr, socket_addr_len(addr)))
+	{
+		socket_close(s);
+		return socket_invalid;
+	}
+
+	return s;
+}
+
 /// create a new UDP socket and bind with ip/port
 /// @param[in] ipv4_or_ipv6_or_dns socket bind local address, NULL-bind any address
 /// @param[in] port bind local port
 /// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
 static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_short port)
 {
-	int r;
 	socket_t sock;
 	char portstr[16];
 	struct addrinfo hints, *addr, *ptr;
@@ -309,32 +345,22 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 	snprintf(portstr, sizeof(portstr), "%hu", port);
-	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
-	if (0 != r)
+	if (0 != getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr))
 		return socket_invalid;
 
-	r = -1; // not found
     sock = socket_invalid;
-	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
+	for (ptr = addr; socket_invalid == sock && ptr != NULL; ptr = ptr->ai_next)
 	{
 		assert(AF_INET == ptr->ai_family);
-		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-		if (socket_invalid == sock)
-			continue;
-
-		// disable reuse addr(fixed rtp port reuse error)
-		//socket_setreuseaddr(sock, 1);
-
+		
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
 		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
-
-		r = socket_bind(sock, ptr->ai_addr, ptr->ai_addrlen);
-		if (0 != r)
-			socket_close(sock);
+		
+		sock = socket_udp_bind_addr(ptr->ai_addr, 0, 0);
 	}
 
 	freeaddrinfo(addr);
-	return 0 == r ? sock : socket_invalid;
+	return sock;
 }
 
 /// create a new UDP socket and bind with ip/port
@@ -344,7 +370,6 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_
 /// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
 static inline socket_t socket_udp_bind_ipv6(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int ipv4)
 {
-	int r;
 	socket_t sock;
 	char portstr[16];
 	struct addrinfo hints, *addr, *ptr;
@@ -354,38 +379,22 @@ static inline socket_t socket_udp_bind_ipv6(IN const char* ipv4_or_ipv6_or_dns, 
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 	snprintf(portstr, sizeof(portstr), "%hu", port);
-	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
-	if (0 != r)
+	if (0 != getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr))
 		return socket_invalid;
 
-	r = -1; // not found
     sock = socket_invalid;
-	for (ptr = addr; 0 != r && ptr != NULL; ptr = ptr->ai_next)
+	for (ptr = addr; socket_invalid == sock && ptr != NULL; ptr = ptr->ai_next)
 	{
 		assert(AF_INET6 == ptr->ai_family);
-		sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-		if (socket_invalid == sock)
-			continue;
-
-		// Dual-Stack Socket option
-		// https://msdn.microsoft.com/en-us/library/windows/desktop/bb513665(v=vs.85).aspx
-		// By default, an IPv6 socket created on Windows Vista and later only operates over the IPv6 protocol.
-		if (0 != socket_setreuseaddr(sock, 1) || 0 != socket_setipv6only(sock, ipv4 ? 0 : 1))
-		{
-			socket_close(sock);
-			continue;
-		}
 
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
 		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
 
-		r = socket_bind(sock, ptr->ai_addr, ptr->ai_addrlen);
-		if (0 != r)
-			socket_close(sock);
+		sock = socket_udp_bind_addr(ptr->ai_addr, 0, ipv4);
 	}
 
 	freeaddrinfo(addr);
-	return 0 == r ? sock : socket_invalid;
+	return sock;
 }
 
 /// wait for client connection
@@ -780,33 +789,27 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 #endif
 }
 
-/// @param[in] n total socket number, [1 ~ 31]
+/// @param[in] n total socket number, [1 ~ 32]
 /// @return <0-error, =0-timeout, >0-socket bitmask
-static inline int socket_poll_read(int timeout, int n, ...)
+static inline int socket_poll_read(socket_t s[], int n, int timeout)
 {
 	int i, r;
-	socket_t fd;
-	va_list args;
-	
+
 #if defined(OS_WINDOWS)
 	fd_set rfds;
 	fd_set wfds;
 	fd_set efds;
 	struct timeval tv;
 
-	assert(n < 31);
+	assert(n < 32);
 	FD_ZERO(&rfds);
 	FD_ZERO(&wfds);
 	FD_ZERO(&efds);
-	va_start(args, n);
-	for (i = 0; i < n && i < 31; i++)
+	for (i = 0; i < n && i < 32; i++)
 	{
-		fd = va_arg(args, socket_t);
-		if(socket_invalid == fd)
-			continue;
-		FD_SET(fd, &rfds);
+		if(socket_invalid != s[i])
+			FD_SET(s[i], &rfds);
 	}
-	va_end(args);
 
 	tv.tv_sec = timeout / 1000;
 	tv.tv_usec = (timeout % 1000) * 1000;
@@ -814,51 +817,58 @@ static inline int socket_poll_read(int timeout, int n, ...)
 	if (r <= 0)
 		return r;
 
-	va_start(args, n);
-	for (r = i = 0; i < n && i < 31; i++)
+	for (r = i = 0; i < n && i < 32; i++)
 	{
-		fd = va_arg(args, socket_t);
-		if (socket_invalid == fd)
+		if (socket_invalid == s[i])
 			continue;
-		if (FD_ISSET(fd, &rfds))
+		if (FD_ISSET(s[i], &rfds))
 			r |= 1 << i;
 	}
-	va_end(args);
 
 	return r;
 #else
 	int j;
-	struct pollfd fds[31];
-	assert(n < 31);
-	for (j = i = 0; i < n && i < 31; i++)
+	struct pollfd fds[32];
+	assert(n < 32);
+	for (j = i = 0; i < n && i < 32; i++)
 	{
-		fd = va_arg(args, socket_t);
-		if (socket_invalid == fd)
+		if (socket_invalid == s[i])
 			continue;
-		fds[j].fd = fd;
+		fds[j].fd = s[i];
 		fds[j].events = POLLIN;
 		fds[j].revents = 0;
 		j++;
 	}
-	va_end(args);
 
 	r = poll(fds, j, timeout);
 	while (-1 == r && EINTR == errno)
 		r = poll(fds, j, timeout);
 
-	va_start(args, n);
-	for (r = i = 0; i < n && i < 31; i++)
+	for (r = i = 0; i < n && i < 32; i++)
 	{
-		fd = va_arg(args, socket_t);
-		if (socket_invalid == fd)
+		if (socket_invalid == s[i])
 			continue;
 		if (fds[i].revents & POLLIN)
 			r |= 1 << i;
 	}
-	va_end(args);
 
 	return r;
 #endif
+}
+
+static inline int socket_poll_readv(int timeout, int n, ...)
+{
+	int i;
+	va_list args;
+	socket_t fd[32];
+
+	assert(n < 32 && 32 <= FD_SETSIZE);
+	va_start(args, n);
+	for (i = 0; i < n && i < 32; i++)
+		fd[i] = va_arg(args, socket_t);
+	va_end(args);
+
+	return socket_poll_read(fd, n, timeout);
 }
 
 #if defined(_MSC_VER)
