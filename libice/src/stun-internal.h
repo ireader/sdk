@@ -1,6 +1,7 @@
 #ifndef _stun_internal_h_
 #define _stun_internal_h_
 
+#include "sys/sock.h"
 #include "stun-agent.h"
 #include "stun-attr.h"
 #include "stun-proto.h"
@@ -41,6 +42,8 @@ struct stun_request_t
 	int rfc; // version
 	int state; // 0-init, 1-running, 2-done
 	int timeout;
+	int elapsed;
+	int interval;
 	void* timer;
 	locker_t locker;
 	stun_agent_t* stun;
@@ -48,9 +51,6 @@ struct stun_request_t
 	void* param;
 	stun_request_handler handler;
 
-	void* ondataparam;
-	turn_agent_ondata ondata;
-	
 	struct stun_address_t addr;
 	struct stun_credential_t auth;
 };
@@ -88,7 +88,7 @@ struct stun_agent_t
 int stun_agent_insert(struct stun_agent_t* stun, struct stun_request_t* req);
 int stun_agent_remove(struct stun_agent_t* stun, struct stun_request_t* req);
 int stun_agent_request_auth_check(stun_agent_t* stun, struct stun_request_t* req, const void* data, int bytes);
-int stun_agent_response_auth_check(stun_agent_t* stun, struct stun_request_t* resp, struct stun_request_t* req, const void* data, int bytes);
+int stun_agent_response_auth_check(stun_agent_t* stun, const struct stun_message_t* resp, struct stun_request_t* req, const void* data, int bytes);
 
 /// cancel a stun request, MUST make sure cancel before handler callback
 /// @param[in] req create by stun_request_create

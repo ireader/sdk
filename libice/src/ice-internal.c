@@ -8,19 +8,19 @@
 int ice_agent_add_peer_reflexive_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr, const struct stun_attr_t* priority)
 {
 	struct ice_candidate_t c, *local;
+	if (0 == addr->reflexive.ss_family)
+		return -1;
 
 	memset(&c, 0, sizeof(struct ice_candidate_t));
 	c.protocol = addr->protocol;
 	memcpy(&c.host, &addr->host, sizeof(c.host));
-	memcpy(&c.stun, &addr->peer, sizeof(c.stun));
-	memcpy(&c.reflexive, &addr->reflexive, sizeof(c.reflexive));
-	memcpy(&c.relay, &addr->relay, sizeof(c.relay));
-	
+	memcpy(&c.addr, &addr->reflexive, sizeof(c.addr));
+	assert(0 == addr->relay.ss_family);
+
 	local = ice_agent_find_local_candidate(ice, &c.host);
 	if (NULL == local)
 		return -1; // local not found, new request ???
 
-	assert(0 == c.relay.ss_family);
 	c.type = ICE_CANDIDATE_PEER_REFLEXIVE;
 	c.stream = local->stream;
 	c.component = local->component;
@@ -28,46 +28,35 @@ int ice_agent_add_peer_reflexive_candidate(struct ice_agent_t* ice, const struct
 	ice_candidate_priority(&c);
 	if (priority)
 		c.priority = priority->v.u32;
-	return ice_add_local_candidate(ice, &c);
+	return ice_agent_add_local_candidate(ice, &c);
 }
 
 // rfc5245 7.2.1.3. Learning Peer Reflexive Candidates (p49)
-int ice_agent_add_remote_peer_reflexive_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr, const struct stun_attr_t* priority)
+int ice_agent_add_remote_peer_reflexive_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t component, const struct stun_address_t* addr, const struct stun_attr_t* priority)
 {
-	struct ice_candidate_t c, *local;
+	struct ice_candidate_t c;
 
+	assert(0 == addr->reflexive.ss_family);
 	memset(&c, 0, sizeof(struct ice_candidate_t));
 	c.protocol = addr->protocol;
 	memcpy(&c.host, &addr->peer, sizeof(c.host));
-	memcpy(&c.stun, &addr->host, sizeof(c.stun));
-	memcpy(&c.reflexive, &addr->reflexive, sizeof(c.reflexive));
-	memcpy(&c.relay, &addr->relay, sizeof(c.relay));
+	memcpy(&c.addr, &addr->peer, sizeof(c.addr));
+	//memcpy(&c.stun, &addr->host, sizeof(c.stun));
+	assert(0 == addr->relay.ss_family);
 
-	local = ice_agent_find_local_candidate(ice, &addr->host);
-	if (NULL == local)
-		return -1; // local not found, new request ???
-
-	assert(0 == c.relay.ss_family);
 	c.type = ICE_CANDIDATE_PEER_REFLEXIVE;
-	c.stream = local->stream;
-	c.component = local->component;
+	c.stream = stream;
+	c.component = component;
 	// The foundation of the candidate is set to an arbitrary value,
 	// different from the foundation for all other remote candidates.
 	c.foundation[0] = '\0'; // ice_candidate_foundation(&c);
 	ice_candidate_priority(&c);
 	if (priority)
 		c.priority = priority->v.u32;
-	return ice_add_remote_candidate(ice, &c);
+	return ice_agent_add_remote_candidate(ice, &c);
 }
 
-static void ice_agent_ondata(void* param, const void* data, int byte, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay)
-{
-	struct ice_agent_t* ice = (struct ice_agent_t*)param;
-	if (ice && ice->handler.ondata)
-		ice->handler.ondata(ice->param, data, byte, protocol, local, remote, relay);
-}
-
-int ice_agent_bind(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param)
+int ice_agent_bind(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, int timeout, stun_request_handler handler, void* param)
 {
 	struct stun_request_t* req;
 	req = stun_request_create(ice->stun, STUN_RFC_5389, handler, param);
@@ -76,12 +65,13 @@ int ice_agent_bind(struct ice_agent_t* ice, const struct sockaddr* local, const 
 	// rfc5245 4.1.1.2. Server Reflexive and Relayed Candidates (p20)
 	// Binding requests to a STUN server are not authenticated, and 
 	// any ALTERNATESERVER attribute in a response is ignored.
+	stun_request_settimeout(req, timeout);
 	stun_request_setaddr(req, STUN_PROTOCOL_UDP, local, remote, relay);
 	stun_request_setauth(req, ice->auth.credential, ice->auth.usr, ice->auth.pwd, ice->auth.realm, ice->auth.nonce);
 	return stun_agent_bind(req);
 }
 
-int ice_agent_allocate(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param)
+int ice_agent_allocate(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, int timeout, stun_request_handler handler, void* param)
 {
 	struct stun_request_t* req;
 	req = stun_request_create(ice->stun, STUN_RFC_5389, handler, param);
@@ -90,12 +80,13 @@ int ice_agent_allocate(struct ice_agent_t* ice, const struct sockaddr* local, co
 	// rfc5245 4.1.1.2. Server Reflexive and Relayed Candidates (p20)
 	// Allocate requests SHOULD be authenticated using a longterm
 	// credential obtained by the client through some other means.
+	stun_request_settimeout(req, timeout);
 	stun_request_setaddr(req, STUN_PROTOCOL_UDP, local, remote, relay);
 	stun_request_setauth(req, ice->auth.credential, ice->auth.usr, ice->auth.pwd, ice->auth.realm, ice->auth.nonce);
-	return turn_agent_allocate(req, ice_agent_ondata, ice);
+	return turn_agent_allocate(req);
 }
 
-int ice_agent_refresh(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param)
+int ice_agent_refresh(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, int timeout, stun_request_handler handler, void* param)
 {
 	struct stun_request_t* req;
 	req = stun_request_create(ice->stun, STUN_RFC_5389, handler, param);
@@ -104,19 +95,21 @@ int ice_agent_refresh(struct ice_agent_t* ice, const struct sockaddr* local, con
 	// rfc5245 4.1.1.2. Server Reflexive and Relayed Candidates (p20)
 	// Allocate requests SHOULD be authenticated using a longterm
 	// credential obtained by the client through some other means.
+	stun_request_settimeout(req, timeout);
 	stun_request_setaddr(req, STUN_PROTOCOL_UDP, local, remote, relay);
 	stun_request_setauth(req, ice->auth.credential, ice->auth.usr, ice->auth.pwd, ice->auth.realm, ice->auth.nonce);
 	return turn_agent_refresh(req, TURN_LIFETIME);
 }
 
-int ice_agent_connect(struct ice_agent_t* ice, const struct ice_candidate_pair_t* pr, int nominated, stun_request_handler handler, void* param)
+int ice_agent_connect(struct ice_agent_t* ice, const struct ice_candidate_pair_t* pr, int nominated, int timeout, stun_request_handler handler, void* param)
 {
 	char user[512];
 	struct stun_request_t* req;
 	req = stun_request_create(ice->stun, STUN_RFC_5389, handler, param);
 	if (!req) return -1;
 
-	stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&pr->local.host, (const struct sockaddr*)ice_candidate_addr(&pr->remote), ICE_CANDIDATE_RELAYED == pr->local.type ? (const struct sockaddr*)&pr->local.relay : NULL);
+	stun_request_settimeout(req, timeout);
+	stun_request_setaddr(req, STUN_PROTOCOL_UDP, (const struct sockaddr*)&pr->local.host, (const struct sockaddr*)&pr->remote.host, ICE_CANDIDATE_RELAYED == pr->local.type ? (const struct sockaddr*)&pr->local.addr : NULL);
 	// rfc5245 7.1.2. Sending the Request (p40)
 	// 1. A connectivity check MUST utilize the STUN short-term credential mechanism
 	// 2. The FINGERPRINT mechanism MUST be used for connectivity checks.

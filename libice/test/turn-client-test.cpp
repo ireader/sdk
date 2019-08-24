@@ -1,7 +1,17 @@
 #include "stun-agent.h"
 #include "stun-proto.h"
 #include "sockutil.h"
+#include "port/ip-route.h"
 #include <errno.h>
+
+#define TURN_PEER_PORT 2345
+#define TURN_PEER_IP "128.10.2.2"
+#define TURN_SERVER "stun.linphone.org"
+#define TURN_USR "tao3"
+#define TURN_PWD "123456"
+//#define TURN_SERVER "numb.viagenie.ca"
+//#define TURN_USR "tao3@outlook.com"
+//#define TURN_PWD "12345678"
 
 struct turn_client_test_context_t
 {
@@ -55,19 +65,21 @@ static int turn_onchannel_bind(void* param, const stun_request_t* req, int code,
 	return 0;
 }
 
-static void turn_ondata(void* param, const void* data, int byte, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay)
+static void turn_ondata(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int byte)
 {
 }
 
 extern "C" void turn_client_test()
 {
-	int r;
-	sockaddr_in host, server, peer;
+	int r, protocol;
+	char local[40];
+	sockaddr_storage host, server, peer, reflexive, relayed;
 	socklen_t addrlen = sizeof(struct sockaddr_in);
-	//r = socket_addr_from_ipv4(&addr, &addrlen, "stunserver.org", 3478);
-    //r = socket_addr_from_ipv4(&server, "numb.viagenie.ca", STUN_PORT); assert(0 == r);
-    r = socket_addr_from_ipv4(&server, "127.0.0.1", STUN_PORT); assert(0 == r);
-    r = socket_addr_from_ipv4(&peer, "127.0.0.1", 2345); assert(0 == r);
+
+	socket_init();
+	r = socket_addr_from_ipv4((struct sockaddr_in*)&server, TURN_SERVER, STUN_PORT); assert(0 == r);
+    r = socket_addr_from_ipv4((struct sockaddr_in*)&peer, TURN_PEER_IP, TURN_PEER_PORT); assert(0 == r);
+	r = ip_route_get(TURN_SERVER, local); assert(0 == r);
 
 	struct turn_client_test_context_t ctx;
 
@@ -75,22 +87,23 @@ extern "C" void turn_client_test()
 	struct stun_agent_handler_t handler;
 	memset(&handler, 0, sizeof(handler));
 	handler.send = turn_send;
+	handler.ondata = turn_ondata;
 
 	memset(&ctx, 0, sizeof(ctx));
-	socket_init();
-	ctx.udp = socket_udp();
+	ctx.udp = socket_udp_bind(local, 0);
 	ctx.stun = stun_agent_create(STUN_RFC_5389, &handler, &ctx);
 
-	stun_request_t* req = stun_request_create(ctx.stun, STUN_RFC_5389, turn_onallocate, &ctx);
-	stun_request_setaddr(req, STUN_PROTOCOL_UDP, NULL, (const struct sockaddr*)&server, NULL);
-    stun_request_setauth(req, STUN_CREDENTIAL_LONG_TERM, "demo", "demo", "", "");
-    //stun_request_setauth(req, STUN_CREDENTIAL_LONG_TERM, "tao3@outlook.com", "12345678", "", "");
-	r = turn_agent_allocate(req, turn_ondata, &ctx); assert(0 == r);
 	getsockname(ctx.udp, (struct sockaddr*)&host, &addrlen);
+
+	stun_request_t* req = stun_request_create(ctx.stun, STUN_RFC_5389, turn_onallocate, &ctx);
+	stun_request_setaddr(req, STUN_PROTOCOL_UDP, (struct sockaddr*)&host, (const struct sockaddr*)&server, NULL);
+    stun_request_setauth(req, STUN_CREDENTIAL_LONG_TERM, TURN_USR, TURN_PWD, "", "");
+    r = turn_agent_allocate(req); assert(0 == r);
 	r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen); assert(r > 0);
 	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, data, r); assert(0 == r);
     r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen); assert(r > 0);
     r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, data, r); assert(0 == r);
+	stun_request_getaddr(req, &protocol, &host, &peer, &reflexive, &relayed); assert(0 == r);
 
 	stun_request_t* req2 = stun_request_create(ctx.stun, STUN_RFC_5389, turn_onrefresh, &ctx);
 	stun_request_setaddr(req2, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL);
@@ -109,7 +122,7 @@ extern "C" void turn_client_test()
 	stun_request_t* req4 = stun_request_create(ctx.stun, STUN_RFC_5389, NULL, &ctx);
 	stun_request_setaddr(req4, STUN_PROTOCOL_UDP, (sockaddr*)&host, (const struct sockaddr*)&server, NULL);
     stun_request_setauth(req4, STUN_CREDENTIAL_LONG_TERM, ctx.usr, ctx.pwd, ctx.realm, ctx.nonce);
-    r = turn_agent_send(ctx.stun, (sockaddr*)&host, (const struct sockaddr*)&peer, (sockaddr*)&server, "hello TURN", 10); assert(0 == r);
+    r = turn_agent_send(ctx.stun, (sockaddr*)&relayed, (const struct sockaddr*)&peer, "hello TURN", 10); assert(0 == r);
 	r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen);
     if(r < 0 && 4 == errno) r = r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen); assert(r > 0);
 	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, data, r); assert(0 == r);
@@ -124,7 +137,7 @@ extern "C" void turn_client_test()
 	stun_request_t* req6 = stun_request_create(ctx.stun, STUN_RFC_5389, NULL, &ctx);
 	stun_request_setaddr(req6, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, NULL);
     stun_request_setauth(req6, STUN_CREDENTIAL_LONG_TERM, ctx.usr, ctx.pwd, ctx.realm, ctx.nonce);
-    r = turn_agent_send(ctx.stun, (const struct sockaddr*)&host, (const struct sockaddr*)&peer, (const struct sockaddr*)&server, "hello TURN channel", 18); assert(0 == r);
+    r = turn_agent_send(ctx.stun, (const struct sockaddr*)&relayed, (const struct sockaddr*)&peer, "hello TURN channel", 18); assert(0 == r);
 	r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen);
 	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, data, r); assert(0 == r);
 

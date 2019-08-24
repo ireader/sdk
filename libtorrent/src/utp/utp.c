@@ -168,7 +168,7 @@ int utp_connect(struct utp_t* utp, const struct sockaddr_storage* addr)
 
 	r = utp_socket_connect(socket, addr);
 	if (0 == r)
-		r = darray_push_back(&utp->sockets, socket, 1);
+		r = darray_insert(&utp->sockets, -1, socket);
 	else
 		utp_socket_release(socket);
 	return r;
@@ -211,7 +211,7 @@ static struct utp_socket_t* utp_input_connect(struct utp_t* utp, const struct ut
 	socket->send.ack_nr = 0;
 	socket->send.clock = 0;
 
-    r = darray_push_back(&utp->sockets, socket, 1);
+    r = darray_insert(&utp->sockets, -1, socket);
     return socket;
 }
 

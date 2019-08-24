@@ -1,4 +1,3 @@
-#include "stun-agent.h"
 #include "stun-internal.h"
 #include <stdlib.h>
 #include <string.h>
@@ -16,6 +15,8 @@ stun_request_t* stun_request_create(stun_agent_t* stun, int rfc, stun_request_ha
 	req->ref = 0;
 	req->rfc = rfc;
 	req->stun = stun;
+	req->timeout = STUN_TIMEOUT;
+	req->interval = STUN_RETRANSMISSION_INTERVAL_MIN;
 	req->state = STUN_REQUEST_INIT;
 	req->param = param;
 	req->handler = handler;
@@ -83,6 +84,7 @@ int stun_request_setaddr(stun_request_t* req, int protocol, const struct sockadd
 		return -1;
 	}
 
+	memset(&req->addr, 0, sizeof(req->addr));
 	req->addr.protocol = protocol;
 	memcpy(&req->addr.host, local, local ? socket_addr_len(local) : 0);
 	memcpy(&req->addr.peer, remote, remote ? socket_addr_len(remote) : 0);
@@ -135,6 +137,11 @@ int stun_request_getauth(const stun_request_t* req, char usr[512], char pwd[512]
 	return 0;
 }
 
+void stun_request_settimeout(stun_request_t* req, int timeout)
+{
+	req->timeout = timeout;
+}
+
 // rfc5389 7.2.1. Sending over UDP (p13)
 static void stun_request_ontimer(void* param)
 {
@@ -144,18 +151,18 @@ static void stun_request_ontimer(void* param)
 	locker_lock(&req->locker);
 	if (STUN_REQUEST_DONE != req->state)
 	{
-		if (0 == stun_message_send(req->stun, &req->msg, req->addr.protocol, &req->addr.host, &req->addr.peer, &req->addr.relay))
+		if (req->elapsed < req->timeout && 0 == stun_message_send(req->stun, &req->msg, req->addr.protocol, &req->addr.host, &req->addr.peer, &req->addr.relay))
 		{
-			req->timeout = req->timeout * 2 + STUN_RETRANSMISSION_INTERVAL_MIN;
-			if (req->timeout <= STUN_RETRANSMISSION_INTERVAL_MAX)
+			req->interval = req->interval < STUN_RETRANSMISSION_INTERVAL_MAX ? req->interval * 2 + STUN_RETRANSMISSION_INTERVAL_MIN : STUN_RETRANSMISSION_INTERVAL_MAX;
+			req->elapsed += req->interval;
+			if (req->elapsed > req->timeout)
+				req->interval = req->timeout + req->interval - req->elapsed;
+			// 11000 = STUN_TIMEOUT - (500 + 1500 + 3500 + 7500 + 15500)
+			req->timer = stun_timer_start(req->interval, stun_request_ontimer, req);
+			if (req->timer)
 			{
-				// 11000 = STUN_TIMEOUT - (500 + 1500 + 3500 + 7500 + 15500)
-				req->timer = stun_timer_start(req->timeout <= STUN_RETRANSMISSION_INTERVAL_MAX ? req->timeout : 11000, stun_request_ontimer, req);
-				if (req->timer)
-				{
-					locker_unlock(&req->locker);
-					return;
-				}
+				locker_unlock(&req->locker);
+				return;
 			}
 		}
 
@@ -189,7 +196,8 @@ int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req)
 		{
 			assert(2 == req->ref);
 			stun_request_addref(req);
-			req->timeout = STUN_RETRANSMISSION_INTERVAL_MIN;
+			req->elapsed = 0;
+			req->interval = STUN_RETRANSMISSION_INTERVAL_MIN;
 			req->timer = stun_timer_start(STUN_RETRANSMISSION_INTERVAL_MIN, stun_request_ontimer, req);
 		}
 		locker_unlock(&req->locker);

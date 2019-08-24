@@ -1,8 +1,8 @@
 #ifndef _ice_internal_h_
 #define _ice_internal_h_
 
-#include "ice-agent.h"
 #include "stun-internal.h"
+#include "ice-agent.h"
 #include "sys/atomic.h"
 #include "sockutil.h"
 #include "darray.h"
@@ -13,13 +13,15 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
+#define ICE_STREAM_MAX		8
+#define ICE_COMPONENT_MAX	4
 #define ICE_TIMER_INTERVAL	20
 #define ICE_BINDING_TIMEOUT	200
 
 // agent MUST limit the total number of connectivity checks the agent 
 // performs across all check lists to a specific value.
 // A default of 100 is RECOMMENDED.
-#define ICE_CANDIDATE_LIMIT 10
+#define ICE_CANDIDATE_LIMIT 32
 
 #define ICE_ROLE_CONFLICT 487
 
@@ -55,7 +57,7 @@ struct ice_candidate_pair_t
 	struct ice_candidate_t local;
 	struct ice_candidate_t remote;
 	enum ice_candidate_pair_state_t state;
-	int nominated;
+	int nominated; // use-candidate
 
 	uint64_t priority;
 	char foundation[66];
@@ -73,6 +75,10 @@ struct ice_stream_t
 	ice_candidates_t locals;
 	ice_candidates_t remotes;
 	struct ice_checklist_t* checklist;
+
+	// nominated candidates(for each component)
+	struct ice_candidate_pair_t components[ICE_COMPONENT_MAX];
+	int ncomponent;
 };
 
 struct ice_agent_t
@@ -106,10 +112,10 @@ static inline void ice_candidate_pair_foundation(struct ice_candidate_pair_t* pa
 	snprintf(pair->foundation, sizeof(pair->foundation), "%s\n%s", pair->local.foundation, pair->remote.foundation);
 }
 
-int ice_agent_bind(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param);
-int ice_agent_allocate(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param);
-int ice_agent_refresh(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, stun_request_handler handler, void* param);
-int ice_agent_connect(struct ice_agent_t* ice, const struct ice_candidate_pair_t* pr, int nominated, stun_request_handler handler, void* param);
+int ice_agent_bind(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, int timeout, stun_request_handler handler, void* param);
+int ice_agent_allocate(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, int timeout, stun_request_handler handler, void* param);
+int ice_agent_refresh(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, int timeout, stun_request_handler handler, void* param);
+int ice_agent_connect(struct ice_agent_t* ice, const struct ice_candidate_pair_t* pr, int nominated, int timeout, stun_request_handler handler, void* param);
 
 int ice_stream_destroy(struct ice_stream_t** pp);
 int ice_agent_active_checklist_count(struct ice_agent_t* ice);
@@ -118,6 +124,6 @@ struct ice_candidate_t* ice_agent_find_local_candidate(struct ice_agent_t* ice, 
 
 int ice_agent_onrolechanged(void* param);
 int ice_agent_add_peer_reflexive_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr, const struct stun_attr_t* priority);
-int ice_agent_add_remote_peer_reflexive_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr, const struct stun_attr_t* priority);
+int ice_agent_add_remote_peer_reflexive_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t component, const struct stun_address_t* addr, const struct stun_attr_t* priority);
 
 #endif /* !_ice_internal_h_ */

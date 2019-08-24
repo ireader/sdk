@@ -44,6 +44,7 @@
     <ClCompile Include="src\stun-client.c" />
     <ClCompile Include="src\stun-message.c" />
     <ClCompile Include="src\stun-request.c" />
+    <ClCompile Include="src\stun-response.c" />
     <ClCompile Include="src\stun-server.c" />
     <ClCompile Include="src\stun-transid.c" />
     <ClCompile Include="src\turn-agent.c" />

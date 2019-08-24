@@ -2,7 +2,6 @@
 #include "stun-proto.h"
 #include "tls-socket.h"
 #include "sockutil.h"
-#include "aio-timeout.h"
 #include <stdlib.h>
 
 // https://gist.github.com/zziuni/3741933
@@ -114,18 +113,4 @@ extern "C" void stun_client_test()
 	socket_close(ctx.udp);
     tls_socket_cleanup();
 	socket_cleanup();
-}
-
-void* stun_timer_start(int ms, void(*ontimer)(void* param), void* param)
-{
-	aio_timeout_t* ptr = (aio_timeout_t*)calloc(1, sizeof(aio_timeout_t));
-	if (0 == aio_timeout_start(ptr, ms, ontimer, param))
-		return ptr;
-	free(ptr);
-	return NULL;
-}
-
-int stun_timer_stop(void* timer)
-{
-	return aio_timeout_stop((aio_timeout_t*)timer);
 }

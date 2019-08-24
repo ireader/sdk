@@ -203,7 +203,7 @@ static int stun_attr_mapped_address_read(const struct stun_message_t* msg, const
 		attr->v.addr.ss_family = AF_INET;
         addr4 = (struct sockaddr_in*)&attr->v.addr;
 		be_read_uint16(data + 2, &addr4->sin_port);
-		be_read_uint32(data + 4, &addr4->sin_addr.s_addr);
+		be_read_uint32(data + 4, (uint32_t*)&addr4->sin_addr.s_addr);
         addr4->sin_port = ntohs(addr4->sin_port);
         addr4->sin_addr.s_addr = ntohl(addr4->sin_addr.s_addr);
 	}
@@ -265,7 +265,7 @@ static int stun_attr_xor_mapped_address_read(const struct stun_message_t* msg, c
         attr->v.addr.ss_family = AF_INET;
         addr4 = (struct sockaddr_in*)&attr->v.addr;
         be_read_uint16(data + 2, &addr4->sin_port);
-        be_read_uint32(data + 4, &addr4->sin_addr.s_addr);
+        be_read_uint32(data + 4, (uint32_t*)&addr4->sin_addr.s_addr);
         addr4->sin_port ^= (uint16_t)(msg->header.cookie >> 16);
         addr4->sin_addr.s_addr ^= msg->header.cookie;
         addr4->sin_port = ntohs(addr4->sin_port);

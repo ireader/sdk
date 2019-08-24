@@ -1,5 +1,5 @@
-#include "ice-candidate.h"
 #include "ice-internal.h"
+#include "ice-candidate.h"
 #include "md5.h"
 #include <assert.h>
 
@@ -34,10 +34,7 @@ void ice_candidate_foundation(struct ice_candidate_t* c)
 		MD5Update(&ctx, (unsigned char*)&((struct sockaddr_in6*)base)->sin6_addr, 8);
 
 	MD5Update(&ctx, (unsigned char*)":", 1);
-	if (ICE_CANDIDATE_HOST != c->type && 0 != c->stun.ss_family)
-		MD5Update(&ctx, (unsigned char*)&c->stun, socket_addr_len((struct sockaddr*)&c->stun));
-	else
-		MD5Update(&ctx, (unsigned char*)&c->host, socket_addr_len((struct sockaddr*)&c->host));
+	MD5Update(&ctx, (unsigned char*)&c->addr, socket_addr_len((struct sockaddr*)&c->addr));
 	MD5Final(md5, &ctx);
 
 	assert(sizeof(c->foundation) >= 2 * sizeof(md5));

@@ -1,13 +1,11 @@
-#include "ice-agent.h"
 #include "ice-internal.h"
-#include "stun-agent.h"
 #include "stun-internal.h"
 #include "ice-checklist.h"
 #include "ice-candidates.h"
 
 static int ice_agent_init(struct ice_agent_t* ice);
 
-struct ice_agent_t* ice_create(int controlling, struct ice_agent_handler_t* handler, void* param)
+struct ice_agent_t* ice_agent_create(int controlling, struct ice_agent_handler_t* handler, void* param)
 {
 	struct ice_agent_t* ice;
 	ice = (struct ice_agent_t*)calloc(1, sizeof(struct ice_agent_t));
@@ -25,7 +23,7 @@ struct ice_agent_t* ice_create(int controlling, struct ice_agent_handler_t* hand
 	return ice;
 }
 
-int ice_destroy(struct ice_agent_t* ice)
+int ice_agent_destroy(struct ice_agent_t* ice)
 {
 	struct ice_stream_t* s;
 	struct list_head *ptr, *next;
@@ -41,12 +39,12 @@ int ice_destroy(struct ice_agent_t* ice)
 	return 0;
 }
 
-int ice_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
+int ice_agent_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
 	return ice && ice->stun ? stun_agent_input(ice->stun, protocol, local, remote, data, bytes) : -1;
 }
 
-int ice_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd)
+int ice_agent_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd)
 {
 	memset(&ice->auth, 0, sizeof(ice->auth));
 	ice->auth.credential = STUN_CREDENTIAL_SHORT_TERM;
@@ -55,7 +53,7 @@ int ice_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd
 	return 0;
 }
 
-int ice_set_remote_auth(struct ice_agent_t* ice, const char* usr, const char* pwd)
+int ice_agent_set_remote_auth(struct ice_agent_t* ice, const char* usr, const char* pwd)
 {
 	memset(&ice->rauth, 0, sizeof(ice->rauth));
 	ice->rauth.credential = STUN_CREDENTIAL_SHORT_TERM;
@@ -64,7 +62,7 @@ int ice_set_remote_auth(struct ice_agent_t* ice, const char* usr, const char* pw
 	return 0;
 }
 
-int ice_start(struct ice_agent_t* ice)
+int ice_agent_start(struct ice_agent_t* ice)
 {
 	struct list_head* ptr, *next;
 	struct ice_stream_t* s;
@@ -90,7 +88,7 @@ int ice_start(struct ice_agent_t* ice)
 	return ice_checklist_start(active);
 }
 
-int ice_stop(struct ice_agent_t* ice)
+int ice_agent_stop(struct ice_agent_t* ice)
 {
 	struct list_head *ptr, *next;
 	struct ice_stream_t* s;
@@ -103,8 +101,8 @@ int ice_stop(struct ice_agent_t* ice)
 	return 0;
 }
 
-// 7.2. STUN Server Procedures
-static int ice_agent_server_onbind(void* param, stun_response_t* resp, const stun_request_t* req)
+// 7.2. STUN Server Procedures, on bind request
+static int ice_agent_onbind(void* param, stun_response_t* resp, const stun_request_t* req)
 {
 	int r;
 	struct ice_agent_t* ice;
@@ -113,6 +111,13 @@ static int ice_agent_server_onbind(void* param, stun_response_t* resp, const stu
 	struct stun_address_t addr;
 	const struct stun_attr_t *nominated, *priority;
 	const struct stun_attr_t *controlled, *controlling;
+
+	priority = stun_message_attr_find(&req->msg, STUN_ATTR_PRIORITY);
+	nominated = stun_message_attr_find(&req->msg, STUN_ATTR_USE_CANDIDATE);
+	controlled = stun_message_attr_find(&req->msg, STUN_ATTR_ICE_CONTROLLED);
+	controlling = stun_message_attr_find(&req->msg, STUN_ATTR_ICE_CONTROLLING);
+	if (controlled && controlling)
+		return 0; // invalid ignore
 
 	memset(&addr, 0, sizeof(addr));
 	ice = (struct ice_agent_t*)param;
@@ -124,19 +129,12 @@ static int ice_agent_server_onbind(void* param, stun_response_t* resp, const stu
 	if (!c)
 		return -1; // not found
 
-	s = ice_agent_find_stream(ice, c->stream);
-	assert(s);
-
-	priority = stun_message_attr_find(&req->msg, STUN_ATTR_PRIORITY);
-	nominated = stun_message_attr_find(&req->msg, STUN_ATTR_USE_CANDIDATE);
-	controlled = stun_message_attr_find(&req->msg, STUN_ATTR_ICE_CONTROLLED);
-	controlling = stun_message_attr_find(&req->msg, STUN_ATTR_ICE_CONTROLLING);
-	if (controlled && controlling)
-		return 0; // invalid ignore
-
 	// add remote candidates. 
 	// However, the agent does not pair this candidate with any local candidates.
-	ice_agent_add_remote_peer_reflexive_candidate(ice, &addr, priority);
+	ice_agent_add_remote_peer_reflexive_candidate(ice, c->stream, c->component, &addr, priority);
+
+	s = ice_agent_find_stream(ice, c->stream);
+	assert(s);
 
 	// rfc5245 7.2.1.1. Detecting and Repairing Role Conflicts (p47)
 	// If the agent is in the controlling role:
@@ -152,12 +150,12 @@ static int ice_agent_server_onbind(void* param, stun_response_t* resp, const stu
 	// 2. If the agent's tie-breaker is less than the contents of the ICE-CONTROLLED 
 	//    attribute, the agent generates a Binding error response and includes an 
 	//    ERROR-CODE attribute with a value of 487 (Role Conflict) but retains its role.
-	if ((controlling && ice->controlling && ice->tiebreaking >= controlled->v.u64)
+	if ((controlling && ice->controlling && ice->tiebreaking >= controlling->v.u64)
 		|| (controlled && 0 == ice->controlling && ice->tiebreaking < controlled->v.u64))
 		return stun_agent_bind_response(resp, ICE_ROLE_CONFLICT, "Role Conflict");
 
-	if ((controlling && ice->controlling && ice->tiebreaking < controlled->v.u64)
-		|| (controlled && 0 == ice->controlling && ice->tiebreaking > controlled->v.u64))
+	if ((controlling && ice->controlling && ice->tiebreaking < controlling->v.u64)
+		|| (controlled && 0 == ice->controlling && ice->tiebreaking >= controlled->v.u64))
 	{
 		// switch role
 		ice->controlling = ice->controlling ? 0 : 1;
@@ -171,14 +169,14 @@ static int ice_agent_server_onbind(void* param, stun_response_t* resp, const stu
 	return stun_agent_bind_response(resp, 200, "OK");
 }
 
-static int ice_agent_server_send(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
+static int ice_agent_send(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
 	struct ice_agent_t* ice;
 	ice = (struct ice_agent_t*)param;
 	return ice->handler.send(ice->param, protocol, local, remote, data, bytes);
 }
 
-static int ice_agent_server_auth(void* param, int cred, const char* usr, const char* realm, const char* nonce, char pwd[512])
+static int ice_agent_auth(void* param, int cred, const char* usr, const char* realm, const char* nonce, char pwd[512])
 {
 	// rfc5245 7.1.2. Sending the Request
 	// A connectivity check MUST utilize the STUN short-term credential mechanism
@@ -193,21 +191,29 @@ static int ice_agent_server_auth(void* param, int cred, const char* usr, const c
 	return 0;
 }
 
-static int ice_agent_server_getnonce(void* param, char realm[128], char nonce[128])
+static int ice_agent_getnonce(void* param, char realm[128], char nonce[128])
 {
 	assert(0);
 	realm[0] = nonce[0] = 0;
 	return -1; (void)param;
 }
 
+static void ice_agent_ondata(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int byte)
+{
+	struct ice_agent_t* ice = (struct ice_agent_t*)param;
+	if (ice && ice->handler.ondata)
+		ice->handler.ondata(ice->param, protocol, local, remote, data, byte);
+}
+
 static int ice_agent_init(struct ice_agent_t* ice)
 {
 	struct stun_agent_handler_t handler;
 	memset(&handler, 0, sizeof(handler));
-	handler.send = ice_agent_server_send;
-	handler.auth = ice_agent_server_auth;
-	handler.onbind = ice_agent_server_onbind;
-	handler.getnonce = ice_agent_server_getnonce;
+	handler.send = ice_agent_send;
+	handler.auth = ice_agent_auth;
+	handler.ondata = ice_agent_ondata;
+	handler.onbind = ice_agent_onbind; // bind request
+	handler.getnonce = ice_agent_getnonce;
 	ice->stun = stun_agent_create(STUN_RFC_5389, &handler, ice);
 	return 0;
 }

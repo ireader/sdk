@@ -2,6 +2,7 @@
 #include "stun-proto.h"
 #include "tls-socket.h"
 #include "sockutil.h"
+#include "sys/pollfd.h"
 #include "aio-timeout.h"
 #include <stdlib.h>
 #include <time.h>
@@ -283,143 +284,6 @@ extern "C" void stun_server_test()
 
     while(1)
     {
-#if defined(OS_WINDOWS)
-		fd_set fds;
-		struct timeval tv;
-		FD_ZERO(&fds);
-		FD_SET(ctx.udp, &fds);
-		FD_SET(ctx.tcp, &fds);
-		FD_SET(ctx.tls, &fds);
-		for(TSockets::const_iterator it = ctx.udprelays.begin(); it != ctx.udprelays.end(); ++it)
-			FD_SET(it->first, &fds);
-		for(TSockets::const_iterator it = ctx.tcpclients.begin(); it != ctx.tcpclients.end(); ++it)
-			FD_SET(it->first, &fds);
-		for(TLSSockets::const_iterator it = ctx.tlsclients.begin(); it != ctx.tlsclients.end(); ++it)
-			FD_SET(tls_socket_getfd(it->first), &fds);
-
-		tv.tv_sec = timeout/1000;
-		tv.tv_usec = (timeout%1000) * 1000;
-		r = socket_select_readfds(ctx.tls+1, &fds, timeout<0?NULL:&tv);
-		if (r < 0)
-		{
-			printf("poll error: %d, errno: %d\n", r, errno);
-		}
-		else if (0 == r)
-		{
-			continue; // timeout
-		}
-
-		for (int i = 0; i < 3 + ctx.udprelays.size() + ctx.tcpclients.size() + ctx.tlsclients.size(); i++)
-		{
-			if (FD_ISSET(ctx.udp, &fds))
-			{
-				// stun/turn protocol
-				struct sockaddr_storage local, from;
-				socklen_t fromlen = sizeof(struct sockaddr_storage);
-				socklen_t locallen = sizeof(struct sockaddr_storage);
-				r = socket_recvfrom_addr(ctx.udp, vec, sizeof(vec)/sizeof(vec[0]), 0, (struct sockaddr*)&from, &fromlen, (struct sockaddr*)&local, &locallen);
-				if (r > 0)
-				{
-					// update local address port
-					socket_addr_setport((struct sockaddr*)&local, locallen, STUN_PORT);
-					r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr *)&local, (const struct sockaddr *)&from, data, r);
-					assert(0 == r);
-				}
-			}
-			else if (FD_ISSET(ctx.tcp, &fds))
-			{
-				// tcp client
-				socket_t tcp;
-				struct sockaddr_storage from;
-				socklen_t fromlen = sizeof(struct sockaddr_storage);
-				tcp = socket_accept(ctx.tcp, &from, &fromlen);
-				if (tcp != socket_invalid)
-				{
-					std::pair<TSockets::iterator, bool> pr = ctx.tcpclients.insert(std::make_pair(tcp, from));
-					assert(pr.second);
-				}
-			}
-			else if (FD_ISSET(ctx.tls, &fds))
-			{
-				// tls client
-				socket_t tcp;
-				struct sockaddr_storage from;
-				socklen_t fromlen = sizeof(struct sockaddr_storage);
-				tcp = socket_accept(ctx.tls, &from, &fromlen);
-				if (tcp != socket_invalid)
-				{
-					tls_socket_t* tls = tls_socket_accept(tcp);
-					std::pair<TLSSockets::iterator, bool> pr = ctx.tlsclients.insert(std::make_pair(tls, from));
-					assert(pr.second);
-				}
-			}
-			else if (i > 2 && i < 3 + ctx.udprelays.size())
-			{
-				for (TSockets::iterator it = ctx.udprelays.begin(); it != ctx.udprelays.end(); ++it)
-				{
-					if (!FD_ISSET(it->first, &fds))
-						continue;
-
-					// relay
-					struct sockaddr_storage local, from;
-					socklen_t fromlen = sizeof(struct sockaddr_storage);
-					r = socket_recvfrom(it->first, data, sizeof(data), 0, (struct sockaddr*)&from, &fromlen);
-					if (r > 0)
-					{
-						addrlen = sizeof(struct sockaddr_storage);
-						getsockname(it->first, (struct sockaddr*)&local, &addrlen);
-						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr *)&local, (const struct sockaddr *)&from, data, r);
-						assert(0 == r);
-					}
-				}
-			}
-			else if (i > 3 + ctx.udprelays.size() && i < 3 + ctx.udprelays.size() + ctx.tcpclients.size())
-			{
-				for (TSockets::iterator it = ctx.tcpclients.begin(); it != ctx.tcpclients.end(); ++it)
-				{
-					if (!FD_ISSET(it->first, &fds))
-						continue;
-
-					// stun/turn protocol
-					r = socket_recv(it->first, data, sizeof(data), 0);
-					if (r > 0)
-					{
-						struct sockaddr_storage local;
-						addrlen = sizeof(struct sockaddr_storage);
-						getsockname(it->first, (struct sockaddr*)&local, &addrlen);
-						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TCP, (const struct sockaddr *)&local, (const struct sockaddr *)&(it->second), data, r);
-						assert(0 == r);
-					}
-				}
-			}
-			else if (i > 3 + ctx.udprelays.size() + ctx.tcpclients.size() && i < 3 + ctx.udprelays.size() + ctx.tcpclients.size() + ctx.tlsclients.size())
-			{
-				for (TLSSockets::iterator it = ctx.tlsclients.begin(); it != ctx.tlsclients.end(); ++it)
-				{
-					socket_t s = tls_socket_getfd(it->first);
-					if (!FD_ISSET(s, &fds))
-						continue;
-
-					// stun/turn protocol
-					struct sockaddr_storage local;
-					addrlen = sizeof(struct sockaddr_storage);
-
-					r = tls_socket_read(it->first, data, sizeof(data));
-					if (r > 0)
-					{
-						addrlen = sizeof(struct sockaddr_storage);
-						getsockname(s, (struct sockaddr*)&local, &addrlen);
-						r = stun_agent_input(ctx.stun, STUN_PROTOCOL_TLS, (const struct sockaddr *)&local, (const struct sockaddr *)&(it->second), data, r);
-						assert(0 == r);
-					}
-				}
-			}
-			else
-			{
-				assert(0);
-			}
-		}
-#else
         struct pollfd fds[64];
         
         fds[0].fd = ctx.udp;
@@ -575,7 +439,6 @@ extern "C" void stun_server_test()
                 assert(0);
             }
         }
-#endif
     }
     
     stun_agent_destroy(&ctx.stun);

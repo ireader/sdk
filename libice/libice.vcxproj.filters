@@ -69,6 +69,9 @@
     <ClCompile Include="src\ice-stream.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\stun-response.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\ice-agent.h">

@@ -17,7 +17,7 @@ int ice_agent_onrolechanged(void* param)
 	return 0;
 }
 
-static int ice_agent_onvalid(void* param, struct ice_checklist_t* l, const ice_candidate_pairs_t* valids)
+static int ice_agent_onvalid(void* param, struct ice_checklist_t* l, const struct darray_t* valids)
 {
 	struct list_head* ptr;
 	struct ice_stream_t* s;
@@ -38,10 +38,12 @@ static int ice_agent_onvalid(void* param, struct ice_checklist_t* l, const ice_c
 
 static int ice_agent_onfinish(void* param, struct ice_checklist_t* l)
 {
+	int failed;
 	struct list_head* ptr;
 	struct ice_stream_t* s;
 	struct ice_agent_t* ice;
 
+	failed = 0;
 	ice = (struct ice_agent_t*)param;
 	list_for_each(ptr, &ice->streams)
 	{
@@ -52,15 +54,17 @@ static int ice_agent_onfinish(void* param, struct ice_checklist_t* l)
 		switch (ice_checklist_getstatus(s->checklist))
 		{
 		case ICE_CHECKLIST_FAILED:
+			++failed;
 			break; // TODO ???
 		case ICE_CHECKLIST_COMPLETED:
+			s->ncomponent = ice_checklist_getnominated(s->checklist, s->components, sizeof(s->components)/sizeof(s->components[0]));
 			break;
 		default:
 			return 0; // wait for other stream
 		}
 	}
 
-	ice->handler.onconnected(ice->param);
+	ice->handler.onconnected(ice->param, failed);
 	return 0;
 }
 
@@ -161,14 +165,13 @@ static struct ice_stream_t* ice_agent_fetch_stream(struct ice_agent_t* ice, int 
 	return s;
 }
 
-int ice_add_local_candidate(struct ice_agent_t* ice, const struct ice_candidate_t* cand)
+int ice_agent_add_local_candidate(struct ice_agent_t* ice, const struct ice_candidate_t* cand)
 {
 	struct ice_stream_t* s;
 	if (!cand || 0 == cand->priority || 0 == cand->foundation[0] || cand->component < 1 || cand->component > 256
 		|| (ICE_CANDIDATE_HOST != cand->type && ICE_CANDIDATE_SERVER_REFLEXIVE != cand->type && ICE_CANDIDATE_RELAYED != cand->type && ICE_CANDIDATE_PEER_REFLEXIVE != cand->type)
 		|| (STUN_PROTOCOL_UDP != cand->protocol && STUN_PROTOCOL_TCP != cand->protocol && STUN_PROTOCOL_TLS != cand->protocol && STUN_PROTOCOL_DTLS != cand->protocol)
-		//|| (AF_INET != cand->reflexive.ss_family && AF_INET6 != cand->reflexive.ss_family)
-		//|| (AF_INET != cand->relay.ss_family && AF_INET6 != cand->relay.ss_family)
+		|| (AF_INET != cand->addr.ss_family && AF_INET6 != cand->addr.ss_family) 
 		|| (AF_INET != cand->host.ss_family && AF_INET6 != cand->host.ss_family))
 	{
 		assert(0);
@@ -179,18 +182,20 @@ int ice_add_local_candidate(struct ice_agent_t* ice, const struct ice_candidate_
 	if (NULL == s)
 		return -1;
 
+	assert(ice_candidates_count(&s->locals) <= ICE_CANDIDATE_LIMIT);
 	if (ice_candidates_count(&s->locals) > ICE_CANDIDATE_LIMIT)
 		return -1;
 	return ice_candidates_insert(&s->locals, cand);
 }
 
-int ice_add_remote_candidate(struct ice_agent_t* ice, const struct ice_candidate_t* cand)
+int ice_agent_add_remote_candidate(struct ice_agent_t* ice, const struct ice_candidate_t* cand)
 {
 	struct ice_stream_t* s;
-	if (!cand || 0 == cand->priority || 0 == cand->foundation[0] || cand->component < 1 || cand->component > 256
+	if (!cand || 0 == cand->priority || /*0 == cand->foundation[0] || */ cand->component < 1 || cand->component > 256
 		|| (ICE_CANDIDATE_HOST != cand->type && ICE_CANDIDATE_SERVER_REFLEXIVE != cand->type && ICE_CANDIDATE_RELAYED != cand->type && ICE_CANDIDATE_PEER_REFLEXIVE != cand->type)
 		|| (STUN_PROTOCOL_UDP != cand->protocol && STUN_PROTOCOL_TCP != cand->protocol && STUN_PROTOCOL_TLS != cand->protocol && STUN_PROTOCOL_DTLS != cand->protocol)
-		|| NULL == ice_candidate_addr(cand) || (AF_INET != ice_candidate_addr(cand)->ss_family && AF_INET6 != ice_candidate_addr(cand)->ss_family))
+		|| (AF_INET != cand->addr.ss_family && AF_INET6 != cand->addr.ss_family)
+		|| (AF_INET != cand->host.ss_family && AF_INET6 != cand->host.ss_family))
 	{
 		assert(0);
 		return -1;
@@ -200,12 +205,13 @@ int ice_add_remote_candidate(struct ice_agent_t* ice, const struct ice_candidate
 	if (NULL == s)
 		return -1;
 
+	assert(ice_candidates_count(&s->remotes) <= ICE_CANDIDATE_LIMIT);
 	if (ice_candidates_count(&s->remotes) > ICE_CANDIDATE_LIMIT)
 		return -1;
 	return ice_candidates_insert(&s->remotes, cand);
 }
 
-int ice_list_local_candidate(struct ice_agent_t* ice, ice_agent_oncandidate oncand, void* param)
+int ice_agent_list_local_candidate(struct ice_agent_t* ice, ice_agent_oncandidate oncand, void* param)
 {
 	int r;
 	struct list_head* ptr;
@@ -220,7 +226,7 @@ int ice_list_local_candidate(struct ice_agent_t* ice, ice_agent_oncandidate onca
 	return 0;
 }
 
-int ice_list_remote_candidate(struct ice_agent_t* ice, ice_agent_oncandidate oncand, void* param)
+int ice_agent_list_remote_candidate(struct ice_agent_t* ice, ice_agent_oncandidate oncand, void* param)
 {
 	int r;
 	struct list_head* ptr;
@@ -235,7 +241,7 @@ int ice_list_remote_candidate(struct ice_agent_t* ice, ice_agent_oncandidate onc
 	return 0;
 }
 
-int ice_get_default_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t component, struct ice_candidate_t* c)
+int ice_agent_get_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t component, struct ice_candidate_t* c)
 {
 	int i;
 	struct ice_stream_t* s;
@@ -245,6 +251,18 @@ int ice_get_default_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t 
 	if (NULL == s)
 		return -1;
 
+	// 1. choose nominated candidate if we have
+	for (i = 0; i < s->ncomponent; i++)
+	{
+		assert(s->components[i].local.stream == stream);
+		if (s->components[i].local.component == component)
+		{
+			memcpy(c, &s->components[i].local, sizeof(struct ice_candidate_t));
+			return 0;
+		}
+	}
+
+	// 2. choose default candidate
 	for (i = 0; i < ice_candidates_count(&s->locals); i++)
 	{
 		p = ice_candidates_get(&s->locals, i);

@@ -1,4 +1,3 @@
-#include "stun-agent.h"
 #include "stun-internal.h"
 #include <stdlib.h>
 #include <string.h>
@@ -44,7 +43,8 @@ int stun_agent_discard(struct stun_response_t* resp)
 int stun_response_send(struct stun_agent_t* stun, struct stun_response_t* resp)
 {
 	int r;
-	r = stun_message_send(stun, &resp->msg, resp->addr.protocol, &resp->addr.host, &resp->addr.peer, &resp->addr.relay);
+	assert(0 == resp->addr.relay.ss_family); // can't be relay
+	r = stun_message_send(stun, &resp->msg, resp->addr.protocol, &resp->addr.host, &resp->addr.peer, NULL);
 	stun_response_destroy(&resp);
 	return r;
 }

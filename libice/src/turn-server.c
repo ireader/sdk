@@ -1,4 +1,3 @@
-#include "stun-agent.h"
 #include "stun-internal.h"
 #include "turn-internal.h"
 #include "sys/system.h"
@@ -96,10 +95,10 @@ int turn_server_onallocate(struct stun_agent_t* turn, const struct stun_request_
 		memcpy(&relay, &allocate->addr.relay, sizeof(struct sockaddr_storage)); // don't overwrite addr.relay
 		memcpy(&allocate->addr, &req->addr, sizeof(struct stun_address_t));
 		memcpy(&allocate->auth, &req->auth, sizeof(struct stun_credential_t));
-		memmove(&allocate->addr.relay, &relay, socket_addr_len(&relay)); // token relay address overwrite
+		memmove(&allocate->addr.relay, &relay, socket_addr_len((struct sockaddr*)&relay)); // token relay address overwrite
 
-		turn_agent_allocation_remove(resp->stun, &resp->stun->turnreserved, allocate);
-		turn_agent_allocation_insert(resp->stun, &resp->stun->turnservers, allocate);
+		turn_agent_allocation_remove(&resp->stun->turnreserved, allocate);
+		turn_agent_allocation_insert(&resp->stun->turnservers, allocate);
 		return turn_server_allocate_doresponse(resp, allocate);
 	}
 	else
@@ -125,7 +124,7 @@ int turn_server_onallocate(struct stun_agent_t* turn, const struct stun_request_
 
 		memcpy(&allocate->addr, &req->addr, sizeof(struct stun_address_t));
 		memcpy(&allocate->auth, &req->auth, sizeof(struct stun_credential_t));
-		turn_agent_allocation_insert(turn, &turn->turnreserved, allocate);
+		turn_agent_allocation_insert(&turn->turnreserved, allocate);
 		return turn->handler.onallocate(turn->param, resp, req, evenport ? 1 : 0, allocate->reserve_next_higher_port);
 	}
 }
@@ -140,13 +139,13 @@ int turn_agent_allocate_response(struct stun_response_t* resp, const struct sock
 	if (!allocate)
 		return stun_server_response_failure(resp, 437, "Allocation Mismatch");
 	assert(NULL == turn_agent_allocation_find_by_relay(&resp->stun->turnservers, relay));
-	turn_agent_allocation_remove(resp->stun, &resp->stun->turnreserved, allocate);
+	turn_agent_allocation_remove(&resp->stun->turnreserved, allocate);
 
 	if (code < 300)
 	{
 		// alloc relayed transport address
 		memmove(&allocate->addr.relay, relay, socket_addr_len(relay)); // token relay address overwrite
-		turn_agent_allocation_insert(resp->stun, &resp->stun->turnservers, allocate);
+		turn_agent_allocation_insert(&resp->stun->turnservers, allocate);
 		return turn_server_allocate_doresponse(resp, allocate);
 	}
 	else
@@ -174,7 +173,7 @@ int turn_server_onrefresh(struct stun_agent_t* turn, const struct stun_request_t
 
 	if (0 == lifetime)
 	{
-		turn_agent_allocation_remove(turn, &turn->turnservers, allocate);
+		turn_agent_allocation_remove(&turn->turnservers, allocate);
 		turn_allocation_destroy(&allocate);
 	}
 	else
@@ -217,7 +216,7 @@ static int turn_agent_add_permission(void* param, const struct stun_attr_t* attr
 
 int turn_server_oncreate_permission(struct stun_agent_t* turn, const struct stun_request_t* req, struct stun_response_t* resp)
 {
-	int r;
+	int r, n;
 	struct turn_allocation_t* allocate;
 	struct turn_permission_t* permission;
 
@@ -225,6 +224,7 @@ int turn_server_oncreate_permission(struct stun_agent_t* turn, const struct stun
 	if (NULL == allocate)
 		return stun_server_response_failure(resp, 437, "Allocation Mismatch");
 
+	n = allocate->npermission;
 	// The CreatePermission request MUST contain at least one XOR-PEER-ADDRESS 
 	// attribute and MAY contain multiple such attributes
 	r = stun_message_attr_list(&req->msg, STUN_ATTR_XOR_PEER_ADDRESS, turn_agent_add_permission, allocate);
@@ -237,11 +237,11 @@ int turn_server_oncreate_permission(struct stun_agent_t* turn, const struct stun
 		return stun_server_response_failure(resp, 508, "Insufficient Capacity)");
 	}
 
-	if(0 == darray_count(&allocate->permissions))
+	if(n >= allocate->npermission)
 		return stun_server_response_failure(resp, 400, "Bad Request");
 
 	// reply
-	permission = (struct turn_permission_t*)darray_get(&allocate->permissions, 0);
+	permission = &allocate->permissions[n];
     if(permission->addr.ss_family != allocate->addr.relay.ss_family)
         return stun_server_response_failure(resp, 443, "Peer Address Family Mismatch");
 

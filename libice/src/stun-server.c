@@ -1,5 +1,5 @@
-#include "stun-message.h"
 #include "stun-internal.h"
+#include "stun-message.h"
 
 int stun_server_onbind(struct stun_agent_t* stun, const struct stun_request_t* req, struct stun_response_t* resp)
 {
