@@ -2,6 +2,7 @@
 #define _sockutil_h_
 
 #include "sys/sock.h"
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <assert.h>
@@ -789,11 +790,12 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 #endif
 }
 
-/// @param[in] n total socket number, [1 ~ 32]
+/// @param[in] n total socket number, [1 ~ 64]
 /// @return <0-error, =0-timeout, >0-socket bitmask
-static inline int socket_poll_read(socket_t s[], int n, int timeout)
+static inline int64_t socket_poll_read(socket_t s[], int n, int timeout)
 {
-	int i, r;
+	int i;
+	int64_t r;
 
 #if defined(OS_WINDOWS)
 	fd_set rfds;
@@ -801,11 +803,11 @@ static inline int socket_poll_read(socket_t s[], int n, int timeout)
 	fd_set efds;
 	struct timeval tv;
 
-	assert(n < 32);
+	assert(n <= 64);
 	FD_ZERO(&rfds);
 	FD_ZERO(&wfds);
 	FD_ZERO(&efds);
-	for (i = 0; i < n && i < 32; i++)
+	for (i = 0; i < n && i < 64; i++)
 	{
 		if(socket_invalid != s[i])
 			FD_SET(s[i], &rfds);
@@ -817,20 +819,20 @@ static inline int socket_poll_read(socket_t s[], int n, int timeout)
 	if (r <= 0)
 		return r;
 
-	for (r = i = 0; i < n && i < 32; i++)
+	for (r = i = 0; i < n && i < 64; i++)
 	{
 		if (socket_invalid == s[i])
 			continue;
 		if (FD_ISSET(s[i], &rfds))
-			r |= 1 << i;
+			r |= (int64_t)1 << i;
 	}
 
 	return r;
 #else
 	int j;
-	struct pollfd fds[32];
-	assert(n < 32);
-	for (j = i = 0; i < n && i < 32; i++)
+	struct pollfd fds[64];
+	assert(n <= 64);
+	for (j = i = 0; i < n && i < 64; i++)
 	{
 		if (socket_invalid == s[i])
 			continue;
@@ -844,27 +846,27 @@ static inline int socket_poll_read(socket_t s[], int n, int timeout)
 	while (-1 == r && EINTR == errno)
 		r = poll(fds, j, timeout);
 
-	for (r = i = 0; i < n && i < 32; i++)
+	for (r = i = 0; i < n && i < 64; i++)
 	{
 		if (socket_invalid == s[i])
 			continue;
 		if (fds[i].revents & POLLIN)
-			r |= 1 << i;
+			r |= (int64_t)1 << i;
 	}
 
 	return r;
 #endif
 }
 
-static inline int socket_poll_readv(int timeout, int n, ...)
+static inline int64_t socket_poll_readv(int timeout, int n, ...)
 {
 	int i;
 	va_list args;
-	socket_t fd[32];
+	socket_t fd[64];
 
-	assert(n < 32 && 32 <= FD_SETSIZE);
+	assert(n <= 64 && 64 <= FD_SETSIZE);
 	va_start(args, n);
-	for (i = 0; i < n && i < 32; i++)
+	for (i = 0; i < n && i < 64; i++)
 		fd[i] = va_arg(args, socket_t);
 	va_end(args);
 

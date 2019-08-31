@@ -1104,7 +1104,7 @@ static inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_
 	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port);
 	assert(addr->ai_addrlen <= sizeof(struct sockaddr_storage));
 	memcpy(ss, addr->ai_addr, addr->ai_addrlen);
-	*len = addr->ai_addrlen;
+	if(len) *len = addr->ai_addrlen;
 	freeaddrinfo(addr);
 	return 0;
 }
