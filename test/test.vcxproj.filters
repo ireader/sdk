@@ -43,6 +43,9 @@
     <Filter Include="libtorrent">
       <UniqueIdentifier>{c4c1f6c9-76b0-4588-94ee-6799abc7b385}</UniqueIdentifier>
     </Filter>
+    <Filter Include="libice">
+      <UniqueIdentifier>{451dbe7b-cad2-4b49-bd9b-0375a9b857eb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="aio-socket-test.c">
@@ -312,6 +315,45 @@
     <ClCompile Include="..\source\twtimer.c">
       <Filter>lib</Filter>
     </ClCompile>
+    <ClCompile Include="socket-opt-dontfrag-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libhttp\test\http-parser-test.c">
+      <Filter>libhttp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libice\test\stun-client-test.cpp">
+      <Filter>libice</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libice\test\tls-socket.c">
+      <Filter>libice</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libice\test\turn-client-test.cpp">
+      <Filter>libice</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libice\test\stun-server-test.cpp">
+      <Filter>libice</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libice\test\ice-agent-test.cpp">
+      <Filter>libice</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\channel.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\random.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="channel-test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libice\test\ice-transport.c">
+      <Filter>libice</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\media-server\librtsp\source\rtsp-media.c">
+      <Filter>libice</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\sockpair.c">
+      <Filter>lib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\list.h">
@@ -346,6 +388,12 @@
     </ClInclude>
     <ClInclude Include="..\include\rarray.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libice\test\tls-socket.h">
+      <Filter>libice</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libice\test\ice-transport.h">
+      <Filter>libice</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

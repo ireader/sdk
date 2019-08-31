@@ -54,7 +54,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../include;../libhttp/include;../libaio/include;../libtorrent/include;../../media-server/librtsp/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../include;../libhttp/include;../libaio/include;../libtorrent/include;../libice/include;../../media-server/librtsp/include;../../3rd/openssl/include;../../media-server/librtsp/test;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;OS_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -66,8 +66,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libssl.lib;libcrypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../3rd/openssl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -95,6 +95,7 @@
     <ClCompile Include="..\..\media-server\librtsp\source\rtsp-header-rtp-info.c" />
     <ClCompile Include="..\..\media-server\librtsp\source\rtsp-header-session.c" />
     <ClCompile Include="..\..\media-server\librtsp\source\rtsp-header-transport.c" />
+    <ClCompile Include="..\..\media-server\librtsp\source\rtsp-media.c" />
     <ClCompile Include="..\..\media-server\librtsp\source\sdp-a-fmtp.c" />
     <ClCompile Include="..\..\media-server\librtsp\source\sdp-a-rtpmap.c" />
     <ClCompile Include="..\..\media-server\librtsp\source\sdp.c" />
@@ -102,13 +103,21 @@
     <ClCompile Include="..\libhttp\test\http-client-test.cpp" />
     <ClCompile Include="..\libhttp\test\http-client-test2.cpp" />
     <ClCompile Include="..\libhttp\test\http-list-dir.cpp" />
+    <ClCompile Include="..\libhttp\test\http-parser-test.c" />
     <ClCompile Include="..\libhttp\test\http-server-test.cpp" />
+    <ClCompile Include="..\libice\test\ice-agent-test.cpp" />
+    <ClCompile Include="..\libice\test\ice-transport.c" />
+    <ClCompile Include="..\libice\test\stun-client-test.cpp" />
+    <ClCompile Include="..\libice\test\stun-server-test.cpp" />
+    <ClCompile Include="..\libice\test\tls-socket.c" />
+    <ClCompile Include="..\libice\test\turn-client-test.cpp" />
     <ClCompile Include="..\libtorrent\test\bencode-test.c" />
     <ClCompile Include="..\source\app-log.c" />
     <ClCompile Include="..\source\base64.c" />
     <ClCompile Include="..\source\bitmap.c" />
     <ClCompile Include="..\source\bits.c" />
     <ClCompile Include="..\source\bsearch.c" />
+    <ClCompile Include="..\source\channel.c" />
     <ClCompile Include="..\source\darray.c" />
     <ClCompile Include="..\source\digest\crc32.c" />
     <ClCompile Include="..\source\digest\hkdf.c" />
@@ -132,8 +141,10 @@
     <ClCompile Include="..\source\port\systimer.c" />
     <ClCompile Include="..\source\port\sysvolume.cpp" />
     <ClCompile Include="..\source\port\win32-async-pipe.c" />
+    <ClCompile Include="..\source\random.c" />
     <ClCompile Include="..\source\rbtree.c" />
     <ClCompile Include="..\source\ring-buffer.c" />
+    <ClCompile Include="..\source\sockpair.c" />
     <ClCompile Include="..\source\string\snprintf.c" />
     <ClCompile Include="..\source\string\strlcat.c" />
     <ClCompile Include="..\source\string\strlcpy.c" />
@@ -156,6 +167,7 @@
     <ClCompile Include="atomic-test.c" />
     <ClCompile Include="atomic-test2.c" />
     <ClCompile Include="bitmap-test.c" />
+    <ClCompile Include="channel-test.cpp" />
     <ClCompile Include="event-test.c" />
     <ClCompile Include="http-test.c" />
     <ClCompile Include="ip-route-test.c" />
@@ -169,6 +181,7 @@
     <ClCompile Include="sdp-test.c" />
     <ClCompile Include="semaphore-test.c" />
     <ClCompile Include="sha-test.c" />
+    <ClCompile Include="socket-opt-dontfrag-test.c" />
     <ClCompile Include="socket-test.c" />
     <ClCompile Include="socket-ipv6-dual-stack-test.c" />
     <ClCompile Include="spinlock-test.c" />
@@ -188,6 +201,9 @@
     <ProjectReference Include="..\libhttp\libhttp.vcxproj">
       <Project>{b2ca3b5d-f7c6-4daf-8f32-f8a169427a7c}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\libice\libice.vcxproj">
+      <Project>{f565e04b-1e19-47f3-8923-36479c5cae4d}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\libtorrent\libtorrent.vcxproj">
       <Project>{29842b79-f362-4277-b0cb-d15cc397c2fe}</Project>
     </ProjectReference>
@@ -204,6 +220,8 @@
     <ClInclude Include="..\include\rarray.h" />
     <ClInclude Include="..\include\ring-buffer.h" />
     <ClInclude Include="..\include\stack.h" />
+    <ClInclude Include="..\libice\test\ice-transport.h" />
+    <ClInclude Include="..\libice\test\tls-socket.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
