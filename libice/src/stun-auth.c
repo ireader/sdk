@@ -172,16 +172,16 @@ static int stun_response_rfc5389_long_term_auth_check(const struct stun_message_
 
 int stun_agent_request_auth_check(stun_agent_t* stun, struct stun_request_t* req, const void* data, int bytes)
 {
-	if (STUN_METHOD_DATA == STUN_MESSAGE_METHOD(req->msg.header.msgtype) || STUN_METHOD_BIND == STUN_MESSAGE_METHOD(req->msg.header.msgtype))
+	if (0 == stun->auth_term || STUN_METHOD_DATA == STUN_MESSAGE_METHOD(req->msg.header.msgtype))
 		return 0;
 
 	if (STUN_RFC_3489 == stun->rfc)
 		return stun_request_rfc3489_auth_check(stun, req, data, bytes);
 	else
-		return 0 == stun->auth_term ? stun_request_rfc5389_short_term_auth_check(stun, req, data, bytes) : stun_request_rfc5389_long_term_auth_check(stun, req, data, bytes);
+		return STUN_CREDENTIAL_SHORT_TERM == stun->auth_term ? stun_request_rfc5389_short_term_auth_check(stun, req, data, bytes) : stun_request_rfc5389_long_term_auth_check(stun, req, data, bytes);
 }
 
 int stun_agent_response_auth_check(stun_agent_t* stun, const struct stun_message_t* resp, struct stun_request_t* req, const void* data, int bytes)
 {
-	return (STUN_RFC_3489 == stun->rfc || 0 == stun->auth_term) ? stun_response_rfc5389_short_term_auth_check(resp, req, data, bytes) : stun_response_rfc5389_long_term_auth_check(resp, req, data, bytes);
+	return (STUN_RFC_3489 == stun->rfc || STUN_CREDENTIAL_SHORT_TERM == stun->auth_term) ? stun_response_rfc5389_short_term_auth_check(resp, req, data, bytes) : stun_response_rfc5389_long_term_auth_check(resp, req, data, bytes);
 }

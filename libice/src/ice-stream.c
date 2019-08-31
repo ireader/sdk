@@ -17,7 +17,7 @@ int ice_agent_onrolechanged(void* param)
 	return 0;
 }
 
-static int ice_agent_onvalid(void* param, struct ice_checklist_t* l, const struct darray_t* valids)
+static int ice_stream_onbind(void* param, struct ice_checklist_t* l, const struct darray_t* valids)
 {
 	struct list_head* ptr;
 	struct ice_stream_t* s;
@@ -27,8 +27,11 @@ static int ice_agent_onvalid(void* param, struct ice_checklist_t* l, const struc
 	list_for_each(ptr, &ice->streams)
 	{
 		s = list_entry(ptr, struct ice_stream_t, link);
-		if(s->checklist == l)
+		if (s->checklist == l)
+		{
+			ice_checklist_conclude(l);
 			continue;
+		}
 
 		// sync the other streams
 		ice_checklist_update(s->checklist, valids);
@@ -36,20 +39,24 @@ static int ice_agent_onvalid(void* param, struct ice_checklist_t* l, const struc
 	return 0;
 }
 
-static int ice_agent_onfinish(void* param, struct ice_checklist_t* l)
+static int ice_stream_oncomplete(void* param, struct ice_checklist_t* l, int failed)
 {
-	int failed;
+	uint64_t flags;
 	struct list_head* ptr;
 	struct ice_stream_t* s;
 	struct ice_agent_t* ice;
 
-	failed = 0;
+	flags = 0;
+	assert(0 == failed || 1 == failed);
 	ice = (struct ice_agent_t*)param;
 	list_for_each(ptr, &ice->streams)
 	{
 		s = list_entry(ptr, struct ice_stream_t, link);
-		if(s->checklist == l)
+		if (s->checklist == l)
+		{
+			flags |= failed ? 0 : ((int64_t)1) << s->stream;
 			continue;
+		}
 
 		switch (ice_checklist_getstatus(s->checklist))
 		{
@@ -57,6 +64,8 @@ static int ice_agent_onfinish(void* param, struct ice_checklist_t* l)
 			++failed;
 			break; // TODO ???
 		case ICE_CHECKLIST_COMPLETED:
+			assert(s->stream < 64);
+			flags |= ((int64_t)1) << s->stream;
 			s->ncomponent = ice_checklist_getnominated(s->checklist, s->components, sizeof(s->components)/sizeof(s->components[0]));
 			break;
 		default:
@@ -64,7 +73,10 @@ static int ice_agent_onfinish(void* param, struct ice_checklist_t* l)
 		}
 	}
 
-	ice->handler.onconnected(ice->param, failed);
+	// TODO: bind relay channel
+
+	// TODO: call once time
+	ice->handler.onconnected(ice->param, flags);
 	return 0;
 }
 
@@ -83,8 +95,8 @@ static struct ice_stream_t* ice_stream_create(struct ice_agent_t* ice, int strea
 		ice_candidates_init(&s->remotes);
 
 		memset(&h, 0, sizeof(h));
-		h.onvalid = ice_agent_onvalid;
-		h.onfinish = ice_agent_onfinish;
+		h.onbind = ice_stream_onbind;
+		h.oncomplete = ice_stream_oncomplete;
 		h.onrolechanged = ice_agent_onrolechanged;
 		s->checklist = ice_checklist_create(ice, &h, ice);
 	}
@@ -165,6 +177,21 @@ static struct ice_stream_t* ice_agent_fetch_stream(struct ice_agent_t* ice, int 
 	return s;
 }
 
+
+int ice_agent_set_remote_auth(struct ice_agent_t* ice, int stream, const char* usr, const char* pwd)
+{
+	struct ice_stream_t* s;
+	s = ice_agent_fetch_stream(ice, stream);
+	if (NULL == s)
+		return -1;
+
+	memset(&s->rauth, 0, sizeof(s->rauth));
+	s->rauth.credential = STUN_CREDENTIAL_SHORT_TERM;
+	snprintf(s->rauth.usr, sizeof(s->rauth.usr), "%s", usr ? usr : "");
+	snprintf(s->rauth.pwd, sizeof(s->rauth.pwd), "%s", pwd ? pwd : "");
+	return 0;
+}
+
 int ice_agent_add_local_candidate(struct ice_agent_t* ice, const struct ice_candidate_t* cand)
 {
 	struct ice_stream_t* s;
@@ -172,7 +199,8 @@ int ice_agent_add_local_candidate(struct ice_agent_t* ice, const struct ice_cand
 		|| (ICE_CANDIDATE_HOST != cand->type && ICE_CANDIDATE_SERVER_REFLEXIVE != cand->type && ICE_CANDIDATE_RELAYED != cand->type && ICE_CANDIDATE_PEER_REFLEXIVE != cand->type)
 		|| (STUN_PROTOCOL_UDP != cand->protocol && STUN_PROTOCOL_TCP != cand->protocol && STUN_PROTOCOL_TLS != cand->protocol && STUN_PROTOCOL_DTLS != cand->protocol)
 		|| (AF_INET != cand->addr.ss_family && AF_INET6 != cand->addr.ss_family) 
-		|| (AF_INET != cand->host.ss_family && AF_INET6 != cand->host.ss_family))
+		|| (AF_INET != cand->host.ss_family && AF_INET6 != cand->host.ss_family)
+		|| cand->stream >= 64) // for onconnected callback stream bitmask
 	{
 		assert(0);
 		return -1;
@@ -195,7 +223,8 @@ int ice_agent_add_remote_candidate(struct ice_agent_t* ice, const struct ice_can
 		|| (ICE_CANDIDATE_HOST != cand->type && ICE_CANDIDATE_SERVER_REFLEXIVE != cand->type && ICE_CANDIDATE_RELAYED != cand->type && ICE_CANDIDATE_PEER_REFLEXIVE != cand->type)
 		|| (STUN_PROTOCOL_UDP != cand->protocol && STUN_PROTOCOL_TCP != cand->protocol && STUN_PROTOCOL_TLS != cand->protocol && STUN_PROTOCOL_DTLS != cand->protocol)
 		|| (AF_INET != cand->addr.ss_family && AF_INET6 != cand->addr.ss_family)
-		|| (AF_INET != cand->host.ss_family && AF_INET6 != cand->host.ss_family))
+		|| (AF_INET != cand->host.ss_family && AF_INET6 != cand->host.ss_family)
+		|| cand->stream >= 64) // for onconnected callback stream bitmask
 	{
 		assert(0);
 		return -1;

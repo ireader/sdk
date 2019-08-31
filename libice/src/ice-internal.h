@@ -52,6 +52,7 @@ enum ice_nomination_t
 // USERNAME = <prefix,rounded-time,clientIP,hmac>
 // password = <hmac(USERNAME,anotherprivatekey)>
 
+struct ice_stream_t;
 struct ice_candidate_pair_t
 {
 	struct ice_candidate_t local;
@@ -61,6 +62,7 @@ struct ice_candidate_pair_t
 
 	uint64_t priority;
 	char foundation[66];
+	struct ice_stream_t* stream;
 };
 
 typedef struct darray_t ice_candidates_t;
@@ -75,6 +77,7 @@ struct ice_stream_t
 	ice_candidates_t locals;
 	ice_candidates_t remotes;
 	struct ice_checklist_t* checklist;
+	struct stun_credential_t rauth; // remote auth
 
 	// nominated candidates(for each component)
 	struct ice_candidate_pair_t components[ICE_COMPONENT_MAX];
@@ -91,8 +94,9 @@ struct ice_agent_t
 	uint64_t tiebreaking; // role conflicts(network byte-order)
 	int controlling;
 
+	struct sockaddr_storage saddr; // stun/turn server addr
 	struct stun_credential_t auth; // local auth
-	struct stun_credential_t rauth; // remote auth
+	struct stun_credential_t sauth; // stun/turn auth
 	struct ice_agent_handler_t handler;
 	void* param;
 };
@@ -112,9 +116,14 @@ static inline void ice_candidate_pair_foundation(struct ice_candidate_pair_t* pa
 	snprintf(pair->foundation, sizeof(pair->foundation), "%s\n%s", pair->local.foundation, pair->remote.foundation);
 }
 
-int ice_agent_bind(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, int timeout, stun_request_handler handler, void* param);
-int ice_agent_allocate(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, int timeout, stun_request_handler handler, void* param);
-int ice_agent_refresh(struct ice_agent_t* ice, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, int timeout, stun_request_handler handler, void* param);
+/// ICE foundation update
+void ice_candidate_foundation(struct ice_agent_t* ice, struct ice_candidate_t* c);
+
+int ice_agent_bind(struct ice_agent_t* ice, const struct stun_credential_t* auth, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, int timeout, stun_request_handler handler, void* param);
+int ice_agent_allocate(struct ice_agent_t* ice, const struct stun_credential_t* auth, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, int timeout, stun_request_handler handler, void* param);
+int ice_agent_refresh(struct ice_agent_t* ice, const struct stun_credential_t* auth, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relay, int timeout, stun_request_handler handler, void* param);
+int ice_agent_create_permission(struct ice_agent_t* ice, const struct stun_credential_t* auth, const struct sockaddr* local, const struct sockaddr* turn, const struct sockaddr* peer, int timeout, stun_request_handler handler, void* param);
+int ice_agent_channel_bind(struct ice_agent_t* ice, const struct stun_credential_t* auth, const struct sockaddr* local, const struct sockaddr* turn, const struct sockaddr* peer, uint16_t channel, int timeout, stun_request_handler handler, void* param);
 int ice_agent_connect(struct ice_agent_t* ice, const struct ice_candidate_pair_t* pr, int nominated, int timeout, stun_request_handler handler, void* param);
 
 int ice_stream_destroy(struct ice_stream_t** pp);

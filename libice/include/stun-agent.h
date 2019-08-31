@@ -47,7 +47,7 @@ struct stun_agent_handler_t
 {
 	/// UDP/TURN data callback
 	/// @param[in] param user-defined parameter form turn_agent_allocate
-	void(*ondata)(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int byte);
+	void(*ondata)(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes);
 
 	/// @return 0-ok, other-error
 	int (*send)(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes);
@@ -94,7 +94,7 @@ int stun_agent_shared_secret(stun_request_t* req);
 
 /// TURN
 /// Allocate relay address, identify by local address with remote server address
-int turn_agent_allocate(stun_request_t* req);
+int turn_agent_allocate(stun_request_t* req, int peertransport);
 /// @param[in] expired 0-free allocate, >0-update expired time(current + expired)
 int turn_agent_refresh(stun_request_t* req, int expired);
 int turn_agent_create_permission(stun_request_t* req, const struct sockaddr* peer);

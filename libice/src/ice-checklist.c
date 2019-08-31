@@ -19,6 +19,15 @@ struct ice_checklist_t
 	void* param;
 };
 
+//static inline void ice_checklist_print(const struct sockaddr_storage* local, const struct sockaddr_storage* remote)
+//{
+//	char src[SOCKET_ADDRLEN], dst[SOCKET_ADDRLEN];
+//	u_short srcport, dstport;
+//	socket_addr_to((const struct sockaddr*)local, socket_addr_len((const struct sockaddr*)local), src, &srcport);
+//	socket_addr_to((const struct sockaddr*)remote, socket_addr_len((const struct sockaddr*)remote), dst, &dstport);
+//	printf("[%s:%hu -> %s:%hu]\n", src, srcport, dst, dstport);
+//}
+
 struct ice_checklist_t* ice_checklist_create(struct ice_agent_t* ice, struct ice_checklist_handler_t* handler, void* param)
 {
 	struct ice_checklist_t* l;
@@ -49,6 +58,7 @@ static int ice_checklist_release(struct ice_checklist_t* l)
 {
 	int32_t ref;
 	ref = atomic_decrement32(&l->ref);
+	assert(ref >= 0);
 	if (0 != ref)
 		return ref;
 
@@ -79,7 +89,28 @@ int ice_checklist_destroy(struct ice_checklist_t** pl)
 	return ice_checklist_release(l);
 }
 
-int ice_checklist_reset(struct ice_checklist_t* l, const ice_candidates_t* locals, const ice_candidates_t* remotes)
+static int ice_checklist_onpermission(void* param, const stun_request_t* req, int code, const char* phrase)
+{
+	int r;
+	struct ice_checklist_t* l;
+	struct stun_address_t addr;
+
+	if (0 == code)
+	{
+		memset(&addr, 0, sizeof(addr));
+		l = (struct ice_checklist_t*)param; (void)phrase;
+		r = stun_request_getaddr(req, &addr.protocol, &addr.host, &addr.peer, &addr.reflexive, &addr.relay);
+		if (0 != r)
+		{
+			assert(0);
+			ice_checklist_release(l);
+			return r;
+		}
+	}
+	return 0;
+}
+
+int ice_checklist_reset(struct ice_checklist_t* l, struct ice_stream_t* stream, const ice_candidates_t* locals, const ice_candidates_t* remotes)
 {
 	int r, i, j;
 	ice_candidate_pairs_t *component;
@@ -115,14 +146,27 @@ int ice_checklist_reset(struct ice_checklist_t* l, const ice_candidates_t* local
 		for (j = 0; j < ice_candidates_count(remotes); j++)
 		{
 			remote = ice_candidates_get((ice_candidates_t*)remotes, j);
-			if(local->stream != remote->stream || local->component != remote->component || local->addr.ss_family != remote->addr.ss_family)
+			assert(local->stream == remote->stream);
+			if(local->protocol != remote->protocol || local->stream != remote->stream || local->component != remote->component || local->addr.ss_family != remote->addr.ss_family)
 				continue;
+
+			if (ICE_CANDIDATE_RELAYED == local->type)
+			{
+				ice_checklist_addref(l);
+				r = ice_agent_create_permission(l->ice, &l->ice->sauth, (const struct sockaddr*)&local->host, (const struct sockaddr*)&l->ice->saddr, (const struct sockaddr*)&remote->addr, 2000, ice_checklist_onpermission, l);
+				if (0 != r)
+				{
+					assert(0);
+					ice_checklist_release(l);
+				}
+			}
 
 			// agent MUST limit the total number of connectivity checks the agent  
 			// performs across all check lists to a specific value.
 			assert(ice_candidate_pairs_count(component) < 64);
 
 			memset(&pair, 0, sizeof(pair));
+			pair.stream = stream;
 			pair.state = ICE_CANDIDATE_PAIR_FROZEN;
 			memcpy(&pair.local, local, sizeof(struct ice_candidate_t));
 			memcpy(&pair.remote, remote, sizeof(struct ice_candidate_t));
@@ -264,7 +308,7 @@ int ice_checklist_getstatus(struct ice_checklist_t* l)
 	return l->state;
 }
 
-static void ice_checlist_update_state(struct ice_checklist_t* l)
+static void ice_checklist_update_state(struct ice_checklist_t* l)
 {
 	int state;
 	if(ice_checklist_is_nominated(l))
@@ -272,7 +316,7 @@ static void ice_checlist_update_state(struct ice_checklist_t* l)
 		l->state = ICE_CHECKLIST_COMPLETED;
 
 		// callback/notify ok
-		l->handler.onfinish(l->param, l);
+		l->handler.oncomplete(l->param, l, 0);
 	}
 	else
 	{
@@ -280,13 +324,13 @@ static void ice_checlist_update_state(struct ice_checklist_t* l)
 		if (ICE_CANDIDATE_PAIR_SUCCEEDED == state)
 		{
 			// callback/notify ok
-			l->handler.onvalid(l->param, l, &l->valids);
+			l->handler.onbind(l->param, l, &l->valids);
 		}
 		else if (ICE_CANDIDATE_PAIR_FAILED == state)
 		{
 			l->state = ICE_CHECKLIST_FAILED;
 			// callback/notify ok
-			l->handler.onfinish(l->param, l);
+			l->handler.oncomplete(l->param, l, 1);
 		}
 		else
 		{
@@ -295,7 +339,7 @@ static void ice_checlist_update_state(struct ice_checklist_t* l)
 	}
 }
 
-static void ice_checklist_update_same_stream(struct ice_checklist_t* l, const struct ice_candidate_pair_t* pr);
+static void ice_checklist_update_foundation(struct ice_checklist_t* l, const struct ice_candidate_pair_t* pr);
 static int ice_checklist_onbind(void* param, const stun_request_t* req, int code, const char* phrase)
 {
 	int r;
@@ -312,6 +356,7 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 	r = stun_request_getaddr(req, &addr.protocol, &addr.host, &addr.peer, &addr.reflexive, &addr.relay);
 	if (0 != r)
 	{
+		assert(0);
 		ice_checklist_release(l);
 		return r;
 	}
@@ -336,15 +381,16 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 		return 0; // ignore
 	}
 
-	assert(ICE_CANDIDATE_PAIR_INPROGRESS == pair->state || ICE_CANDIDATE_PAIR_SUCCEEDED == pair->state /*norminated*/);
+	// TODO: multi-onbind response(by trigger)
+	//assert(ICE_CANDIDATE_PAIR_INPROGRESS == pair->state || ICE_CANDIDATE_PAIR_SUCCEEDED == pair->state /*norminated*/);
 	if (0 == code)
 	{
-		ice_checklist_update_same_stream(l, pair);
+		ice_checklist_update_foundation(l, pair);
 
 		pair->nominated = nominated ? 1 : 0;
 		pair->state = ICE_CANDIDATE_PAIR_SUCCEEDED;
-		darray_insert(&l->valids, -1, &pair);
-		ice_checlist_update_state(l);
+		darray_insert2(&l->valids, &pair, NULL);
+		ice_checklist_update_state(l);
 	}
 	else if (ICE_ROLE_CONFLICT == code)
 	{
@@ -358,13 +404,13 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 
 		// redo connectivity check
 		pair->state = ICE_CANDIDATE_PAIR_WAITING;
-		darray_insert(&l->trigger, -1, &pair);
+		darray_insert2(&l->trigger, &pair, NULL);
 	}
 	else
 	{
 		// timeout
 		pair->state = ICE_CANDIDATE_PAIR_FAILED;
-		ice_checlist_update_state(l);
+		ice_checklist_update_state(l);
 	}
 
 	// stream done callback
@@ -393,13 +439,7 @@ static int ice_checklist_ontimer(void* param)
 	
 	l = (struct ice_checklist_t*)param;
 	locker_lock(&l->locker);
-	if (ICE_CHECKLIST_FROZEN == l->state)
-	{
-		assert(0);
-		locker_unlock(&l->locker);
-		ice_checklist_release(l);
-		return 0;
-	}
+	assert(ICE_CHECKLIST_FROZEN != l->state);
 
 	waiting = NULL;
 	if(ice_candidate_pairs_count(&l->trigger) > 0)
@@ -440,6 +480,10 @@ static int ice_checklist_ontimer(void* param)
 			}
 		}
 	}
+	else {
+		assert(0 != l->conclude);
+		// do nothing
+	}
 
 	if (waiting)
 	{
@@ -450,7 +494,7 @@ static int ice_checklist_ontimer(void* param)
 		if (0 != ice_agent_connect(l->ice, waiting, nominated, STUN_TIMEOUT, ice_checklist_onbind, l))
 		{
 			waiting->state = ICE_CANDIDATE_PAIR_FAILED;
-			ice_checlist_update_state(l);
+			ice_checklist_update_state(l);
 			ice_checklist_release(l);
 		}
 	}
@@ -461,7 +505,7 @@ static int ice_checklist_ontimer(void* param)
 
 	if (ICE_CHECKLIST_RUNNING == l->state)
 	{
-		// timer continue
+		// timer next-tick
 		ice_checklist_addref(l);
 		l->timer = stun_timer_start(ICE_TIMER_INTERVAL * ice_agent_active_checklist_count(l->ice), ice_checklist_ontimer, l);
 	}
@@ -486,9 +530,7 @@ static void ice_checklist_foundation_group(struct ice_checklist_t* l, struct dar
 		for (j = 0; j < ice_candidate_pairs_count(component); j++)
 		{
 			pair = ice_candidate_pairs_get(component, j);
-			if(ICE_CANDIDATE_PAIR_FROZEN != pair->state)
-				continue;
-
+			assert(ICE_CANDIDATE_PAIR_FROZEN == pair->state);
 			pp = darray_find(foundations, pair, NULL, ice_candidate_pair_compare_foundation);
 			if (NULL == pp)
 			{
@@ -513,7 +555,7 @@ static void ice_checklist_foundation_group(struct ice_checklist_t* l, struct dar
 //    For all pairs with the same foundation, it sets the state of
 //    the pair with the lowest component ID to Waiting. If there is
 //    more than one such pair, the one with the highest priority is used.
-int ice_checklist_start(struct ice_checklist_t* l)
+int ice_checklist_start(struct ice_checklist_t* l, int first)
 {
 	int i;
 	struct darray_t foundations;
@@ -522,17 +564,20 @@ int ice_checklist_start(struct ice_checklist_t* l)
 	assert(ICE_CHECKLIST_FROZEN == l->state);
 	l->state = ICE_CHECKLIST_RUNNING;
 	
-	// group with foundation
-	memset(&foundations, 0, sizeof(foundations));
-	darray_init(&foundations, sizeof(struct ice_candidate_pair_t*), 4);
-	ice_checklist_foundation_group(l, &foundations);
-
-	for (i = 0; i < darray_count(&foundations); i++)
+	if (first)
 	{
-		pair = *(struct ice_candidate_pair_t**)darray_get(&foundations, i);
-		pair->state = ICE_CANDIDATE_PAIR_WAITING;
+		// group with foundation
+		memset(&foundations, 0, sizeof(foundations));
+		darray_init(&foundations, sizeof(struct ice_candidate_pair_t*), 4);
+		ice_checklist_foundation_group(l, &foundations);
+
+		for (i = 0; i < darray_count(&foundations); i++)
+		{
+			pair = *(struct ice_candidate_pair_t**)darray_get(&foundations, i);
+			pair->state = ICE_CANDIDATE_PAIR_WAITING;
+		}
+		darray_free(&foundations);
 	}
-	darray_free(&foundations);
 
 	// start timer
 	assert(NULL == l->timer);
@@ -607,7 +652,7 @@ int ice_checklist_update(struct ice_checklist_t* l, const struct darray_t* valid
 
 	// 2. active frozen checklist(0 == waiting or not)
 	if (ICE_CHECKLIST_FROZEN == l->state)
-		return ice_checklist_start(l);
+		return ice_checklist_start(l, 0);
 
 	//ICE_CHECKLIST_COMPLETED, ICE_CHECKLIST_FAILED;
 	assert(0 == waiting);
@@ -618,7 +663,7 @@ int ice_checklist_update(struct ice_checklist_t* l, const struct darray_t* valid
 // 1. The agent changes the states for all other Frozen pairs for the
 //    same media stream and same foundation to Waiting. Typically, but
 //    not always, these other pairs will have different component IDs.
-static void ice_checklist_update_same_stream(struct ice_checklist_t* l, const struct ice_candidate_pair_t* pr)
+static void ice_checklist_update_foundation(struct ice_checklist_t* l, const struct ice_candidate_pair_t* pr)
 {
 	int i, j;
 	struct darray_t* component;
@@ -650,8 +695,8 @@ int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t
 		// bind request from unknown internal NAT, response ok
 		// REMOTER: add peer reflexive address
 		// TODO: re-invite to update remote address(new peer reflexive address)???
+		//assert(0);
 		locker_unlock(&l->locker);
-		assert(0);
 		return 0;
 	}
 
@@ -670,14 +715,14 @@ int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t
 			l->state = ICE_CHECKLIST_RUNNING;
 		//if (ICE_CANDIDATE_PAIR_INPROGRESS == pair->state)
 		//	stun_request_cancel(req);
-		darray_insert(&l->trigger, -1, &pair);
+		darray_insert2(&l->trigger, &pair, NULL);
 	}
 	
 	// 7.2.1.5. Updating the Nominated Flag (p50)
 	// 1. If the state of this pair is Succeeded, The agent now sets the nominated flag in the valid pair to true.
 	// 2. If the state of this pair is In-Progress, if its check produces a successful result, 
 	//    the resulting valid pair has its nominated flag set when the response arrives.
-	if(0 == l->ice->controlling && l->ice->nomination != ICE_AGGRESSIVE_NOMINATION)
+	if(0 == l->ice->controlling /*&& l->ice->nomination != ICE_AGGRESSIVE_NOMINATION*/ )
 		pair->nominated = pair->nominated ? 1 : nominated;
 
 	// 8.1.2. Updating States (p53)
@@ -714,7 +759,7 @@ int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t
 	//      SHOULD remove the failed media stream from the session in its updated offer.
 	//    * If none of the check lists for other media streams are Completed, but at least one is Running, 
 	//      the agent SHOULD let ICE continue
-	ice_checlist_update_state(l);
+	ice_checklist_update_state(l);
 	locker_unlock(&l->locker);
 	return 0;
 }
@@ -723,23 +768,29 @@ int ice_checklist_conclude(struct ice_checklist_t* l)
 {
 	int i, j;
 	struct darray_t* component;
-	struct ice_candidate_pair_t* pair;
+	struct ice_candidate_pair_t* pair, *pair0;
 
+	if (!l->ice->controlling || l->conclude)
+		return 0;
 	l->conclude = 1;
 
 	for (i = 0; i < ice_candidate_components_count(&l->components); i++)
 	{
+		pair0 = NULL;
 		component = ice_candidate_components_get(&l->components, i);
 		for (j = 0; j < ice_candidate_pairs_count(component); j++)
 		{
 			pair = ice_candidate_pairs_get(component, j);
-			if (ICE_CANDIDATE_PAIR_SUCCEEDED == pair->state)
+			if (ICE_CANDIDATE_PAIR_SUCCEEDED == pair->state && (NULL == pair0 || pair0->priority < pair->priority))
 			{
-				// TODO: choose highest priority pair
-				darray_insert(&l->trigger, -1, &pair);
-				break; // next component
+				// choose highest priority pair
+				pair0 = pair;
 			}
 		}
+
+		assert(pair0);
+		if (pair0)
+			darray_insert2(&l->trigger, &pair0, NULL);
 	}
 
 	return 0;

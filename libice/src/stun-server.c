@@ -30,7 +30,7 @@ int stun_server_onbind(struct stun_agent_t* stun, const struct stun_request_t* r
 	stun_message_add_address(&resp->msg, STUN_ATTR_MAPPED_ADDRESS, (const struct sockaddr*)&resp->addr.peer);
 	stun_message_add_address(&resp->msg, STUN_ATTR_XOR_MAPPED_ADDRESS, (const struct sockaddr*)&resp->addr.peer);
     stun_message_add_address(&resp->msg, STUN_ATTR_RESPONSE_ORIGIN, (const struct sockaddr*)&resp->addr.host);
-	return req->stun->handler.onbind(stun->param, resp, req);
+	return stun->handler.onbind(stun->param, resp, req);
 }
 
 int stun_agent_bind_response(struct stun_response_t* resp, int code, const char* pharse)
@@ -58,7 +58,7 @@ int stun_agent_bind_response(struct stun_response_t* resp, int code, const char*
 
 int stun_server_onshared_secret(struct stun_agent_t* stun, const struct stun_request_t* req, struct stun_response_t* resp)
 {
-	return req->stun->handler.onsharedsecret(stun->param, resp, req);
+	return stun->handler.onsharedsecret ? stun->handler.onsharedsecret(stun->param, resp, req) : 0;
 }
 
 // the username MUST be valid for a period of at least 10 minutes.
@@ -99,5 +99,5 @@ int stun_agent_shared_secret_response(struct stun_response_t* resp, int code, co
 
 int stun_server_onbindindication(struct stun_agent_t* stun, const struct stun_request_t* req)
 {
-    return req->stun->handler.onbindindication(stun->param, req);
+    return stun->handler.onbindindication ? stun->handler.onbindindication(stun->param, req) : 0;
 }

@@ -46,7 +46,7 @@ int turn_allocation_add_permission(struct turn_allocation_t* allocate, const str
 	p = (struct turn_permission_t*)turn_allocation_find_permission(allocate, addr);
 	if (p)
 	{
-		p->expired = system_clock() + TURN_PERMISSION_LIFETIME * 1000;
+		p->expired = system_clock() + allocate->lifetime * 1000;
 		return 0;
 	}
 	
@@ -58,7 +58,7 @@ int turn_allocation_add_permission(struct turn_allocation_t* allocate, const str
 
 	memset(&permission, 0, sizeof(struct turn_permission_t));
 	memcpy(&permission.addr, addr, socket_addr_len(addr));
-	permission.expired = system_clock() + TURN_PERMISSION_LIFETIME * 1000;
+	permission.expired = system_clock() + allocate->lifetime * 1000;
 	memcpy(&allocate->permissions[allocate->npermission++], &permission, sizeof(struct turn_permission_t));
 	return 0;
 }
@@ -104,7 +104,7 @@ int turn_allocation_add_channel(struct turn_allocation_t* allocate, const struct
 		if (0 != socket_addr_compare((const struct sockaddr*)&p->addr, addr) || p != turn_allocation_find_channel_by_peer(allocate, addr))
 			return -1; // channel in-use
 
-		p->expired = system_clock() + TURN_PERMISSION_LIFETIME * 1000;
+		p->expired = system_clock() + allocate->lifetime * 1000;
 		return 0;
 	}
 
@@ -116,7 +116,7 @@ int turn_allocation_add_channel(struct turn_allocation_t* allocate, const struct
 
 	memset(&c, 0, sizeof(struct turn_channel_t));
 	memcpy(&c.addr, addr, socket_addr_len(addr));
-	c.expired = system_clock() + TURN_PERMISSION_LIFETIME * 1000;
+	c.expired = system_clock() + allocate->lifetime * 1000;
     c.channel = channel;
 	memcpy(&allocate->channels[allocate->nchannel++], &c, sizeof(struct turn_channel_t));
 	return 0;

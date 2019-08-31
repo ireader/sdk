@@ -101,7 +101,7 @@ int turn_server_onallocate(struct stun_agent_t* turn, const struct stun_request_
 		turn_agent_allocation_insert(&resp->stun->turnservers, allocate);
 		return turn_server_allocate_doresponse(resp, allocate);
 	}
-	else
+	else if(turn->handler.onallocate)
 	{
 		allocate = turn_allocation_create();
 		if (!allocate)
@@ -126,6 +126,11 @@ int turn_server_onallocate(struct stun_agent_t* turn, const struct stun_request_
 		memcpy(&allocate->auth, &req->auth, sizeof(struct stun_credential_t));
 		turn_agent_allocation_insert(&turn->turnreserved, allocate);
 		return turn->handler.onallocate(turn->param, resp, req, evenport ? 1 : 0, allocate->reserve_next_higher_port);
+	}
+	else
+	{
+		// discard
+		return 0;
 	}
 }
 

@@ -76,7 +76,7 @@ struct stun_agent_t
     struct list_head turnreserved; // reserved allocations
 
 	int rfc; // rfc version
-	int auth_term; // 0-short term, 1-long term
+	int auth_term; // STUN_CREDENTIAL_SHORT_TERM/STUN_CREDENTIAL_LONG_TERM
 
 	// for RFC3489 CHANGE-REQUEST
 	struct sockaddr_storage A1, A2;
@@ -84,6 +84,8 @@ struct stun_agent_t
 	struct stun_agent_handler_t handler;
 	void* param;
 };
+
+int stun_agent_input2(stun_agent_t* stun, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relayed, const void* data, int bytes);
 
 int stun_agent_insert(struct stun_agent_t* stun, struct stun_request_t* req);
 int stun_agent_remove(struct stun_agent_t* stun, struct stun_request_t* req);
@@ -100,7 +102,7 @@ int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req);
 int stun_response_send(struct stun_agent_t* stun, struct stun_response_t* resp);
 int stun_message_send(struct stun_agent_t* stun, struct stun_message_t* msg, int protocol, const struct sockaddr_storage* local, const struct sockaddr_storage* remote, const struct sockaddr_storage* relay);
 
-struct stun_response_t* stun_response_create(struct stun_request_t* req);
+struct stun_response_t* stun_response_create(stun_agent_t* stun, struct stun_request_t* req);
 int stun_response_destroy(struct stun_response_t** pp);
 
 int stun_server_onbind(struct stun_agent_t* stun, const struct stun_request_t* req, struct stun_response_t* resp);

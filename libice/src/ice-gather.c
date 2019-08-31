@@ -33,8 +33,15 @@ static void ice_gather_destroy(struct ice_gather_t* g)
 
 static int ice_gather_callback(struct ice_gather_t* g)
 {
-	if (0 != ice_candidates_count(&g->candidates))
-		return 0;
+	int i;
+	struct ice_candidate_t *c;
+
+	for (i = 0; i < ice_candidates_count(&g->candidates); i++)
+	{
+		c = ice_candidates_get(&g->candidates, i);
+		if (ICE_CANDIDATE_UNKNOWN != c->type)
+			return 0;
+	}
 
 	g->ice->handler.ongather(g->ice->param, 0);
 	ice_gather_destroy(g);
@@ -65,10 +72,11 @@ static int ice_gather_onbind(void* param, const stun_request_t* req, int code, c
 		c.type = ICE_CANDIDATE_SERVER_REFLEXIVE;
 		c.component = local->component;
 		c.protocol = local->protocol;
+		c.stream = local->stream;
 		memcpy(&c.addr, &addr.reflexive, sizeof(c.addr));
 		memcpy(&c.host, &addr.host, sizeof(c.host));
 		ice_candidate_priority(&c);
-		ice_candidate_foundation(&c);
+		ice_candidate_foundation(g->ice, &c);
 		r = ice_agent_add_local_candidate(g->ice, &c);
 
 		if (AF_INET == addr.relay.ss_family || AF_INET6 == addr.relay.ss_family)
@@ -77,10 +85,11 @@ static int ice_gather_onbind(void* param, const stun_request_t* req, int code, c
 			c.type = ICE_CANDIDATE_RELAYED;
 			c.component = local->component;
 			c.protocol = local->protocol;
+			c.stream = local->stream;
 			memcpy(&c.addr, &addr.relay, sizeof(c.addr));
 			memcpy(&c.host, &addr.host, sizeof(c.host));
 			ice_candidate_priority(&c);
-			ice_candidate_foundation(&c);
+			ice_candidate_foundation(g->ice, &c);
 			r = ice_agent_add_local_candidate(g->ice, &c);
 		}
 	}
@@ -90,11 +99,11 @@ static int ice_gather_onbind(void* param, const stun_request_t* req, int code, c
 		printf("ice_checklist_ongather code: %d, phrase: %s\n", code, phrase);
 	}
 
-	ice_candidates_erase(&g->candidates, local);
+	local->type = ICE_CANDIDATE_UNKNOWN; // done flags
 	return ice_gather_callback(g);
 }
 
-int ice_agent_gather(struct ice_agent_t* ice, const struct sockaddr* addr, int turn, int timeout)
+int ice_agent_gather(struct ice_agent_t* ice, const struct sockaddr* addr, int turn, int timeout, int credential, const char* usr, const char* pwd)
 {
 	int i, r;
 	struct list_head *ptr, *next;
@@ -108,6 +117,13 @@ int ice_agent_gather(struct ice_agent_t* ice, const struct sockaddr* addr, int t
 	g = ice_gather_create(ice);
 	if (!g)
 		return -1;
+
+	// save stun/turn server info
+	memcpy(&ice->saddr, addr, socket_addr_len(addr));
+	memset(&ice->sauth, 0, sizeof(ice->sauth));
+	ice->sauth.credential = credential;
+	snprintf(ice->sauth.usr, sizeof(ice->sauth.usr), "%s", usr ? usr : "");
+	snprintf(ice->sauth.pwd, sizeof(ice->sauth.pwd), "%s", pwd ? pwd : "");
 
 	r = 0;
 	list_for_each_safe(ptr, next, &ice->streams)
@@ -130,15 +146,13 @@ int ice_agent_gather(struct ice_agent_t* ice, const struct sockaddr* addr, int t
 	{
 		c = ice_candidates_get(&g->candidates, i);
 		if (0 == turn)
-			r = ice_agent_bind(ice, (const struct sockaddr*)&c->host, addr, NULL, timeout, ice_gather_onbind, g);
+			r = ice_agent_bind(ice, &ice->sauth, (const struct sockaddr*)&c->host, addr, NULL, timeout, ice_gather_onbind, g);
 		else
-			r = ice_agent_allocate(ice, (const struct sockaddr*)&c->host, addr, NULL, timeout, ice_gather_onbind, g);
+			r = ice_agent_allocate(ice, &ice->sauth, (const struct sockaddr*)&c->host, addr, NULL, timeout, ice_gather_onbind, g);
+
+		// TODO: notify
 		if (0 != r)
-		{
-			// TODO: notify
-			ice_candidates_erase(&g->candidates, c);
-			i--; // for erase
-		}
+			c->type = ICE_CANDIDATE_UNKNOWN; // done flags
 	}
 
 	return ice_gather_callback(g);

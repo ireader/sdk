@@ -67,7 +67,4 @@ static inline void ice_candidate_priority(struct ice_candidate_t* c)
 	c->priority = (1 << 24) * s_priority[(c->type - ICE_CANDIDATE_HOST) % 4] + (1 << 8) * v + (256 - c->component);
 }
 
-/// ICE foundation update
-void ice_candidate_foundation(struct ice_candidate_t* c);
-
 #endif /* !_ice_candidate_h_ */

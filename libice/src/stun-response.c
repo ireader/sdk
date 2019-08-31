@@ -3,7 +3,7 @@
 #include <string.h>
 #include <assert.h>
 
-struct stun_response_t* stun_response_create(struct stun_request_t* req)
+struct stun_response_t* stun_response_create(stun_agent_t* stun, struct stun_request_t* req)
 {
 	stun_response_t* resp;
 	resp = (stun_response_t*)calloc(1, sizeof(stun_response_t));
@@ -13,7 +13,7 @@ struct stun_response_t* stun_response_create(struct stun_request_t* req)
 	resp->msg.header.msgtype = STUN_MESSAGE_METHOD(req->msg.header.msgtype);
 	resp->msg.header.length = 0;
 
-	resp->stun = req->stun;
+	resp->stun = stun;
 	//resp->addr.protocol = req->addr.protocol;
 	//memcpy(&resp->addr.host, &req->addr.host, sizeof(struct sockaddr_storage));
 	//memcpy(&resp->addr.peer, &req->addr.peer, sizeof(struct sockaddr_storage));
@@ -43,8 +43,7 @@ int stun_agent_discard(struct stun_response_t* resp)
 int stun_response_send(struct stun_agent_t* stun, struct stun_response_t* resp)
 {
 	int r;
-	assert(0 == resp->addr.relay.ss_family); // can't be relay
-	r = stun_message_send(stun, &resp->msg, resp->addr.protocol, &resp->addr.host, &resp->addr.peer, NULL);
+	r = stun_message_send(stun, &resp->msg, resp->addr.protocol, &resp->addr.host, &resp->addr.peer, &resp->addr.relay);
 	stun_response_destroy(&resp);
 	return r;
 }

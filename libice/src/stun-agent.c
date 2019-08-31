@@ -14,7 +14,7 @@ struct stun_agent_t* stun_agent_create(int rfc, struct stun_agent_handler_t* han
 	if (stun)
 	{
 		stun->rfc = rfc;
-		stun->auth_term = STUN_RFC_3489 == rfc ? 0 : 1;
+		stun->auth_term = 0; // disable bind request auth check
 		LIST_INIT_HEAD(&stun->requests);
 		LIST_INIT_HEAD(&stun->turnclients);
 		LIST_INIT_HEAD(&stun->turnservers);
@@ -141,7 +141,7 @@ int stun_message_send(struct stun_agent_t* stun, struct stun_message_t* msg, int
 static int stun_agent_onrequest(struct stun_agent_t* stun, struct stun_request_t* req)
 {
 	struct stun_response_t* resp;
-	resp = stun_response_create(req);
+	resp = stun_response_create(stun, req);
 	if (NULL == resp)
 		return -1; // -ENOMEM
 
@@ -236,7 +236,8 @@ static int stun_agent_onfailure(stun_agent_t* stun, const struct stun_message_t*
 	error = stun_message_attr_find(resp, STUN_ATTR_ERROR_CODE);
 	if (error)
 	{
-		if (STUN_CREDENTIAL_LONG_TERM == req->auth.credential && (401 == error->v.errcode.code || 438 == error->v.errcode.code))
+		// fixed: check nonce value to avoid recurse call
+		if (STUN_CREDENTIAL_LONG_TERM == req->auth.credential && (401 == error->v.errcode.code || 438 == error->v.errcode.code) && 0==req->auth.nonce[0])
 		{
 			// 1. If the response is an error response with an error code of 401 (Unauthorized),
 			//    the client SHOULD retry the request with a new transaction.
@@ -393,6 +394,11 @@ static int stun_agent_onresponse(stun_agent_t* stun, int protocol, const struct 
 
 int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
+	return stun_agent_input2(stun, protocol, local, remote, NULL, data, bytes);
+}
+
+int stun_agent_input2(stun_agent_t* stun, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const struct sockaddr* relayed, const void* data, int bytes)
+{
 	int r;
 	struct stun_request_t req;
 	struct turn_allocation_t* allocate;
@@ -438,10 +444,11 @@ int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* lo
 	if (0 != r)
 		return r;
 
+	req.stun = stun;
 	switch (STUN_MESSAGE_CLASS(req.msg.header.msgtype))
 	{
 	case STUN_METHOD_CLASS_REQUEST:
-		stun_request_setaddr(&req, protocol, local, remote, NULL);
+		stun_request_setaddr(&req, protocol, local, remote, relayed);
 		if (0 != stun_agent_parse_attr(stun, &req, &req.msg))
 			return 0; // discard
 
@@ -450,11 +457,11 @@ int stun_agent_input(stun_agent_t* stun, int protocol, const struct sockaddr* lo
 		break;
 
 	case STUN_METHOD_CLASS_INDICATION:
-		stun_request_setaddr(&req, protocol, local, remote, NULL);
+		stun_request_setaddr(&req, protocol, local, remote, relayed);
 		if (0 != stun_agent_parse_attr(stun, &req, &req.msg))
 			return 0; // discard
 
-		if (0 == stun_agent_request_auth_check(stun, &req, data, bytes))
+		//if (0 == stun_agent_request_auth_check(stun, &req, data, bytes))
 			r = stun_agent_onindication(stun, &req);
 		break;
 

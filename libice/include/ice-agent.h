@@ -13,13 +13,14 @@ struct ice_agent_handler_t
 	int (*send)(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes);
 
 	/// turn callback
-	void (*ondata)(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes);
+	void (*ondata)(void* param, uint8_t stream, uint16_t component, const void* data, int bytes);
 
 	/// Gather server reflexive and relayed candidates
 	void (*ongather)(void* param, int code);
 
 	/// ICE nominated
-	void (*onconnected)(void* param, int code);
+	/// @param[in] streams stream connected bitmask flags, base 0, from Least Significant Bit(LSB), 1-connected, 0-failed
+	void (*onconnected)(void* param, int64_t streams);
 };
 
 struct ice_agent_t;
@@ -30,7 +31,7 @@ struct ice_agent_t* ice_agent_create(int controlling, struct ice_agent_handler_t
 int ice_agent_destroy(struct ice_agent_t* ice);
 
 int ice_agent_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd);
-int ice_agent_set_remote_auth(struct ice_agent_t* ice, const char* usr, const char* pwd);
+int ice_agent_set_remote_auth(struct ice_agent_t* ice, int stream, const char* usr, const char* pwd);
 
 /// Add host candidate
 /// @param[in] stream audio/video stream id, base 0
@@ -50,7 +51,7 @@ int ice_agent_list_remote_candidate(struct ice_agent_t* ice, ice_agent_oncandida
 /// Gather reflexive/relayed candidates
 /// @param[in] addr stun/turn server address
 /// @param[in] turn 0-stun server, 1-turn server
-int ice_agent_gather(struct ice_agent_t* ice, const struct sockaddr* addr, int turn, int timeout);
+int ice_agent_gather(struct ice_agent_t* ice, const struct sockaddr* addr, int turn, int timeout, int credential, const char* usr, const char* pwd);
 
 /// 1. before ice connected: get default candidate
 /// 2. after ice connected: get nominated candidate
@@ -60,6 +61,8 @@ int ice_agent_start(struct ice_agent_t* ice);
 int ice_agent_stop(struct ice_agent_t* ice);
 
 int ice_agent_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes);
+
+int ice_agent_send(struct ice_agent_t* ice, uint8_t stream, uint16_t component, const void* data, int bytes);
 
 #if defined(__cplusplus)
 }

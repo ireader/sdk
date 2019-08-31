@@ -44,21 +44,66 @@ int ice_agent_input(struct ice_agent_t* ice, int protocol, const struct sockaddr
 	return ice && ice->stun ? stun_agent_input(ice->stun, protocol, local, remote, data, bytes) : -1;
 }
 
+int ice_agent_send(struct ice_agent_t* ice, uint8_t stream, uint16_t component, const void* data, int bytes)
+{
+	int i;
+	struct ice_stream_t* s;
+	struct ice_candidate_t* local, *c;
+	struct ice_candidate_t* remote;
+
+	s = ice_agent_find_stream(ice, stream);
+	if (NULL == s)
+		return -1;
+
+	local = remote = NULL;
+	for (i = 0; i < s->ncomponent; i++)
+	{
+		if (s->components[i].local.component == component)
+		{
+			local = &s->components[i].local;
+			remote = &s->components[i].remote;
+			assert(local->stream == stream && remote->stream == stream);
+			break;
+		}
+	}
+
+	for (i = 0; NULL == local && i < ice_candidates_count(&s->locals); i++)
+	{
+		c = ice_candidates_get(&s->locals, i);
+		if (c->component == component)
+		{
+			local = c;
+			break;
+		}
+	}
+
+	for (i = 0; NULL == remote && i < ice_candidates_count(&s->remotes); i++)
+	{
+		c = ice_candidates_get(&s->remotes, i);
+		if (c->component == component)
+		{
+			remote = c;
+			break;
+		}
+	}
+
+	if (local && remote)
+	{
+		if (ICE_CANDIDATE_RELAYED == s->components[i].local.type)
+			return turn_agent_send(ice->stun, (struct sockaddr*)&local->addr, (struct sockaddr*)&remote->addr, data, bytes);
+		else
+			return ice->handler.send(ice->param, STUN_PROTOCOL_UDP, (struct sockaddr*)&local->addr, (struct sockaddr*)&remote->addr, data, bytes);
+	}
+
+	return -1;
+}
+
 int ice_agent_set_local_auth(struct ice_agent_t* ice, const char* usr, const char* pwd)
 {
 	memset(&ice->auth, 0, sizeof(ice->auth));
 	ice->auth.credential = STUN_CREDENTIAL_SHORT_TERM;
 	snprintf(ice->auth.usr, sizeof(ice->auth.usr) , "%s", usr ? usr : "");
 	snprintf(ice->auth.pwd, sizeof(ice->auth.pwd), "%s", pwd ? pwd : "");
-	return 0;
-}
-
-int ice_agent_set_remote_auth(struct ice_agent_t* ice, const char* usr, const char* pwd)
-{
-	memset(&ice->rauth, 0, sizeof(ice->rauth));
-	ice->rauth.credential = STUN_CREDENTIAL_SHORT_TERM;
-	snprintf(ice->rauth.usr, sizeof(ice->rauth.usr), "%s", usr ? usr : "");
-	snprintf(ice->rauth.pwd, sizeof(ice->rauth.pwd), "%s", pwd ? pwd : "");
 	return 0;
 }
 
@@ -78,14 +123,16 @@ int ice_agent_start(struct ice_agent_t* ice)
 			continue;
 		}
 
-		ice_checklist_reset(s->checklist, &s->locals, &s->remotes);
+		s->ncomponent = 0;
+		memset(s->components, 0, sizeof(s->components));
+		ice_checklist_reset(s->checklist, s, &s->locals, &s->remotes);
 		if (NULL == active)
 			active = s->checklist;
 	}
 
 	if (NULL == active)
 		return -1;
-	return ice_checklist_start(active);
+	return ice_checklist_start(active, 1);
 }
 
 int ice_agent_stop(struct ice_agent_t* ice)
@@ -166,10 +213,20 @@ static int ice_agent_onbind(void* param, stun_response_t* resp, const stun_reque
 	// try trigger check
 	ice_checklist_trigger(s->checklist, &addr, nominated ? 1 : 0);
 
+	// set auth
+	memcpy(&resp->auth, &ice->auth, sizeof(resp->auth));
+	snprintf(resp->auth.usr, sizeof(resp->auth.usr), "%s:%s", ice->auth.usr, s->rauth.usr);
 	return stun_agent_bind_response(resp, 200, "OK");
 }
 
-static int ice_agent_send(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
+static int ice_agent_onbindindication(void* param, const stun_request_t* req)
+{
+	struct ice_agent_t* ice;
+	ice = (struct ice_agent_t*)param;
+	return 0;
+}
+
+static int ice_agent_onsend(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
 	struct ice_agent_t* ice;
 	ice = (struct ice_agent_t*)param;
@@ -180,14 +237,15 @@ static int ice_agent_auth(void* param, int cred, const char* usr, const char* re
 {
 	// rfc5245 7.1.2. Sending the Request
 	// A connectivity check MUST utilize the STUN short-term credential mechanism
-
+	char full[512];
 	struct ice_agent_t* ice;
 	(void)realm, (void)nonce;
 	ice = (struct ice_agent_t*)param;
-	assert(STUN_CREDENTIAL_SHORT_TERM == cred);
-	if(0 != strcmp(usr, ice->auth.usr))
+	assert(STUN_CREDENTIAL_SHORT_TERM == ice->stun->auth_term);
+	snprintf(full, sizeof(full), "%s:", ice->auth.usr);
+	if(0 != strncmp(usr, full, strlen(full)))
 		return -1;
-	strcmp(pwd, ice->auth.pwd);
+	snprintf(pwd, 512, "%s", ice->auth.pwd);
 	return 0;
 }
 
@@ -198,22 +256,50 @@ static int ice_agent_getnonce(void* param, char realm[128], char nonce[128])
 	return -1; (void)param;
 }
 
-static void ice_agent_ondata(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int byte)
+static void ice_agent_ondata(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
-	struct ice_agent_t* ice = (struct ice_agent_t*)param;
-	if (ice && ice->handler.ondata)
-		ice->handler.ondata(ice->param, protocol, local, remote, data, byte);
+	int i;
+	struct list_head* ptr;
+	struct ice_stream_t* s;
+	struct ice_candidate_t* c;
+	struct ice_agent_t* ice;
+
+	ice = (struct ice_agent_t*)param;
+
+	if (bytes > 0 && 0 != (0xC0 & ((const uint8_t*)data)[0]))
+	{
+		list_for_each(ptr, &ice->streams)
+		{
+			s = list_entry(ptr, struct ice_stream_t, link);
+			for (i = 0; i < ice_candidates_count(&s->locals); i++)
+			{
+				c = ice_candidates_get(&s->locals, i);
+				if (ICE_CANDIDATE_HOST ==c->type && 0 == socket_addr_compare(local, (struct sockaddr*)&c->addr))
+				{
+					if (ice->handler.ondata)
+						ice->handler.ondata(ice->param, c->stream, c->component, data, bytes);
+					break;
+				}
+			}			
+		}
+	}
+	else
+	{
+		ice_agent_input(ice, protocol, local, remote, data, bytes);
+	}
 }
 
 static int ice_agent_init(struct ice_agent_t* ice)
 {
 	struct stun_agent_handler_t handler;
 	memset(&handler, 0, sizeof(handler));
-	handler.send = ice_agent_send;
 	handler.auth = ice_agent_auth;
+	handler.send = ice_agent_onsend;
 	handler.ondata = ice_agent_ondata;
 	handler.onbind = ice_agent_onbind; // bind request
 	handler.getnonce = ice_agent_getnonce;
+	handler.onbindindication = ice_agent_onbindindication;
 	ice->stun = stun_agent_create(STUN_RFC_5389, &handler, ice);
+	ice->stun->auth_term = STUN_CREDENTIAL_SHORT_TERM;
 	return 0;
 }

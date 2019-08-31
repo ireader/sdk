@@ -98,7 +98,7 @@ extern "C" void turn_client_test()
 	stun_request_t* req = stun_request_create(ctx.stun, STUN_RFC_5389, turn_onallocate, &ctx);
 	stun_request_setaddr(req, STUN_PROTOCOL_UDP, (struct sockaddr*)&host, (const struct sockaddr*)&server, NULL);
     stun_request_setauth(req, STUN_CREDENTIAL_LONG_TERM, TURN_USR, TURN_PWD, "", "");
-    r = turn_agent_allocate(req); assert(0 == r);
+    r = turn_agent_allocate(req, TURN_TRANSPORT_UDP); assert(0 == r);
 	r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen); assert(r > 0);
 	r = stun_agent_input(ctx.stun, STUN_PROTOCOL_UDP, (const struct sockaddr*)&host, (const struct sockaddr*)&server, data, r); assert(0 == r);
     r = socket_recvfrom(ctx.udp, data, sizeof(data), 0, (struct sockaddr*)&server, &addrlen); assert(r > 0);

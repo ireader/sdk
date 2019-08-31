@@ -5,10 +5,9 @@
 
 // rfc3489 8.2 Shared Secret Requests (p13)
 // rfc3489 9.3 Formulating the Binding Request (p17)
-int turn_agent_allocate(stun_request_t* req)
+int turn_agent_allocate(stun_request_t* req, int peertransport)
 {
 	struct stun_message_t* msg;
-	struct turn_allocation_t* allocate;
 	msg = &req->msg;
 
 	if (req->auth.credential != STUN_CREDENTIAL_LONG_TERM)
@@ -17,14 +16,7 @@ int turn_agent_allocate(stun_request_t* req)
 		return -1;
 	}
 
-	allocate = turn_agent_allocation_find_by_address(&req->stun->turnclients, (const struct sockaddr*)&req->addr.host, (const struct sockaddr*)&req->addr.peer);
-	if (!allocate)
-	{
-		allocate = turn_allocation_create();
-		if (!allocate) return -1;
-		turn_agent_allocation_insert(&req->stun->turnclients, allocate);
-	}
-
+	assert(peertransport == TURN_TRANSPORT_UDP);
 	msg->header.msgtype = STUN_MESSAGE_TYPE(STUN_METHOD_CLASS_REQUEST, STUN_METHOD_ALLOCATE);
 	stun_message_add_uint32(msg, STUN_ATTR_REQUESTED_TRANSPORT, TURN_TRANSPORT_UDP << 24);
 	stun_message_add_uint32(msg, STUN_ATTR_LIFETIME, TURN_LIFETIME);
@@ -51,7 +43,11 @@ int turn_client_allocate_onresponse(struct stun_agent_t* stun, struct stun_reque
 
 	memcpy(&allocate->auth, &req->auth, sizeof(struct stun_credential_t));
 	memcpy(&allocate->addr, &req->addr, sizeof(struct stun_address_t)); // fill host/peer
-	
+
+	attr = stun_message_attr_find(resp, STUN_ATTR_REQUESTED_TRANSPORT);
+	if(!attr) attr = stun_message_attr_find(&req->msg, STUN_ATTR_REQUESTED_TRANSPORT);
+	allocate->peertransport = attr ? (attr->v.u32 >> 24) : TURN_TRANSPORT_UDP;
+
 	attr = stun_message_attr_find(resp, STUN_ATTR_XOR_RELAYED_ADDRESS);
 	if (!attr) goto FAILED;
 	memcpy(&allocate->addr.relay, &attr->v.addr, sizeof(struct sockaddr_storage));
@@ -62,7 +58,8 @@ int turn_client_allocate_onresponse(struct stun_agent_t* stun, struct stun_reque
 	memcpy(&allocate->addr.reflexive, &attr->v.addr, sizeof(struct sockaddr_storage));
 
 	attr = stun_message_attr_find(resp, STUN_ATTR_LIFETIME);
-	allocate->expire = system_clock() + (attr ? attr->v.u32 : TURN_LIFETIME) * 1000;
+	allocate->lifetime = attr ? attr->v.u32 : TURN_LIFETIME;
+	allocate->expire = system_clock() + allocate->lifetime * 1000;
 
 	return 0;
 FAILED:
@@ -249,8 +246,8 @@ int turn_client_ondata(struct stun_agent_t* turn, const struct stun_request_t* r
 	assert(req->addr.protocol == allocate->addr.protocol);
 	assert(turn_allocation_find_permission(allocate, (const struct sockaddr*)&peer->v.addr));
 	assert(0 == socket_addr_compare((const struct sockaddr*)&req->addr.peer, (const struct sockaddr*)&allocate->addr.peer));
-	turn->handler.ondata(turn->param, allocate->addr.protocol, (const struct sockaddr*)&allocate->addr.host, (const struct sockaddr*)&peer->v.addr, data->v.ptr, data->length);
-	return 0;
+	//turn->handler.ondata(turn->param, allocate->addr.protocol, (const struct sockaddr*)&allocate->addr.host, (const struct sockaddr*)&peer->v.addr, data->v.ptr, data->length);
+	return stun_agent_input2(turn, allocate->addr.protocol, (const struct sockaddr*)&allocate->addr.host, (const struct sockaddr*)&peer->v.addr, (const struct sockaddr*)&allocate->addr.relay, data->v.ptr, data->length);
 }
 
 // ChannelData from server
@@ -266,7 +263,10 @@ int turn_client_onchannel_data(struct stun_agent_t* turn, struct turn_allocation
 	length = ((uint16_t)data[2] << 8) | (uint16_t)data[3];
 	channel = turn_allocation_find_channel(allocate, number);
 	if (channel && length + 4 <= bytes)
-		turn->handler.ondata(turn->param, allocate->addr.protocol, (const struct sockaddr*)&allocate->addr.host, (const struct sockaddr*)&channel->addr, (const uint8_t*)data + 4, length);
+	{
+		//turn->handler.ondata(turn->param, allocate->addr.protocol, (const struct sockaddr*)&allocate->addr.host, (const struct sockaddr*)&channel->addr, (const uint8_t*)data + 4, length);
+		return stun_agent_input2(turn, allocate->addr.protocol, (const struct sockaddr*)&allocate->addr.host, (const struct sockaddr*)&channel->addr, (const struct sockaddr*)&allocate->addr.relay, (const uint8_t*)data + 4, length);
+	}
 	
 	return 0;
 }
