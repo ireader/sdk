@@ -64,6 +64,12 @@ static int ice_gather_onbind(void* param, const stun_request_t* req, int code, c
 		assert(0);
 		return -1;
 	}
+#if defined(_DEBUG) || defined(DEBUG)
+	{
+		char ip[256];
+		printf("ice ongather %d. [%s:%hu] -> [%s:%hu], reflexive: %s:%hu, relay: %s:%hu\n", code, IP(&addr.host, ip), PORT(&addr.host), IP(&addr.peer, ip+65), PORT(&addr.peer), IP(&addr.reflexive, ip+130), PORT(&addr.reflexive), IP(&addr.relay+195, ip), PORT(&addr.relay));
+	}
+#endif
 	
 	if (0 == code)
 	{
@@ -96,7 +102,6 @@ static int ice_gather_onbind(void* param, const stun_request_t* req, int code, c
 	else
 	{
 		r = 0; // ignore error
-		printf("ice_checklist_ongather code: %d, phrase: %s\n", code, phrase);
 	}
 
 	local->type = ICE_CANDIDATE_UNKNOWN; // done flags

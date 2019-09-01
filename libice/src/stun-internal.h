@@ -109,4 +109,17 @@ int stun_server_onbind(struct stun_agent_t* stun, const struct stun_request_t* r
 int stun_server_onshared_secret(struct stun_agent_t* stun, const struct stun_request_t* req, struct stun_response_t* resp);
 int stun_server_onbindindication(struct stun_agent_t* stun, const struct stun_request_t* req);
 
+static inline const char* IP(const void* addr, char* ip)
+{
+	const struct sockaddr* sa;
+	sa = (const struct sockaddr*)addr;
+	return NULL == sa || 0 == sa->sa_family ? "" : inet_ntop(sa->sa_family, AF_INET == sa->sa_family ? (void*)&(((struct sockaddr_in*)sa)->sin_addr) : (void*)&(((struct sockaddr_in6*)sa)->sin6_addr), ip, 65);
+}
+static inline u_short PORT(const void* addr)
+{
+	const struct sockaddr* sa;
+	sa = (const struct sockaddr*)addr;
+	return NULL == sa || 0 == sa->sa_family ? 0 : ntohs(AF_INET == sa->sa_family ? ((const struct sockaddr_in*)sa)->sin_port : ((const struct sockaddr_in6*)sa)->sin6_port);
+}
+
 #endif /* !_stun_internal_h_ */

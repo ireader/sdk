@@ -19,15 +19,6 @@ struct ice_checklist_t
 	void* param;
 };
 
-//static inline void ice_checklist_print(const struct sockaddr_storage* local, const struct sockaddr_storage* remote)
-//{
-//	char src[SOCKET_ADDRLEN], dst[SOCKET_ADDRLEN];
-//	u_short srcport, dstport;
-//	socket_addr_to((const struct sockaddr*)local, socket_addr_len((const struct sockaddr*)local), src, &srcport);
-//	socket_addr_to((const struct sockaddr*)remote, socket_addr_len((const struct sockaddr*)remote), dst, &dstport);
-//	printf("[%s:%hu -> %s:%hu]\n", src, srcport, dst, dstport);
-//}
-
 struct ice_checklist_t* ice_checklist_create(struct ice_agent_t* ice, struct ice_checklist_handler_t* handler, void* param)
 {
 	struct ice_checklist_t* l;
@@ -380,6 +371,12 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 		ice_checklist_release(l);
 		return 0; // ignore
 	}
+#if defined(_DEBUG) || defined(DEBUG)
+	{
+		char ip[256];
+		printf("ice checklist [%d:%d] onbind [%s:%hu] -> [%s:%hu] ==> %d\n", (int)pair->local.stream, (int)pair->local.component, IP(&pair->local.host, ip), PORT(&pair->local.host), IP(&pair->remote.addr, ip + 65), PORT(&pair->remote.addr), code);
+	}
+#endif
 
 	// TODO: multi-onbind response(by trigger)
 	//assert(ICE_CANDIDATE_PAIR_INPROGRESS == pair->state || ICE_CANDIDATE_PAIR_SUCCEEDED == pair->state /*norminated*/);

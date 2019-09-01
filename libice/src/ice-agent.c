@@ -176,6 +176,13 @@ static int ice_agent_onbind(void* param, stun_response_t* resp, const stun_reque
 	if (!c)
 		return -1; // not found
 
+#if defined(_DEBUG) || defined(DEBUG)
+	{
+		char ip[256];
+		printf("ice onbind request on local [%d:%d] [%s:%hu] from: [%s:%hu], relay: [%s:%hu]\n", (int)c->stream, (int)c->component, IP(&c->host, ip), PORT(&c->host), IP(&addr.peer, ip + 65), PORT(&addr.peer), IP(&addr.relay, ip + 130), PORT(&addr.relay));
+	}
+#endif
+
 	// add remote candidates. 
 	// However, the agent does not pair this candidate with any local candidates.
 	ice_agent_add_remote_peer_reflexive_candidate(ice, c->stream, c->component, &addr, priority);
