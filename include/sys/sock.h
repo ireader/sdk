@@ -1116,14 +1116,14 @@ static inline int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t sale
 		struct sockaddr_in* in = (struct sockaddr_in*)sa;
 		assert(sizeof(struct sockaddr_in) == salen);
 		inet_ntop(AF_INET, &in->sin_addr, ip, SOCKET_ADDRLEN);
-		*port = ntohs(in->sin_port);
+		if(port) *port = ntohs(in->sin_port);
 	}
 	else if (AF_INET6 == sa->sa_family)
 	{
 		struct sockaddr_in6* in6 = (struct sockaddr_in6*)sa;
 		assert(sizeof(struct sockaddr_in6) == salen);
 		inet_ntop(AF_INET6, &in6->sin6_addr, ip, SOCKET_ADDRLEN);
-		*port = ntohs(in6->sin6_port);
+		if (port) *port = ntohs(in6->sin6_port);
 	}
 	else
 	{
