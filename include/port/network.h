@@ -12,10 +12,10 @@ int network_setip(const char* name, int enableDHCP, const char* ip, const char* 
 
 // dns: primary;secondary
 // dns: 222.222.202.100;8.8.8.8
-int network_getdns(const char* name, char primary[40], char secondary[40]);
+int network_getdns(const char* name, char primary[65], char secondary[65]);
 int network_setdns(const char* name, const char* primary, const char *secondary);
 
-int network_getgateway(char* gateway, int len);
+int network_getgateway(char gateway[65]);
 int network_setgateway(const char* gateway);
 
 #ifdef  __cplusplus

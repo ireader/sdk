@@ -172,7 +172,7 @@ int network_setip(const char* name, int enableDHCP, const char* ipaddr, const ch
 	return 0;
 }
 
-int network_getdns(const char* name, char primary[40], char secondary[40])
+int network_getdns(const char* name, char primary[65], char secondary[65])
 {
 	ULONG idx = 0;
 	DWORD dwRetVal = 0;
@@ -235,7 +235,7 @@ int network_setdns(const char* name, const char* primary, const char *secondary)
 	return 0;
 }
 
-int network_getgateway(char* gateway, int len)
+int network_getgateway(char gateway[65])
 {
 	// http://msdn.microsoft.com/en-us/library/aa373798%28v=VS.85%29.aspx
 	return -1;
@@ -249,11 +249,10 @@ int network_setgateway(const char* gateway)
 
 #else
 
-int network_getgateway(char* gateway, int len)
+int network_getgateway(char gateway[65])
 {
 	FILE* fp;
 	char buffer[512];
-	const char* p;
 
 	fp = popen("ip route", "r");
 	if(!fp)
@@ -261,12 +260,8 @@ int network_getgateway(char* gateway, int len)
 
 	while(fgets(buffer, sizeof(buffer), fp))
 	{
-		p += strspn(buffer, " \r\n");
-		if(0 == strncmp("default ", p, 8))
-		{
-			sscanf(p, "%*s %*s %s", gateway);
+		if(1 == sscanf(buffer, "default via %65s dev %*s", gateway))
 			break;
-		}
 	}
 	pclose(fp);
 	return 0;
@@ -280,7 +275,7 @@ int network_setgateway(const char* gateway)
 	strcpy(buffer, "route del default gw ");
 	r = strlen(buffer);
 
-	r = network_getgateway(buffer+r, sizeof(buffer)-r);
+	r = network_getgateway(buffer+r);
 	if(0 == r)
 	{
 		system(buffer);
@@ -309,7 +304,7 @@ int network_getip(network_getip_fcb fcb, void* param)
 	char hwaddr[20];	
 	char ipaddr[32];
 	char netmask[32];
-	char gateway[32];
+	char gateway[65];
 
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if(fd < 0)
@@ -348,7 +343,7 @@ int network_getip(network_getip_fcb fcb, void* param)
 		ipaddr2str(netmask, (struct sockaddr_in*)&req[i].ifr_netmask);
 
 		memset(gateway, 0, sizeof(gateway));
-		network_getgateway(gateway, sizeof(gateway));
+		network_getgateway(gateway);
 		fcb(param, hwaddr, req[i].ifr_name, 0, ipaddr, netmask, gateway);
 	}
 
@@ -385,11 +380,11 @@ static int network_getmac(const struct ifaddrs *ifaddr, const char* ifname, char
 int network_getip(network_getip_fcb fcb, void* param)
 {
 	char hwaddr[20];	
-	char ipaddr[32] ,netmask[32], gateway[32];
+	char ipaddr[32] ,netmask[32], gateway[65];
 	struct ifaddrs *ifaddr, *ifa;
 
 	memset(gateway, 0, sizeof(gateway));
-	network_getgateway(gateway, sizeof(gateway));
+	network_getgateway(gateway);
 
 	if(0 != getifaddrs(&ifaddr))
 		return errno;
@@ -532,7 +527,7 @@ static int network_getdns_handle(const char* str, int strLen, va_list val)
 	return 0;
 }
 
-int network_getdns(const char* name, char primary[40], char secondary[40])
+int network_getdns(const char* name, char primary[65], char secondary[65])
 {
 	int r;
 	char content[1024*2] = {0};
