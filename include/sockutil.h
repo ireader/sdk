@@ -126,9 +126,7 @@ static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, I
 static inline int socket_bind_any_ipv4(IN socket_t sock, IN u_short port)
 {
     struct sockaddr_in addr;
-    int domain;
-    socket_getdomain(sock, &domain);
-    memset(&addr, 0, sizeof(addr));
+	memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
@@ -577,12 +575,15 @@ static inline int socket_sendto_v_by_time(IN socket_t sock, IN const socket_bufv
 
 #if defined(OS_WINDOWS) && _WIN32_WINNT >= 0x0600
 #include <Mswsock.h>
-static inline BOOL WINAPI wsarecvmsgcallback(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *sock)
+static inline BOOL WINAPI wsarecvmsgcallback(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *Parameter2)
 {
 	DWORD bytes;
+	socket_t sock;
 	GUID guid = WSAID_WSARECVMSG;
-	WSAIoctl(*(socket_t*)sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(GUID), Parameter, sizeof(LPFN_WSARECVMSG), &bytes, NULL, NULL);
-	(void)InitOnce;
+	sock = socket_tcp();
+	WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(GUID), Parameter, sizeof(LPFN_WSARECVMSG), &bytes, NULL, NULL);
+	socket_close(sock);
+	(void)InitOnce, (void)Parameter2;
 	return TRUE;
 }
 #endif
@@ -602,7 +603,8 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 
 	DWORD bytes;
 	WSAMSG wsamsg;
-	InitOnceExecuteOnce(&wsarecvmsgonce, wsarecvmsgcallback, &WSARecvMsg, (LPVOID*)&sock);
+	InitOnceExecuteOnce(&wsarecvmsgonce, wsarecvmsgcallback, &WSARecvMsg, NULL);
+	memset(control, 0, sizeof(control));
 	memset(&wsamsg, 0, sizeof(wsamsg));
 	wsamsg.name = peer;
 	wsamsg.namelen = *peerlen;
@@ -610,13 +612,12 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 	wsamsg.dwBufferCount = n;
 	wsamsg.Control.buf = control;
 	wsamsg.Control.len = sizeof(control);
-	wsamsg.dwFlags = 0;
+	wsamsg.dwFlags = flags;
 	r = WSARecvMsg(sock, &wsamsg, &bytes, NULL, NULL);
 	if (0 != r)
 		return r;
 
-	(void)flags;
-	*peerlen = socket_addr_len(peer);
+	*peerlen = wsamsg.namelen;
 	for (cmsg = CMSG_FIRSTHDR(&wsamsg); !!cmsg && local && locallen; cmsg = CMSG_NXTHDR(&wsamsg, cmsg))
 	{
 		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO && *locallen >= sizeof(struct sockaddr_in))
@@ -646,7 +647,7 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 	struct cmsghdr *cmsg;
 	memset(&hdr, 0, sizeof(hdr));
 	memset(control, 0, sizeof(control));
-	hdr.msg_name = &peer;
+	hdr.msg_name = peer;
 	hdr.msg_namelen = *peerlen;
 	hdr.msg_iov = vec;
 	hdr.msg_iovlen = n;
@@ -654,9 +655,10 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 	hdr.msg_controllen = sizeof(control);
 	hdr.msg_flags = 0;
 	r = recvmsg(sock, &hdr, flags);
-	if (0 != r)
-		return r;
+	if (-1 == r)
+		return -1;
 
+	*peerlen = wsamsg.namelen;
 	for (cmsg = CMSG_FIRSTHDR(&hdr); !!cmsg && local && locallen; cmsg = CMSG_NXTHDR(&hdr, cmsg))
 	{
 		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO && *locallen >= sizeof(struct sockaddr_in))
@@ -683,7 +685,7 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 #endif
 	}
 
-	return 0;
+	return r;
 #else
 #pragma error("xxxx\n");
 	return -1;
@@ -706,7 +708,7 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 	wsamsg.lpBuffers = (LPWSABUF)vec;
 	wsamsg.dwBufferCount = n;
 	wsamsg.Control.buf = control;
-	wsamsg.Control.len = 0;
+	wsamsg.Control.len = sizeof(control);
 	wsamsg.dwFlags = 0;
 
 	cmsg = CMSG_FIRSTHDR(&wsamsg);
@@ -749,7 +751,7 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 	hdr.msg_iov = (struct iovec*)vec;
 	hdr.msg_iovlen = n;
 	hdr.msg_control = control;
-	hdr.msg_controllen = 0;
+	hdr.msg_controllen = sizeof(control);
 	hdr.msg_flags = 0;
 
 	cmsg = CMSG_FIRSTHDR(&hdr);
