@@ -7,6 +7,7 @@
 #include "sys/locker.h"
 #include "sys/system.h"
 #include "port/network.h"
+#include "port/ip-route.h"
 #include "aio-timeout.h"
 #include "sockpair.h"
 #include "base64.h"
@@ -31,7 +32,11 @@ struct ice_transport_t
 	socket_t udp[64];
 	struct sockaddr_storage addr[64];
 	int naddr;
+	int stream;
+	int component;
+	int foundation;
 
+	int ipv6; // TODO: enable IPv6
 	int stun;
 	int running;
 	pthread_t thread;
@@ -112,16 +117,30 @@ static void ice_transport_ondata(void* param, uint8_t stream, uint16_t component
 	avt->handler.ondata(avt->param, stream, component, data, bytes);
 }
 
+static inline u_short socket_addr_getport(const struct sockaddr* addr)
+{
+	switch (addr->sa_family)
+	{
+	case AF_INET:	return ntohs(((struct sockaddr_in*)addr)->sin_port);
+	case AF_INET6:	return ntohs(((struct sockaddr_in6*)addr)->sin6_port);
+	default: return 0;
+	}
+}
+
 static int ice_transport_onsend(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
 	int i;
+	socket_bufvec_t vec[1];
 	struct ice_transport_t* avt = (struct ice_transport_t*)param;
 	assert(STUN_PROTOCOL_UDP == protocol);
-	for (i = 0; i < sizeof(avt->udp)/sizeof(avt->udp[0]); i++)
+	for (i = 0; i < avt->naddr; i++)
 	{
-		if (0 == socket_addr_compare((struct sockaddr*)&avt->addr[i], local))
+		//if (0 == socket_addr_compare((struct sockaddr*)&avt->addr[i], local))
+		if(local->sa_family == avt->addr[i].ss_family && socket_addr_getport((struct sockaddr*)&avt->addr[i]) == socket_addr_getport(local))
 		{
-			int r = socket_sendto(avt->udp[i], data, bytes, 0, remote, socket_addr_len(remote));
+			socket_setbufvec(vec, 0, (void*)data, bytes);
+			//int r = socket_sendto(avt->udp[i], data, bytes, 0, remote, socket_addr_len(remote));
+			int r = socket_sendto_addr(avt->udp[i], vec, sizeof(vec)/sizeof(vec[0]), 0, remote, socket_addr_len(remote), local, socket_addr_len(local));
 			assert(r == bytes || socket_geterror() == ENETUNREACH || socket_geterror() == 10051/*WSAENETUNREACH*/);
 			return r == bytes ? 0 : socket_geterror();
 		}
@@ -245,7 +264,7 @@ struct ice_transport_list_local_candidates_t
 	char* end;
 };
 
-static int ice_transport_oncandidate(const struct ice_candidate_t* c, const void* param)
+static int ice_transport_candidate_onsdp(const struct ice_candidate_t* c, const void* param)
 {
 	static const char* s_transport[] = { "UDP", "TCP", "TLS", "DTLS", };
 
@@ -278,6 +297,8 @@ static int ice_transport_oncandidate(const struct ice_candidate_t* c, const void
 
 int ice_transport_getsdp(struct ice_transport_t* avt, int stream, char* buf, int bytes)
 {
+	//static const char* pattern = "a=ice-ufrag:%s\na=ice-pwd:%s\nc=IN %s %s\na=rtcp:%hu\n";
+
 	int n;
 	struct ice_transport_list_local_candidates_t p;
 	p.stream = stream;
@@ -291,71 +312,105 @@ int ice_transport_getsdp(struct ice_transport_t* avt, int stream, char* buf, int
 			return -1;
 		p.ptr += n;
 
-		if (0 != ice_agent_list_local_candidate(avt->ice, ice_transport_oncandidate, &p))
+		//n += snprintf((char*)s->video.sender.buffer + n, sizeof(s->video.sender.buffer) - n, "", AF_INET6 == addr[0].ss_family ? "IP6" : "IP4", ip, port);
+
+		if (0 != ice_agent_list_local_candidate(avt->ice, ice_transport_candidate_onsdp, &p))
 			return 0;
 	}
 	return (int)(p.ptr - buf);
 }
 
-struct ice_transport_gather_local_candidate_t
-{
-	struct ice_transport_t* avt;
-	int foundation;
-	int stream;
-	int component;
-};
-
 static void ice_transport_gather_local_candidate_handler(void* param, const char* mac, const char* name, int dhcp, const char* ip, const char* netmask, const char* gateway)
 {
-	int i, j;
-	u_short port[2];
+	int i, j, n;
 	socklen_t addrlen;
-	struct sockaddr_storage addr;
-	struct ice_transport_gather_local_candidate_t* p;
+	struct sockaddr_storage addr, *addr0;
 	struct ice_transport_t* avt;
 
 	(void)gateway, (void)netmask, (void)dhcp, (void)name, (void)mac;
-	p = (struct ice_transport_gather_local_candidate_t*)param;
-	avt = p->avt;
+	avt = (struct ice_transport_t*)param;
 
-	if (NULL == ip || 0 == *ip || 0 == strcmp("0.0.0.0", ip))
+	if (NULL == ip || 0 == *ip || 0 == strcmp("0.0.0.0", ip) || 0 == strcmp("::", ip) || 0 == strcmp("127.0.0.1", ip) || 0 == strcmp("::1", ip))
 		return; // ignore
 
 	socket_addr_from(&addr, &addrlen, ip, 0);
+	n = AF_INET6 == addr.ss_family ? avt->stream*avt->component : 0;
 
-	for (i = 0; i < p->stream; i++)
+	for (i = 0; i < avt->stream; i++)
 	{
-		if (avt->naddr + p->component >= sizeof(avt->udp) / sizeof(avt->udp[0]))
-			continue;
-
-		if (2 == p->component)
-			sockpair_create2((struct sockaddr*)&addr, &avt->udp[avt->naddr], port);
-		else
-			avt->udp[avt->naddr] = socket_udp_bind_addr((struct sockaddr*)&addr, 0, 0);
-
-		for (j = 0; j < p->component && j < 2; j++)
+		for (j = 0; j < avt->component; j++)
 		{
-			getsockname(avt->udp[avt->naddr+j], (struct sockaddr*)&avt->addr[avt->naddr+j], &addrlen);
-			ice_add_local_candidate(avt->ice, i, j+1, p->foundation + 1, (struct sockaddr*)&avt->addr[avt->naddr+j]);
+			addr0 = &avt->addr[n + i * avt->stream + j];
+			assert(addr0->ss_family == addr.ss_family);
+			if (AF_INET == addr0->ss_family)
+				((struct sockaddr_in*)&addr)->sin_port = ((struct sockaddr_in*)addr0)->sin_port;
+			else
+				((struct sockaddr_in6*)&addr)->sin6_port = ((struct sockaddr_in*)addr0)->sin_port;
+			ice_add_local_candidate(avt->ice, i, j+1, avt->foundation + 1, (struct sockaddr*)&addr);
 		}
-
-		avt->naddr += p->component;
 	}
 
-	++p->foundation;
+	++avt->foundation;
 }
 
 int ice_transport_bind(struct ice_transport_t* avt, int stream, int component, const struct sockaddr* stun, int turn, const char* usr, const char* pwd)
 {
-	struct ice_transport_gather_local_candidate_t t;
-	t.foundation = 0;
-	t.component = component;
-	t.stream = stream;
-	t.avt = avt;
+	int i, j, k, r;
+	u_short port[2];
+	char ip[SOCKET_ADDRLEN];
+	static const char *address[] = { "0.0.0.0", "::" };
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
 
-	assert(component <= 2);
-	network_getip(ice_transport_gather_local_candidate_handler, &t);
-	avt->stun = (avt->stun & ~ICE_LOCAL_ENABLE) | (stun ? ICE_LOCAL_ENABLE : 0);
+	if (component > 2)
+	{
+		assert(0);
+		return -1;
+	}
+	
+	avt->stream = stream;
+	avt->component = component;
+	avt->foundation = 0;
+
+	for (i = 0; i < sizeof(address) / sizeof(address[0]); i++)
+	{
+		if (avt->naddr + component >= sizeof(avt->udp) / sizeof(avt->udp[0]))
+		{
+			assert(0);
+			break;
+		}
+
+		r = socket_addr_from(&addr, &addrlen, address[i], 0);
+		if(0 != r)
+			continue;
+
+		for (j = 0; j < stream; j++)
+		{
+			if (2 == component)
+				sockpair_create2((struct sockaddr*)&addr, &avt->udp[avt->naddr], port);
+			else
+				avt->udp[avt->naddr] = socket_udp_bind_addr((struct sockaddr*)&addr, 0, 0);
+
+			for (k = 0; k < component; k++)
+			{
+				if(AF_INET == addr.ss_family)
+					r = socket_setpktinfo(avt->udp[avt->naddr + k], 1);
+				else if(AF_INET6 == addr.ss_family)
+					r = socket_setpktinfo6(avt->udp[avt->naddr + k], 1);
+				assert(0 == r);
+
+				socket_setnonblock(avt->udp[avt->naddr + k], 1);
+				getsockname(avt->udp[avt->naddr + k], (struct sockaddr*)&avt->addr[avt->naddr + k], &addrlen);
+			}
+			avt->naddr += component;
+		}
+	}
+
+	if (0 == avt->naddr)
+	{
+		assert(0);
+		return -1;
+	}
 
 	// start run thread
 	assert(0 == avt->running);
@@ -364,11 +419,16 @@ int ice_transport_bind(struct ice_transport_t* avt, int stream, int component, c
 
 	if (stun && (AF_INET == stun->sa_family || AF_INET6 == stun->sa_family))
 	{
+		avt->stun |= ICE_LOCAL_ENABLE;
+		network_getip(ice_transport_gather_local_candidate_handler, avt);
 		return ice_agent_gather(avt->ice, (struct sockaddr*)stun, turn, 2000, STUN_CREDENTIAL_LONG_TERM, usr, pwd);
 	}
 	else
 	{
-		ice_transport_ongather(avt->param, 0);
+		ip_route_get("0.0.0.0", ip); // default ip(IPv4)
+		avt->stun = (avt->stun & ~ICE_LOCAL_ENABLE);
+		ice_transport_gather_local_candidate_handler(avt, NULL, NULL, 0, ip, NULL, NULL);
+		ice_transport_ongather(avt, 0);
 		return 0;
 	}
 }
@@ -408,11 +468,11 @@ int ice_transport_connect(struct ice_transport_t* avt, const struct rtsp_media_t
 			memset(&c, 0, sizeof(c));
 			c.stream = (uint8_t)i;
 			c.priority = 1;
-			c.component = j + 1;
+			c.component = (uint16_t)(j + 1);
 			c.protocol = STUN_PROTOCOL_UDP;
 			c.type = ICE_CANDIDATE_HOST;
 			snprintf(c.foundation, sizeof(c.foundation), "%s", "default");
-			socket_addr_from(&c.addr, &len, m->address, m->port[j]);
+			socket_addr_from(&c.addr, &len, m->address, (u_short)m->port[j]);
 			memcpy(&c.host, &c.addr, sizeof(struct sockaddr_storage)); // remote candidate c.host = c.addr
 			ice_agent_add_remote_candidate(avt->ice, &c);
 		}
@@ -436,18 +496,21 @@ int ice_transport_send(struct ice_transport_t* avt, int stream, int component, c
 
 static int STDCALL ice_transport_thread(void* param)
 {
-	int i, r, n;
+	int i, n;
+	int64_t r;
 	struct ice_transport_t* avt;
-	struct sockaddr_storage addr;
-	socklen_t addrlen;
-
+	struct sockaddr_storage local, peer;
+	socklen_t locallen, peerlen;
+	socket_bufvec_t vec[1];
+	
 	avt = (struct ice_transport_t*)param;
+	socket_setbufvec(vec, 0, avt->ptr, sizeof(avt->ptr));
 
 	while (avt->running)
 	{
 		aio_timeout_process();
 
-		r = socket_poll_read(avt->udp, sizeof(avt->udp) / sizeof(avt->udp[0]), 1000);
+		r = socket_poll_read(avt->udp, avt->naddr, 1000);
 		if (0 == r)
 		{
 			continue; // timeout
@@ -460,17 +523,20 @@ static int STDCALL ice_transport_thread(void* param)
 		}
 		else
 		{
-			for (i = 0; i < sizeof(avt->udp) / sizeof(avt->udp[0]); i++)
+			for (i = 0; i < avt->naddr; i++)
 			{
-				if (0 == (r & (1 << i)))
+				if (0 == (r & ((int64_t)1 << i)))
 					continue;
 
-				addrlen = sizeof(addr);
-				n = socket_recvfrom(avt->udp[i], avt->ptr, sizeof(avt->ptr), 0, (struct sockaddr*)&addr, &addrlen);
+				peerlen = sizeof(peer);
+				locallen = sizeof(local);
+				//n = socket_recvfrom(avt->udp[i], avt->ptr, sizeof(avt->ptr), 0, (struct sockaddr*)&peer, &peerlen);
+				n = socket_recvfrom_addr(avt->udp[i], vec, sizeof(vec) / sizeof(vec[0]), 0, (struct sockaddr*)&peer, &peerlen, (struct sockaddr*)&local, &locallen);
 				if (n <= 0)
 					continue;
 
-				n = ice_agent_input(avt->ice, STUN_PROTOCOL_UDP, (struct sockaddr*)&avt->addr[i], (struct sockaddr*)&addr, avt->ptr, n);
+				socket_addr_setport((struct sockaddr*)&local, locallen, socket_addr_getport((struct sockaddr*)&avt->addr[i]));
+				n = ice_agent_input(avt->ice, STUN_PROTOCOL_UDP, (struct sockaddr*)&local, (struct sockaddr*)&peer, avt->ptr, n);
 				assert(0 == n);
 			}
 		}

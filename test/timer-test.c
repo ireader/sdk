@@ -68,7 +68,7 @@ static void timer_check_cascade2()
 		twtimer_start(wheel, &timers[i]);
 	}
 
-	for (counter = i = 0; i < TIMER + 1; i+=rand())
+	for (counter = i = 0; i < TIMER + 1; i+=rand()%(TIMER+1))
 	{
 		twtimer_process(wheel, now + (i << TIMER_RESOLUTION));
 		assert(counter == i);

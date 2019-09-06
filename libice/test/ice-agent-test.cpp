@@ -56,7 +56,7 @@ static void ice_agent_test_onbind(void* param, int code)
 	{
 		ice_transport_getaddr(ctx->avt, i, 1, &addr);
 		socket_addr_to((sockaddr*)&addr, socket_addr_len((sockaddr*)&addr), ip, &port);
-		n += snprintf(buffer + n, sizeof(buffer) - n, "m=%s %hu ICE/SDP\n", 0==i?"video":"text", port);
+		n += snprintf(buffer + n, sizeof(buffer) - n, "m=%s %hu RTP/AVP\n", 0==i?"audio":"text", port);
 		n += snprintf(buffer + n, sizeof(buffer) - n, "c=IN IP4 %s\n", ip);
 		ice_transport_getaddr(ctx->avt, i, 2, &addr);
 		socket_addr_to((sockaddr*)&addr, socket_addr_len((sockaddr*)&addr), ip, &port);
@@ -66,7 +66,7 @@ static void ice_agent_test_onbind(void* param, int code)
 
 	char base64[3 * 1024];
 	n = base64_encode(base64, buffer, n);
-	printf("Copy this line to remote client:\n\n  %.*s\n\n", n, base64);
+	printf("%s\n\nCopy this line to remote client:\n\n  %.*s\n\n", buffer, n, base64);
 	ctx->onbind = 1;
 }
 
@@ -93,9 +93,9 @@ extern "C" void ice_agent_test(void)
 	handler.ondata = ice_agent_test_ondata;
 	handler.onbind = ice_agent_test_onbind;
 	handler.onconnected = ice_agent_test_onconnected;
-	ctx.avt = ice_transport_create(0, &handler, &ctx);
+	ctx.avt = ice_transport_create(1, &handler, &ctx);
 	ctx.onbind = 0;
-	ctx.stream = 2;
+	ctx.stream = 1;
 	ctx.component = 2;
 
 	struct sockaddr_storage stun;

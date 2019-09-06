@@ -179,7 +179,7 @@ static int ice_agent_onbind(void* param, stun_response_t* resp, const stun_reque
 #if defined(_DEBUG) || defined(DEBUG)
 	{
 		char ip[256];
-		printf("ice onbind request on local [%d:%d] [%s:%hu] from: [%s:%hu], relay: [%s:%hu]\n", (int)c->stream, (int)c->component, IP(&c->host, ip), PORT(&c->host), IP(&addr.peer, ip + 65), PORT(&addr.peer), IP(&addr.relay, ip + 130), PORT(&addr.relay));
+		printf("[S] ice [%d:%d] %s%s [%s:%hu] peer: [%s:%hu], relay: [%s:%hu]\n", (int)c->stream, (int)c->component, controlling ? "[controlling]" : "[controlled]", nominated ? "[nominated]" : "", IP(&c->host, ip), PORT(&c->host), IP(&addr.peer, ip + 65), PORT(&addr.peer), IP(&addr.relay, ip + 130), PORT(&addr.relay));
 	}
 #endif
 

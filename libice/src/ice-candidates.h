@@ -31,18 +31,18 @@ static inline struct ice_candidate_t* ice_candidates_get(ice_candidates_t* arr, 
 
 /// Compare candidate host address with addr
 /// @return 0-equal
-static int ice_candidate_compare_host_addr(const struct ice_candidate_t* l, const struct sockaddr_storage* addr)
+static inline int ice_candidate_compare_host_addr(const struct ice_candidate_t* l, const struct sockaddr_storage* addr)
 {
 	return ICE_CANDIDATE_HOST == l->type && 0 == socket_addr_compare((const struct sockaddr*)&l->host, (const struct sockaddr*)addr) ? 0 : -1;
 }
 
-static int ice_candidate_compare_base_addr(const struct ice_candidate_t* l, const struct ice_candidate_t* r)
+static inline int ice_candidate_compare_base_addr(const struct ice_candidate_t* l, const struct ice_candidate_t* r)
 {
 	// rfc5245 B.2. Candidates with Multiple Bases (p109)
 	return l->type == r->type && 0 == socket_addr_compare((const struct sockaddr*)ice_candidate_base(l), (const struct sockaddr*)ice_candidate_base(r)) ? 0 : -1;
 }
 
-static int ice_candidate_compare(const struct ice_candidate_t* l, const struct ice_candidate_t* r)
+static inline int ice_candidate_compare(const struct ice_candidate_t* l, const struct ice_candidate_t* r)
 {
 	// multi-home maybe has same reflexive address
 	// eth0: 192.168.10.100 --> stun server 1
@@ -54,12 +54,12 @@ static int ice_candidate_compare(const struct ice_candidate_t* l, const struct i
 
 static inline int ice_candidates_insert(ice_candidates_t* arr, const struct ice_candidate_t* c)
 {
-	return darray_insert2(arr, c, ice_candidate_compare);
+	return darray_insert2(arr, c, (darray_compare)ice_candidate_compare);
 }
 
 static inline int ice_candidates_erase(ice_candidates_t* arr, const struct ice_candidate_t* c)
 {
-	return darray_erase2(arr, c, ice_candidate_compare);
+	return darray_erase2(arr, c, (darray_compare)ice_candidate_compare);
 }
 
 static inline int ice_candidates_list(ice_candidates_t* arr, int (*oncandidate)(const struct ice_candidate_t*, void*), void* param)
@@ -76,9 +76,9 @@ static inline int ice_candidates_list(ice_candidates_t* arr, int (*oncandidate)(
 	return 0;
 }
 
-static inline struct ice_candidate_t* ice_candidates_find(ice_candidates_t* arr, int (*oncandidate)(const struct ice_candidate_t*, const void*), const void* param)
+static inline struct ice_candidate_t* ice_candidates_find(ice_candidates_t* arr, int (*oncandidate)(const struct ice_candidate_t*, const struct sockaddr_storage*), const void* param)
 {
-	return (struct ice_candidate_t*)darray_find(arr, param, NULL, oncandidate);
+	return (struct ice_candidate_t*)darray_find(arr, param, NULL, (darray_compare)oncandidate);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -109,12 +109,12 @@ static inline struct ice_candidate_pair_t* ice_candidate_pairs_get(ice_candidate
 	return (struct ice_candidate_pair_t*)darray_get(arr, i);
 }
 
-static int ice_candidate_pair_compare_foundation(const struct ice_candidate_pair_t** l, const struct ice_candidate_pair_t* r)
+static inline int ice_candidate_pair_compare_foundation(const struct ice_candidate_pair_t** l, const struct ice_candidate_pair_t* r)
 {
 	return 0 == strcmp((*l)->foundation, r->foundation) ? 0 : -1;
 }
 
-static int ice_candidate_pair_compare(const struct ice_candidate_pair_t* l, const struct ice_candidate_pair_t* r)
+static inline int ice_candidate_pair_compare(const struct ice_candidate_pair_t* l, const struct ice_candidate_pair_t* r)
 {
 	if (l->priority == r->priority)
 	{
@@ -127,7 +127,7 @@ static int ice_candidate_pair_compare(const struct ice_candidate_pair_t* l, cons
 	return (l->priority - r->priority) > 0 ? 1 : -1;
 }
 
-static int ice_candidate_pair_compare_addr(const struct ice_candidate_pair_t* pair, const struct stun_address_t* addr)
+static inline int ice_candidate_pair_compare_addr(const struct ice_candidate_pair_t* pair, const struct stun_address_t* addr)
 {
 	if (0 == socket_addr_compare((const struct sockaddr*)&pair->local.host, (const struct sockaddr*)&addr->host)
 		&& 0 == socket_addr_compare((const struct sockaddr*)&pair->remote.host, (const struct sockaddr*)&addr->peer))
@@ -135,19 +135,19 @@ static int ice_candidate_pair_compare_addr(const struct ice_candidate_pair_t* pa
 	return -1;
 }
 
-static inline struct ice_candidate_pair_t* ice_candidate_pairs_find(ice_candidate_pairs_t* arr, int (*onpair)(const struct ice_candidate_pair_t*, const void*), const void* param)
+static inline struct ice_candidate_pair_t* ice_candidate_pairs_find(ice_candidate_pairs_t* arr, int (*onpair)(const struct ice_candidate_pair_t*, const struct stun_address_t*), const void* param)
 {
-	return (struct ice_candidate_pair_t*)darray_find(arr, param, NULL, onpair);
+	return (struct ice_candidate_pair_t*)darray_find(arr, param, NULL, (darray_compare)onpair);
 }
 
 static inline int ice_candidate_pairs_insert(ice_candidate_pairs_t* arr, const struct ice_candidate_pair_t* pair)
 {
-	return darray_insert2(arr, pair, ice_candidate_pair_compare);
+	return darray_insert2(arr, pair, (darray_compare)ice_candidate_pair_compare);
 }
 
 static inline int ice_candidate_pairs_remove(ice_candidate_pairs_t* arr, const struct ice_candidate_pair_t* pair)
 {
-	return darray_erase2(arr, pair, ice_candidate_pair_compare);
+	return darray_erase2(arr, pair, (darray_compare)ice_candidate_pair_compare);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -208,7 +208,7 @@ static inline struct ice_candidate_pair_t* ice_candidate_components_find(ice_can
 	return pair;
 }
 
-static int ice_candidate_component_compare(const ice_candidate_pairs_t* component, const uint16_t *id)
+static inline int ice_candidate_component_compare(const ice_candidate_pairs_t* component, const uint16_t *id)
 {
 	const struct ice_candidate_pair_t* pair;
 	assert(ice_candidate_pairs_count(component) > 0);
@@ -220,7 +220,7 @@ static ice_candidate_pairs_t* ice_candidate_components_fetch(ice_candidate_compo
 {
 	int pos;
 	ice_candidate_pairs_t arr, *component;
-	component = darray_find(components, &id, &pos, ice_candidate_component_compare);
+	component = darray_find(components, &id, &pos, (darray_compare)ice_candidate_component_compare);
 	if (NULL == component)
 	{
 		memset(&arr, 0, sizeof(arr));

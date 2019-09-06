@@ -44,7 +44,7 @@ int ice_agent_add_local_candidate(struct ice_agent_t* ice, const struct ice_cand
 int ice_agent_add_remote_candidate(struct ice_agent_t* ice, const struct ice_candidate_t* cand);
 
 /// @return 0-continue, other-abort
-typedef int(*ice_agent_oncandidate)(const struct ice_candidate_t* c, const void* param);
+typedef int(*ice_agent_oncandidate)(const struct ice_candidate_t* c, void* param);
 int ice_agent_list_local_candidate(struct ice_agent_t* ice, ice_agent_oncandidate oncand, void* param);
 int ice_agent_list_remote_candidate(struct ice_agent_t* ice, ice_agent_oncandidate oncand, void* param);
 

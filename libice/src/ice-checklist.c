@@ -374,7 +374,7 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 #if defined(_DEBUG) || defined(DEBUG)
 	{
 		char ip[256];
-		printf("ice checklist [%d:%d] onbind [%s:%hu] -> [%s:%hu] ==> %d\n", (int)pair->local.stream, (int)pair->local.component, IP(&pair->local.host, ip), PORT(&pair->local.host), IP(&pair->remote.addr, ip + 65), PORT(&pair->remote.addr), code);
+		printf("[C] ice [%d:%d] %s%s [%s:%hu] -> [%s:%hu] ==> %d\n", (int)pair->local.stream, (int)pair->local.component, controlling?"[controlling]":"[controlled]", nominated?"[nominated]":"", IP(&pair->local.host, ip), PORT(&pair->local.host), IP(&pair->remote.addr, ip + 65), PORT(&pair->remote.addr), code);
 	}
 #endif
 
@@ -528,7 +528,7 @@ static void ice_checklist_foundation_group(struct ice_checklist_t* l, struct dar
 		{
 			pair = ice_candidate_pairs_get(component, j);
 			assert(ICE_CANDIDATE_PAIR_FROZEN == pair->state);
-			pp = darray_find(foundations, pair, NULL, ice_candidate_pair_compare_foundation);
+			pp = darray_find(foundations, pair, NULL, (darray_compare)ice_candidate_pair_compare_foundation);
 			if (NULL == pp)
 			{
 				darray_insert(foundations, -1, &pair);
@@ -635,7 +635,7 @@ int ice_checklist_update(struct ice_checklist_t* l, const struct darray_t* valid
 		{
 			pair = ice_candidate_pairs_get(component, j);
 			if ( ICE_CANDIDATE_PAIR_FROZEN == pair->state
-				&& NULL != darray_find(valids, pair, NULL, ice_candidate_pair_compare_foundation))
+				&& NULL != darray_find(valids, pair, NULL, (darray_compare)ice_candidate_pair_compare_foundation))
 			{
 				pair->state = ICE_CANDIDATE_PAIR_WAITING;
 				waiting++;
