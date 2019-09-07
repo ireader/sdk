@@ -55,7 +55,8 @@ int ice_agent_gather(struct ice_agent_t* ice, const struct sockaddr* addr, int t
 
 /// 1. before ice connected: get default candidate
 /// 2. after ice connected: get nominated candidate
-int ice_agent_get_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t component, struct ice_candidate_t* cand);
+int ice_agent_get_local_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t component, struct ice_candidate_t* cand);
+int ice_agent_get_remote_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t component, struct ice_candidate_t* cand);
 
 int ice_agent_start(struct ice_agent_t* ice);
 int ice_agent_stop(struct ice_agent_t* ice);

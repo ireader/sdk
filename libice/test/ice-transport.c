@@ -35,6 +35,7 @@ struct ice_transport_t
 	int stream;
 	int component;
 	int foundation;
+	int connected;
 
 	int ipv6; // TODO: enable IPv6
 	int stun;
@@ -94,9 +95,9 @@ static int ice_candidate_attribute(const struct ice_candidate_t* c, char* buf, i
 	socket_addr_to(connaddr, socket_addr_len(connaddr), addr, &addrport);
 	socket_addr_to(realaddr, socket_addr_len(realaddr), raddr, &raddrport);
 	if (ICE_CANDIDATE_HOST == c->type)
-		return snprintf(buf, len, "%s %hu %s %u %s %hu typ host", c->foundation, c->component, ice_candidate_transport_name(c->protocol), c->priority, addr, addrport);
+		return snprintf(buf, len, "a=candidate:%s %hu %s %u %s %hu typ host\n", c->foundation, c->component, ice_candidate_transport_name(c->protocol), c->priority, addr, addrport);
 	else
-		return snprintf(buf, len, "%s %hu %s %u %s %hu typ %s raddr %s rport %hu", c->foundation, c->component, ice_candidate_transport_name(c->protocol), c->priority, addr, addrport, ice_candidate_typename(c), raddr, raddrport);
+		return snprintf(buf, len, "a=candidate:%s %hu %s %u %s %hu typ %s raddr %s rport %hu\n", c->foundation, c->component, ice_candidate_transport_name(c->protocol), c->priority, addr, addrport, ice_candidate_typename(c), raddr, raddrport);
 }
 
 static void ice_agent_username(char usr[16], char pwd[48])
@@ -105,9 +106,9 @@ static void ice_agent_username(char usr[16], char pwd[48])
 	char ptr[40];
 
 	read_random(ptr, sizeof(ptr));
-	n = base64_encode(usr, ptr, 6);
+	n = base64_encode_url(usr, ptr, 6);
 	usr[n] = 0;
-	n = base64_encode(pwd, ptr+9, 18);
+	n = base64_encode_url(pwd, ptr+9, 18);
 	pwd[n] = 0;
 }
 
@@ -158,8 +159,8 @@ static void ice_transport_ongather(void* param, int code)
 static void ice_transport_onconnected(void* param, int64_t streams)
 {
 	struct ice_transport_t* avt = (struct ice_transport_t*)param;
+	avt->connected = streams;
 	avt->handler.onconnected(avt->param, streams);
-
 	//TODO: close other socket
 }
 
@@ -266,29 +267,13 @@ struct ice_transport_list_local_candidates_t
 
 static int ice_transport_candidate_onsdp(const struct ice_candidate_t* c, const void* param)
 {
-	static const char* s_transport[] = { "UDP", "TCP", "TLS", "DTLS", };
-
 	int n;
-	u_short addrport, raddrport;
-	char addr[SOCKET_ADDRLEN], raddr[SOCKET_ADDRLEN];
-	const struct sockaddr* connaddr;
-	const struct sockaddr* realaddr;
 	struct ice_transport_list_local_candidates_t* s;
-
 	s = (struct ice_transport_list_local_candidates_t*)param;
 	if (c->stream != s->stream)
 		return 0;
 
-	connaddr = (const struct sockaddr*)&c->addr;
-	realaddr = (const struct sockaddr*)ice_candidate_realaddr(c);
-	assert(c->protocol <= 0 && c->protocol < sizeof(s_transport) / sizeof(s_transport[0]));
-	socket_addr_to(connaddr, socket_addr_len(connaddr), addr, &addrport);
-	socket_addr_to(realaddr, socket_addr_len(realaddr), raddr, &raddrport);
-	if (ICE_CANDIDATE_HOST == c->type)
-		n = snprintf(s->ptr, s->end - s->ptr, "a=candidate:%s %hu %s %u %s %hu typ host\n", c->foundation, c->component, ice_candidate_transport_name(c->protocol), c->priority, addr, addrport);
-	else
-		n = snprintf(s->ptr, s->end - s->ptr, "a=candidate:%s %hu %s %u %s %hu typ %s raddr %s rport %hu\n", c->foundation, c->component, ice_candidate_transport_name(c->protocol), c->priority, addr, addrport, ice_candidate_typename(c), raddr, raddrport);
-
+	n = ice_candidate_attribute(c, s->ptr, s->end - s->ptr);
 	if (n < 0 || n >= s->end - s->ptr)
 		return -1;
 	s->ptr += n;
@@ -297,9 +282,12 @@ static int ice_transport_candidate_onsdp(const struct ice_candidate_t* c, const 
 
 int ice_transport_getsdp(struct ice_transport_t* avt, int stream, char* buf, int bytes)
 {
-	//static const char* pattern = "a=ice-ufrag:%s\na=ice-pwd:%s\nc=IN %s %s\na=rtcp:%hu\n";
+	static const char* pattern = "a=ice-ufrag:%s\na=ice-pwd:%s\nc=IN %s %s\na=rtcp:%hu\na=sendrecv\n";
 
-	int n;
+	int i, n;
+	u_short port;
+	char host[SOCKET_ADDRLEN];
+	struct ice_candidate_t c;
 	struct ice_transport_list_local_candidates_t p;
 	p.stream = stream;
 	p.ptr = buf;
@@ -307,16 +295,49 @@ int ice_transport_getsdp(struct ice_transport_t* avt, int stream, char* buf, int
 
 	if (avt->stun & ICE_LOCAL_ENABLE)
 	{
-		n = snprintf(p.ptr, bytes, "a=ice-ufrag:%s\na=ice-pwd:%s\n", avt->usr, avt->pwd);
-		if (n < 0 || n >= bytes)
+		// ice default address
+		memset(&c, 0, sizeof(c));
+		ice_agent_get_local_candidate(avt->ice, stream, 1, &c);
+		socket_addr_to((struct sockaddr*)&c.addr, socket_addr_len((struct sockaddr*)&c.addr), host, &port);
+		n = snprintf(p.ptr, p.end - p.ptr, pattern, avt->usr, avt->pwd, AF_INET6==c.addr.ss_family ? "IP6" : "IP4", host, port);
+		if (n < 0 || p.ptr + n >= p.end)
 			return -1;
 		p.ptr += n;
 
-		//n += snprintf((char*)s->video.sender.buffer + n, sizeof(s->video.sender.buffer) - n, "", AF_INET6 == addr[0].ss_family ? "IP6" : "IP4", ip, port);
+		if (avt->connected)
+		{
+			// local candidates
+			for (i = 0; i < avt->component; i++)
+			{
+				memset(&c, 0, sizeof(c));
+				ice_agent_get_local_candidate(avt->ice, stream, i + 1, &c);
+				ice_transport_candidate_onsdp(&c, &p);
+			}
 
-		if (0 != ice_agent_list_local_candidate(avt->ice, ice_transport_candidate_onsdp, &p))
-			return 0;
+			// remote candidates
+			n = snprintf(p.ptr, p.end-p.ptr, "a=remote-candidates:");
+			if (n < 0 || p.ptr + n >= p.end)
+				return -1;
+			p.ptr += n;
+
+			for (i = 0; i < avt->component; i++)
+			{
+				memset(&c, 0, sizeof(c));
+				ice_agent_get_remote_candidate(avt->ice, stream, i + 1, &c);
+				socket_addr_to((struct sockaddr*)&c.addr, socket_addr_len((struct sockaddr*)&c.addr), host, &port);
+				n = snprintf(p.ptr, p.end - p.ptr, " %d %s %hu", i + 1, host, port);
+				if (n < 0 || p.ptr + n >= p.end)
+					return -1;
+				p.ptr += n;
+			}
+		}
+		else
+		{
+			if (0 != ice_agent_list_local_candidate(avt->ice, ice_transport_candidate_onsdp, &p))
+				return 0;
+		}
 	}
+
 	return (int)(p.ptr - buf);
 }
 
@@ -399,7 +420,7 @@ int ice_transport_bind(struct ice_transport_t* avt, int stream, int component, c
 					r = socket_setpktinfo6(avt->udp[avt->naddr + k], 1);
 				assert(0 == r);
 
-				socket_setnonblock(avt->udp[avt->naddr + k], 1);
+				//socket_setnonblock(avt->udp[avt->naddr + k], 1);
 				getsockname(avt->udp[avt->naddr + k], (struct sockaddr*)&avt->addr[avt->naddr + k], &addrlen);
 			}
 			avt->naddr += component;
@@ -438,7 +459,7 @@ int ice_transport_getaddr(struct ice_transport_t* avt, int stream, int component
 	struct ice_candidate_t c;
 
 	memset(&c, 0, sizeof(c));
-	if (0 != ice_agent_get_candidate(avt->ice, (uint8_t)stream, (uint16_t)component, &c))
+	if (0 != ice_agent_get_local_candidate(avt->ice, (uint8_t)stream, (uint16_t)component, &c))
 		return -1;
 
 	memcpy(local, &c.addr, sizeof(struct sockaddr_storage));

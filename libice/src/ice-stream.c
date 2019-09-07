@@ -41,6 +41,7 @@ static int ice_stream_onbind(void* param, struct ice_checklist_t* l, const struc
 
 static int ice_stream_oncomplete(void* param, struct ice_checklist_t* l, int failed)
 {
+	int status;
 	uint64_t flags;
 	struct list_head* ptr;
 	struct ice_stream_t* s;
@@ -53,12 +54,11 @@ static int ice_stream_oncomplete(void* param, struct ice_checklist_t* l, int fai
 	{
 		s = list_entry(ptr, struct ice_stream_t, link);
 		if (s->checklist == l)
-		{
-			flags |= failed ? 0 : ((int64_t)1) << s->stream;
-			continue;
-		}
+			status = failed ? ICE_CHECKLIST_FAILED : ICE_CHECKLIST_COMPLETED;
+		else
+			status = ice_checklist_getstatus(s->checklist);
 
-		switch (ice_checklist_getstatus(s->checklist))
+		switch (status)
 		{
 		case ICE_CHECKLIST_FAILED:
 			++failed;
@@ -270,7 +270,7 @@ int ice_agent_list_remote_candidate(struct ice_agent_t* ice, ice_agent_oncandida
 	return 0;
 }
 
-int ice_agent_get_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t component, struct ice_candidate_t* c)
+int ice_agent_get_local_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t component, struct ice_candidate_t* c)
 {
 	int i;
 	struct ice_stream_t* s;
@@ -295,6 +295,51 @@ int ice_agent_get_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t co
 	for (i = 0; i < ice_candidates_count(&s->locals); i++)
 	{
 		p = ice_candidates_get(&s->locals, i);
+		if (p->stream != stream || p->component != component)
+			continue;
+
+		// rfc5245 4.1.4. Choosing Default Candidates (p25)
+		// 1. It is RECOMMENDED that default candidates be chosen based on the likelihood 
+		//    of those candidates to work with the peer that is being contacted. 
+		// 2. It is RECOMMENDED that the default candidates are the relayed candidates 
+		//    (if relayed candidates are available), server reflexive candidates 
+		//    (if server reflexive candidates are available), and finally host candidates.
+		if (NULL == pc || pc->priority > p->priority)
+			pc = p;
+	}
+
+	if (NULL == pc || NULL == c)
+		return -1; // not found local candidate
+
+	memcpy(c, pc, sizeof(struct ice_candidate_t));
+	return 0;
+}
+
+int ice_agent_get_remote_candidate(struct ice_agent_t* ice, uint8_t stream, uint16_t component, struct ice_candidate_t* c)
+{
+	int i;
+	struct ice_stream_t* s;
+	struct ice_candidate_t *p, *pc = NULL;
+
+	s = ice_agent_find_stream(ice, stream);
+	if (NULL == s)
+		return -1;
+
+	// 1. choose nominated candidate if we have
+	for (i = 0; i < s->ncomponent; i++)
+	{
+		assert(s->components[i].local.stream == stream);
+		if (s->components[i].local.component == component)
+		{
+			memcpy(c, &s->components[i].remote, sizeof(struct ice_candidate_t));
+			return 0;
+		}
+	}
+
+	// 2. choose default candidate
+	for (i = 0; i < ice_candidates_count(&s->remotes); i++)
+	{
+		p = ice_candidates_get(&s->remotes, i);
 		if (p->stream != stream || p->component != component)
 			continue;
 
