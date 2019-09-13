@@ -46,7 +46,7 @@ static int read_random_bytes(void* buf, int len)
 			return -1;
 	}
 
-	for (n = 0; n < len; n += r)
+	for (r = n = 0; n < len; n += r)
 	{
 		r = fread((uint8_t*)buf + n, 1, len - n, fp);
 		if (r <= 0)

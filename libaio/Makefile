@@ -20,7 +20,11 @@ INCLUDES = . \
 SOURCE_PATHS = src
 SOURCE_FILES = $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.cpp))
 SOURCE_FILES += $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.c))
-SOURCE_FILES += $(ROOT)/source/port/aio-socket-epoll.c
+ifdef OS_LINUX
+    SOURCE_FILES += $(ROOT)/source/port/aio-socket-epoll.c
+else
+    SOURCE_FILES += $(ROOT)/source/port/aio-socket-kqueue.c
+endif
 SOURCE_FILES += $(ROOT)/source/twtimer.c
 
 #-----------------------------Library--------------------------------

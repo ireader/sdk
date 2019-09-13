@@ -7,11 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		46C5B1BF2182E50400419E57 /* twtimer.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1BE2182E50400419E57 /* twtimer.c */; };
+		461F0D02232B5B7A00A995BD /* ice-transport.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0D01232B5B7A00A995BD /* ice-transport.c */; };
+		461F0D05232B5BF900A995BD /* random.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0D04232B5BF900A995BD /* random.c */; };
+		461F0D07232B630A00A995BD /* ice-agent-test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 461F0D06232B630A00A995BD /* ice-agent-test.cpp */; };
+		461F0D09232B64E600A995BD /* sockpair.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0D08232B64E500A995BD /* sockpair.c */; };
+		461F0D0B232B650100A995BD /* sysnetconfig.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0D0A232B650100A995BD /* sysnetconfig.c */; };
+		461F0D0D232B652000A995BD /* sdp.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0D0C232B652000A995BD /* sdp.c */; };
+		461F0D0F232B652700A995BD /* rtsp-media.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0D0E232B652600A995BD /* rtsp-media.c */; };
+		461F0D11232B652C00A995BD /* sdp-a-rtpmap.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0D10232B652C00A995BD /* sdp-a-rtpmap.c */; };
+		461F0D13232B653000A995BD /* sdp-a-fmtp.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0D12232B653000A995BD /* sdp-a-fmtp.c */; };
+		461F0D15232B654F00A995BD /* rtsp-header-range.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0D14232B654F00A995BD /* rtsp-header-range.c */; };
+		461F0D17232B657100A995BD /* tools.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0D16232B657100A995BD /* tools.c */; };
+		4620E15F226D6CC500ED9689 /* turn-client-test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4620E15E226D6CC500ED9689 /* turn-client-test.cpp */; };
+		4620E161226F605000ED9689 /* stun-client-test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4620E160226F605000ED9689 /* stun-client-test.cpp */; };
+		4620E16322712E0300ED9689 /* stun-server-test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4620E16222712E0300ED9689 /* stun-server-test.cpp */; };
+		46AC0374221300D0003CF43D /* libhttp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 46AC0373221300D0003CF43D /* libhttp.a */; };
+		46AC0376221300D6003CF43D /* libaio.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 46AC0375221300D6003CF43D /* libaio.dylib */; };
+		46AC037822130194003CF43D /* libice.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 46AC037722130194003CF43D /* libice.a */; };
+		46AC037D2214FCE1003CF43D /* tls-socket.c in Sources */ = {isa = PBXBuildFile; fileRef = 46AC037C2214FCE1003CF43D /* tls-socket.c */; };
 		46C5B1C72182E79000419E57 /* twtimer.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1C62182E79000419E57 /* twtimer.c */; };
 		46C5B1E72182E96C00419E57 /* http-test.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1E62182E96B00419E57 /* http-test.c */; };
-		46C5B1F221836F1100419E57 /* liblibaio.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 46C5B1F121836F1100419E57 /* liblibaio.dylib */; };
-		46C5B1F421836F1400419E57 /* liblibhttp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 46C5B1F321836F1400419E57 /* liblibhttp.a */; };
 		46C5B1FC21836F8D00419E57 /* aio-socket-test3.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1F721836F8C00419E57 /* aio-socket-test3.c */; };
 		46C5B1FD21836F8D00419E57 /* aio-socket-test5.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1F821836F8C00419E57 /* aio-socket-test5.c */; };
 		46C5B1FE21836F8D00419E57 /* aio-socket-test2.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1F921836F8C00419E57 /* aio-socket-test2.c */; };
@@ -98,7 +113,28 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		46C5B1BE2182E50400419E57 /* twtimer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = twtimer.c; sourceTree = "<group>"; };
+		461F0D01232B5B7A00A995BD /* ice-transport.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "ice-transport.c"; path = "libice/test/ice-transport.c"; sourceTree = "<group>"; };
+		461F0D03232B5B8200A995BD /* ice-transport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "ice-transport.h"; path = "libice/test/ice-transport.h"; sourceTree = "<group>"; };
+		461F0D04232B5BF900A995BD /* random.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = random.c; sourceTree = "<group>"; };
+		461F0D06232B630A00A995BD /* ice-agent-test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "ice-agent-test.cpp"; path = "libice/test/ice-agent-test.cpp"; sourceTree = "<group>"; };
+		461F0D08232B64E500A995BD /* sockpair.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sockpair.c; sourceTree = "<group>"; };
+		461F0D0A232B650100A995BD /* sysnetconfig.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sysnetconfig.c; sourceTree = "<group>"; };
+		461F0D0C232B652000A995BD /* sdp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sdp.c; path = "../media-server/librtsp/source/sdp.c"; sourceTree = "<group>"; };
+		461F0D0E232B652600A995BD /* rtsp-media.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "rtsp-media.c"; path = "../media-server/librtsp/source/rtsp-media.c"; sourceTree = "<group>"; };
+		461F0D10232B652C00A995BD /* sdp-a-rtpmap.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "sdp-a-rtpmap.c"; path = "../media-server/librtsp/source/sdp-a-rtpmap.c"; sourceTree = "<group>"; };
+		461F0D12232B653000A995BD /* sdp-a-fmtp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "sdp-a-fmtp.c"; path = "../media-server/librtsp/source/sdp-a-fmtp.c"; sourceTree = "<group>"; };
+		461F0D14232B654F00A995BD /* rtsp-header-range.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "rtsp-header-range.c"; path = "../media-server/librtsp/source/rtsp-header-range.c"; sourceTree = "<group>"; };
+		461F0D16232B657100A995BD /* tools.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tools.c; path = deprecated/tools.c; sourceTree = SOURCE_ROOT; };
+		4620E15E226D6CC500ED9689 /* turn-client-test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "turn-client-test.cpp"; path = "libice/test/turn-client-test.cpp"; sourceTree = "<group>"; };
+		4620E160226F605000ED9689 /* stun-client-test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "stun-client-test.cpp"; path = "libice/test/stun-client-test.cpp"; sourceTree = "<group>"; };
+		4620E16222712E0300ED9689 /* stun-server-test.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "stun-server-test.cpp"; path = "libice/test/stun-server-test.cpp"; sourceTree = "<group>"; };
+		46AC03712212FF99003CF43D /* liblibice.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = liblibice.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		46AC0373221300D0003CF43D /* libhttp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libhttp.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		46AC0375221300D6003CF43D /* libaio.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = libaio.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		46AC037722130194003CF43D /* libice.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libice.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		46AC037922145460003CF43D /* libboringssl.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libboringssl.tbd; path = usr/lib/libboringssl.tbd; sourceTree = SDKROOT; };
+		46AC037B2214FCE1003CF43D /* tls-socket.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "tls-socket.h"; path = "libice/test/tls-socket.h"; sourceTree = "<group>"; };
+		46AC037C2214FCE1003CF43D /* tls-socket.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = "tls-socket.c"; path = "libice/test/tls-socket.c"; sourceTree = "<group>"; };
 		46C5B1C62182E79000419E57 /* twtimer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = twtimer.c; sourceTree = "<group>"; };
 		46C5B1E62182E96B00419E57 /* http-test.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "http-test.c"; path = "test/http-test.c"; sourceTree = "<group>"; };
 		46C5B1F121836F1100419E57 /* liblibaio.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = liblibaio.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -255,17 +291,43 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				46C5B1F421836F1400419E57 /* liblibhttp.a in Frameworks */,
-				46C5B1F221836F1100419E57 /* liblibaio.dylib in Frameworks */,
+				46AC037822130194003CF43D /* libice.a in Frameworks */,
+				46AC0376221300D6003CF43D /* libaio.dylib in Frameworks */,
+				46AC0374221300D0003CF43D /* libhttp.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		46AC036E2212FE64003CF43D /* libice-test */ = {
+			isa = PBXGroup;
+			children = (
+				461F0D06232B630A00A995BD /* ice-agent-test.cpp */,
+				461F0D0E232B652600A995BD /* rtsp-media.c */,
+				461F0D14232B654F00A995BD /* rtsp-header-range.c */,
+				461F0D10232B652C00A995BD /* sdp-a-rtpmap.c */,
+				461F0D0C232B652000A995BD /* sdp.c */,
+				461F0D12232B653000A995BD /* sdp-a-fmtp.c */,
+				461F0D03232B5B8200A995BD /* ice-transport.h */,
+				461F0D01232B5B7A00A995BD /* ice-transport.c */,
+				4620E160226F605000ED9689 /* stun-client-test.cpp */,
+				4620E15E226D6CC500ED9689 /* turn-client-test.cpp */,
+				46AC037B2214FCE1003CF43D /* tls-socket.h */,
+				46AC037C2214FCE1003CF43D /* tls-socket.c */,
+				4620E16222712E0300ED9689 /* stun-server-test.cpp */,
+			);
+			name = "libice-test";
+			sourceTree = "<group>";
+		};
 		46C5B1E821836A5600419E57 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				46AC037922145460003CF43D /* libboringssl.tbd */,
+				46AC037722130194003CF43D /* libice.a */,
+				46AC0375221300D6003CF43D /* libaio.dylib */,
+				46AC0373221300D0003CF43D /* libhttp.a */,
+				46AC03712212FF99003CF43D /* liblibice.a */,
 				46C5B1F321836F1400419E57 /* liblibhttp.a */,
 				46C5B1F121836F1100419E57 /* liblibaio.dylib */,
 			);
@@ -333,6 +395,7 @@
 		46E02C7621820FDB009E1070 = {
 			isa = PBXGroup;
 			children = (
+				46AC036E2212FE64003CF43D /* libice-test */,
 				46C5B20221836F9A00419E57 /* libaio-test */,
 				46C5B20121836F9300419E57 /* libhttp-test */,
 				46C5B1F621836F6900419E57 /* test */,
@@ -354,7 +417,8 @@
 		46E02C8B218211C8009E1070 /* source */ = {
 			isa = PBXGroup;
 			children = (
-				46C5B1BE2182E50400419E57 /* twtimer.c */,
+				461F0D04232B5BF900A995BD /* random.c */,
+				461F0D08232B64E500A995BD /* sockpair.c */,
 				46C5B1C62182E79000419E57 /* twtimer.c */,
 				46E02C8C218211C8009E1070 /* darray.c */,
 				46E02C8E218211C8009E1070 /* rbtree.c */,
@@ -413,7 +477,9 @@
 		46E02CAF218211C8009E1070 /* port */ = {
 			isa = PBXGroup;
 			children = (
+				461F0D16232B657100A995BD /* tools.c */,
 				46E02CB3218211C8009E1070 /* ip-route.c */,
+				461F0D0A232B650100A995BD /* sysnetconfig.c */,
 				46E02CB5218211C8009E1070 /* serial-port-posix.c */,
 			);
 			path = port;
@@ -595,10 +661,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				461F0D13232B653000A995BD /* sdp-a-fmtp.c in Sources */,
 				46C5B20F21836FBF00419E57 /* http-list-dir.cpp in Sources */,
 				46E395DC2182A072001649FA /* spinlock-test.c in Sources */,
 				46C5B1E72182E96C00419E57 /* http-test.c in Sources */,
 				46E02CDD218211C8009E1070 /* uuid.c in Sources */,
+				4620E15F226D6CC500ED9689 /* turn-client-test.cpp in Sources */,
 				46E02CE1218211C8009E1070 /* snprintf.c in Sources */,
 				46C5B20021836F8D00419E57 /* aio-socket-test4.c in Sources */,
 				46E02CCF218211C8009E1070 /* sha1.c in Sources */,
@@ -608,7 +676,9 @@
 				46E02CCD218211C8009E1070 /* hmac.c in Sources */,
 				46E395E62182A072001649FA /* utf8codec-test.cpp in Sources */,
 				46E395DE2182A072001649FA /* sha-test.c in Sources */,
+				461F0D15232B654F00A995BD /* rtsp-header-range.c in Sources */,
 				46E395CD2182A072001649FA /* socket-ipv6-dual-stack-test.c in Sources */,
+				461F0D0F232B652700A995BD /* rtsp-media.c in Sources */,
 				46E02CC8218211C8009E1070 /* time64.c in Sources */,
 				46E02CD5218211C8009E1070 /* thread-pool.c in Sources */,
 				46E395D92182A072001649FA /* ip-route-test.c in Sources */,
@@ -618,16 +688,21 @@
 				46E395D32182A072001649FA /* aio-socket-test-cancel.c in Sources */,
 				46E02CD8218211C8009E1070 /* app-log.c in Sources */,
 				46E395CF2182A072001649FA /* locker-test.c in Sources */,
+				4620E161226F605000ED9689 /* stun-client-test.cpp in Sources */,
 				46C5B20E21836FBF00419E57 /* http-client-test.cpp in Sources */,
 				46E02CC9218211C8009E1070 /* heap.c in Sources */,
+				461F0D02232B5B7A00A995BD /* ice-transport.c in Sources */,
 				46E02CE4218211C8009E1070 /* bsearch.c in Sources */,
 				46E02CF7218211C8009E1070 /* uri-parse.c in Sources */,
 				46E395CE2182A072001649FA /* timer-test.c in Sources */,
 				46E395CB2182A072001649FA /* atomic-test2.c in Sources */,
 				46E02CE0218211C8009E1070 /* strrev.c in Sources */,
 				46E395DB2182A072001649FA /* uri-parse-test.c in Sources */,
+				461F0D09232B64E600A995BD /* sockpair.c in Sources */,
+				461F0D11232B652C00A995BD /* sdp-a-rtpmap.c in Sources */,
 				46C5B1C72182E79000419E57 /* twtimer.c in Sources */,
 				46E02CDC218211C8009E1070 /* base64.c in Sources */,
+				461F0D0B232B650100A995BD /* sysnetconfig.c in Sources */,
 				46E02CD1218211C8009E1070 /* crc32.c in Sources */,
 				46E02CCA218211C8009E1070 /* hweight.c in Sources */,
 				46E395D12182A072001649FA /* rbtree-test.c in Sources */,
@@ -635,10 +710,12 @@
 				46E02CCB218211C8009E1070 /* ring-buffer.c in Sources */,
 				46C5B20A21836FBF00419E57 /* http-download.c in Sources */,
 				46E02CF6218211C8009E1070 /* task-queue.c in Sources */,
+				461F0D17232B657100A995BD /* tools.c in Sources */,
 				46E02CD6218211C8009E1070 /* bits.c in Sources */,
 				46E395D72182A072001649FA /* thread-pool-test.c in Sources */,
 				46E02CC4218211C8009E1070 /* darray.c in Sources */,
 				46C5B1FD21836F8D00419E57 /* aio-socket-test5.c in Sources */,
+				4620E16322712E0300ED9689 /* stun-server-test.cpp in Sources */,
 				46E395D22182A072001649FA /* atomic-test.c in Sources */,
 				46E395E72182A072001649FA /* event-test.c in Sources */,
 				46E02CCE218211C8009E1070 /* sha224-256.c in Sources */,
@@ -647,19 +724,22 @@
 				46E02CD3218211C8009E1070 /* md5.c in Sources */,
 				46E395DF2182A072001649FA /* stack-test.c in Sources */,
 				46E02CEA218211C8009E1070 /* serial-port-posix.c in Sources */,
-				46C5B1BF2182E50400419E57 /* twtimer.c in Sources */,
 				46E02CDF218211C8009E1070 /* strtoken.c in Sources */,
+				461F0D05232B5BF900A995BD /* random.c in Sources */,
 				46E02CC6218211C8009E1070 /* rbtree.c in Sources */,
 				46E02CD9218211C8009E1070 /* uri-query.c in Sources */,
 				46E395E32182A072001649FA /* socket-test.c in Sources */,
+				461F0D07232B630A00A995BD /* ice-agent-test.cpp in Sources */,
 				46E395D52182A072001649FA /* task-queue-test.c in Sources */,
 				46E395E22182A072001649FA /* bitmap-test.c in Sources */,
 				46C5B1FE21836F8D00419E57 /* aio-socket-test2.c in Sources */,
 				46E02CF5218211C8009E1070 /* nls_cp936.c in Sources */,
+				461F0D0D232B652000A995BD /* sdp.c in Sources */,
 				46E02CDB218211C8009E1070 /* urlcodec.c in Sources */,
 				46E02CCC218211C8009E1070 /* bitmap.c in Sources */,
 				46E02CD0218211C8009E1070 /* sha384-512.c in Sources */,
 				46E02CE8218211C8009E1070 /* ip-route.c in Sources */,
+				46AC037D2214FCE1003CF43D /* tls-socket.c in Sources */,
 				46F4BE5821870C9300CC9B15 /* socket-opt-dontfrag-test.c in Sources */,
 				46C5B21021836FBF00419E57 /* http-client-test2.cpp in Sources */,
 				46E395D42182A072001649FA /* main.c in Sources */,
@@ -810,12 +890,21 @@
 				GCC_WARN_UNKNOWN_PRAGMAS = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_PARAMETER = YES;
+				LIBRARY_SEARCH_PATHS = /usr/local/opt/openssl/lib;
+				OTHER_LDFLAGS = (
+					"-lcrypto",
+					"-lssl",
+				);
+				PRELINK_LIBS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SYSTEM_HEADER_SEARCH_PATHS = /usr/local/opt/openssl/include;
 				USER_HEADER_SEARCH_PATHS = (
 					.,
 					"$(SRCROOT)/include",
 					"$(SRCROOT)/libaio/include",
 					"$(SRCROOT)/libhttp/include",
+					"$(SRCROOT)/libice/include",
+					"$(SRCROOT)/../media-server/librtsp/include",
 				);
 			};
 			name = Debug;
@@ -841,12 +930,21 @@
 				GCC_WARN_UNKNOWN_PRAGMAS = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_PARAMETER = YES;
+				LIBRARY_SEARCH_PATHS = /usr/local/opt/openssl/lib;
+				OTHER_LDFLAGS = (
+					"-lcrypto",
+					"-lssl",
+				);
+				PRELINK_LIBS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SYSTEM_HEADER_SEARCH_PATHS = /usr/local/opt/openssl/include;
 				USER_HEADER_SEARCH_PATHS = (
 					.,
 					"$(SRCROOT)/include",
 					"$(SRCROOT)/libaio/include",
 					"$(SRCROOT)/libhttp/include",
+					"$(SRCROOT)/libice/include",
+					"$(SRCROOT)/../media-server/librtsp/include",
 				);
 			};
 			name = Release;

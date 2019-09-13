@@ -22,7 +22,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#if !defined(OS_MAC)
 #include <netpacket/packet.h>
+#endif
 #include <net/if.h>
 #include <ifaddrs.h>
 #include <netdb.h>
@@ -352,6 +354,7 @@ int network_getip(network_getip_fcb fcb, void* param)
 }
 
 #else
+#if !defined(OS_MAC)
 static int network_getmac(const struct ifaddrs *ifaddr, const char* ifname, char hwaddr[20])
 {
 	const struct ifaddrs *ifa = NULL;
@@ -376,6 +379,7 @@ static int network_getmac(const struct ifaddrs *ifaddr, const char* ifname, char
 	}
 	return -1;
 }
+#endif
 
 int network_getip(network_getip_fcb fcb, void* param)
 {
@@ -403,7 +407,9 @@ int network_getip(network_getip_fcb fcb, void* param)
 		ipaddr2str(netmask, (struct sockaddr_in*)ifa->ifa_netmask);
 
 		memset(hwaddr, 0, sizeof(hwaddr));
+#if !defined(OS_MAC)
 		network_getmac(ifaddr, ifa->ifa_name, hwaddr);
+#endif
 
 		fcb(param, hwaddr, ifa->ifa_name, 0, ipaddr, netmask, gateway);
 	}

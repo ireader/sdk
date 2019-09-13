@@ -265,7 +265,7 @@ struct ice_transport_list_local_candidates_t
 	char* end;
 };
 
-static int ice_transport_candidate_onsdp(const struct ice_candidate_t* c, const void* param)
+static int ice_transport_candidate_onsdp(const struct ice_candidate_t* c, void* param)
 {
 	int n;
 	struct ice_transport_list_local_candidates_t* s;

@@ -7,85 +7,63 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		4620E146226D6CAC00ED9689 /* turn-server.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E12E226D6CA900ED9689 /* turn-server.c */; };
-		4620E147226D6CAC00ED9689 /* stun-client.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E12F226D6CA900ED9689 /* stun-client.c */; };
-		4620E148226D6CAC00ED9689 /* ice-agent.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E130226D6CA900ED9689 /* ice-agent.c */; };
-		4620E149226D6CAC00ED9689 /* stun-message.h in Headers */ = {isa = PBXBuildFile; fileRef = 4620E131226D6CA900ED9689 /* stun-message.h */; };
-		4620E14A226D6CAC00ED9689 /* ice-checklist.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E132226D6CA900ED9689 /* ice-checklist.c */; };
-		4620E14B226D6CAC00ED9689 /* stun-transid.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E133226D6CA900ED9689 /* stun-transid.c */; };
-		4620E14C226D6CAC00ED9689 /* stun-attr.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E134226D6CA900ED9689 /* stun-attr.c */; };
-		4620E14D226D6CAC00ED9689 /* ice-stream.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E135226D6CAA00ED9689 /* ice-stream.c */; };
-		4620E14E226D6CAC00ED9689 /* stun-agent.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E136226D6CAA00ED9689 /* stun-agent.c */; };
-		4620E14F226D6CAC00ED9689 /* ice-streams.h in Headers */ = {isa = PBXBuildFile; fileRef = 4620E137226D6CAA00ED9689 /* ice-streams.h */; };
-		4620E150226D6CAC00ED9689 /* ice-checklist.h in Headers */ = {isa = PBXBuildFile; fileRef = 4620E138226D6CAA00ED9689 /* ice-checklist.h */; };
-		4620E151226D6CAC00ED9689 /* stun-server.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E139226D6CAA00ED9689 /* stun-server.c */; };
-		4620E152226D6CAC00ED9689 /* turn-client.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E13A226D6CAA00ED9689 /* turn-client.c */; };
-		4620E153226D6CAC00ED9689 /* turn-internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 4620E13B226D6CAA00ED9689 /* turn-internal.h */; };
-		4620E154226D6CAC00ED9689 /* turn-allocate.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E13C226D6CAB00ED9689 /* turn-allocate.c */; };
-		4620E155226D6CAC00ED9689 /* stun-request.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E13D226D6CAB00ED9689 /* stun-request.c */; };
-		4620E156226D6CAC00ED9689 /* ice-internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 4620E13E226D6CAB00ED9689 /* ice-internal.h */; };
-		4620E157226D6CAC00ED9689 /* ice-candidates.h in Headers */ = {isa = PBXBuildFile; fileRef = 4620E13F226D6CAB00ED9689 /* ice-candidates.h */; };
-		4620E158226D6CAC00ED9689 /* stun-internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 4620E140226D6CAB00ED9689 /* stun-internal.h */; };
-		4620E159226D6CAC00ED9689 /* ice-gather.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E141226D6CAB00ED9689 /* ice-gather.c */; };
-		4620E15A226D6CAC00ED9689 /* stun-auth.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E142226D6CAB00ED9689 /* stun-auth.c */; };
-		4620E15B226D6CAC00ED9689 /* turn-agent.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E143226D6CAC00ED9689 /* turn-agent.c */; };
-		4620E15C226D6CAC00ED9689 /* stun-attr.h in Headers */ = {isa = PBXBuildFile; fileRef = 4620E144226D6CAC00ED9689 /* stun-attr.h */; };
-		4620E15D226D6CAC00ED9689 /* stun-message.c in Sources */ = {isa = PBXBuildFile; fileRef = 4620E145226D6CAC00ED9689 /* stun-message.c */; };
-		467520E62218E3A20081FCF9 /* turn-client.c in Sources */ = {isa = PBXBuildFile; fileRef = 467520E52218E3A20081FCF9 /* turn-client.c */; };
-		46AC035E2212FE51003CF43D /* stun-transid.c in Sources */ = {isa = PBXBuildFile; fileRef = 46AC034E2212FE50003CF43D /* stun-transid.c */; };
-		46AC03602212FE51003CF43D /* stun-internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 46AC03502212FE50003CF43D /* stun-internal.h */; };
-		46AC03622212FE51003CF43D /* stun-client.c in Sources */ = {isa = PBXBuildFile; fileRef = 46AC03522212FE50003CF43D /* stun-client.c */; };
-		46AC03632212FE51003CF43D /* stun-server.c in Sources */ = {isa = PBXBuildFile; fileRef = 46AC03532212FE50003CF43D /* stun-server.c */; };
-		46AC03642212FE51003CF43D /* ice-checklist.c in Sources */ = {isa = PBXBuildFile; fileRef = 46AC03542212FE51003CF43D /* ice-checklist.c */; };
-		46AC03652212FE51003CF43D /* ice-agent.c in Sources */ = {isa = PBXBuildFile; fileRef = 46AC03552212FE51003CF43D /* ice-agent.c */; };
-		46AC03662212FE51003CF43D /* stun-message.h in Headers */ = {isa = PBXBuildFile; fileRef = 46AC03562212FE51003CF43D /* stun-message.h */; };
-		46AC03682212FE51003CF43D /* ice-stream.c in Sources */ = {isa = PBXBuildFile; fileRef = 46AC03582212FE51003CF43D /* ice-stream.c */; };
-		46AC03692212FE51003CF43D /* ice-internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 46AC03592212FE51003CF43D /* ice-internal.h */; };
-		46AC036B2212FE51003CF43D /* stun-message.c in Sources */ = {isa = PBXBuildFile; fileRef = 46AC035B2212FE51003CF43D /* stun-message.c */; };
-		46AC036C2212FE51003CF43D /* stun-attr.h in Headers */ = {isa = PBXBuildFile; fileRef = 46AC035C2212FE51003CF43D /* stun-attr.h */; };
-		46AC036D2212FE51003CF43D /* stun-attr.c in Sources */ = {isa = PBXBuildFile; fileRef = 46AC035D2212FE51003CF43D /* stun-attr.c */; };
+		461F0C8B231F7EE700A995BD /* ice-internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 461F0C71231F7EE600A995BD /* ice-internal.h */; };
+		461F0C8C231F7EE700A995BD /* stun-transid.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C72231F7EE600A995BD /* stun-transid.c */; };
+		461F0C8D231F7EE700A995BD /* stun-agent.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C73231F7EE600A995BD /* stun-agent.c */; };
+		461F0C8E231F7EE700A995BD /* stun-client.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C74231F7EE600A995BD /* stun-client.c */; };
+		461F0C8F231F7EE700A995BD /* ice-checklist.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C75231F7EE600A995BD /* ice-checklist.c */; };
+		461F0C90231F7EE700A995BD /* ice-candidates.h in Headers */ = {isa = PBXBuildFile; fileRef = 461F0C76231F7EE600A995BD /* ice-candidates.h */; };
+		461F0C91231F7EE700A995BD /* stun-attr.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C77231F7EE600A995BD /* stun-attr.c */; };
+		461F0C92231F7EE700A995BD /* stun-auth.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C78231F7EE600A995BD /* stun-auth.c */; };
+		461F0C93231F7EE700A995BD /* ice-internal.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C79231F7EE600A995BD /* ice-internal.c */; };
+		461F0C94231F7EE700A995BD /* turn-internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 461F0C7A231F7EE600A995BD /* turn-internal.h */; };
+		461F0C95231F7EE700A995BD /* turn-agent.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C7B231F7EE600A995BD /* turn-agent.c */; };
+		461F0C96231F7EE700A995BD /* stun-server.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C7C231F7EE600A995BD /* stun-server.c */; };
+		461F0C97231F7EE700A995BD /* stun-internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 461F0C7D231F7EE600A995BD /* stun-internal.h */; };
+		461F0C98231F7EE700A995BD /* ice-candidate.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C7E231F7EE600A995BD /* ice-candidate.c */; };
+		461F0C99231F7EE700A995BD /* turn-server.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C7F231F7EE600A995BD /* turn-server.c */; };
+		461F0C9A231F7EE700A995BD /* ice-stream.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C80231F7EE600A995BD /* ice-stream.c */; };
+		461F0C9B231F7EE700A995BD /* stun-message.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C81231F7EE600A995BD /* stun-message.c */; };
+		461F0C9C231F7EE700A995BD /* stun-request.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C82231F7EE600A995BD /* stun-request.c */; };
+		461F0C9D231F7EE700A995BD /* ice-gather.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C83231F7EE600A995BD /* ice-gather.c */; };
+		461F0C9E231F7EE700A995BD /* ice-agent.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C84231F7EE700A995BD /* ice-agent.c */; };
+		461F0C9F231F7EE700A995BD /* stun-message.h in Headers */ = {isa = PBXBuildFile; fileRef = 461F0C85231F7EE700A995BD /* stun-message.h */; };
+		461F0CA0231F7EE700A995BD /* stun-attr.h in Headers */ = {isa = PBXBuildFile; fileRef = 461F0C86231F7EE700A995BD /* stun-attr.h */; };
+		461F0CA1231F7EE700A995BD /* ice-checklist.h in Headers */ = {isa = PBXBuildFile; fileRef = 461F0C87231F7EE700A995BD /* ice-checklist.h */; };
+		461F0CA2231F7EE700A995BD /* stun-response.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C88231F7EE700A995BD /* stun-response.c */; };
+		461F0CA3231F7EE700A995BD /* turn-client.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C89231F7EE700A995BD /* turn-client.c */; };
+		461F0CA4231F7EE700A995BD /* turn-allocate.c in Sources */ = {isa = PBXBuildFile; fileRef = 461F0C8A231F7EE700A995BD /* turn-allocate.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		4620E12E226D6CA900ED9689 /* turn-server.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "turn-server.c"; sourceTree = "<group>"; };
-		4620E12F226D6CA900ED9689 /* stun-client.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-client.c"; sourceTree = "<group>"; };
-		4620E130226D6CA900ED9689 /* ice-agent.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-agent.c"; sourceTree = "<group>"; };
-		4620E131226D6CA900ED9689 /* stun-message.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "stun-message.h"; sourceTree = "<group>"; };
-		4620E132226D6CA900ED9689 /* ice-checklist.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-checklist.c"; sourceTree = "<group>"; };
-		4620E133226D6CA900ED9689 /* stun-transid.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-transid.c"; sourceTree = "<group>"; };
-		4620E134226D6CA900ED9689 /* stun-attr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-attr.c"; sourceTree = "<group>"; };
-		4620E135226D6CAA00ED9689 /* ice-stream.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-stream.c"; sourceTree = "<group>"; };
-		4620E136226D6CAA00ED9689 /* stun-agent.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-agent.c"; sourceTree = "<group>"; };
-		4620E137226D6CAA00ED9689 /* ice-streams.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "ice-streams.h"; sourceTree = "<group>"; };
-		4620E138226D6CAA00ED9689 /* ice-checklist.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "ice-checklist.h"; sourceTree = "<group>"; };
-		4620E139226D6CAA00ED9689 /* stun-server.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-server.c"; sourceTree = "<group>"; };
-		4620E13A226D6CAA00ED9689 /* turn-client.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "turn-client.c"; sourceTree = "<group>"; };
-		4620E13B226D6CAA00ED9689 /* turn-internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "turn-internal.h"; sourceTree = "<group>"; };
-		4620E13C226D6CAB00ED9689 /* turn-allocate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "turn-allocate.c"; sourceTree = "<group>"; };
-		4620E13D226D6CAB00ED9689 /* stun-request.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-request.c"; sourceTree = "<group>"; };
-		4620E13E226D6CAB00ED9689 /* ice-internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "ice-internal.h"; sourceTree = "<group>"; };
-		4620E13F226D6CAB00ED9689 /* ice-candidates.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "ice-candidates.h"; sourceTree = "<group>"; };
-		4620E140226D6CAB00ED9689 /* stun-internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "stun-internal.h"; sourceTree = "<group>"; };
-		4620E141226D6CAB00ED9689 /* ice-gather.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-gather.c"; sourceTree = "<group>"; };
-		4620E142226D6CAB00ED9689 /* stun-auth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-auth.c"; sourceTree = "<group>"; };
-		4620E143226D6CAC00ED9689 /* turn-agent.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "turn-agent.c"; sourceTree = "<group>"; };
-		4620E144226D6CAC00ED9689 /* stun-attr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "stun-attr.h"; sourceTree = "<group>"; };
-		4620E145226D6CAC00ED9689 /* stun-message.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-message.c"; sourceTree = "<group>"; };
-		467520E52218E3A20081FCF9 /* turn-client.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "turn-client.c"; sourceTree = "<group>"; };
+		461F0C71231F7EE600A995BD /* ice-internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "ice-internal.h"; sourceTree = "<group>"; };
+		461F0C72231F7EE600A995BD /* stun-transid.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-transid.c"; sourceTree = "<group>"; };
+		461F0C73231F7EE600A995BD /* stun-agent.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-agent.c"; sourceTree = "<group>"; };
+		461F0C74231F7EE600A995BD /* stun-client.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-client.c"; sourceTree = "<group>"; };
+		461F0C75231F7EE600A995BD /* ice-checklist.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-checklist.c"; sourceTree = "<group>"; };
+		461F0C76231F7EE600A995BD /* ice-candidates.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "ice-candidates.h"; sourceTree = "<group>"; };
+		461F0C77231F7EE600A995BD /* stun-attr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-attr.c"; sourceTree = "<group>"; };
+		461F0C78231F7EE600A995BD /* stun-auth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-auth.c"; sourceTree = "<group>"; };
+		461F0C79231F7EE600A995BD /* ice-internal.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-internal.c"; sourceTree = "<group>"; };
+		461F0C7A231F7EE600A995BD /* turn-internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "turn-internal.h"; sourceTree = "<group>"; };
+		461F0C7B231F7EE600A995BD /* turn-agent.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "turn-agent.c"; sourceTree = "<group>"; };
+		461F0C7C231F7EE600A995BD /* stun-server.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-server.c"; sourceTree = "<group>"; };
+		461F0C7D231F7EE600A995BD /* stun-internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "stun-internal.h"; sourceTree = "<group>"; };
+		461F0C7E231F7EE600A995BD /* ice-candidate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-candidate.c"; sourceTree = "<group>"; };
+		461F0C7F231F7EE600A995BD /* turn-server.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "turn-server.c"; sourceTree = "<group>"; };
+		461F0C80231F7EE600A995BD /* ice-stream.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-stream.c"; sourceTree = "<group>"; };
+		461F0C81231F7EE600A995BD /* stun-message.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-message.c"; sourceTree = "<group>"; };
+		461F0C82231F7EE600A995BD /* stun-request.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-request.c"; sourceTree = "<group>"; };
+		461F0C83231F7EE600A995BD /* ice-gather.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-gather.c"; sourceTree = "<group>"; };
+		461F0C84231F7EE700A995BD /* ice-agent.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-agent.c"; sourceTree = "<group>"; };
+		461F0C85231F7EE700A995BD /* stun-message.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "stun-message.h"; sourceTree = "<group>"; };
+		461F0C86231F7EE700A995BD /* stun-attr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "stun-attr.h"; sourceTree = "<group>"; };
+		461F0C87231F7EE700A995BD /* ice-checklist.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "ice-checklist.h"; sourceTree = "<group>"; };
+		461F0C88231F7EE700A995BD /* stun-response.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-response.c"; sourceTree = "<group>"; };
+		461F0C89231F7EE700A995BD /* turn-client.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "turn-client.c"; sourceTree = "<group>"; };
+		461F0C8A231F7EE700A995BD /* turn-allocate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "turn-allocate.c"; sourceTree = "<group>"; };
 		46AC03212212FB3B003CF43D /* libice.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libice.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		46AC033A2212FD3B003CF43D /* include */ = {isa = PBXFileReference; lastKnownFileType = folder; path = include; sourceTree = "<group>"; };
-		46AC034E2212FE50003CF43D /* stun-transid.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-transid.c"; sourceTree = "<group>"; };
-		46AC03502212FE50003CF43D /* stun-internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "stun-internal.h"; sourceTree = "<group>"; };
-		46AC03522212FE50003CF43D /* stun-client.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-client.c"; sourceTree = "<group>"; };
-		46AC03532212FE50003CF43D /* stun-server.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-server.c"; sourceTree = "<group>"; };
-		46AC03542212FE51003CF43D /* ice-checklist.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-checklist.c"; sourceTree = "<group>"; };
-		46AC03552212FE51003CF43D /* ice-agent.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-agent.c"; sourceTree = "<group>"; };
-		46AC03562212FE51003CF43D /* stun-message.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "stun-message.h"; sourceTree = "<group>"; };
-		46AC03582212FE51003CF43D /* ice-stream.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "ice-stream.c"; sourceTree = "<group>"; };
-		46AC03592212FE51003CF43D /* ice-internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "ice-internal.h"; sourceTree = "<group>"; };
-		46AC035B2212FE51003CF43D /* stun-message.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-message.c"; sourceTree = "<group>"; };
-		46AC035C2212FE51003CF43D /* stun-attr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "stun-attr.h"; sourceTree = "<group>"; };
-		46AC035D2212FE51003CF43D /* stun-attr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "stun-attr.c"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -119,43 +97,32 @@
 		46AC033B2212FD4D003CF43D /* src */ = {
 			isa = PBXGroup;
 			children = (
-				4620E130226D6CA900ED9689 /* ice-agent.c */,
-				4620E13F226D6CAB00ED9689 /* ice-candidates.h */,
-				4620E132226D6CA900ED9689 /* ice-checklist.c */,
-				4620E138226D6CAA00ED9689 /* ice-checklist.h */,
-				4620E141226D6CAB00ED9689 /* ice-gather.c */,
-				4620E13E226D6CAB00ED9689 /* ice-internal.h */,
-				4620E135226D6CAA00ED9689 /* ice-stream.c */,
-				4620E137226D6CAA00ED9689 /* ice-streams.h */,
-				4620E136226D6CAA00ED9689 /* stun-agent.c */,
-				4620E134226D6CA900ED9689 /* stun-attr.c */,
-				4620E144226D6CAC00ED9689 /* stun-attr.h */,
-				4620E142226D6CAB00ED9689 /* stun-auth.c */,
-				4620E12F226D6CA900ED9689 /* stun-client.c */,
-				4620E140226D6CAB00ED9689 /* stun-internal.h */,
-				4620E145226D6CAC00ED9689 /* stun-message.c */,
-				4620E131226D6CA900ED9689 /* stun-message.h */,
-				4620E13D226D6CAB00ED9689 /* stun-request.c */,
-				4620E139226D6CAA00ED9689 /* stun-server.c */,
-				4620E133226D6CA900ED9689 /* stun-transid.c */,
-				4620E143226D6CAC00ED9689 /* turn-agent.c */,
-				4620E13C226D6CAB00ED9689 /* turn-allocate.c */,
-				4620E13A226D6CAA00ED9689 /* turn-client.c */,
-				4620E13B226D6CAA00ED9689 /* turn-internal.h */,
-				4620E12E226D6CA900ED9689 /* turn-server.c */,
-				46AC03552212FE51003CF43D /* ice-agent.c */,
-				46AC03542212FE51003CF43D /* ice-checklist.c */,
-				46AC03592212FE51003CF43D /* ice-internal.h */,
-				46AC03582212FE51003CF43D /* ice-stream.c */,
-				46AC035D2212FE51003CF43D /* stun-attr.c */,
-				46AC035C2212FE51003CF43D /* stun-attr.h */,
-				46AC03522212FE50003CF43D /* stun-client.c */,
-				46AC03502212FE50003CF43D /* stun-internal.h */,
-				46AC035B2212FE51003CF43D /* stun-message.c */,
-				46AC03562212FE51003CF43D /* stun-message.h */,
-				46AC03532212FE50003CF43D /* stun-server.c */,
-				46AC034E2212FE50003CF43D /* stun-transid.c */,
-				467520E52218E3A20081FCF9 /* turn-client.c */,
+				461F0C84231F7EE700A995BD /* ice-agent.c */,
+				461F0C7E231F7EE600A995BD /* ice-candidate.c */,
+				461F0C76231F7EE600A995BD /* ice-candidates.h */,
+				461F0C75231F7EE600A995BD /* ice-checklist.c */,
+				461F0C87231F7EE700A995BD /* ice-checklist.h */,
+				461F0C83231F7EE600A995BD /* ice-gather.c */,
+				461F0C79231F7EE600A995BD /* ice-internal.c */,
+				461F0C71231F7EE600A995BD /* ice-internal.h */,
+				461F0C80231F7EE600A995BD /* ice-stream.c */,
+				461F0C73231F7EE600A995BD /* stun-agent.c */,
+				461F0C77231F7EE600A995BD /* stun-attr.c */,
+				461F0C86231F7EE700A995BD /* stun-attr.h */,
+				461F0C78231F7EE600A995BD /* stun-auth.c */,
+				461F0C74231F7EE600A995BD /* stun-client.c */,
+				461F0C7D231F7EE600A995BD /* stun-internal.h */,
+				461F0C81231F7EE600A995BD /* stun-message.c */,
+				461F0C85231F7EE700A995BD /* stun-message.h */,
+				461F0C82231F7EE600A995BD /* stun-request.c */,
+				461F0C88231F7EE700A995BD /* stun-response.c */,
+				461F0C7C231F7EE600A995BD /* stun-server.c */,
+				461F0C72231F7EE600A995BD /* stun-transid.c */,
+				461F0C7B231F7EE600A995BD /* turn-agent.c */,
+				461F0C8A231F7EE700A995BD /* turn-allocate.c */,
+				461F0C89231F7EE700A995BD /* turn-client.c */,
+				461F0C7A231F7EE600A995BD /* turn-internal.h */,
+				461F0C7F231F7EE600A995BD /* turn-server.c */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -167,18 +134,13 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4620E153226D6CAC00ED9689 /* turn-internal.h in Headers */,
-				4620E14F226D6CAC00ED9689 /* ice-streams.h in Headers */,
-				4620E157226D6CAC00ED9689 /* ice-candidates.h in Headers */,
-				4620E158226D6CAC00ED9689 /* stun-internal.h in Headers */,
-				46AC03692212FE51003CF43D /* ice-internal.h in Headers */,
-				4620E149226D6CAC00ED9689 /* stun-message.h in Headers */,
-				46AC03662212FE51003CF43D /* stun-message.h in Headers */,
-				4620E15C226D6CAC00ED9689 /* stun-attr.h in Headers */,
-				46AC03602212FE51003CF43D /* stun-internal.h in Headers */,
-				4620E156226D6CAC00ED9689 /* ice-internal.h in Headers */,
-				46AC036C2212FE51003CF43D /* stun-attr.h in Headers */,
-				4620E150226D6CAC00ED9689 /* ice-checklist.h in Headers */,
+				461F0C90231F7EE700A995BD /* ice-candidates.h in Headers */,
+				461F0CA0231F7EE700A995BD /* stun-attr.h in Headers */,
+				461F0C9F231F7EE700A995BD /* stun-message.h in Headers */,
+				461F0C97231F7EE700A995BD /* stun-internal.h in Headers */,
+				461F0C94231F7EE700A995BD /* turn-internal.h in Headers */,
+				461F0C8B231F7EE700A995BD /* ice-internal.h in Headers */,
+				461F0CA1231F7EE700A995BD /* ice-checklist.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -238,31 +200,25 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				46AC03642212FE51003CF43D /* ice-checklist.c in Sources */,
-				46AC03622212FE51003CF43D /* stun-client.c in Sources */,
-				4620E15B226D6CAC00ED9689 /* turn-agent.c in Sources */,
-				46AC03652212FE51003CF43D /* ice-agent.c in Sources */,
-				4620E14A226D6CAC00ED9689 /* ice-checklist.c in Sources */,
-				46AC03682212FE51003CF43D /* ice-stream.c in Sources */,
-				467520E62218E3A20081FCF9 /* turn-client.c in Sources */,
-				46AC03632212FE51003CF43D /* stun-server.c in Sources */,
-				4620E14D226D6CAC00ED9689 /* ice-stream.c in Sources */,
-				4620E14E226D6CAC00ED9689 /* stun-agent.c in Sources */,
-				4620E14B226D6CAC00ED9689 /* stun-transid.c in Sources */,
-				4620E155226D6CAC00ED9689 /* stun-request.c in Sources */,
-				46AC035E2212FE51003CF43D /* stun-transid.c in Sources */,
-				4620E154226D6CAC00ED9689 /* turn-allocate.c in Sources */,
-				4620E146226D6CAC00ED9689 /* turn-server.c in Sources */,
-				4620E159226D6CAC00ED9689 /* ice-gather.c in Sources */,
-				4620E15D226D6CAC00ED9689 /* stun-message.c in Sources */,
-				4620E147226D6CAC00ED9689 /* stun-client.c in Sources */,
-				4620E148226D6CAC00ED9689 /* ice-agent.c in Sources */,
-				4620E15A226D6CAC00ED9689 /* stun-auth.c in Sources */,
-				4620E151226D6CAC00ED9689 /* stun-server.c in Sources */,
-				46AC036D2212FE51003CF43D /* stun-attr.c in Sources */,
-				4620E14C226D6CAC00ED9689 /* stun-attr.c in Sources */,
-				46AC036B2212FE51003CF43D /* stun-message.c in Sources */,
-				4620E152226D6CAC00ED9689 /* turn-client.c in Sources */,
+				461F0C8F231F7EE700A995BD /* ice-checklist.c in Sources */,
+				461F0CA4231F7EE700A995BD /* turn-allocate.c in Sources */,
+				461F0C92231F7EE700A995BD /* stun-auth.c in Sources */,
+				461F0C95231F7EE700A995BD /* turn-agent.c in Sources */,
+				461F0C9C231F7EE700A995BD /* stun-request.c in Sources */,
+				461F0C8C231F7EE700A995BD /* stun-transid.c in Sources */,
+				461F0C8E231F7EE700A995BD /* stun-client.c in Sources */,
+				461F0C96231F7EE700A995BD /* stun-server.c in Sources */,
+				461F0C91231F7EE700A995BD /* stun-attr.c in Sources */,
+				461F0C9B231F7EE700A995BD /* stun-message.c in Sources */,
+				461F0CA2231F7EE700A995BD /* stun-response.c in Sources */,
+				461F0C9E231F7EE700A995BD /* ice-agent.c in Sources */,
+				461F0CA3231F7EE700A995BD /* turn-client.c in Sources */,
+				461F0C99231F7EE700A995BD /* turn-server.c in Sources */,
+				461F0C8D231F7EE700A995BD /* stun-agent.c in Sources */,
+				461F0C93231F7EE700A995BD /* ice-internal.c in Sources */,
+				461F0C98231F7EE700A995BD /* ice-candidate.c in Sources */,
+				461F0C9D231F7EE700A995BD /* ice-gather.c in Sources */,
+				461F0C9A231F7EE700A995BD /* ice-stream.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

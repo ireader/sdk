@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		46A0D5052297930D0070E1F5 /* http-header-auth.c in Sources */ = {isa = PBXBuildFile; fileRef = 46A0D5042297930D0070E1F5 /* http-header-auth.c */; };
 		46C5B15D2182E16E00419E57 /* http-client.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1472182E16E00419E57 /* http-client.c */; };
 		46C5B15E2182E16E00419E57 /* http-header-expires.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1482182E16E00419E57 /* http-header-expires.c */; };
 		46C5B15F2182E16E00419E57 /* http-server-route.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1492182E16E00419E57 /* http-server-route.cpp */; };
@@ -32,6 +33,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		46A0D5042297930D0070E1F5 /* http-header-auth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-header-auth.c"; sourceTree = "<group>"; };
 		46C5B1332182E13000419E57 /* libhttp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libhttp.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		46C5B1472182E16E00419E57 /* http-client.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-client.c"; sourceTree = "<group>"; };
 		46C5B1482182E16E00419E57 /* http-header-expires.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-header-expires.c"; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 				46C5B1592182E16E00419E57 /* http-server-sendfile.c */,
 				46C5B15A2182E16E00419E57 /* http-server.c */,
 				46C5B15B2182E16E00419E57 /* http-upload.c */,
+				46A0D5042297930D0070E1F5 /* http-header-auth.c */,
 				46C5B15C2182E16E00419E57 /* http-header-content-type.c */,
 			);
 			path = source;
@@ -193,6 +196,7 @@
 				46C5B15F2182E16E00419E57 /* http-server-route.cpp in Sources */,
 				46C5B1722182E16E00419E57 /* http-header-content-type.c in Sources */,
 				46C5B1702182E16E00419E57 /* http-server.c in Sources */,
+				46A0D5052297930D0070E1F5 /* http-header-auth.c in Sources */,
 				46C5B1642182E16E00419E57 /* http-cookie.c in Sources */,
 				46C5B1672182E16E00419E57 /* http-reason.c in Sources */,
 				46C5B16A2182E16E00419E57 /* http-client-connection-aio.c in Sources */,
