@@ -2,24 +2,30 @@
 // magnet:?xt=urn:ed2k:31D6CFE0D16AE931B73C59D7E0C089C0&xl=0&dn=zero_len.fil&xt=urn:bitprint:3I42H3S6NNFQ2MSVX7XZKYAYSCX5QBYJ.LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ&xt=urn:md5:D41D8CD98F00B204E9800998ECF8427E
 // magnet:?xt=urn:ed2k:354B15E68FB8F36D7CD88FF94116CDC1&xt=urn:tree:tiger:7N5OAMRNGMSSEUE3ORHOKWN4WWIQ5X4EBOOTLJY&xt=urn:btih:QHQXPYWMACKDWKP47RRVIV7VOURXFE5Q&xl=10826029&dn=mediawiki-1.15.1.tar.gz&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80%2Fannounce&as=http%3A%2F%2Fdownload.wikimedia.org%2Fmediawiki%2F1.15%2Fmediawiki-1.15.1.tar.gz&xs=http%3A%2F%2Fcache.example.org%2FXRX2PEFXOOEJFRVUCX6HMZMKS5TWG4K5&xs=dchub://example.org
 
+// http://www.bittorrent.org/beps/bep_0009.html
+// v1: magnet:?xt=urn:btih:<info-hash>&dn=<name>&tr=<tracker-url>&x.pe=<peer-address>
+// v2: magnet:?xt=urn:btmh:<tagged-info-hash>&dn=<name>&tr=<tracker-url>&x.pe=<peer-address>
+
 #include "magnet.h"
 #include "base64.h"
 #include "urlcodec.h"
+#include "uri-parse.h"
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
 
-static int manget_parse_xt(struct magnet_t* magnet, const char* url)
+#define N_MAGNET 2048
+
+static int manget_parse_xt(struct magnet_t* magnet, const char* url, int len)
 {
 	int i;
 	const char* p;
-	p = strchr(url, '=');
-	if (!p || 0 != strncmp("=urn:", p, 5))
+	if (len < 5 || 0 != strncmp("urn:", url, 4))
 		return -1;
 
-	p += 5; // skip =urn:
-	if (0 == strncmp("btih:", p, 5))
+	p = url + 4; // skip urn:
+	if (len == 4+5+40 && 0 == strncmp("btih:", p, 5))
 	{
 		magnet->protocol = MAGNET_HASH_BT;
 		for (i = 5; i < 45; i++)
@@ -68,33 +74,39 @@ static int manget_parse_tr(struct magnet_t* magnet, const char* url, size_t len)
 
 struct magnet_t* magnet_parse(const char* url)
 {
-	int r;
+	int i, r, n;
 	size_t len;
 	const char* p, *next;
 	struct magnet_t* magnet;
+	struct uri_query_t* query;
 
 	if (0 != strncmp("magnet:?", url, 8))
 		return NULL;
 
-	magnet = calloc(1, sizeof(*magnet));
+	magnet = malloc(1, sizeof(*magnet) + N_MAGNET);
 	if (!magnet)
 		return NULL;
+	memset(magnet, 0, sizeof(struct magnet_t));
 
-	r = 0;
-	for (p = url + 8 - 1; 0 == r && p++; p = next)
+	n = uri_query(url + 8, url + strlen(url), &query);
+	for (i = 0; i < n; i++)
 	{
-		next = strchr(p, '&');
-		len = next ? next - p : strlen(p);
-
-		if (0 == strncmp("xt", p, 2))
+		if ( (query[i].n_name == 2 && 0 == strncmp("xt", query[i].name, 2)) || (query[i].n_name >= 3 && 0 == strncmp("xt.", query[i].name, 3)))
 		{
-			r = manget_parse_xt(magnet, p);
+			// match xt/xt.xxx
+			r = manget_parse_xt(magnet, query[i].value, query[i].n_value);
 		}
-		else if (0 == strncmp("tr", p, 2))
+		else if (query[i].n_name == 2 && 0 == strncmp("tr", query[i].name, 2))
 		{
-			r = manget_parse_tr(magnet, p, len);
+			r = manget_parse_tr(magnet, query[i].value, query[i].n_value);
 		}
-		else if (0 == strncmp("xl", p, 2))
+		else if (query[i].n_name == 2 && 0 == strncmp("xl", query[i].name, 2))
+		{
+		}
+		else if (query[i].n_name == 2 && 0 == strncmp("dn", query[i].name, 2))
+		{
+		}
+		else if (query[i].n_name == 4 && 0 == strncmp("x.pe", query[i].name, 4))
 		{
 		}
 		else
@@ -102,6 +114,8 @@ struct magnet_t* magnet_parse(const char* url)
 			// TODO:
 		}
 	}
+
+	uri_query_free(&query);
 
 	if (0 != r)
 	{
@@ -128,7 +142,7 @@ void magnet_free(struct magnet_t* magnet)
 void magnet_test(void)
 {
 	const uint8_t info_hash[] = { 0xde, 0xc8, 0xae, 0x69, 0x73, 0x51, 0xff, 0x4a, 0xec, 0x29, 0xcd, 0xba, 0xab, 0xf2, 0xfb, 0xe3, 0x46, 0x7c, 0xc2, 0x67 };
-	const char* url = "magnet:?xt=urn:ed2k:354B15E68FB8F36D7CD88FF94116CDC1&xt=urn:tree:tiger:7N5OAMRNGMSSEUE3ORHOKWN4WWIQ5X4EBOOTLJY&xt=urn:btih:dec8ae697351ff4aec29cdbaabf2fbe3467cc267&xl=10826029&dn=mediawiki-1.15.1.tar.gz&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80%2Fannounce&as=http%3A%2F%2Fdownload.wikimedia.org%2Fmediawiki%2F1.15%2Fmediawiki-1.15.1.tar.gz&xs=http%3A%2F%2Fcache.example.org%2FXRX2PEFXOOEJFRVUCX6HMZMKS5TWG4K5&xs=dchub://example.org";
+	const char* url = "magnet:?xt=urn:ed2k:354B15E68FB8F36D7CD88FF94116CDC1&nameonly&name=&=value&xt=urn:tree:tiger:7N5OAMRNGMSSEUE3ORHOKWN4WWIQ5X4EBOOTLJY&xt=urn:btih:dec8ae697351ff4aec29cdbaabf2fbe3467cc267&xl=10826029&dn=mediawiki-1.15.1.tar.gz&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80%2Fannounce&as=http%3A%2F%2Fdownload.wikimedia.org%2Fmediawiki%2F1.15%2Fmediawiki-1.15.1.tar.gz&xs=http%3A%2F%2Fcache.example.org%2FXRX2PEFXOOEJFRVUCX6HMZMKS5TWG4K5&xs=dchub://example.org";
 	struct magnet_t* magnet;
 
 	magnet = magnet_parse(url);

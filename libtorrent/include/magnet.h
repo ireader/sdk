@@ -17,15 +17,33 @@ enum manget_hash_t
 	MAGNET_HASH_AICH     = 0x20, // xt=urn:aich:[ aich Hash (Base32) ]
 	MAGNET_HASH_KAZAA    = 0x40, // xt=urn:kzhash:[ Kazaa Hash (Hex) ]
 	MAGNET_HASH_MD5      = 0x80, // xt=urn:md5:[MD5 Hash(Hex)]
+	MAGNET_HASH_BT_V2	 = 0x100, // xt=urn:btmh:[ BitTorrent Info Hash (Hex) ]
 };
 
 struct magnet_t
 {
 	int protocol; // MAGNET_HASH_XXX bit or
-	uint8_t info_hash[20];
+	uint8_t bt_hash[20];
+	uint8_t btv2_hash[20];
+	//uint8_t tth_hash[20];
+	//uint8_t sha1_hash[20];
+	//uint8_t bitprint_hash[20];
+	uint8_t ed2k_hash[20];
+	//uint8_t aich_hash[20];
+	//uint8_t kazaa_hash[20];
+	//uint8_t md5_hash[20];
+
+	uint64_t size; // 0-unknown
+	char *name;
 
 	char* trackers[16]; // tr: Tracker URL for BitTorrent downloads
-	unsigned int tracker_count;
+	int tracker_count;
+	char* xs[16];
+	int xs_count;
+	char* as[16];
+	int as_count;
+
+	size_t __off; // internal use only
 };
 
 struct magnet_t* magnet_parse(const char* url);
