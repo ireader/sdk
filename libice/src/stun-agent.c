@@ -302,19 +302,19 @@ static int stun_agent_parse_attr(stun_agent_t* stun, struct stun_request_t* req,
 		switch (msg->attrs[i].type)
 		{
 		case STUN_ATTR_NONCE:
-			snprintf(auth->nonce, sizeof(auth->nonce), "%.*s", msg->attrs[i].length, (const char*)msg->attrs[i].v.ptr);
+			snprintf(auth->nonce, sizeof(auth->nonce), "%.*s", (int)msg->attrs[i].length, (const char*)msg->attrs[i].v.ptr);
 			break;
 
 		case STUN_ATTR_REALM:
-			snprintf(auth->realm, sizeof(auth->realm), "%.*s", msg->attrs[i].length, (const char*)msg->attrs[i].v.ptr);
+			snprintf(auth->realm, sizeof(auth->realm), "%.*s", (int)msg->attrs[i].length, (const char*)msg->attrs[i].v.ptr);
 			break;
 
 		case STUN_ATTR_USERNAME:
-			snprintf(auth->usr, sizeof(auth->usr), "%.*s", msg->attrs[i].length, (const char*)msg->attrs[i].v.ptr);
+			snprintf(auth->usr, sizeof(auth->usr), "%.*s", (int)msg->attrs[i].length, (const char*)msg->attrs[i].v.ptr);
 			break;
 
 		case STUN_ATTR_PASSWORD:
-			snprintf(auth->pwd, sizeof(auth->pwd), "%.*s", msg->attrs[i].length, (const char*)msg->attrs[i].v.ptr);
+			snprintf(auth->pwd, sizeof(auth->pwd), "%.*s", (int)msg->attrs[i].length, (const char*)msg->attrs[i].v.ptr);
 			break;
 
 		case STUN_ATTR_SOURCE_ADDRESS:

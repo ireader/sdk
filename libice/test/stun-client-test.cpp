@@ -9,8 +9,6 @@
 // http://olegh.ftp.sh/public-stun.txt
 // https://stackoverflow.com/questions/20068944/webrtc-stun-stun-l-google-com19302
 
-extern "C" void stun_message_test(void);
-
 struct stun_client_test_context_t
 {
 	socket_t udp;
@@ -70,8 +68,6 @@ static int stun_onbind(void* param, const stun_request_t* req, int code, const c
 
 extern "C" void stun_client_test()
 {
-	stun_message_test();
-
 	socket_init();
 	tls_socket_init();
 

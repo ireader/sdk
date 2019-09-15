@@ -38,7 +38,7 @@ int http_server_delroute(const char* path)
 
 int http_server_route(void* http, http_session_t* session, const char* method, const char* path)
 {
-	char reqpath[PATH_MAX];
+	char reqpath[1024];//[PATH_MAX];
 	struct uri_t* uri = uri_parse(path, strlen(path));
 	url_decode(uri->path, -1, reqpath, sizeof(reqpath));
 	uri_free(uri);

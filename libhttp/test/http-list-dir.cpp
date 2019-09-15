@@ -53,8 +53,8 @@ int path_list(const char* path, path_onfile onfile, void* param)
 
 static void http_onlist(void* param, const char* name, int dir)
 {
-	char link[PATH_MAX];
-	char item[PATH_MAX];
+	char link[1024];
+	char item[1024];
 	std::string* reply = (std::string*)param;
 
 	UTF8Encode utf8(name);

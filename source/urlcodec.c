@@ -73,6 +73,13 @@ int url_decode(const char* source, int srcBytes, char* target, int tgtBytes)
 		}
 		else if('%' == *p)
 		{
+			if ((-1==srcBytes || p + 1 < source + srcBytes) && '%' == p[1])
+			{
+				target[i] = '%';
+				p += 1;
+				continue;
+			}
+
             // https://tools.ietf.org/html/rfc3986#page-21
             // in the host component %-encoding can only be used for non-ASCII bytes.
             // https://tools.ietf.org/html/rfc6874#section-2
