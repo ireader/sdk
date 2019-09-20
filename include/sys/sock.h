@@ -1190,10 +1190,18 @@ static inline int socket_addr_compare(const struct sockaddr* sa, const struct so
 	if(sa->sa_family != sb->sa_family)
 		return sa->sa_family - sb->sa_family;
 
+	// https://opensource.apple.com/source/postfix/postfix-197/postfix/src/util/sock_addr.c
 	switch (sa->sa_family)
 	{
-	case AF_INET:	return memcmp(sa, sb, sizeof(struct sockaddr_in));
-	case AF_INET6:	return memcmp(sa, sb, sizeof(struct sockaddr_in6));
+	case AF_INET:
+		return ((struct sockaddr_in*)sa)->sin_port==((struct sockaddr_in*)sb)->sin_port 
+			&& 0 == memcmp(&((struct sockaddr_in*)sa)->sin_addr, &((struct sockaddr_in*)sb)->sin_addr, sizeof(IN_ADDR)) 
+			? 0 : -1;
+	case AF_INET6:
+		return ((struct sockaddr_in6*)sa)->sin6_port == ((struct sockaddr_in6*)sb)->sin6_port 
+			&& 0 == memcmp(&((struct sockaddr_in6*)sa)->sin6_addr, &((struct sockaddr_in6*)sb)->sin6_addr, sizeof(IN6_ADDR)) 
+			? 0 : -1;
+
 #if defined(OS_LINUX) || defined(OS_MAC) // Windows build 17061
 	// https://blogs.msdn.microsoft.com/commandline/2017/12/19/af_unix-comes-to-windows/
 	case AF_UNIX:	return memcmp(sa, sb, sizeof(struct sockaddr_un));

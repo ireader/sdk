@@ -658,7 +658,7 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 	if (-1 == r)
 		return -1;
 
-	*peerlen = wsamsg.namelen;
+	*peerlen = hdr.msg_namelen;
 	for (cmsg = CMSG_FIRSTHDR(&hdr); !!cmsg && local && locallen; cmsg = CMSG_NXTHDR(&hdr, cmsg))
 	{
 		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO && *locallen >= sizeof(struct sockaddr_in))
