@@ -28,6 +28,9 @@ size_t base64_decode(void* target, const char *source, size_t bytes);
 size_t base16_encode(char* target, const void *source, size_t bytes);
 size_t base16_decode(void* target, const char *source, size_t bytes);
 
+size_t base32_encode(char* target, const void *source, size_t bytes);
+size_t base32_decode(void* target, const char *source, size_t bytes);
+
 #ifdef  __cplusplus
 } // extern "C"
 #endif

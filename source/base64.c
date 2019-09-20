@@ -80,7 +80,7 @@ size_t base64_decode(void* target, const char *src, size_t bytes)
 	const uint8_t* source = (const uint8_t*)src;
 	const uint8_t* end;
 
-	assert(0 == bytes % 4);
+	//assert(0 == bytes % 4);
 	
 	i = 0;
 	end = source + bytes;
@@ -92,17 +92,19 @@ size_t base64_decode(void* target, const char *src, size_t bytes)
 		source += 4;
 	}
 
-	if (source + 4 == end)
+	if (source < end)
 	{
-		p[i++] = (s_base64_dec[source[0]] << 2) | (s_base64_dec[source[1]] >> 4);
-		if ('=' != source[2]) p[i++] = (s_base64_dec[source[1]] << 4) | (s_base64_dec[source[2]] >> 2);
-		if ('=' != source[3]) p[i++] = (s_base64_dec[source[2]] << 6) | s_base64_dec[source[3]];
+#define S(i) ((source+i < end) ? source[i] : '=')
+		p[i++] = (s_base64_dec[S(0)] << 2) | (s_base64_dec[S(1)] >> 4);
+		if ('=' != S(2)) p[i++] = (s_base64_dec[S(1)] << 4) | (s_base64_dec[S(2)] >> 2);
+		if ('=' != S(3)) p[i++] = (s_base64_dec[S(2)] << 6) | s_base64_dec[S(3)];
+#undef S
 	}
 	return i;
 }
 
 static const char* s_base16_enc = "0123456789ABCDEF";
-static const uint8_t s_base16_dec[128] = {
+static const uint8_t s_base16_dec[256] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -136,8 +138,110 @@ size_t base16_decode(void* target, const char *source, size_t bytes)
 	assert(0 == bytes % 2);
 	for (i = 0; i < bytes / 2; i++)
 	{
-		p[i] = s_base16_dec[source[i * 2] & 0x7F] << 4;
-		p[i] |= s_base16_dec[source[i * 2 + 1] & 0x7F];
+		p[i] = s_base16_dec[source[i * 2]] << 4;
+		p[i] |= s_base16_dec[source[i * 2 + 1]];
+	}
+	return i;
+}
+
+// https://en.wikipedia.org/wiki/Base32
+static const char* s_base32_enc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+static const uint8_t s_base32_dec[256] = {
+	0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0, 0, 0, 0, 0, 0, 0, 0, /* 0 - 9 */
+	0,    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, /* A - F */
+	0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0, 0, 0, 0, 0,
+	0,    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, /* a - f */
+	0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0, 0, 0, 0, 0,
+};
+
+// RFC4648
+size_t base32_encode(char* target, const void *source, size_t bytes)
+{
+	size_t i, j;
+	const uint8_t *ptr = (const uint8_t*)source;
+
+	for (j = i = 0; i < bytes / 5 * 5; i += 5)
+	{
+		target[j++] = s_base32_enc[(ptr[i] >> 3) & 0x1F]; /* c1 */
+		target[j++] = s_base32_enc[((ptr[i] & 0x07) << 2) | ((ptr[i + 1] >> 6) & 0x03)]; /*c2*/
+		target[j++] = s_base32_enc[(ptr[i + 1] >> 1) & 0x1F];/*c3*/
+		target[j++] = s_base32_enc[((ptr[i + 1] & 0x01) << 4) | ((ptr[i + 2] >> 4) & 0x0F)]; /*c4*/
+		target[j++] = s_base32_enc[((ptr[i + 2] & 0x0F) << 1) | ((ptr[i + 3] >> 7) & 0x01)]; /*c5*/
+		target[j++] = s_base32_enc[(ptr[i + 3] >> 2) & 0x1F];/*c6*/
+		target[j++] = s_base32_enc[((ptr[i + 3] & 0x03) << 3) | ((ptr[i + 4] >> 5) & 0x07)]; /*c7*/
+		target[j++] = s_base32_enc[ptr[i + 4] & 0x1F]; /* c8 */
+	}
+
+	if (i + 1 == bytes)
+	{
+		target[j++] = s_base32_enc[(ptr[i] >> 3) & 0x1F]; /* c1 */
+		target[j++] = s_base32_enc[((ptr[i] & 0x07) << 2)]; /*c2*/
+	}
+	else if (i + 2 == bytes)
+	{
+		target[j++] = s_base32_enc[(ptr[i] >> 3) & 0x1F]; /* c1 */
+		target[j++] = s_base32_enc[((ptr[i] & 0x07) << 2) | ((ptr[i + 1] >> 6) & 0x03)]; /*c2*/
+		target[j++] = s_base32_enc[(ptr[i + 1] >> 1) & 0x1F];/*c3*/
+		target[j++] = s_base32_enc[((ptr[i + 1] & 0x01) << 4)]; /*c4*/
+	}
+	else if (i + 3 == bytes)
+	{
+		target[j++] = s_base32_enc[(ptr[i] >> 3) & 0x1F]; /* c1 */
+		target[j++] = s_base32_enc[((ptr[i] & 0x07) << 2) | ((ptr[i + 1] >> 6) & 0x03)]; /*c2*/
+		target[j++] = s_base32_enc[(ptr[i + 1] >> 1) & 0x1F];/*c3*/
+		target[j++] = s_base32_enc[((ptr[i + 1] & 0x01) << 4) | ((ptr[i + 2] >> 4) & 0x0F)]; /*c4*/
+		target[j++] = s_base32_enc[((ptr[i + 2] & 0x0F) << 1)]; /*c5*/
+	}
+	else if (i + 4 == bytes)
+	{
+		target[j++] = s_base32_enc[(ptr[i] >> 3) & 0x1F]; /* c1 */
+		target[j++] = s_base32_enc[((ptr[i] & 0x07) << 2) | ((ptr[i + 1] >> 6) & 0x03)]; /*c2*/
+		target[j++] = s_base32_enc[(ptr[i + 1] >> 1) & 0x1F];/*c3*/
+		target[j++] = s_base32_enc[((ptr[i + 1] & 0x01) << 4) | ((ptr[i + 2] >> 4) & 0x0F)]; /*c4*/
+		target[j++] = s_base32_enc[((ptr[i + 2] & 0x0F) << 1) | ((ptr[i + 3] >> 7) & 0x01)]; /*c5*/
+		target[j++] = s_base32_enc[(ptr[i + 3] >> 2) & 0x1F];/*c6*/
+		target[j++] = s_base32_enc[((ptr[i + 3] & 0x03) << 3)]; /*c7*/
+	}
+
+	while (0 != (j % 8))
+	{
+		target[j++] = '=';
+	}
+
+	return j;
+}
+
+size_t base32_decode(void* target, const char *src, size_t bytes)
+{
+	size_t i, j;
+	uint8_t* p = (uint8_t*)target;
+	const uint8_t* source = (const uint8_t*)src;
+	const uint8_t* end;
+
+	i = 0;
+	end = source + bytes;
+	for (j = 1; j < bytes / 8; j++)
+	{
+		p[i++] = (s_base32_dec[source[0]] << 3) | (s_base32_dec[source[1]] >> 2);
+		p[i++] = (s_base32_dec[source[1]] << 6) | (s_base32_dec[source[2]] << 1) | (s_base32_dec[source[3]] >> 4);
+		p[i++] = (s_base32_dec[source[3]] << 4) | (s_base32_dec[source[4]] >> 1);
+		p[i++] = (s_base32_dec[source[4]] << 7) | (s_base32_dec[source[5]] << 2) | (s_base32_dec[source[6]] >> 3);
+		p[i++] = (s_base32_dec[source[6]] << 5) | s_base32_dec[source[7]];
+		source += 8;
+	}
+
+	if (source < end)
+	{
+#define S(i) ((source+i < end) ? source[i] : '=')
+		p[i++] = (s_base32_dec[S(0)] << 3) | (s_base32_dec[S(1)] >> 2);
+		if ('=' != S(2)) p[i++] = (s_base32_dec[S(1)] << 6) | (s_base32_dec[S(2)] << 1) | (s_base32_dec[S(3)] >> 4);
+		if ('=' != S(4)) p[i++] = (s_base32_dec[S(3)] << 4) | (s_base32_dec[S(4)] >> 1);
+		if ('=' != S(5)) p[i++] = (s_base32_dec[S(4)] << 7) | (s_base32_dec[S(5)] << 2) | (s_base32_dec[S(6)] >> 3);
+		if ('=' != S(7)) p[i++] = (s_base32_dec[S(6)] << 5) | s_base32_dec[S(7)];
+#undef S
 	}
 	return i;
 }
@@ -150,6 +254,7 @@ void base64_test(void)
 	const char* r;
 	char source[512];
 	char target[512];
+	const uint8_t p[] = { 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0xde, 0xad, 0xbe, 0xef };
 
 	assert(8 == base64_encode(source, "4444", 4));
 	assert(4 == base64_decode(target, source, 8));
@@ -177,5 +282,34 @@ void base64_test(void)
 	assert(8 == base16_encode(source, "4444", 4));
 	assert(4 == base16_decode(target, source, 8));
 	assert(0 == memcmp(target, "4444", 4));
+
+	assert(16 == base32_encode(source, p, 10));
+	assert(0 == memcmp(source, "JBSWY3DPEHPK3PXP", 16));
+	assert(10 == base32_decode(target, source, 16));
+	assert(0 == memcmp(target, p, sizeof(p)));
+	assert(8 == base32_encode(source, "H", 1));
+	assert(0 == memcmp(source, "JA======", 8));
+	assert(1 == base32_decode(target, source, 8));
+	assert(0 == memcmp(target, "H", 1));
+	assert(1 == base32_decode(target, "JA", 2));
+	assert(0 == memcmp(target, "H", 1));
+	assert(8 == base32_encode(source, "He", 2));
+	assert(0 == memcmp(source, "JBSQ====", 8));
+	assert(2 == base32_decode(target, source, 8));
+	assert(0 == memcmp(target, "He", 2));
+	assert(2 == base32_decode(target, "JBSQ", 4));
+	assert(0 == memcmp(target, "He", 2));
+	assert(8 == base32_encode(source, "Hel", 3));
+	assert(0 == memcmp(source, "JBSWY===", 8));
+	assert(3 == base32_decode(target, source, 8));
+	assert(0 == memcmp(target, "Hel", 3));
+	assert(3 == base32_decode(target, "JBSWY", 5));
+	assert(0 == memcmp(target, "Hel", 3));
+	assert(8 == base32_encode(source, "Hell", 4));
+	assert(0 == memcmp(source, "JBSWY3A=", 8));
+	assert(4 == base32_decode(target, source, 8));
+	assert(0 == memcmp(target, "Hell", 4));
+	assert(4 == base32_decode(target, "JBSWY3A", 7));
+	assert(0 == memcmp(target, "Hell", 4));
 }
 #endif
