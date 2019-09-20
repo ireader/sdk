@@ -36,6 +36,11 @@ static inline int ice_candidate_compare_host_addr(const struct ice_candidate_t* 
 	return ICE_CANDIDATE_HOST == l->type && 0 == socket_addr_compare((const struct sockaddr*)&l->host, (const struct sockaddr*)addr) ? 0 : -1;
 }
 
+static inline int ice_candidate_compare_addr(const struct ice_candidate_t* l, const struct sockaddr_storage* addr)
+{
+	return 0 == socket_addr_compare((const struct sockaddr*)&l->addr, (const struct sockaddr*)addr) ? 0 : -1;
+}
+
 static inline int ice_candidate_compare_base_addr(const struct ice_candidate_t* l, const struct ice_candidate_t* r)
 {
 	// rfc5245 B.2. Candidates with Multiple Bases (p109)

@@ -174,7 +174,10 @@ static int ice_agent_onbind(void* param, stun_response_t* resp, const stun_reque
 
 	c = ice_agent_find_local_candidate(ice, &addr.host);
 	if (!c)
+	{
+		assert(0);
 		return -1; // not found
+	}
 
 #if defined(_DEBUG) || defined(DEBUG)
 	{
@@ -218,7 +221,7 @@ static int ice_agent_onbind(void* param, stun_response_t* resp, const stun_reque
 	}
 
 	// try trigger check
-	ice_checklist_trigger(s->checklist, &addr, nominated ? 1 : 0);
+	ice_checklist_trigger(s->checklist, s, c, &addr, nominated ? 1 : 0);
 
 	// set auth
 	memcpy(&resp->auth, &ice->auth, sizeof(resp->auth));

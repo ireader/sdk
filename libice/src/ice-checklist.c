@@ -101,12 +101,48 @@ static int ice_checklist_onpermission(void* param, const stun_request_t* req, in
 	return 0;
 }
 
+
+static int ice_checklist_add_candidate_pair(struct ice_checklist_t* l, struct ice_stream_t* stream, const struct ice_candidate_t* local, const struct ice_candidate_t* remote, ice_candidate_pairs_t *component)
+{
+	int r;
+	struct ice_candidate_pair_t pair;
+
+	assert(local->stream == remote->stream);
+	if (local->protocol != remote->protocol || local->stream != remote->stream || local->component != remote->component || local->addr.ss_family != remote->addr.ss_family)
+		return 0; // skip
+
+	if (ICE_CANDIDATE_RELAYED == local->type)
+	{
+		ice_checklist_addref(l);
+		r = ice_agent_create_permission(l->ice, &l->ice->sauth, (const struct sockaddr*)&local->host, (const struct sockaddr*)&l->ice->saddr, (const struct sockaddr*)&remote->addr, 2000, ice_checklist_onpermission, l);
+		if (0 != r)
+		{
+			assert(0);
+			ice_checklist_release(l);
+
+			// ignore
+		}
+	}
+
+	// agent MUST limit the total number of connectivity checks the agent  
+	// performs across all check lists to a specific value.
+	assert(ice_candidate_pairs_count(component) < 64);
+
+	memset(&pair, 0, sizeof(pair));
+	pair.stream = stream;
+	pair.state = ICE_CANDIDATE_PAIR_FROZEN;
+	memcpy(&pair.local, local, sizeof(struct ice_candidate_t));
+	memcpy(&pair.remote, remote, sizeof(struct ice_candidate_t));
+	ice_candidate_pair_priority(&pair, l->ice->controlling);
+	ice_candidate_pair_foundation(&pair);
+	return ice_candidate_pairs_insert(component, &pair);
+}
+
 int ice_checklist_reset(struct ice_checklist_t* l, struct ice_stream_t* stream, const ice_candidates_t* locals, const ice_candidates_t* remotes)
 {
 	int r, i, j;
 	ice_candidate_pairs_t *component;
 	struct ice_candidate_t *local, *remote;
-	struct ice_candidate_pair_t pair;
 
 	locker_lock(&l->locker);
 	if (ICE_CHECKLIST_FROZEN != l->state)
@@ -137,33 +173,8 @@ int ice_checklist_reset(struct ice_checklist_t* l, struct ice_stream_t* stream, 
 		for (j = 0; j < ice_candidates_count(remotes); j++)
 		{
 			remote = ice_candidates_get((ice_candidates_t*)remotes, j);
-			assert(local->stream == remote->stream);
-			if(local->protocol != remote->protocol || local->stream != remote->stream || local->component != remote->component || local->addr.ss_family != remote->addr.ss_family)
-				continue;
-
-			if (ICE_CANDIDATE_RELAYED == local->type)
-			{
-				ice_checklist_addref(l);
-				r = ice_agent_create_permission(l->ice, &l->ice->sauth, (const struct sockaddr*)&local->host, (const struct sockaddr*)&l->ice->saddr, (const struct sockaddr*)&remote->addr, 2000, ice_checklist_onpermission, l);
-				if (0 != r)
-				{
-					assert(0);
-					ice_checklist_release(l);
-				}
-			}
-
-			// agent MUST limit the total number of connectivity checks the agent  
-			// performs across all check lists to a specific value.
-			assert(ice_candidate_pairs_count(component) < 64);
-
-			memset(&pair, 0, sizeof(pair));
-			pair.stream = stream;
-			pair.state = ICE_CANDIDATE_PAIR_FROZEN;
-			memcpy(&pair.local, local, sizeof(struct ice_candidate_t));
-			memcpy(&pair.remote, remote, sizeof(struct ice_candidate_t));
-			ice_candidate_pair_priority(&pair, l->ice->controlling);
-			ice_candidate_pair_foundation(&pair);
-			ice_candidate_pairs_insert(component, &pair);
+			r = ice_checklist_add_candidate_pair(l, stream, local, remote, component);
+			assert(0 == r);
 		}
 	}
 
@@ -680,21 +691,35 @@ static void ice_checklist_update_foundation(struct ice_checklist_t* l, const str
 	}
 }
 
-int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t* addr, int nominated)
+int ice_checklist_trigger(struct ice_checklist_t* l, struct ice_stream_t* stream, const struct ice_candidate_t* local, const struct stun_address_t* addr, int nominated)
 {
+	ice_candidate_pairs_t *component;
+	struct ice_candidate_t* remote;
 	struct ice_candidate_pair_t *pair;
 	
 	locker_lock(&l->locker);
-	// 1. unfreeze pair with same foundation
-	pair = ice_candidate_components_find(&l->components, addr);
+	component = ice_candidate_components_fetch(&l->components, local->component);
+	if (!component)
+	{
+		// assert(0); // ignore before local init
+		locker_unlock(&l->locker);
+		return 0;
+	}
+
+	pair = ice_candidate_pairs_find(component, ice_candidate_pair_compare_addr, addr);
 	if (!pair)
 	{
 		// bind request from unknown internal NAT, response ok
 		// REMOTER: add peer reflexive address
 		// TODO: re-invite to update remote address(new peer reflexive address)???
-		//assert(0);
-		locker_unlock(&l->locker);
-		return 0;
+		remote = ice_agent_find_remote_candidate(l->ice, &addr->peer);
+		if (!remote || 0 != ice_checklist_add_candidate_pair(l, stream, local, remote, component))
+		{
+			locker_unlock(&l->locker);
+			return 0;
+		}
+		pair = ice_candidate_pairs_find(component, ice_candidate_pair_compare_addr, addr);
+		assert(pair);
 	}
 
 	// 7.2. STUN Server Procedures

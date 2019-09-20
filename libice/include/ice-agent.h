@@ -20,7 +20,7 @@ struct ice_agent_handler_t
 
 	/// ICE nominated
 	/// @param[in] streams stream connected bitmask flags, base 0, from Least Significant Bit(LSB), 1-connected, 0-failed
-	void (*onconnected)(void* param, int64_t streams);
+	void (*onconnected)(void* param, uint64_t streams);
 };
 
 struct ice_agent_t;

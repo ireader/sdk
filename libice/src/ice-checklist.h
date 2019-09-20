@@ -28,7 +28,7 @@ int ice_checklist_conclude(struct ice_checklist_t* l);
 int ice_checklist_update(struct ice_checklist_t* l, const struct darray_t* valids);
 
 /// on receive peer connection request
-int ice_checklist_trigger(struct ice_checklist_t* l, const struct stun_address_t* addr, int nominated);
+int ice_checklist_trigger(struct ice_checklist_t* l, struct ice_stream_t* stream, const struct ice_candidate_t* local, const struct stun_address_t* addr, int nominated);
 
 /// on role changed
 int ice_checklist_onrolechanged(struct ice_checklist_t* l, int controlling);

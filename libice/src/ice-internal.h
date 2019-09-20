@@ -130,6 +130,7 @@ int ice_stream_destroy(struct ice_stream_t** pp);
 int ice_agent_active_checklist_count(struct ice_agent_t* ice);
 struct ice_stream_t* ice_agent_find_stream(struct ice_agent_t* ice, int stream);
 struct ice_candidate_t* ice_agent_find_local_candidate(struct ice_agent_t* ice, const struct sockaddr_storage* host);
+struct ice_candidate_t* ice_agent_find_remote_candidate(struct ice_agent_t* ice, const struct sockaddr_storage* addr);
 
 int ice_agent_onrolechanged(void* param);
 int ice_agent_add_peer_reflexive_candidate(struct ice_agent_t* ice, const struct stun_address_t* addr, const struct stun_attr_t* priority);

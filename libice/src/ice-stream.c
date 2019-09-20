@@ -65,7 +65,7 @@ static int ice_stream_oncomplete(void* param, struct ice_checklist_t* l, int fai
 			break; // TODO ???
 		case ICE_CHECKLIST_COMPLETED:
 			assert(s->stream < 64);
-			flags |= ((int64_t)1) << s->stream;
+			flags |= ((uint64_t)1) << s->stream;
 			s->ncomponent = ice_checklist_getnominated(s->checklist, s->components, sizeof(s->components)/sizeof(s->components[0]));
 			break;
 		default:
@@ -126,6 +126,21 @@ struct ice_candidate_t* ice_agent_find_local_candidate(struct ice_agent_t* ice, 
 	{
 		s = list_entry(ptr, struct ice_stream_t, link);
 		c = ice_candidates_find(&s->locals, ice_candidate_compare_host_addr, host);
+		if (NULL != c)
+			return c;
+	}
+	return NULL;
+}
+
+struct ice_candidate_t* ice_agent_find_remote_candidate(struct ice_agent_t* ice, const struct sockaddr_storage* addr)
+{
+	struct list_head* ptr;
+	struct ice_stream_t* s;
+	struct ice_candidate_t* c;
+	list_for_each(ptr, &ice->streams)
+	{
+		s = list_entry(ptr, struct ice_stream_t, link);
+		c = ice_candidates_find(&s->remotes, ice_candidate_compare_addr, addr);
 		if (NULL != c)
 			return c;
 	}
