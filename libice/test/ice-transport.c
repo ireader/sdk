@@ -35,7 +35,7 @@ struct ice_transport_t
 	int stream;
 	int component;
 	int foundation;
-	int connected;
+	uint64_t connected;
 
 	int ipv6; // TODO: enable IPv6
 	int stun;
@@ -130,7 +130,7 @@ static inline u_short socket_addr_getport(const struct sockaddr* addr)
 
 static int ice_transport_onsend(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
 {
-	int i;
+	int i, r;
 	socket_bufvec_t vec[1];
 	struct ice_transport_t* avt = (struct ice_transport_t*)param;
 	assert(STUN_PROTOCOL_UDP == protocol);
@@ -140,8 +140,10 @@ static int ice_transport_onsend(void* param, int protocol, const struct sockaddr
 		if(local->sa_family == avt->addr[i].ss_family && socket_addr_getport((struct sockaddr*)&avt->addr[i]) == socket_addr_getport(local))
 		{
 			socket_setbufvec(vec, 0, (void*)data, bytes);
-			//int r = socket_sendto(avt->udp[i], data, bytes, 0, remote, socket_addr_len(remote));
-			int r = socket_sendto_addr(avt->udp[i], vec, sizeof(vec)/sizeof(vec[0]), 0, remote, socket_addr_len(remote), local, socket_addr_len(local));
+			if(avt->stun & ICE_LOCAL_ENABLE)
+				r = socket_sendto_addr(avt->udp[i], vec, sizeof(vec) / sizeof(vec[0]), 0, remote, socket_addr_len(remote), local, socket_addr_len(local));
+			else
+				r = socket_sendto(avt->udp[i], data, bytes, 0, remote, socket_addr_len(remote));
 			assert(r == bytes || socket_geterror() == ENETUNREACH || socket_geterror() == 10051/*WSAENETUNREACH*/);
 			return r == bytes ? 0 : socket_geterror();
 		}
@@ -156,7 +158,7 @@ static void ice_transport_ongather(void* param, int code)
 	avt->handler.onbind(avt->param, code);
 }
 
-static void ice_transport_onconnected(void* param, int64_t streams)
+static void ice_transport_onconnected(void* param, uint64_t streams)
 {
 	struct ice_transport_t* avt = (struct ice_transport_t*)param;
 	avt->connected = streams;
@@ -469,7 +471,7 @@ int ice_transport_getaddr(struct ice_transport_t* avt, int stream, int component
 int ice_transport_connect(struct ice_transport_t* avt, const struct rtsp_media_t* avmedia, int count)
 {
 	int i, j, r;
-	int64_t flags;
+	uint64_t flags;
 	socklen_t len;
 	struct ice_candidate_t c;
 	const struct rtsp_media_t *m;
@@ -498,7 +500,7 @@ int ice_transport_connect(struct ice_transport_t* avt, const struct rtsp_media_t
 			ice_agent_add_remote_candidate(avt->ice, &c);
 		}
 
-		flags |= (int64_t)1 << i;
+		flags |= (uint64_t)1 << i;
 	}
 	
 	avt->handler.onconnected(avt->param, flags);
