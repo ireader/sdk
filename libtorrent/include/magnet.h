@@ -24,17 +24,18 @@ struct magnet_t
 {
 	int protocol; // MAGNET_HASH_XXX bit or
 	uint8_t bt_hash[20];
-	uint8_t btv2_hash[20];
-	//uint8_t tth_hash[20];
+	//uint8_t btv2_hash[64];
+	uint8_t tth_hash[20];
 	//uint8_t sha1_hash[20];
 	//uint8_t bitprint_hash[20];
-	uint8_t ed2k_hash[20];
+	uint8_t ed2k_hash[16];
 	//uint8_t aich_hash[20];
 	//uint8_t kazaa_hash[20];
 	//uint8_t md5_hash[20];
 
 	uint64_t size; // 0-unknown
 	char *name;
+	char *keywords;
 
 	char* trackers[16]; // tr: Tracker URL for BitTorrent downloads
 	int tracker_count;
