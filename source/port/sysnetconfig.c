@@ -1,8 +1,11 @@
 #include "port/network.h"
 
 #if defined(_WIN32) || defined(_WIN64)
-#include <Windows.h>
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#include <Winsock2.h>
+#include <WS2tcpip.h>
 #include <IPHlpApi.h>
+#include <Windows.h>
 
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Iphlpapi.lib")
@@ -49,53 +52,134 @@
 //	return -1;
 //}
 
+#if 0
 int network_getip(network_getip_fcb fcb, void* param)
 {
 	UINT i = 0;
 	ULONG ulOutBufLen;
 	DWORD dwRetVal = 0;
+	IP_ADDR_STRING *addr;
 	PIP_ADAPTER_INFO pAdapter, pAdapterInfo;
 	char hwaddr[MAX_ADAPTER_ADDRESS_LENGTH*3] = {0};
 
 	// Make an initial call to GetAdaptersInfo to get
 	// the necessary size into the ulOutBufLen variable
 	ulOutBufLen = sizeof(IP_ADAPTER_INFO);
-	pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);
+	pAdapterInfo = (PIP_ADAPTER_INFO)malloc(ulOutBufLen);
 	if (GetAdaptersInfo( pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW) 
 	{
 		free(pAdapterInfo);
-		pAdapterInfo = (IP_ADAPTER_INFO *) malloc (ulOutBufLen); 
+		pAdapterInfo = (PIP_ADAPTER_INFO) malloc (ulOutBufLen);
 	}
 
 	if ((dwRetVal = GetAdaptersInfo( pAdapterInfo, &ulOutBufLen)) == ERROR_SUCCESS)
 	{
-		pAdapter = pAdapterInfo;
-		while(pAdapter)
+		for(pAdapter = pAdapterInfo; pAdapter; pAdapter = pAdapter->Next)
 		{
-			if(MIB_IF_TYPE_ETHERNET==pAdapter->Type || IF_TYPE_IEEE80211==pAdapter->Type)
-			{
-				// mac address
-				for(i=0; i<pAdapter->AddressLength; i++)
-				{
-					if(i > 0) hwaddr[i*3-1] = ':';
-					sprintf(hwaddr+i*3, "%02X", (int)pAdapter->Address[i]);
-				}
+			if(IF_TYPE_ETHERNET_CSMACD!=pAdapter->Type && IF_TYPE_IEEE80211!=pAdapter->Type)
+				continue;
 
-				fcb(param, 
+			// mac address
+			for(i=0; i<pAdapter->AddressLength; i++)
+			{
+				if(i > 0) hwaddr[i*3-1] = ':';
+				sprintf(hwaddr+i*3, "%02X", (int)pAdapter->Address[i]);
+			}
+
+			for (addr = &pAdapter->IpAddressList; addr; addr = addr->Next)
+			{
+				fcb(param,
 					hwaddr,										// mac address
 					pAdapter->AdapterName,						// name
-					0==pAdapter->DhcpEnabled?0:1,				// dhcp
-					pAdapter->IpAddressList.IpAddress.String,	// ip address
-					pAdapter->IpAddressList.IpMask.String,		// netmask
+					0 == pAdapter->DhcpEnabled ? 0 : 1,			// dhcp
+					addr->IpAddress.String,						// ip address
+					addr->IpMask.String,						// netmask
 					pAdapter->GatewayList.IpAddress.String);	// gateway
 			}
-			pAdapter = pAdapter->Next;
 		}
 	}
 
 	free(pAdapterInfo);
 	return dwRetVal==ERROR_SUCCESS?0:-(int)dwRetVal;
 }
+#else
+int network_getip(network_getip_fcb fcb, void* param)
+{
+	UINT i = 0;
+	ULONG ulOutBufLen;
+	DWORD dwRetVal = 0;
+	IN_ADDR netmask;
+	PIP_ADAPTER_UNICAST_ADDRESS_LH addr;
+	PIP_ADAPTER_ADDRESSES pAdapter, pAdapterInfo;
+	char hwaddr[MAX_ADAPTER_ADDRESS_LENGTH * 3] = { 0 };
+	char ip[65] = { 0 };
+	char subnet[65] = { 0 };
+	char gateway[65] = { 0 };
+	char description[128] = { 0 };
+
+	// Make an initial call to GetAdaptersInfo to get
+	// the necessary size into the ulOutBufLen variable
+	ulOutBufLen = sizeof(IP_ADAPTER_ADDRESSES);
+	pAdapterInfo = (PIP_ADAPTER_ADDRESSES)malloc(ulOutBufLen);
+	if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_GATEWAYS, NULL, pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW)
+	{
+		free(pAdapterInfo);
+		pAdapterInfo = (PIP_ADAPTER_ADDRESSES)malloc(ulOutBufLen);
+	}
+
+	if ((dwRetVal = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_GATEWAYS, NULL, pAdapterInfo, &ulOutBufLen)) == ERROR_SUCCESS)
+	{
+		for (pAdapter = pAdapterInfo; pAdapter; pAdapter = pAdapter->Next)
+		{
+			if (IfOperStatusUp != pAdapter->OperStatus)
+				continue;
+			if (IF_TYPE_ETHERNET_CSMACD != pAdapter->IfType && IF_TYPE_IEEE80211 != pAdapter->IfType)
+				continue;
+
+			memset(description, 0, sizeof(description));
+			WideCharToMultiByte(CP_UTF8, 0, pAdapter->Description, -1, description, sizeof(description) - 1, NULL, NULL);
+
+			// mac address
+			for (i = 0; i < pAdapter->PhysicalAddressLength; i++)
+			{
+				if (i > 0) hwaddr[i * 3 - 1] = ':';
+				sprintf(hwaddr + i * 3, "%02X", (int)pAdapter->PhysicalAddress[i]);
+			}
+
+			if (pAdapter->FirstGatewayAddress && AF_INET == pAdapter->FirstGatewayAddress->Address.lpSockaddr->sa_family)
+				inet_ntop(AF_INET, &((struct sockaddr_in*)pAdapter->FirstGatewayAddress->Address.lpSockaddr)->sin_addr, gateway, sizeof(gateway));
+			else if (pAdapter->FirstGatewayAddress && AF_INET6 == AF_INET == pAdapter->FirstGatewayAddress->Address.lpSockaddr->sa_family)
+				inet_ntop(AF_INET6, &((struct sockaddr_in6*)pAdapter->FirstGatewayAddress->Address.lpSockaddr)->sin6_addr, gateway, sizeof(gateway));
+			else
+				memset(gateway, 0, sizeof(gateway));
+
+			for (addr = pAdapter->FirstUnicastAddress; addr; addr = addr->Next)
+			{
+				if (AF_INET == addr->Address.lpSockaddr->sa_family)
+				{
+					ConvertLengthToIpv4Mask(addr->OnLinkPrefixLength, &netmask.s_addr);
+					inet_ntop(AF_INET, &netmask, subnet, sizeof(subnet));
+					inet_ntop(AF_INET, &((struct sockaddr_in*)addr->Address.lpSockaddr)->sin_addr, ip, sizeof(ip));
+				}
+				else if (AF_INET6 == addr->Address.lpSockaddr->sa_family)
+				{
+					memset(subnet, 0, sizeof(subnet));
+					inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr->Address.lpSockaddr)->sin6_addr, ip, sizeof(ip));
+				}
+				else
+				{
+					continue;
+				}
+
+				fcb(param, hwaddr, description[0] ? description : pAdapter->AdapterName, pAdapter->Dhcpv4Enabled, ip, subnet, gateway);
+			}
+		}
+	}
+
+	free(pAdapterInfo);
+	return dwRetVal == ERROR_SUCCESS ? 0 : -(int)dwRetVal;
+}
+#endif
 
 typedef int (CALLBACK* DNSFLUSHPROC)();
 typedef int (CALLBACK* DHCPNOTIFYPROC)(LPWSTR, LPWSTR, BOOL, DWORD, DWORD, DWORD, int);
