@@ -137,7 +137,7 @@ int ice_agent_gather(struct ice_agent_t* ice, const struct sockaddr* addr, int t
 		for (i = 0; 0 == r && i < ice_candidates_count(&s->locals); i++)
 		{
 			c = ice_candidates_get(&s->locals, i);
-			if (ICE_CANDIDATE_HOST != c->type)
+			if (ICE_CANDIDATE_HOST != c->type || c->addr.ss_family != addr->sa_family)
 				continue;
 
 			r = ice_candidates_insert(&g->candidates, c);
