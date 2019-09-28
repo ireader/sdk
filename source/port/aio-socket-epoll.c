@@ -1,4 +1,5 @@
 #include "aio-socket.h"
+#include <linux/spinlock.h>
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -7,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <pthread.h>
 
 //#define MAX_EVENT 64
 
@@ -31,6 +31,10 @@
 
 // SIGPIPE
 // 1. send after shutdown(SHUT_WR)
+
+#ifndef EPOLLONESHOT
+#define EPOLLONESHOT 0x40000000
+#endif
 
 static int s_epoll = -1;
 static int s_threads = 0;
@@ -103,7 +107,7 @@ struct epoll_context_recvfrom_v
 
 struct epoll_context
 {
-	pthread_spinlock_t locker; // memory alignment, see more about Apple Developer spinlock
+	spinlock_t locker; // memory alignment, see more about Apple Developer spinlock
 	struct epoll_event ev;
 	socket_t socket;
 	volatile int32_t ref;
@@ -136,7 +140,7 @@ struct epoll_context
 #define EPollCtrl(ctx, flag) do {				\
 	int r;										\
 	__sync_add_and_fetch_4(&ctx->ref, 1);		\
-	pthread_spin_lock(&ctx->locker);			\
+	spin_lock(&ctx->locker);			\
 	ctx->ev.events |= flag;						\
 	if(0 == ctx->init)							\
 	{											\
@@ -152,7 +156,7 @@ struct epoll_context
 		ctx->ev.events &= ~flag;				\
 		__sync_sub_and_fetch_4(&ctx->ref, 1);	\
 	}											\
-	pthread_spin_unlock(&ctx->locker);			\
+	spin_unlock(&ctx->locker);			\
 	if(0 == r) return 0;						\
 } while(0)
 
@@ -172,7 +176,7 @@ static int aio_socket_release(struct epoll_context* ctx)
 		if(ctx->own)
 			close(ctx->socket);
 
-		pthread_spin_destroy(&ctx->locker);
+//		pthread_spin_destroy(&ctx->locker);
 
 		if (ctx->ondestroy)
 			ctx->ondestroy(ctx->param);
@@ -225,10 +229,10 @@ int aio_socket_process(int timeout)
 		if(events[i].events & flags)
 		{
 			// save event
-			pthread_spin_lock(&ctx->locker);
+			spin_lock(&ctx->locker);
 			userevent = ctx->ev.events;
 			ctx->ev.events &= ~(EPOLLIN|EPOLLOUT);
-			pthread_spin_unlock(&ctx->locker);
+			spin_unlock(&ctx->locker);
 
 			// epoll oneshot don't need change event
 			//if(userevent & (EPOLLIN|EPOLLOUT))
@@ -259,7 +263,7 @@ int aio_socket_process(int timeout)
 			// 5. thread-2 redo decrement ctx->ref (decrement twice, crash)
 
 			// clear IN/OUT event
-			pthread_spin_lock(&ctx->locker);
+			spin_lock(&ctx->locker);
 	
 			// 1. thread-1 aio_socket_send() set ctx->ev.events to EPOLLOUT
 			// 2. thread-2 epoll_wait -> events[i].events EPOLLOUT
@@ -273,7 +277,7 @@ int aio_socket_process(int timeout)
 			ctx->ev.events &= ~(events[i].events & (EPOLLIN | EPOLLOUT));
 			if(ctx->ev.events & (EPOLLIN|EPOLLOUT))
 				epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev); // update epoll event(clear in/out cause EPOLLHUP)
-			pthread_spin_unlock(&ctx->locker);
+			spin_unlock(&ctx->locker);
 
 			//if(EPOLLRDHUP & events[i].events)
 			//{
@@ -308,7 +312,7 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	if(!ctx)
 		return NULL;
 
-	pthread_spin_init(&ctx->locker, PTHREAD_PROCESS_PRIVATE);
+	spin_lock_init(&ctx->locker);
 	ctx->own = own;
 	ctx->ref = 1; // 1-for EPOLLHUP(no in/out, shutdown), 2-destroy release
 	ctx->socket = socket;
