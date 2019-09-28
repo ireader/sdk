@@ -1195,11 +1195,11 @@ static inline int socket_addr_compare(const struct sockaddr* sa, const struct so
 	{
 	case AF_INET:
 		return ((struct sockaddr_in*)sa)->sin_port==((struct sockaddr_in*)sb)->sin_port 
-			&& 0 == memcmp(&((struct sockaddr_in*)sa)->sin_addr, &((struct sockaddr_in*)sb)->sin_addr, sizeof(IN_ADDR)) 
+			&& 0 == memcmp(&((struct sockaddr_in*)sa)->sin_addr, &((struct sockaddr_in*)sb)->sin_addr, sizeof(struct in_addr))
 			? 0 : -1;
 	case AF_INET6:
 		return ((struct sockaddr_in6*)sa)->sin6_port == ((struct sockaddr_in6*)sb)->sin6_port 
-			&& 0 == memcmp(&((struct sockaddr_in6*)sa)->sin6_addr, &((struct sockaddr_in6*)sb)->sin6_addr, sizeof(IN6_ADDR)) 
+			&& 0 == memcmp(&((struct sockaddr_in6*)sa)->sin6_addr, &((struct sockaddr_in6*)sb)->sin6_addr, sizeof(struct in6_addr))
 			? 0 : -1;
 
 #if defined(OS_LINUX) || defined(OS_MAC) // Windows build 17061
