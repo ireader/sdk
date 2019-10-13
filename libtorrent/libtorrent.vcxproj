@@ -189,6 +189,7 @@
     <ClCompile Include="..\source\rbtree.c" />
     <ClCompile Include="..\source\ring-buffer.c" />
     <ClCompile Include="..\source\uri-parse.c" />
+    <ClCompile Include="..\source\uri-query.c" />
     <ClCompile Include="..\source\urlcodec.c" />
     <ClCompile Include="src\bencode.c" />
     <ClCompile Include="src\dht-message.c" />

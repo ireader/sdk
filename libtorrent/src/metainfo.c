@@ -406,3 +406,9 @@ int metainfo_hash(const struct metainfo_t* meta, uint8_t sha1[20])
 
 	return 0;
 }
+
+#if defined(_DEBUG) || defined(DEBUG)
+void metainfo_test(void)
+{
+}
+#endif

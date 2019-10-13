@@ -19,6 +19,9 @@
     <Filter Include="Source Files\utp">
       <UniqueIdentifier>{87ec033b-254d-4215-9250-2bb40d99ca87}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\dht">
+      <UniqueIdentifier>{1a104aee-308d-450f-9d86-3f6eb8986aa4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\bencode.h">
@@ -220,6 +223,9 @@
     </ClCompile>
     <ClCompile Include="src\udp-socket.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\uri-query.c">
+      <Filter>3rd</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

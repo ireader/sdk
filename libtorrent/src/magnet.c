@@ -308,10 +308,10 @@ void magnet_free(struct magnet_t* magnet)
 		return;
 
 	assert(magnet->tracker_count < sizeof(magnet->trackers) / sizeof(magnet->trackers[0]));
-	while (magnet->tracker_count > 0)
-	{
-		free(magnet->trackers[--magnet->tracker_count]);
-	}
+	//while (magnet->tracker_count > 0)
+	//{
+	//	free(magnet->trackers[--magnet->tracker_count]);
+	//}
 	free(magnet);
 }
 
@@ -336,7 +336,7 @@ void magnet_test(void)
 	assert(2 == magnet->xs_count);
 	assert(0 == strcmp(magnet->xs[0], "http://cache.example.org/XRX2PEFXOOEJFRVUCX6HMZMKS5TWG4K5"));
 	assert(0 == strcmp(magnet->xs[1], "dchub://example.org"));
-	free(magnet);
+	magnet_free(magnet);
 
 	magnet = magnet_parse(url2);
 	assert(MAGNET_HASH_BT == magnet->protocol);
@@ -345,6 +345,6 @@ void magnet_test(void)
 	assert(2 == magnet->tracker_count);
 	assert(0 == strcmp(magnet->trackers[0], "http://tracker.openbittorrent.com/announce"));
 	assert(0 == strcmp(magnet->trackers[1], "http://tracker.opentracker.org/announce"));
-	free(magnet);
+	magnet_free(magnet);
 }
 #endif

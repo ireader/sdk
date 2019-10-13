@@ -103,7 +103,7 @@ static void dht_handle_find_node(void* param, int code, const uint8_t id[20])
 	dht_save(dht, NODEFILE);
 
 	magnet = magnet_parse("magnet:?xt=urn:btih:40948DD35268BDEA37894FCB5390402CC3AAD95E");
-	dht_get_peers(dht, magnet->info_hash);
+	dht_get_peers(dht, magnet->bt_hash);
 	magnet_free(magnet);
 }
 

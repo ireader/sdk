@@ -1,4 +1,5 @@
 #include "metainfo.h"
+#include "magnet.h"
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
@@ -29,4 +30,12 @@ void metainfo_test(const char* file)
 	assert((int)n == metainfo_write(&metainfo, s_buffer2, sizeof(s_buffer2)));
 	assert(0 == memcmp(s_buffer1, s_buffer2, n));
 	metainfo_free(&metainfo);
+}
+
+void metainfo_test2(const char* url)
+{
+	struct magnet_t* magnet;
+
+	magnet = magnet_parse(url);
+	magnet_free(magnet);
 }
