@@ -14,10 +14,12 @@ endif
 all:
 	$(MAKE) -C libaio
 	$(MAKE) -C libhttp
+	$(MAKE) -C libice
 	
 clean:
 	$(MAKE) -C libaio clean
 	$(MAKE) -C libhttp clean
+	$(MAKE) -C libice clean
 	$(MAKE) -C test clean
 
 .PHONY : test
