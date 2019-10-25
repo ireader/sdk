@@ -52,6 +52,8 @@ struct peer_t
 	struct list_head messages;
 
 	int recv_timeout; // 0-ok, 1-keepalive, >=2-timeout
+
+	struct list_head piece; // link to piece
 };
 
 static int peer_onbitfield(struct peer_t* peer, uint8_t* bitfield, uint32_t count);

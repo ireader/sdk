@@ -1,6 +1,8 @@
 #ifndef _piece_h_
 #define _piece_h_
 
+#include "sys/locker.h"
+#include "list.h"
 #include <stdint.h>
 
 #if defined(__cplusplus)
@@ -15,6 +17,10 @@ struct piece_t
 
 	uint8_t *data;
 	uint8_t *bitfield;
+
+	locker_t locker;
+	struct list_head idles; // idle peers
+	struct list_head working; // working peers
 };
 
 struct piece_t* piece_create(uint32_t piece, uint32_t bytes, const uint8_t sha1[20]);

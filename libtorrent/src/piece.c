@@ -19,6 +19,9 @@ struct piece_t* piece_create(uint32_t piece, uint32_t bytes, const uint8_t sha1[
 	if (!p) return NULL;
 
 	memcpy(p->sha1, sha1, sizeof(p->sha1));
+	locker_create(&p->locker);
+	LIST_INIT_HEAD(&p->idles);
+	LIST_INIT_HEAD(&p->working);
 	p->piece = piece;
 	p->bytes = bytes;
 	p->data = (uint8_t *)(p + 1);
@@ -29,6 +32,23 @@ struct piece_t* piece_create(uint32_t piece, uint32_t bytes, const uint8_t sha1[
 
 void piece_destroy(struct piece_t* piece)
 {
+	struct peer_t* peer;
+	struct list_head ptr, next;
+	assert(list_empty(&piece->idles));
+	assert(list_empty(&piece->working));
+	list_for_each_safe(ptr, next, &piece->idles)
+	{
+		peer = list_entry(ptr, struct peer_t, piece);
+		list_remove(ptr);
+		peer_release(peer);
+	}
+	list_for_each_safe(ptr, next, &piece->working)
+	{
+		peer = list_entry(ptr, struct peer_t, piece);
+		list_remove(ptr);
+		peer_release(peer);
+	}
+	locker_destroy(&piece->locker);
 	free(piece);
 }
 

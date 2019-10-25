@@ -45,6 +45,9 @@ int peer_send_slices(peer_t* peer, uint32_t piece, uint32_t begin, uint32_t leng
 int peer_send_meta(peer_t* peer, const void* meta, uint32_t bytes);
 int peer_empty(const peer_t* peer);
 
+/// @return 1 if p1 < p2, 0-other
+int peer_compare_less(void* param, const peer_t* p1, const peer_t* p2);
+
 #if defined(__cplusplus)
 }
 #endif
