@@ -150,6 +150,7 @@
     <ClCompile Include="..\source\twtimer.c" />
     <ClCompile Include="src\aio-accept.c" />
     <ClCompile Include="src\aio-client.c" />
+    <ClCompile Include="src\aio-poll.c" />
     <ClCompile Include="src\aio-recv.c" />
     <ClCompile Include="src\aio-rwutil.c" />
     <ClCompile Include="src\aio-connect.c" />
@@ -161,6 +162,7 @@
   <ItemGroup>
     <ClInclude Include="..\include\aio-socket.h" />
     <ClInclude Include="include\aio-accept.h" />
+    <ClInclude Include="include\aio-poll.h" />
     <ClInclude Include="include\aio-recv.h" />
     <ClInclude Include="include\aio-rwutil.h" />
     <ClInclude Include="include\aio-connect.h" />

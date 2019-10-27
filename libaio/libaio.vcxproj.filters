@@ -48,6 +48,9 @@
     <ClCompile Include="..\source\twtimer.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\aio-poll.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\aio-accept.h">
@@ -78,6 +81,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\aio-worker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\aio-poll.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
