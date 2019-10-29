@@ -23,7 +23,7 @@ int aio_poll_destroy(struct aio_poll_t* poll);
 /// @param[in] socket same as aio_poll_poll socket
 /// @param[in] flags AIO_POLL_IN/AIO_POLL_OUT
 /// @param[in] param same as aio_poll_poll param
-typedef void (*aio_poll_callback)(int code, socket_t socket, int flags, void* param);
+typedef void (*aio_poll_onpoll)(int code, socket_t socket, int flags, void* param);
 
 /// Async poll
 /// @param[in] flags AIO_POLL_IN/AIO_POLL_OUT
@@ -31,7 +31,7 @@ typedef void (*aio_poll_callback)(int code, socket_t socket, int flags, void* pa
 /// @param[in] callback poll callback
 /// @param[in] param user defined callback parameter
 /// @return 0-ok, other-error
-int aio_poll_poll(struct aio_poll_t* poll, socket_t socket, int flags, int timeout, aio_poll_callback callback, void* param);
+int aio_poll_poll(struct aio_poll_t* poll, socket_t socket, int flags, int timeout, aio_poll_onpoll callback, void* param);
 
 #ifdef __cplusplus
 }

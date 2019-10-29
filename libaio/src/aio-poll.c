@@ -3,13 +3,14 @@
 #include "sys/thread.h"
 #include "sys/locker.h"
 #include "sys/pollfd.h"
+#include "port/socketpair.h"
 #include "sockutil.h"
 #include "list.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <assert.h>
 
-#define N_SOCKETS FD_SETSIZE
+#define N_SOCKETS (FD_SETSIZE-1)
 
 struct aio_poll_socket_t
 {
@@ -19,13 +20,14 @@ struct aio_poll_socket_t
 	int events;
 	int revents;
 	uint64_t expire;
-	aio_poll_callback callback;
+	aio_poll_onpoll callback;
 	void* param;
 };
 
 struct aio_poll_t
 {
 	locker_t locker;
+	socket_t pair[2];
 	struct list_head root;
 	struct list_head idles;
 
@@ -79,6 +81,13 @@ struct aio_poll_t* aio_poll_create()
 	{
 		LIST_INIT_HEAD(&poll->root);
 		LIST_INIT_HEAD(&poll->idles);
+		aio_poll_init_idles(poll);
+
+		if (0 != socketpair(PF_INET, SOCK_DGRAM, 0, poll->pair))
+		{
+			free(poll);
+			return NULL;
+		}
 
 		poll->running = 1;
 		locker_create(&poll->locker);
@@ -94,12 +103,16 @@ int aio_poll_destroy(struct aio_poll_t* poll)
 
 	assert(list_empty(&poll->root));
 	poll->running = 0;
+	socket_send_all_by_time(poll->pair[1], poll, 1, 0, 5000);
+
 	thread_destroy(poll->thread);
 	locker_destroy(&poll->locker);
+	socket_close(poll->pair[0]);
+	socket_close(poll->pair[1]);
 	return 0;
 }
 
-int aio_poll_poll(struct aio_poll_t* poll, socket_t socket, int flags, int timeout, aio_poll_callback callback, void* param)
+int aio_poll_poll(struct aio_poll_t* poll, socket_t socket, int flags, int timeout, aio_poll_onpoll callback, void* param)
 {
 	struct aio_poll_socket_t* s;
 
@@ -120,6 +133,9 @@ int aio_poll_poll(struct aio_poll_t* poll, socket_t socket, int flags, int timeo
 	locker_lock(&poll->locker);
 	list_insert_after(&s->link, poll->root.prev);
 	locker_unlock(&poll->locker);
+
+	// notify
+	socket_send_all_by_time(poll->pair[1], s, 1, 0, 5000);
 	return 0;
 }
 
@@ -128,14 +144,21 @@ static int STDCALL aio_poll_worker(void* param)
 {
 	int i, n, r;
 	uint64_t now;
+	char buf[128];
 	struct list_head* ptr;
 	struct aio_poll_t* poll;
-	struct aio_poll_socket_t* links[N_SOCKETS];
+	struct aio_poll_socket_t link0, *links[N_SOCKETS];
 
 	poll = (struct aio_poll_t*)param;
+	link0.fd = poll->pair[0];
+	link0.events = AIO_POLL_IN;
+	
 	while (poll->running)
 	{
+		socket_recv_by_time(poll->pair[0], buf, sizeof(buf), 0, 0);
+
 		n = 0;
+		links[n++] = &link0;
 		locker_lock(&poll->locker);
 		list_for_each(ptr, &poll->root)
 		{
@@ -143,13 +166,12 @@ static int STDCALL aio_poll_worker(void* param)
 		}
 		locker_unlock(&poll->locker);
 
-		// TODO: timeout
-		r = aio_poll_do(links, n, 1000);
+		r = aio_poll_do(links, n, 120000);
 		if (r < 0)
 			break;
 
 		now = system_clock();
-		for (i = 0; i < n; i++)
+		for (i = 1; i < n; i++)
 		{
 			if (0 != links[i]->revents)
 			{
@@ -231,11 +253,11 @@ static int aio_poll_do(struct aio_poll_socket_t* s[], int n, int timeout)
 
 	for (r = i = 0; i < n && i < 64; i++)
 	{
-		s[i]->oflags = 0;
+		s[i]->revents = 0;
 		if (fds[i].revents & POLLIN)
-			s[i]->oflags |= AIO_POLL_IN;
+			s[i]->revents |= AIO_POLL_IN;
 		if (fds[i].revents & POLLOUT)
-			s[i]->oflags |= AIO_POLL_OUT;
+			s[i]->revents |= AIO_POLL_OUT;
 	}
 
 	return r;
