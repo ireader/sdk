@@ -99,7 +99,7 @@ int peer_have_read(const uint8_t* buffer, int bytes, uint32_t* piece)
 int peer_have_write(uint8_t buffer[9], uint32_t piece)
 {
 	nbo_w32(buffer, 5);
-	buffer[4] = BT_PIECE;
+	buffer[4] = BT_HAVE;
 	nbo_w32(buffer + 5, piece);
 	return 9;
 }
