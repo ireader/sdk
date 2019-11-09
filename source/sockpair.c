@@ -54,13 +54,13 @@ int sockpair_create2(const struct sockaddr* addr, socket_t pair[2], unsigned sho
 		i = rand() % (s_port_num-2);
 		i = i / 2 * 2 + s_base_port;
 
-		socket_addr_setport((struct sockaddr*)&ss, socket_addr_len(addr), i);
-		sock[0] = socket_udp_bind_addr(addr, 0, 0);
+		socket_addr_setport((struct sockaddr*)&ss, socket_addr_len(addr), ntohs(i));
+		sock[0] = socket_udp_bind_addr((struct sockaddr*)&ss, 0, 0);
 		if (socket_invalid == sock[0])
 			continue;
 
-		socket_addr_setport((struct sockaddr*)&ss, socket_addr_len(addr), i+1);
-		sock[1] = socket_udp_bind_addr(addr, 0, 0);
+		socket_addr_setport((struct sockaddr*)&ss, socket_addr_len(addr), ntohs(i+1));
+		sock[1] = socket_udp_bind_addr((struct sockaddr*)&ss, 0, 0);
 		if (socket_invalid == sock[1])
 		{
 			socket_close(sock[0]);
@@ -69,8 +69,8 @@ int sockpair_create2(const struct sockaddr* addr, socket_t pair[2], unsigned sho
 
 		pair[0] = sock[0];
 		pair[1] = sock[1];
-		port[0] = i;
-		port[1] = i + 1;
+		port[0] = ntohs(i);
+		port[1] = ntohs(i + 1);
 		return 0;
 
 	} while (socket_invalid == sock[0] || socket_invalid == sock[1]);
