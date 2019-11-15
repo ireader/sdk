@@ -395,7 +395,7 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 	{
 		ice_checklist_update_foundation(l, pair);
 
-		pair->nominated = nominated ? 1 : 0;
+		pair->nominated = (pair->nominated || nominated) ? 1 : 0;
 		pair->state = ICE_CANDIDATE_PAIR_SUCCEEDED;
 		darray_insert2(&l->valids, &pair, NULL);
 		ice_checklist_update_state(l);
