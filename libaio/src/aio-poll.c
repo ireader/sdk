@@ -135,7 +135,8 @@ int aio_poll_poll(struct aio_poll_t* poll, socket_t socket, int flags, int timeo
 	locker_unlock(&poll->locker);
 
 	// notify
-	socket_send_all_by_time(poll->pair[1], s, 1, 0, 5000);
+	if(!thread_isself(poll->thread))
+		socket_send_all_by_time(poll->pair[1], s, 1, 0, 5000);
 	return 0;
 }
 
