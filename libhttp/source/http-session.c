@@ -65,7 +65,7 @@ static void http_session_onrecv(void* param, int code, size_t bytes)
 {
 	struct http_session_t *session;
 	session = (struct http_session_t *)param;
-	session->remain = 0 == code ? bytes : 0;
+	session->remain = 0 == code ? (int)bytes : 0;
 
 	if (0 == code)
 	{
@@ -150,7 +150,7 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	session->header = (char*)(session + 1);
 	session->header_capacity = 2 * 1024;
 	session->data = session->header + session->header_capacity;
-	session->parser = http_parser_create(HTTP_PARSER_SERVER);
+	session->parser = http_parser_create(HTTP_PARSER_REQUEST, NULL, NULL);
 	assert(AF_INET == sa->sa_family || AF_INET6 == sa->sa_family);
 	assert(salen <= sizeof(session->addr));
 	memcpy(&session->addr, sa, salen);

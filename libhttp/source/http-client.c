@@ -72,7 +72,7 @@ static int http_make_request(struct http_client_t *http, int method, const char*
 	if (0 == r && 0 == flag_cookie && http->cookie)
 		r = http_request_set_header(http->req, "Cookie", http->cookie);
 	if (0 == r && 0 == flag_content_length)
-		r = http_request_set_header_int(http->req, "Content-Length", bytes);
+		r = http_request_set_header_int(http->req, "Content-Length", (int)bytes);
 	return r;
 }
 
@@ -157,7 +157,7 @@ struct http_client_t* http_client_create(const char* ip, unsigned short port, in
 	locker_create(&http->locker);
 	http->ref = 1;
 	http->req = http_request_create(HTTP_1_1);
-	http->parser = http_parser_create(HTTP_PARSER_CLIENT);
+	http->parser = http_parser_create(HTTP_PARSER_RESPONSE, NULL, NULL);
 	http->connection = http->conn->create(http);
 	if (r <= 0 || r >= sizeof(http->host) || !http->parser || !http->req || !http->connection)
 	{

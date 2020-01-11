@@ -10,19 +10,19 @@ extern "C" {
 typedef struct http_parser_t http_parser_t;
 
 enum HTTP_PARSER_MODE { 
-	HTTP_PARSER_CLIENT = 0, 
-	HTTP_PARSER_SERVER = 1
+	HTTP_PARSER_RESPONSE = 0,   // HTTP/1.1 200 OK
+	HTTP_PARSER_REQUEST = 1		// POST /uri HTTP/1.1
 };
 
 /// get/set maximum body size(global setting)
 /// @param[in] bytes 0-unlimited, other-limit bytes
-int http_get_max_size(void);
+size_t http_get_max_size(void);
 int http_set_max_size(size_t bytes);
 
 /// create
 /// @param[in] mode 1-server mode, 0-client mode
 /// @return parser instance
-http_parser_t* http_parser_create(enum HTTP_PARSER_MODE mode);
+http_parser_t* http_parser_create(enum HTTP_PARSER_MODE mode, void(*ondata)(void* param, const void* data, int len), void* param);
 
 /// destroy
 /// @return 0-ok, other-error
@@ -45,6 +45,7 @@ const char* http_get_request_uri(const http_parser_t* parser);
 const char* http_get_request_method(const http_parser_t* parser);
 
 /// HTTP body(use with http_get_content_length)
+/// Get HTTP body if http_parser_create without callback, otherwise, it's invalid
 const void* http_get_content(const http_parser_t* parser);
 
 /// HTTP headers

@@ -1,6 +1,9 @@
 #include "http-parser.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "time64.h"
 
 static void http_request_test(void)
 {
@@ -15,7 +18,7 @@ static void http_request_test(void)
 	http_parser_t* parser;
 
 	n = strlen(s);
-	parser = http_parser_create(HTTP_PARSER_SERVER);
+	parser = http_parser_create(HTTP_PARSER_REQUEST, NULL, NULL);
 	assert(0 == http_parser_input(parser, s, &n));
 	assert(0 == http_get_version(parser, protocol, &major, &minor) && 1 == major && 1 == minor && 0 == strcmp("HTTP", protocol));
 	assert(0 == strcmp(http_get_request_uri(parser), "/"));
@@ -40,7 +43,7 @@ static void rtsp_response_test(void)
 	http_parser_t* parser;
 
 	n = strlen(s);
-	parser = http_parser_create(HTTP_PARSER_CLIENT);
+	parser = http_parser_create(HTTP_PARSER_RESPONSE, NULL, NULL);
 	assert(0 == http_parser_input(parser, s, &n));
 	assert(200 == http_get_status_code(parser));
 	assert(0 == http_get_version(parser, protocol, &major, &minor) && 1 == major && 0 == minor && 0 == strcmp("RTSP", protocol));
@@ -71,7 +74,7 @@ static void sip_request_test(void)
 	http_parser_t* parser;
 
 	n = strlen(s);
-	parser = http_parser_create(HTTP_PARSER_SERVER);
+	parser = http_parser_create(HTTP_PARSER_REQUEST, NULL, NULL);
 	assert(0 == http_parser_input(parser, s, &n));
 	assert(0 == http_get_version(parser, protocol, &major, &minor) && 2 == major && 0 == minor && 0 == strcmp("SIP", protocol));
 	assert(0 == strcmp(http_get_request_uri(parser), "sip:bob@biloxi.com"));
@@ -110,7 +113,7 @@ static void sip_response_test(void)
 	http_parser_t* parser;
 
 	n = strlen(s);
-	parser = http_parser_create(HTTP_PARSER_CLIENT);
+	parser = http_parser_create(HTTP_PARSER_RESPONSE, NULL, NULL);
 	assert(0 == http_parser_input(parser, s, &n));
 	assert(0 == http_get_version(parser, protocol, &major, &minor) && 2 == major && 0 == minor && 0 == strcmp("SIP", protocol));
 	assert(200 == http_get_status_code(parser));
@@ -121,9 +124,60 @@ static void sip_response_test(void)
 	http_parser_destroy(parser);
 }
 
+static void sip_payload(void* param, const void* data, int bytes)
+{
+	printf("%.*s", bytes, (const char*)data);
+}
+
+static void sip_request_test2(void)
+{
+	const char* s = "INVITE sip:bob@biloxi.com SIP/2.0\r\n" \
+		"Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bK776asdhds\r\n" \
+		"Max-Forwards: 70\r\n" \
+		"To: Bob <sip:bob@biloxi.com>\r\n" \
+		"From: Alice <sip:alice@atlanta.com>;tag=1928301774\r\n" \
+		"Call-ID: a84b4c76e66710@pc33.atlanta.com\r\n" \
+		"CSeq: 314159 INVITE\r\n" \
+		"Contact: <sip:alice@pc33.atlanta.com>\r\n" \
+		"Content-Type: application/sdp\r\n" \
+		"Transfer-Encoding: chunked\r\n" \
+		"\r\n" \
+		"8\r\n12345678\r\n10\r\n1234567890123456\r\n0\r\n\r\n";
+
+	size_t i, n, m;
+	int major, minor;
+	char protocol[64];
+	http_parser_t* parser;
+
+	parser = http_parser_create(HTTP_PARSER_REQUEST, sip_payload, NULL);
+	for (i = 0; i < strlen(s); i+=m)
+	{
+		n = m = rand() % (strlen(s) - i + 1);
+		assert(http_parser_input(parser, s+i, &n) >= 0 && 0 == n);
+	}
+	assert(0 == http_get_version(parser, protocol, &major, &minor) && 2 == major && 0 == minor && 0 == strcmp("SIP", protocol));
+	assert(0 == strcmp(http_get_request_uri(parser), "sip:bob@biloxi.com"));
+	assert(0 == strcmp(http_get_request_method(parser), "INVITE"));
+	assert(0 == strcmp(http_get_header_by_name(parser, "Via"), "SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bK776asdhds"));
+	assert(0 == strcmp(http_get_header_by_name(parser, "Max-Forwards"), "70"));
+	assert(0 == strcmp(http_get_header_by_name(parser, "To"), "Bob <sip:bob@biloxi.com>"));
+	assert(0 == strcmp(http_get_header_by_name(parser, "From"), "Alice <sip:alice@atlanta.com>;tag=1928301774"));
+	assert(0 == strcmp(http_get_header_by_name(parser, "Call-ID"), "a84b4c76e66710@pc33.atlanta.com"));
+	assert(0 == strcmp(http_get_header_by_name(parser, "CSeq"), "314159 INVITE"));
+	assert(0 == strcmp(http_get_header_by_name(parser, "Contact"), "<sip:alice@pc33.atlanta.com>"));
+	assert(0 == strcmp(http_get_content_type(parser), "application/sdp"));
+	assert(24 == http_get_content_length(parser));
+	http_parser_destroy(parser);
+}
+
 void http_parser_test(void)
 {
+	int i;
 	http_request_test();
 	rtsp_response_test();
 	sip_response_test();
+
+	srand((unsigned int)time64_now());
+	for (i = 0; i < 10000; i++)
+		sip_request_test2();
 }

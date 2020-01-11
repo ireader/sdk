@@ -56,11 +56,11 @@ static void	md5_A1(char A1[33], const char* algorithm, const char* usr, const ch
 	unsigned char md5[16];
 
 	MD5Init(&ctx);
-	MD5Update(&ctx, (unsigned char*)usr, strlen(usr));
+	MD5Update(&ctx, (unsigned char*)usr, (unsigned int)strlen(usr));
 	MD5Update(&ctx, (unsigned char*)":", 1);
-	MD5Update(&ctx, (unsigned char*)realm, strlen(realm));
+	MD5Update(&ctx, (unsigned char*)realm, (unsigned int)strlen(realm));
 	MD5Update(&ctx, (unsigned char*)":", 1);
-	MD5Update(&ctx, (unsigned char*)pwd, strlen(pwd));
+	MD5Update(&ctx, (unsigned char*)pwd, (unsigned int)strlen(pwd));
 	MD5Final(md5, &ctx);
 
 	// algorithm endwith -sess
@@ -69,9 +69,9 @@ static void	md5_A1(char A1[33], const char* algorithm, const char* usr, const ch
 		MD5Init(&ctx);
 		MD5Update(&ctx, md5, 16);
 		MD5Update(&ctx, (unsigned char*)":", 1);
-		MD5Update(&ctx, (unsigned char*)nonce, strlen(nonce));
+		MD5Update(&ctx, (unsigned char*)nonce, (unsigned int)strlen(nonce));
 		MD5Update(&ctx, (unsigned char*)":", 1);
-		MD5Update(&ctx, (unsigned char*)cnonce, strlen(cnonce));
+		MD5Update(&ctx, (unsigned char*)cnonce, (unsigned int)strlen(cnonce));
 		MD5Final(md5, &ctx);
 	}
 
@@ -84,9 +84,9 @@ static void	md5_A2(char A2[33], const char* method, const char* uri, const char*
 	unsigned char md5[16];
 
 	MD5Init(&ctx);
-	MD5Update(&ctx, (unsigned char*)method, strlen(method));
+	MD5Update(&ctx, (unsigned char*)method, (unsigned int)strlen(method));
 	MD5Update(&ctx, (unsigned char*)":", 1);
-	MD5Update(&ctx, (unsigned char*)uri, strlen(uri));
+	MD5Update(&ctx, (unsigned char*)uri, (unsigned int)strlen(uri));
 	if (0 == strcmp("auth-int", qop))
 	{
 		MD5Update(&ctx, (unsigned char*)":", 1);
@@ -106,16 +106,16 @@ static void md5_response(char reponse[33], const char* A1, const char* A2, const
 	MD5Init(&ctx);
 	MD5Update(&ctx, (unsigned char*)A1, 32);
 	MD5Update(&ctx, (unsigned char*)":", 1);
-	MD5Update(&ctx, (unsigned char*)nonce, strlen(nonce));
+	MD5Update(&ctx, (unsigned char*)nonce, (unsigned int)strlen(nonce));
 	MD5Update(&ctx, (unsigned char*)":", 1);
 	if (*qop)
 	{
 		snprintf(hex, sizeof(hex), "%08x", nc);
-		MD5Update(&ctx, (unsigned char*)hex, strlen(hex));
+		MD5Update(&ctx, (unsigned char*)hex, (unsigned int)strlen(hex));
 		MD5Update(&ctx, (unsigned char*)":", 1);
-		MD5Update(&ctx, (unsigned char*)cnonce, strlen(cnonce));
+		MD5Update(&ctx, (unsigned char*)cnonce, (unsigned int)strlen(cnonce));
 		MD5Update(&ctx, (unsigned char*)":", 1);
-		MD5Update(&ctx, (unsigned char*)qop, strlen(qop));
+		MD5Update(&ctx, (unsigned char*)qop, (unsigned int)strlen(qop));
 		MD5Update(&ctx, (unsigned char*)":", 1);
 	}
 	MD5Update(&ctx, (unsigned char*)A2, 32);
@@ -130,9 +130,9 @@ static void	md5_username(char r[33], const char* user, const char* realm)
 	unsigned char md5[16];
 
 	MD5Init(&ctx);
-	MD5Update(&ctx, (unsigned char*)user, strlen(user));
+	MD5Update(&ctx, (unsigned char*)user, (unsigned int)strlen(user));
 	MD5Update(&ctx, (unsigned char*)":", 1);
-	MD5Update(&ctx, (unsigned char*)realm, strlen(realm));
+	MD5Update(&ctx, (unsigned char*)realm, (unsigned int)strlen(realm));
 	MD5Final(md5, &ctx);
 
 	base16(r, md5, 16);
@@ -164,7 +164,7 @@ int http_header_auth(const struct http_header_www_authenticate_t* auth, const ch
 		n = snprintf(authenrization, bytes, "%s:%s", auth->username, pwd);
 		if (n < 0 || n + 1 >= bytes || (n + 2) / 3 * 4 + n / 57 + 1 > sizeof(auth->response))
 			return -E2BIG;
-		n = base64_encode(auth2.response, authenrization, n);
+		n = (int)base64_encode(auth2.response, authenrization, n);
 		return http_header_authorization_write(&auth2, authenrization, bytes);
 	}
 	else if (HTTP_AUTHENTICATION_DIGEST == auth->scheme)
