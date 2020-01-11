@@ -449,7 +449,7 @@ static inline int socket_select_read(IN socket_t sock, IN int timeout)
 
 	tv.tv_sec = timeout/1000;
 	tv.tv_usec = (timeout%1000) * 1000;
-	return socket_select_readfds(sock+1, &fds, timeout<0?NULL:&tv);
+	return socket_select_readfds(0 /*sock+1*/, &fds, timeout<0?NULL:&tv);
 #else
 	int r;
 	struct pollfd fds;
@@ -478,7 +478,7 @@ static inline int socket_select_write(IN socket_t sock, IN int timeout)
 
 	tv.tv_sec = timeout/1000;
 	tv.tv_usec = (timeout%1000) * 1000;
-	return socket_select_writefds(sock+1, &fds, timeout<0?NULL:&tv);
+	return socket_select_writefds(0 /*sock+1*/, &fds, timeout<0?NULL:&tv);
 #else
 	int r;
 	struct pollfd fds;
@@ -520,7 +520,7 @@ static inline int socket_select_connect(IN socket_t sock, IN int timeout)
 	// MSDN > select function > Remarks:
 	//	writefds: If processing a connect call (nonblocking), connection has succeeded.
 	//	exceptfds: If processing a connect call (nonblocking), connection attempt failed.
-	r = socket_select(sock + 1, NULL, &wfds, &efds, timeout < 0 ? NULL : &tv);
+	r = socket_select(0 /*sock+1*/, NULL, &wfds, &efds, timeout < 0 ? NULL : &tv);
 	if (1 == r)
 	{
 		if (FD_ISSET(sock, &wfds))
