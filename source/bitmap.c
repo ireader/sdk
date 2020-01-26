@@ -18,6 +18,12 @@ void bitmap_fill(uint8_t* bitmap, unsigned int nbits)
 	memset(bitmap, 0xFF, n * sizeof(uint8_t));
 }
 
+void bitmap_copy(uint8_t *bitmap, const uint8_t *src, unsigned int nbits);
+{
+	unsigned int n = BITS_TO_BYTES(nbits);
+	memmove(bitmap, src, n * sizeof(uint8_t));
+}
+
 void bitmap_set(uint8_t *bitmap, unsigned int start, unsigned int len)
 {
 	unsigned int end = start + len;

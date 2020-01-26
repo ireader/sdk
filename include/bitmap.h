@@ -9,6 +9,7 @@ extern "C" {
 
 void bitmap_zero(uint8_t* bitmap, unsigned int nbits);
 void bitmap_fill(uint8_t* bitmap, unsigned int nbits);
+void bitmap_copy(uint8_t *bitmap, const uint8_t *src, unsigned int nbits);
 
 void bitmap_set(uint8_t *bitmap, unsigned int start, unsigned int len);
 void bitmap_clear(uint8_t *bitmap, unsigned int start, unsigned int len);
