@@ -182,7 +182,7 @@ static inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const 
 static inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const char* ip_or_dns, IN u_short port);
 static inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_t* len, IN const char* ipv4_or_ipv6_or_dns, IN u_short port);
 static inline int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
-static inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN size_t hostlen);
+static inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN socklen_t hostlen);
 static inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen, u_short port);
 static inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t salen);
 static inline int socket_addr_compare(const struct sockaddr* first, const struct sockaddr* second); // 0-equal, other-don't equal
@@ -1156,7 +1156,7 @@ static inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen
 	return 0;
 }
 
-static inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN size_t hostlen)
+static inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN socklen_t hostlen)
 {
 	return getnameinfo(sa, salen, host, hostlen, NULL, 0, 0);
 }

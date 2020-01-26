@@ -32,8 +32,8 @@ static int http_header_attr_value(const char* source, char* value, int bytes)
 {
 	int n;
 	
-	source += strspn(source, "\'\"");
-	n = strcspn(source, "; \t\r\n\'\"");
+	source += (int)strspn(source, "\'\"");
+	n = (int)strcspn(source, "; \t\r\n\'\"");
 	if (bytes > n || 0 == bytes)
 	{
 		memcpy(value, source, n);

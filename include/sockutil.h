@@ -642,7 +642,7 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 
 	return bytes;
 	
-#elif defined(OS_LINUX)
+#elif defined(OS_LINUX) || defined(OS_MAC)
 	struct msghdr hdr;
 	struct cmsghdr *cmsg;
 	memset(&hdr, 0, sizeof(hdr));
@@ -654,7 +654,7 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 	hdr.msg_control = control;
 	hdr.msg_controllen = sizeof(control);
 	hdr.msg_flags = 0;
-	r = recvmsg(sock, &hdr, flags);
+	r = (int)recvmsg(sock, &hdr, flags);
 	if (-1 == r)
 		return -1;
 
@@ -740,7 +740,7 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 
 	return 0 == WSASendMsg(sock, &wsamsg, flags, &bytes, NULL, NULL) ? bytes : SOCKET_ERROR;
 
-#elif defined(OS_LINUX)
+#elif defined(OS_LINUX) || defined(OS_MAC)
 	struct msghdr hdr;
 	struct cmsghdr *cmsg;
 
@@ -758,7 +758,7 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 	if (AF_INET == local->sa_family)
 	{
 		struct in_pktinfo* pktinfo;
-		cmsg->cmsg_level = SOL_IP;// IPPROTO_IP;
+        cmsg->cmsg_level = IPPROTO_IP; // SOL_IP
 		cmsg->cmsg_type = IP_PKTINFO;
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 		pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
@@ -785,7 +785,7 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 		return -1;
 	}
 
-	return sendmsg(sock, &hdr, flags);
+	return (int)sendmsg(sock, &hdr, flags);
 #else
 #pragma error("xxxx\n");
 	return -1;

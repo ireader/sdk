@@ -19,7 +19,7 @@ static int turn_server_allocate_doresponse(struct stun_response_t* resp, struct 
 	stun_message_add_uint32(&resp->msg, STUN_ATTR_LIFETIME, allocate->lifetime);
 	stun_message_add_address(&resp->msg, STUN_ATTR_XOR_MAPPED_ADDRESS, (const struct sockaddr*)&allocate->addr.peer);
 	stun_message_add_address(&resp->msg, STUN_ATTR_XOR_RELAYED_ADDRESS, (const struct sockaddr*)&allocate->addr.relay);
-	if (allocate->token)
+	if (allocate->token[0])
 		stun_message_add_data(&resp->msg, STUN_ATTR_RESERVATION_TOKEN, allocate->token, sizeof(allocate->token));
 	stun_message_add_credentials(&resp->msg, &resp->auth);
 	stun_message_add_fingerprint(&resp->msg);

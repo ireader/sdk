@@ -51,8 +51,9 @@ int turn_agent_allocation_insert(struct list_head* root, struct turn_allocation_
 
 int turn_agent_allocation_remove(struct list_head* root, struct turn_allocation_t* allocate)
 {
+    (void)root;
 	list_remove(&allocate->link);
-	return 0; (void)root;
+	return 0;
 }
 
 struct turn_allocation_t* turn_agent_allocation_reservation_token(struct stun_agent_t* turn, struct turn_allocation_t* from)

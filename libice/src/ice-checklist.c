@@ -438,7 +438,7 @@ static int ice_checklist_onbind(void* param, const stun_request_t* req, int code
 // 3. Find the highest-priority pair in that check list that is in the Waiting state.
 // 4. Find the highest-priority pair in that check list that is in the Frozen state.
 // 5. Terminate the timer for that check list.
-static int ice_checklist_ontimer(void* param)
+static void ice_checklist_ontimer(void* param)
 {
 	int i, j, nominated;
 	ice_candidate_pairs_t* component;
@@ -520,7 +520,6 @@ static int ice_checklist_ontimer(void* param)
 
 	locker_unlock(&l->locker);
 	ice_checklist_release(l);
-	return 0;
 }
 
 // For all pairs with the same foundation, it sets the state of

@@ -1,8 +1,9 @@
 #ifndef _cstring_h_
 #define _cstring_h_
 
-#include <string.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 struct cstring_t
 {
@@ -96,7 +97,7 @@ static inline int cstrcmp(const struct cstring_t* s, const char* c)
 	size_t n;
 	n = c ? strlen(c) : 0;
 	r = cstrncmp(s, c, n);
-	return 0 == r ? s->n - n : r;
+	return 0 == r ? (int)(s->n - n) : r;
 }
 
 // @return 1-equal, 0-don't equal
@@ -127,7 +128,7 @@ static inline int cstrcasecmp(const struct cstring_t* s, const char* c)
 	size_t n;
 	n = c ? strlen(c) : 0;
 	r = cstrncasecmp(s, c, n);
-	return 0 == r ? s->n - n : r;
+	return 0 == r ? (int)(s->n - n) : r;
 }
 
 // cstrprefix("abc", "ab") => 1

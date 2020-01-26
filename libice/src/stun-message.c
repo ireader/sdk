@@ -9,7 +9,7 @@
 #include "crc32.h"
 #include <string.h>
 
-void crc32_lsb_init();
+void crc32_lsb_init(void);
 unsigned int crc32_lsb(unsigned int crc, const unsigned char *buffer, unsigned int size);
 
 int stun_header_read(const uint8_t* data, int bytes, struct stun_header_t* header)
@@ -202,11 +202,11 @@ static void long_term_key(uint8_t md5[16], const char* username, const char* pas
 {
 	MD5_CTX ctx;
 	MD5Init(&ctx);
-	MD5Update(&ctx, (unsigned char*)username, strlen(username));
+	MD5Update(&ctx, (unsigned char*)username, (unsigned int)strlen(username));
 	MD5Update(&ctx, (unsigned char*)":", 1);
-	MD5Update(&ctx, (unsigned char*)realm, strlen(realm));
+	MD5Update(&ctx, (unsigned char*)realm, (unsigned int)strlen(realm));
 	MD5Update(&ctx, (unsigned char*)":", 1);
-	MD5Update(&ctx, (unsigned char*)password, strlen(password));
+	MD5Update(&ctx, (unsigned char*)password, (unsigned int)strlen(password));
 	MD5Final(md5, &ctx);
 }
 
@@ -247,7 +247,7 @@ int stun_message_add_credentials(struct stun_message_t* msg, const struct stun_c
 	else
 	{
 		key = (const uint8_t *)auth->pwd;
-		nkey = strlen(auth->pwd);
+		nkey = (int)strlen(auth->pwd);
 	}
 
 	// The length MUST then be set to point to the length of the message up to, and including,
@@ -312,7 +312,7 @@ int stun_message_check_integrity(const uint8_t* data, int bytes, const struct st
 	}
 	else
 	{
-		hmacReset(&context, SHA1, (const uint8_t *)auth->pwd, strlen(auth->pwd));
+		hmacReset(&context, SHA1, (const uint8_t *)auth->pwd, (int)strlen(auth->pwd));
 	}
 
 	len = msg->header.length;

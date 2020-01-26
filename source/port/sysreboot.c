@@ -32,18 +32,18 @@ int windows_exit(int action)
 
 int system_reboot(void)
 {
-#if defined(OS_LINUX)
-	return system("reboot");
-#else
+#if defined(OS_WINDOWS)
 	return windows_exit(EWX_REBOOT);
+#else
+	return system("reboot");
 #endif
 }
 
 int system_shutdown(void)
 {
-#if defined(OS_LINUX)
-	return system("halt");
-#else
+#if defined(OS_WINDOWS)
 	return windows_exit(EWX_SHUTDOWN);
+#else
+	return system("halt");
 #endif
 }

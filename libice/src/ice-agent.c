@@ -262,8 +262,9 @@ static int ice_agent_auth(void* param, int cred, const char* usr, const char* re
 static int ice_agent_getnonce(void* param, char realm[128], char nonce[128])
 {
 	assert(0);
+    (void)param;
 	realm[0] = nonce[0] = 0;
-	return -1; (void)param;
+	return -1;
 }
 
 static void ice_agent_ondata(void* param, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes)
