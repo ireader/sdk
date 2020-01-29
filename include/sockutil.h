@@ -104,12 +104,12 @@ static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, I
 			continue;
 
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
-		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
+		socket_addr_setport(ptr->ai_addr, (socklen_t)ptr->ai_addrlen, port);
 
 		if (timeout < 0)
-			r = socket_connect(sock, ptr->ai_addr, ptr->ai_addrlen);
+			r = socket_connect(sock, ptr->ai_addr, (socklen_t)ptr->ai_addrlen);
 		else
-			r = socket_connect_by_time(sock, ptr->ai_addr, ptr->ai_addrlen, timeout);
+			r = socket_connect_by_time(sock, ptr->ai_addr, (socklen_t)ptr->ai_addrlen, timeout);
 
 		if (0 != r)
 			socket_close(sock);
@@ -223,9 +223,9 @@ static inline socket_t socket_tcp_listen(IN const char* ipv4_or_dns, IN u_short 
 		socket_setreuseaddr(sock, 1);
 
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
-		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
+		socket_addr_setport(ptr->ai_addr, (socklen_t)ptr->ai_addrlen, port);
 
-		r = socket_bind(sock, ptr->ai_addr, ptr->ai_addrlen);
+		r = socket_bind(sock, ptr->ai_addr, (socklen_t)ptr->ai_addrlen);
 		if (0 == r)
 			r = socket_listen(sock, backlog);
 
@@ -278,9 +278,9 @@ static inline socket_t socket_tcp_listen_ipv6(IN const char* ipv4_or_ipv6_or_dns
 		}
 
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
-		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
+		socket_addr_setport(ptr->ai_addr, (socklen_t)ptr->ai_addrlen, port);
 
-		r = socket_bind(sock, ptr->ai_addr, ptr->ai_addrlen);
+		r = socket_bind(sock, ptr->ai_addr, (socklen_t)ptr->ai_addrlen);
 		if (0 == r)
 			r = socket_listen(sock, backlog);
 
@@ -353,7 +353,7 @@ static inline socket_t socket_udp_bind(IN const char* ipv4_or_ipv6_or_dns, IN u_
 		assert(AF_INET == ptr->ai_family);
 		
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
-		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
+		socket_addr_setport(ptr->ai_addr, (socklen_t)ptr->ai_addrlen, port);
 		
 		sock = socket_udp_bind_addr(ptr->ai_addr, 0, 0);
 	}
@@ -387,7 +387,7 @@ static inline socket_t socket_udp_bind_ipv6(IN const char* ipv4_or_ipv6_or_dns, 
 		assert(AF_INET6 == ptr->ai_family);
 
 		// fixed ios getaddrinfo don't set port if nodename is ipv4 address
-		socket_addr_setport(ptr->ai_addr, ptr->ai_addrlen, port);
+		socket_addr_setport(ptr->ai_addr, (socklen_t)ptr->ai_addrlen, port);
 
 		sock = socket_udp_bind_addr(ptr->ai_addr, 0, ipv4);
 	}
