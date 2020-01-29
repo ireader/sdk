@@ -33,6 +33,7 @@ void base64_test(void);
 void bitmap_test(void);
 void hweight_test(void);
 void ring_buffer_test(void);
+void channel_test(void);
 
 void unicode_test(void);
 void uri_parse_test(void);
@@ -68,6 +69,7 @@ int main(int argc, char* argv[])
 	heap_test();
 	rbtree_test();
 	timer_test();
+	channel_test();
 
 	socket_test();
 	locker_test();

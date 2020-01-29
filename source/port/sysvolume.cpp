@@ -1,4 +1,4 @@
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
 #include <Windows.h>
 #include <Mmdeviceapi.h>
 #include <Endpointvolume.h>

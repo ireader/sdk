@@ -1,0 +1,429 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Header Files\sys">
+      <UniqueIdentifier>{0f83e874-9e90-453b-8d6f-ded5fcc97ecc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\port">
+      <UniqueIdentifier>{f066aa49-545f-4b1f-b383-002e09683436}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\libct">
+      <UniqueIdentifier>{8ffb7153-33b4-4407-bfd5-6c5c00a992d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\cpm">
+      <UniqueIdentifier>{8c42fa83-9bba-4655-a1f9-f712eee8b9c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\port">
+      <UniqueIdentifier>{9dc3e12e-ab76-4bfa-8a90-26c838e06bd0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\string">
+      <UniqueIdentifier>{be03c952-6982-418e-b834-0b8c0b8f3d84}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\algorithm">
+      <UniqueIdentifier>{155a2ca5-e4f0-4d33-9b28-55cbf27394bf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\digest">
+      <UniqueIdentifier>{a75d2167-be3f-4b8d-acc8-b4f6e93a59e2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="source\app-log.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\base64.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\bitmap.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\bits.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\bsearch.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\channel.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\darray.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\heap.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\hweight.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ntp-time.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\random.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\rbtree.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ring-buffer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\sockpair.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\task-queue.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\thread-pool.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\time64.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\twtimer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\unicode.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\uri-parse.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\uri-query.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\urlcodec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\uuid.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\port\ip-route.c">
+      <Filter>Source Files\port</Filter>
+    </ClCompile>
+    <ClCompile Include="source\port\serial-port-win32.c">
+      <Filter>Source Files\port</Filter>
+    </ClCompile>
+    <ClCompile Include="source\port\sysnetconfig.c">
+      <Filter>Source Files\port</Filter>
+    </ClCompile>
+    <ClCompile Include="source\port\sysntpconfig.c">
+      <Filter>Source Files\port</Filter>
+    </ClCompile>
+    <ClCompile Include="source\port\sysprocess.c">
+      <Filter>Source Files\port</Filter>
+    </ClCompile>
+    <ClCompile Include="source\port\sysreboot.c">
+      <Filter>Source Files\port</Filter>
+    </ClCompile>
+    <ClCompile Include="source\port\systimeconfig.c">
+      <Filter>Source Files\port</Filter>
+    </ClCompile>
+    <ClCompile Include="source\port\systimer.c">
+      <Filter>Source Files\port</Filter>
+    </ClCompile>
+    <ClCompile Include="source\port\sysvolume.cpp">
+      <Filter>Source Files\port</Filter>
+    </ClCompile>
+    <ClCompile Include="source\port\win32-async-pipe.c">
+      <Filter>Source Files\port</Filter>
+    </ClCompile>
+    <ClCompile Include="source\string\snprintf.c">
+      <Filter>Source Files\string</Filter>
+    </ClCompile>
+    <ClCompile Include="source\string\strlcat.c">
+      <Filter>Source Files\string</Filter>
+    </ClCompile>
+    <ClCompile Include="source\string\strlcpy.c">
+      <Filter>Source Files\string</Filter>
+    </ClCompile>
+    <ClCompile Include="source\string\strndup.c">
+      <Filter>Source Files\string</Filter>
+    </ClCompile>
+    <ClCompile Include="source\string\strrev.c">
+      <Filter>Source Files\string</Filter>
+    </ClCompile>
+    <ClCompile Include="source\string\strtoken.c">
+      <Filter>Source Files\string</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\kmp.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\lcs.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\substring.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="source\digest\crc32.c">
+      <Filter>Source Files\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="source\digest\hkdf.c">
+      <Filter>Source Files\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="source\digest\hmac.c">
+      <Filter>Source Files\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="source\digest\md5.c">
+      <Filter>Source Files\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="source\digest\sha.c">
+      <Filter>Source Files\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="source\digest\sha1.c">
+      <Filter>Source Files\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="source\digest\sha224-256.c">
+      <Filter>Source Files\digest</Filter>
+    </ClCompile>
+    <ClCompile Include="source\digest\sha384-512.c">
+      <Filter>Source Files\digest</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\aio-socket.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\app-log.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\base64.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bitmap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bsearch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\byte-order.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\channel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\crc32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cstring.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cstringext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ctypedef.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\darray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\hash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\hash-list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\heap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\html-entities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\hweight.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\jhash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\md5.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ntp-time.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\path.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rbtree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ring-buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sha.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sockpair.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\socktcpinfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sockutil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\stack.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\task-queue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\thread-pool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\time64.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tls.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\twtimer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\unicode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\uri-parse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\urlcodec.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\utf8codec.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\uuid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\xmlutil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\atomic.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\event.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\locker.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\mmap.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\onetime.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\path.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\pipe.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\pollfd.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\process.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\rwlocker.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\sema.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\sock.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\spinlock.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\sync.hpp">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\system.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\thread.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sys\tls.h">
+      <Filter>Header Files\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="include\port\async-pipe.h">
+      <Filter>Header Files\port</Filter>
+    </ClInclude>
+    <ClInclude Include="include\port\ip-route.h">
+      <Filter>Header Files\port</Filter>
+    </ClInclude>
+    <ClInclude Include="include\port\network.h">
+      <Filter>Header Files\port</Filter>
+    </ClInclude>
+    <ClInclude Include="include\port\process.h">
+      <Filter>Header Files\port</Filter>
+    </ClInclude>
+    <ClInclude Include="include\port\serial-port.h">
+      <Filter>Header Files\port</Filter>
+    </ClInclude>
+    <ClInclude Include="include\port\socketpair.h">
+      <Filter>Header Files\port</Filter>
+    </ClInclude>
+    <ClInclude Include="include\port\system.h">
+      <Filter>Header Files\port</Filter>
+    </ClInclude>
+    <ClInclude Include="include\port\systimer.h">
+      <Filter>Header Files\port</Filter>
+    </ClInclude>
+    <ClInclude Include="include\port\sysvolume.h">
+      <Filter>Header Files\port</Filter>
+    </ClInclude>
+    <ClInclude Include="include\libct\auto_obj.h">
+      <Filter>Header Files\libct</Filter>
+    </ClInclude>
+    <ClInclude Include="include\libct\auto_ptr.h">
+      <Filter>Header Files\libct</Filter>
+    </ClInclude>
+    <ClInclude Include="include\libct\object.h">
+      <Filter>Header Files\libct</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cpm\deprecated.h">
+      <Filter>Header Files\cpm</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cpm\dllexport.h">
+      <Filter>Header Files\cpm</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cpm\inline.h">
+      <Filter>Header Files\cpm</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cpm\param.h">
+      <Filter>Header Files\cpm</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cpm\shared_ptr.h">
+      <Filter>Header Files\cpm</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cpm\todo.h">
+      <Filter>Header Files\cpm</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cpm\unuse.h">
+      <Filter>Header Files\cpm</Filter>
+    </ClInclude>
+    <ClInclude Include="algorithm\algorithm.h">
+      <Filter>Source Files\algorithm</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

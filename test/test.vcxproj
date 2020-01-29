@@ -111,53 +111,6 @@
     <ClCompile Include="..\libice\test\stun-server-test.cpp" />
     <ClCompile Include="..\libice\test\tls-socket.c" />
     <ClCompile Include="..\libice\test\turn-client-test.cpp" />
-    <ClCompile Include="..\libtorrent\test\bencode-test.c" />
-    <ClCompile Include="..\source\app-log.c" />
-    <ClCompile Include="..\source\base64.c" />
-    <ClCompile Include="..\source\bitmap.c" />
-    <ClCompile Include="..\source\bits.c" />
-    <ClCompile Include="..\source\bsearch.c" />
-    <ClCompile Include="..\source\channel.c" />
-    <ClCompile Include="..\source\darray.c" />
-    <ClCompile Include="..\source\digest\crc32.c" />
-    <ClCompile Include="..\source\digest\hkdf.c" />
-    <ClCompile Include="..\source\digest\hmac.c" />
-    <ClCompile Include="..\source\digest\md5.c" />
-    <ClCompile Include="..\source\digest\sha.c" />
-    <ClCompile Include="..\source\digest\sha1.c" />
-    <ClCompile Include="..\source\digest\sha224-256.c" />
-    <ClCompile Include="..\source\digest\sha384-512.c" />
-    <ClCompile Include="..\source\heap.c" />
-    <ClCompile Include="..\source\html-entities.c" />
-    <ClCompile Include="..\source\hweight.c" />
-    <ClCompile Include="..\source\ntp-time.c" />
-    <ClCompile Include="..\source\port\ip-route.c" />
-    <ClCompile Include="..\source\port\serial-port-win32.c" />
-    <ClCompile Include="..\source\port\sysnetconfig.c" />
-    <ClCompile Include="..\source\port\sysntpconfig.c" />
-    <ClCompile Include="..\source\port\sysprocess.c" />
-    <ClCompile Include="..\source\port\sysreboot.c" />
-    <ClCompile Include="..\source\port\systimeconfig.c" />
-    <ClCompile Include="..\source\port\systimer.c" />
-    <ClCompile Include="..\source\port\sysvolume.cpp" />
-    <ClCompile Include="..\source\port\win32-async-pipe.c" />
-    <ClCompile Include="..\source\random.c" />
-    <ClCompile Include="..\source\rbtree.c" />
-    <ClCompile Include="..\source\ring-buffer.c" />
-    <ClCompile Include="..\source\sockpair.c" />
-    <ClCompile Include="..\source\string\snprintf.c" />
-    <ClCompile Include="..\source\string\strlcat.c" />
-    <ClCompile Include="..\source\string\strlcpy.c" />
-    <ClCompile Include="..\source\string\strndup.c" />
-    <ClCompile Include="..\source\string\strrev.c" />
-    <ClCompile Include="..\source\string\strtoken.c" />
-    <ClCompile Include="..\source\task-queue.c" />
-    <ClCompile Include="..\source\thread-pool.c" />
-    <ClCompile Include="..\source\time64.c" />
-    <ClCompile Include="..\source\twtimer.c" />
-    <ClCompile Include="..\source\unicode.c" />
-    <ClCompile Include="..\source\uri-parse.c" />
-    <ClCompile Include="..\source\urlcodec.c" />
     <ClCompile Include="aio-socket-test-cancel.c" />
     <ClCompile Include="aio-socket-test.c" />
     <ClCompile Include="aio-socket-test2.c" />
@@ -204,22 +157,11 @@
     <ProjectReference Include="..\libice\libice.vcxproj">
       <Project>{f565e04b-1e19-47f3-8923-36479c5cae4d}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\libtorrent\libtorrent.vcxproj">
-      <Project>{29842b79-f362-4277-b0cb-d15cc397c2fe}</Project>
+    <ProjectReference Include="..\sdk.vcxproj">
+      <Project>{11b5e9d8-cee3-4f4a-9df6-370ec4d71639}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\bsearch.h" />
-    <ClInclude Include="..\include\hash-list.h" />
-    <ClInclude Include="..\include\hash.h" />
-    <ClInclude Include="..\include\heap.h" />
-    <ClInclude Include="..\include\hweight.h" />
-    <ClInclude Include="..\include\jhash.h" />
-    <ClInclude Include="..\include\list.h" />
-    <ClInclude Include="..\include\rbtree.h" />
-    <ClInclude Include="..\include\rarray.h" />
-    <ClInclude Include="..\include\ring-buffer.h" />
-    <ClInclude Include="..\include\stack.h" />
     <ClInclude Include="..\libice\test\ice-transport.h" />
     <ClInclude Include="..\libice\test\tls-socket.h" />
   </ItemGroup>

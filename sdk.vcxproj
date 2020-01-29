@@ -1,0 +1,268 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="algorithm\kmp.c" />
+    <ClCompile Include="algorithm\lcs.c" />
+    <ClCompile Include="algorithm\substring.c" />
+    <ClCompile Include="source\app-log.c" />
+    <ClCompile Include="source\base64.c" />
+    <ClCompile Include="source\bitmap.c" />
+    <ClCompile Include="source\bits.c" />
+    <ClCompile Include="source\bsearch.c" />
+    <ClCompile Include="source\channel.c" />
+    <ClCompile Include="source\darray.c" />
+    <ClCompile Include="source\digest\crc32.c" />
+    <ClCompile Include="source\digest\hkdf.c" />
+    <ClCompile Include="source\digest\hmac.c" />
+    <ClCompile Include="source\digest\md5.c" />
+    <ClCompile Include="source\digest\sha.c" />
+    <ClCompile Include="source\digest\sha1.c" />
+    <ClCompile Include="source\digest\sha224-256.c" />
+    <ClCompile Include="source\digest\sha384-512.c" />
+    <ClCompile Include="source\heap.c" />
+    <ClCompile Include="source\hweight.c" />
+    <ClCompile Include="source\ntp-time.c" />
+    <ClCompile Include="source\port\ip-route.c" />
+    <ClCompile Include="source\port\serial-port-win32.c" />
+    <ClCompile Include="source\port\sysnetconfig.c" />
+    <ClCompile Include="source\port\sysntpconfig.c" />
+    <ClCompile Include="source\port\sysprocess.c" />
+    <ClCompile Include="source\port\sysreboot.c" />
+    <ClCompile Include="source\port\systimeconfig.c" />
+    <ClCompile Include="source\port\systimer.c" />
+    <ClCompile Include="source\port\sysvolume.cpp" />
+    <ClCompile Include="source\port\win32-async-pipe.c" />
+    <ClCompile Include="source\random.c" />
+    <ClCompile Include="source\rbtree.c" />
+    <ClCompile Include="source\ring-buffer.c" />
+    <ClCompile Include="source\sockpair.c" />
+    <ClCompile Include="source\string\snprintf.c" />
+    <ClCompile Include="source\string\strlcat.c" />
+    <ClCompile Include="source\string\strlcpy.c" />
+    <ClCompile Include="source\string\strndup.c" />
+    <ClCompile Include="source\string\strrev.c" />
+    <ClCompile Include="source\string\strtoken.c" />
+    <ClCompile Include="source\task-queue.c" />
+    <ClCompile Include="source\thread-pool.c" />
+    <ClCompile Include="source\time64.c" />
+    <ClCompile Include="source\twtimer.c" />
+    <ClCompile Include="source\unicode.c" />
+    <ClCompile Include="source\uri-parse.c" />
+    <ClCompile Include="source\uri-query.c" />
+    <ClCompile Include="source\urlcodec.c" />
+    <ClCompile Include="source\uuid.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="algorithm\algorithm.h" />
+    <ClInclude Include="include\aio-socket.h" />
+    <ClInclude Include="include\app-log.h" />
+    <ClInclude Include="include\base64.h" />
+    <ClInclude Include="include\bitmap.h" />
+    <ClInclude Include="include\bits.h" />
+    <ClInclude Include="include\bsearch.h" />
+    <ClInclude Include="include\byte-order.h" />
+    <ClInclude Include="include\channel.h" />
+    <ClInclude Include="include\cpm\deprecated.h" />
+    <ClInclude Include="include\cpm\dllexport.h" />
+    <ClInclude Include="include\cpm\inline.h" />
+    <ClInclude Include="include\cpm\param.h" />
+    <ClInclude Include="include\cpm\shared_ptr.h" />
+    <ClInclude Include="include\cpm\todo.h" />
+    <ClInclude Include="include\cpm\unuse.h" />
+    <ClInclude Include="include\crc32.h" />
+    <ClInclude Include="include\cstring.h" />
+    <ClInclude Include="include\cstringext.h" />
+    <ClInclude Include="include\ctypedef.h" />
+    <ClInclude Include="include\darray.h" />
+    <ClInclude Include="include\hash-list.h" />
+    <ClInclude Include="include\hash.h" />
+    <ClInclude Include="include\heap.h" />
+    <ClInclude Include="include\html-entities.h" />
+    <ClInclude Include="include\hweight.h" />
+    <ClInclude Include="include\jhash.h" />
+    <ClInclude Include="include\libct\auto_obj.h" />
+    <ClInclude Include="include\libct\auto_ptr.h" />
+    <ClInclude Include="include\libct\object.h" />
+    <ClInclude Include="include\list.h" />
+    <ClInclude Include="include\md5.h" />
+    <ClInclude Include="include\ntp-time.h" />
+    <ClInclude Include="include\path.h" />
+    <ClInclude Include="include\port\async-pipe.h" />
+    <ClInclude Include="include\port\ip-route.h" />
+    <ClInclude Include="include\port\network.h" />
+    <ClInclude Include="include\port\process.h" />
+    <ClInclude Include="include\port\serial-port.h" />
+    <ClInclude Include="include\port\socketpair.h" />
+    <ClInclude Include="include\port\system.h" />
+    <ClInclude Include="include\port\systimer.h" />
+    <ClInclude Include="include\port\sysvolume.h" />
+    <ClInclude Include="include\rbtree.h" />
+    <ClInclude Include="include\ring-buffer.h" />
+    <ClInclude Include="include\sha.h" />
+    <ClInclude Include="include\sockpair.h" />
+    <ClInclude Include="include\socktcpinfo.h" />
+    <ClInclude Include="include\sockutil.h" />
+    <ClInclude Include="include\stack.h" />
+    <ClInclude Include="include\sys\atomic.h" />
+    <ClInclude Include="include\sys\event.h" />
+    <ClInclude Include="include\sys\locker.h" />
+    <ClInclude Include="include\sys\mmap.h" />
+    <ClInclude Include="include\sys\onetime.h" />
+    <ClInclude Include="include\sys\path.h" />
+    <ClInclude Include="include\sys\pipe.h" />
+    <ClInclude Include="include\sys\pollfd.h" />
+    <ClInclude Include="include\sys\process.h" />
+    <ClInclude Include="include\sys\rwlocker.h" />
+    <ClInclude Include="include\sys\sema.h" />
+    <ClInclude Include="include\sys\sock.h" />
+    <ClInclude Include="include\sys\spinlock.h" />
+    <ClInclude Include="include\sys\sync.hpp" />
+    <ClInclude Include="include\sys\system.h" />
+    <ClInclude Include="include\sys\thread.h" />
+    <ClInclude Include="include\sys\tls.h" />
+    <ClInclude Include="include\task-queue.h" />
+    <ClInclude Include="include\thread-pool.h" />
+    <ClInclude Include="include\time64.h" />
+    <ClInclude Include="include\tls.hpp" />
+    <ClInclude Include="include\twtimer.h" />
+    <ClInclude Include="include\unicode.h" />
+    <ClInclude Include="include\uri-parse.h" />
+    <ClInclude Include="include\urlcodec.h" />
+    <ClInclude Include="include\utf8codec.h" />
+    <ClInclude Include="include\uuid.h" />
+    <ClInclude Include="include\xmlutil.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{11B5E9D8-CEE3-4F4A-9DF6-370EC4D71639}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>sdk</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;OS_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_DEBUG;_LIB;OS_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;OS_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;_LIB;OS_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
