@@ -55,7 +55,7 @@ enum thread_priority
 
 typedef int (STDCALL *thread_proc)(void* param);
 
-static inline int thread_create2(pthread_t* thread, size_t stacksize, thread_proc func, void* param)
+static inline int thread_create2(pthread_t* thread, unsigned int stacksize, thread_proc func, void* param)
 {
 #if defined(OS_WINDOWS)
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms682453.aspx

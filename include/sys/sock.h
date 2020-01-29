@@ -1062,7 +1062,7 @@ static inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const 
 		return r;
 
 	// fixed ios getaddrinfo don't set port if node is ipv4 address
-	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port);
+	socket_addr_setport(addr->ai_addr, (socklen_t)addr->ai_addrlen, port);
 	assert(sizeof(struct sockaddr_in) == addr->ai_addrlen);
 	memcpy(addr4, addr->ai_addr, addr->ai_addrlen);
 	freeaddrinfo(addr);
@@ -1083,7 +1083,7 @@ static inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const
 		return r;
 
 	// fixed ios getaddrinfo don't set port if node is ipv4 address
-	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port);
+	socket_addr_setport(addr->ai_addr, (socklen_t)addr->ai_addrlen, port);
 	assert(sizeof(struct sockaddr_in6) == addr->ai_addrlen);
 	memcpy(addr6, addr->ai_addr, addr->ai_addrlen);
 	freeaddrinfo(addr);
@@ -1101,10 +1101,10 @@ static inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_
 		return r;
 
 	// fixed ios getaddrinfo don't set port if node is ipv4 address
-	socket_addr_setport(addr->ai_addr, addr->ai_addrlen, port);
+	socket_addr_setport(addr->ai_addr, (socklen_t)addr->ai_addrlen, port);
 	assert(addr->ai_addrlen <= sizeof(struct sockaddr_storage));
 	memcpy(ss, addr->ai_addr, addr->ai_addrlen);
-	if(len) *len = addr->ai_addrlen;
+	if(len) *len = (socklen_t)addr->ai_addrlen;
 	freeaddrinfo(addr);
 	return 0;
 }

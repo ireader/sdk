@@ -6,28 +6,28 @@
 #define BITS_TO_BYTES(nbits)	(((nbits) + BITS_PER_BYTE - 1) / BITS_PER_BYTE)
 #define BITS_MASK_BYTE(nbits)	((uint8_t)~(((uint8_t)~0) >> nbits))
 
-void bitmap_zero(uint8_t* bitmap, unsigned int nbits)
+void bitmap_zero(uint8_t* bitmap, size_t nbits)
 {
-	unsigned int n = BITS_TO_BYTES(nbits);
-	memset(bitmap, 0x00, n * sizeof(uint8_t));
+	size_t n = BITS_TO_BYTES(nbits);
+	memset(bitmap, 0x00, n);
 }
 
-void bitmap_fill(uint8_t* bitmap, unsigned int nbits)
+void bitmap_fill(uint8_t* bitmap, size_t nbits)
 {
-	unsigned int n = BITS_TO_BYTES(nbits);
-	memset(bitmap, 0xFF, n * sizeof(uint8_t));
+	size_t n = BITS_TO_BYTES(nbits);
+	memset(bitmap, 0xFF, n);
 }
 
-void bitmap_copy(uint8_t *bitmap, const uint8_t *src, unsigned int nbits);
+void bitmap_copy(uint8_t *bitmap, const uint8_t *src, size_t nbits)
 {
-	unsigned int n = BITS_TO_BYTES(nbits);
-	memmove(bitmap, src, n * sizeof(uint8_t));
+	size_t n = BITS_TO_BYTES(nbits);
+	memmove(bitmap, src, n);
 }
 
-void bitmap_set(uint8_t *bitmap, unsigned int start, unsigned int len)
+void bitmap_set(uint8_t *bitmap, size_t start, size_t len)
 {
-	unsigned int end = start + len;
-	unsigned int from = start / BITS_PER_BYTE;
+	size_t end = start + len;
+	size_t from = start / BITS_PER_BYTE;
 	uint8_t mask = ((uint8_t)~0) >> (start % BITS_PER_BYTE);
 	while (from < end / BITS_PER_BYTE)
 	{
@@ -42,10 +42,10 @@ void bitmap_set(uint8_t *bitmap, unsigned int start, unsigned int len)
 	}
 }
 
-void bitmap_clear(uint8_t *bitmap, unsigned int start, unsigned int len)
+void bitmap_clear(uint8_t *bitmap, size_t start, size_t len)
 {
-	unsigned int end = start + len;
-	unsigned int from = start / BITS_PER_BYTE;
+	size_t end = start + len;
+	size_t from = start / BITS_PER_BYTE;
 	uint8_t mask = BITS_MASK_BYTE(start % BITS_PER_BYTE);
 	while (from < end / BITS_PER_BYTE)
 	{
@@ -60,31 +60,31 @@ void bitmap_clear(uint8_t *bitmap, unsigned int start, unsigned int len)
 	}
 }
 
-void bitmap_or(uint8_t* result, const uint8_t* src1, const uint8_t* src2, unsigned int nbits)
+void bitmap_or(uint8_t* result, const uint8_t* src1, const uint8_t* src2, size_t nbits)
 {
-	unsigned int i;
+	size_t i;
 	for (i = 0; i < BITS_TO_BYTES(nbits); i++)
 		result[i] = src1[i] | src2[i];
 }
 
-void bitmap_and(uint8_t* result, const uint8_t* src1, const uint8_t* src2, unsigned int nbits)
+void bitmap_and(uint8_t* result, const uint8_t* src1, const uint8_t* src2, size_t nbits)
 {
-	unsigned int i;
+	size_t i;
 	for (i = 0; i < BITS_TO_BYTES(nbits); i++)
 		result[i] = src1[i] & src2[i];
 }
 
-void bitmap_xor(uint8_t* result, const uint8_t* src1, const uint8_t* src2, unsigned int nbits)
+void bitmap_xor(uint8_t* result, const uint8_t* src1, const uint8_t* src2, size_t nbits)
 {
-	unsigned int i;
+	size_t i;
 	for (i = 0; i < BITS_TO_BYTES(nbits); i++)
 		result[i] = src1[i] ^ src2[i];
 }
 
-unsigned int bitmap_weight(const uint8_t* bitmap, unsigned int nbits)
+size_t bitmap_weight(const uint8_t* bitmap, size_t nbits)
 {
-	unsigned int w;
-	unsigned int i;
+	size_t w;
+	size_t i;
 	const unsigned long *p;
 	const uint8_t* p8;
 	
@@ -189,10 +189,10 @@ static inline unsigned int ffz8(uint8_t v)
 	return clz8((uint8_t)~v);
 }
 
-unsigned int bitmap_count_leading_zero(const uint8_t* bitmap, unsigned int nbits)
+size_t bitmap_count_leading_zero(const uint8_t* bitmap, size_t nbits)
 {
-	unsigned int i, c = 0;
-	unsigned int n = BITS_TO_BYTES(nbits);
+	size_t i, c = 0;
+	size_t n = BITS_TO_BYTES(nbits);
 
 	for (i = 0; i < n; i++)
 	{
@@ -205,9 +205,9 @@ unsigned int bitmap_count_leading_zero(const uint8_t* bitmap, unsigned int nbits
 	return c > nbits ? nbits : c;
 }
 
-unsigned int bitmap_count_next_zero(const uint8_t* bitmap, unsigned int nbits, unsigned int start)
+size_t bitmap_count_next_zero(const uint8_t* bitmap, size_t nbits, size_t start)
 {
-	unsigned int c, i = start / BITS_PER_BYTE;
+	size_t c, i = start / BITS_PER_BYTE;
 	uint8_t mask = ((uint8_t)~0) >> (start % BITS_PER_BYTE);
 
 	c = clz8(bitmap[i] & mask);
@@ -219,10 +219,10 @@ unsigned int bitmap_count_next_zero(const uint8_t* bitmap, unsigned int nbits, u
 	return c;
 }
 
-unsigned int bitmap_find_first_zero(const uint8_t* bitmap, unsigned int nbits)
+size_t bitmap_find_first_zero(const uint8_t* bitmap, size_t nbits)
 {
-	unsigned int i, c = 0;
-	unsigned int n = BITS_TO_BYTES(nbits);
+	size_t i, c = 0;
+	size_t n = BITS_TO_BYTES(nbits);
 
 	for (i = 0; i < n; i++)
 	{
@@ -235,9 +235,9 @@ unsigned int bitmap_find_first_zero(const uint8_t* bitmap, unsigned int nbits)
 	return c > nbits ? nbits : c;
 }
 
-unsigned int bitmap_find_next_zero(const uint8_t* bitmap, unsigned int nbits, unsigned int start)
+size_t bitmap_find_next_zero(const uint8_t* bitmap, size_t nbits, size_t start)
 {
-	unsigned int c, i = start / BITS_PER_BYTE;
+	size_t c, i = start / BITS_PER_BYTE;
 	uint8_t mask = BITS_MASK_BYTE(start % BITS_PER_BYTE);
 
 	c = ffz8(bitmap[i] | mask);
@@ -249,8 +249,8 @@ unsigned int bitmap_find_next_zero(const uint8_t* bitmap, unsigned int nbits, un
 	return c;
 }
 
-int bitmap_test_bit(const uint8_t* bitmap, unsigned int bits)
+int bitmap_test_bit(const uint8_t* bitmap, size_t bits)
 {
-	unsigned int n = bits / BITS_PER_BYTE;
+	size_t n = bits / BITS_PER_BYTE;
 	return bitmap[n] & (1 << (BITS_PER_BYTE - 1 - (bits % BITS_PER_BYTE)));
 }
