@@ -29,6 +29,10 @@ size_t ring_buffer_size(struct ring_buffer_t* rb);
 /// @return writeable element count
 size_t ring_buffer_space(struct ring_buffer_t* rb);
 
+/// extend ring buffer memory
+/// @return 0-ok, other-error
+int ring_buffer_resize(struct ring_buffer_t* rb, size_t capacity);
+
 #ifdef __cplusplus
 }
 #endif

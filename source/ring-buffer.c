@@ -89,6 +89,45 @@ size_t ring_buffer_space(struct ring_buffer_t* rb)
 	return rb->capacity - rb->count;
 }
 
+int ring_buffer_resize(struct ring_buffer_t* rb, size_t capacity)
+{
+	void* ptr;
+	size_t offset;
+	size_t extend;
+
+	if (capacity < rb->count)
+		return ENOSPC;
+	else if (capacity == rb->capacity)
+		return 0;
+
+	extend = capacity < rb->capacity ? rb->capacity - capacity : (capacity - rb->capacity);
+	if (capacity < rb->capacity && rb->offset + rb->count > capacity)
+	{
+		// move toward to FRONT (|<--|)
+		extend = rb->capacity - capacity;
+		offset = rb->offset - extend;
+		memmove(rb->ptr + offset, rb->ptr + rb->offset, extend);
+		rb->offset = offset;
+	}
+
+	ptr = realloc(rb->ptr, capacity);
+	if (!ptr)
+		return ENOMEM;
+
+	if (capacity > rb->capacity && rb->offset + rb->count > rb->capacity)
+	{
+		// move toward to TAIL (|-->|)
+		extend = capacity - rb->capacity;
+		offset = rb->offset + extend;
+		memmove(rb->ptr + offset, rb->ptr + rb->offset, extend);
+		rb->offset = offset;
+	}
+
+	rb->ptr = ptr;
+	rb->capacity = capacity;
+	return 0;
+}
+
 #if defined(DEBUG) || defined(_DEBUG)
 #include <math.h>
 #include <time.h>
