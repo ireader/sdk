@@ -150,9 +150,6 @@
     <ClCompile Include="aio-socket-test5.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\twtimer.c">
-      <Filter>lib</Filter>
-    </ClCompile>
     <ClCompile Include="socket-opt-dontfrag-test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -191,6 +188,9 @@
     </ClCompile>
     <ClCompile Include="..\..\media-server\librtsp\source\sdp-a-rtpmap.c">
       <Filter>librtsp</Filter>
+    </ClCompile>
+    <ClCompile Include="socketpair-test.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

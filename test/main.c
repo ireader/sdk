@@ -48,6 +48,7 @@ void aio_socket_test4(void);
 void aio_socket_test_cancel(void);
 void ip_route_test(void);
 void onetime_test(void);
+void socketpair_test(void);
 
 #if defined(HTTP_TEST)
 void http_test(void);
@@ -83,6 +84,7 @@ int main(int argc, char* argv[])
 	semaphore_test();
 #endif
 	onetime_test();
+	socketpair_test();
 
 	bits_test();
 	stack_test();

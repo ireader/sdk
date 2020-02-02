@@ -137,6 +137,7 @@
     <ClCompile Include="socket-opt-dontfrag-test.c" />
     <ClCompile Include="socket-test.c" />
     <ClCompile Include="socket-ipv6-dual-stack-test.c" />
+    <ClCompile Include="socketpair-test.c" />
     <ClCompile Include="spinlock-test.c" />
     <ClCompile Include="stack-test.c" />
     <ClCompile Include="systimer-test.c" />
