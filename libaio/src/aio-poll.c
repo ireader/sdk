@@ -44,7 +44,7 @@ static void aio_poll_init_idles(struct aio_poll_t* poll)
 	for (i = 0; i < N_SOCKETS; i++)
 	{
 		s = (struct aio_poll_socket_t*)(poll + 1) + i;
-		list_insert_after(&s->link, poll->root.next);
+		list_insert_after(&s->link, &poll->idles);
 	}
 }
 
@@ -69,7 +69,7 @@ static void aio_poll_free(struct aio_poll_t* poll, struct aio_poll_socket_t* s)
 	// TODO: assert(idle count < N);
 	locker_lock(&poll->locker);
 	list_remove(&s->link);
-	list_insert_after(&s->link, poll->idles.prev);
+	list_insert_after(&s->link, &poll->idles);
 	locker_unlock(&poll->locker);
 }
 
@@ -131,7 +131,7 @@ int aio_poll_poll(struct aio_poll_t* poll, socket_t socket, int flags, int timeo
 	s->param = param;
 
 	locker_lock(&poll->locker);
-	list_insert_after(&s->link, poll->root.prev);
+	list_insert_after(&s->link, &poll->root);
 	locker_unlock(&poll->locker);
 
 	// notify
@@ -167,7 +167,7 @@ static int STDCALL aio_poll_worker(void* param)
 		}
 		locker_unlock(&poll->locker);
 
-		r = aio_poll_do(links, n, 120000);
+		r = aio_poll_do(links, n, 10*1000);
 		if (r < 0)
 			break;
 
@@ -179,7 +179,7 @@ static int STDCALL aio_poll_worker(void* param)
 				links[i]->callback(0, links[i]->fd, links[i]->revents, links[i]->param);
 				aio_poll_free(poll, links[i]);
 			}
-			else if ((int64_t)(links[i]->expire - now) > 0)
+			else if ((int64_t)(now - links[i]->expire) > 0)
 			{
 				links[i]->callback(ETIMEDOUT, links[i]->fd, 0, links[i]->param);
 				aio_poll_free(poll, links[i]);
@@ -192,7 +192,7 @@ static int STDCALL aio_poll_worker(void* param)
 
 	}
 
-	return r;
+	return 0;
 }
 
 static int aio_poll_do(struct aio_poll_socket_t* s[], int n, int timeout)
@@ -227,9 +227,9 @@ static int aio_poll_do(struct aio_poll_socket_t* s[], int n, int timeout)
 	for (r = i = 0; i < n && i < 64; i++)
 	{
 		s[i]->revents = 0;
-		if (FD_ISSET(s[i]->fd, &rfds))
+		if (FD_ISSET(s[i]->fd, &rfds) && (AIO_POLL_IN & s[i]->events))
 			s[i]->revents |= AIO_POLL_IN;
-		if (FD_ISSET(s[i]->fd, &wfds))
+		if (FD_ISSET(s[i]->fd, &wfds) && (AIO_POLL_OUT & s[i]->events))
 			s[i]->revents |= AIO_POLL_OUT;
 	}
 
