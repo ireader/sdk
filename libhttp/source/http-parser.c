@@ -532,7 +532,7 @@ static int http_parse_status_line(struct http_parser_t *http, const char* data, 
 			if (http->header.name.len < 5 || 3 != sscanf(http->raw + http->header.name.pos, "%16[^/]/%d.%d", http->protocol, &http->vermajor, &http->verminor)
 				// H6.1.1 Status Code and Reason Phrase (p26)
 				// The Status-Code element is a 3-digit integer result code
-				|| http->header.value.len != 3 || http->u.reply.reason.len < 1)
+				|| http->header.value.len != 3 /*|| http->u.reply.reason.len < 1*/ )
 			{
 				assert(0);
 				return -1;
@@ -885,10 +885,11 @@ static int http_parse_chunked(struct http_parser_t *http, const char* data, size
 				return -1;
 			}
 
-			http->stateM = CHUNK_DATA;
+			http->stateM = http->chunk.len ? CHUNK_DATA : CHUNK_TRAILER_START;
 			break;
 
 		case CHUNK_DATA:
+			assert(http->chunk.len > 0);
 			assert(http->chunk.loaded <= http->chunk.len);
 			n = http->chunk.len - http->chunk.loaded;
 			n = i + n > len ? len - i : n;
@@ -910,7 +911,7 @@ static int http_parse_chunked(struct http_parser_t *http, const char* data, size
 				break;
 
 			case '\n':
-				http->stateM = http->chunk.len ? CHUNK_START : CHUNK_TRAILER_START;
+				http->stateM = CHUNK_START;
 				http->chunk.len = 0;
 				http->chunk.loaded = 0;
 				break;
@@ -1075,6 +1076,7 @@ int http_parser_input(struct http_parser_t* http, const void* data, size_t *byte
 		if(is_transfer_encoding_chunked(http))
 		{
 			r = http_parse_chunked(http, ptr, end - ptr);
+			ptr += r;
 		}
 		else
 		{
