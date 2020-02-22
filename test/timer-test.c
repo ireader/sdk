@@ -12,6 +12,14 @@
 #define TIMER_RESOLUTION 3
 #define WORKER 3
 
+struct timer_test_t
+{
+	int running;
+	uint64_t clock;
+	time_wheel_t* wheel;
+	struct twtimer_t* timer;
+};
+
 static int s_cancel = 0;
 
 static void ontimer1(void* param)
@@ -125,7 +133,53 @@ static int STDCALL timer_worker(void* param)
 	return 0;
 }
 
+
 static void ontimer2(void* param)
+{
+	static int lastclock;
+	struct timer_test_t* t;
+	t = (struct timer_test_t*)param;
+	if (t->running)
+	{
+		t->timer->expire += 5000;
+		twtimer_start((time_wheel_t*)t->wheel, t->timer);
+	}
+
+	if (0 != lastclock)
+		assert(t->clock - lastclock > 4000);
+	lastclock = t->clock;
+}
+
+static void timer_check_addmanytimes()
+{
+	int i;
+	struct timer_test_t t;
+	struct twtimer_t timer;
+
+	t.running = 1;
+	t.timer = &timer;
+	t.clock = system_clock();
+	t.wheel = time_wheel_create(t.clock);
+	memset(&timer, 0, sizeof(timer));
+	timer.ontimeout = ontimer2;
+	timer.param = &t;
+	timer.expire = t.clock + 5000;
+	twtimer_start(t.wheel, &timer);
+	
+	for (i = 0; i < 30 * 5000; i++)
+	{
+		t.clock++;
+		twtimer_process(t.wheel, t.clock);
+	}
+
+	// clear all
+	t.running = 0;
+	t.clock += 10000;
+	twtimer_process(t.wheel, t.clock);
+	time_wheel_destroy(t.wheel);
+}
+
+static void ontimer3(void* param)
 {
 }
 
@@ -149,7 +203,7 @@ static void timer_check_remove()
     {
         for(i = 0; i < TIMER; i++)
         {
-            timers[i].ontimeout = ontimer2;
+            timers[i].ontimeout = ontimer3;
             timers[i].param = NULL;
             timers[i].expire = now + rand() % 4096;
             twtimer_start(wheel, &timers[i]);
@@ -172,6 +226,7 @@ void timer_test(void)
 {
     srand((unsigned int)system_clock());
 
+	timer_check_addmanytimes();
     timer_check_cascade();
 	timer_check_cascade2();
     timer_check3();

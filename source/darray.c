@@ -64,7 +64,8 @@ int darray_erase(struct darray_t* arr, int index)
     if (index < 0 || index >= arr->count)
         return ENOENT;
 
-    memmove(ADDRESS(index), ADDRESS(index + 1), SIZE(arr->count - 1));
+    if(index + 1 < arr->count)
+        memmove(ADDRESS(index), ADDRESS(index + 1), SIZE(arr->count - index - 1));
     arr->count -= 1;
     return 0;
 }
