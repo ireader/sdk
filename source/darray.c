@@ -97,6 +97,11 @@ int darray_insert(struct darray_t* arr, int before, const void* item)
     return 0;
 }
 
+int darray_push_back(struct darray_t* arr, const void* item)
+{
+    return darray_insert(arr, -1, item);
+}
+
 int darray_pop_back(struct darray_t* arr)
 {
 	return darray_erase(arr, arr->count-1);
