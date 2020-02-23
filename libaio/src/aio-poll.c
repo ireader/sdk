@@ -140,6 +140,7 @@ int aio_poll_poll(struct aio_poll_t* poll, socket_t socket, int flags, int timeo
 	return 0;
 }
 
+static void aio_poll_doerror(struct aio_poll_t* poll, struct aio_poll_socket_t* s[], int n);
 static int aio_poll_do(struct aio_poll_socket_t* s[], int n, int timeout);
 static int STDCALL aio_poll_worker(void* param)
 {
@@ -169,7 +170,12 @@ static int STDCALL aio_poll_worker(void* param)
 
 		r = aio_poll_do(links, n, 10*1000);
 		if (r < 0)
-			break;
+		{
+			//WSAENOTSOCK;
+			//r = socket_geterror();
+			aio_poll_doerror(poll, links, n);
+			continue;
+		}
 
 		now = system_clock();
 		for (i = 1; i < n; i++)
@@ -189,7 +195,6 @@ static int STDCALL aio_poll_worker(void* param)
 				// next loop
 			}
 		}
-
 	}
 
 	return 0;
@@ -263,4 +268,24 @@ static int aio_poll_do(struct aio_poll_socket_t* s[], int n, int timeout)
 
 	return r;
 #endif
+}
+
+static void aio_poll_doerror(struct aio_poll_t* poll, struct aio_poll_socket_t* s[], int n)
+{
+	int i, r;
+	for (i = 1; i < n; i++)
+	{
+		if (s[i]->events & AIO_POLL_IN)
+			r = socket_select_read(s[i]->fd, 0);
+		else if (s[i]->events & AIO_POLL_OUT)
+			r = socket_select_write(s[i]->fd, 0);
+		else
+			r = -1;
+
+		if(r < 0)
+		{
+			s[i]->callback(EINVAL, s[i]->fd, 0, s[i]->param);
+			aio_poll_free(poll, s[i]);
+		}
+	}
 }
