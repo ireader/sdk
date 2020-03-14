@@ -15,7 +15,7 @@ enum
 	AIO_POLL_OUT = 0x02,
 };
 
-struct aio_poll_t* aio_poll_create();
+struct aio_poll_t* aio_poll_create(void);
 int aio_poll_destroy(struct aio_poll_t* poll);
 
 /// Read/Write callback

@@ -73,7 +73,7 @@ static void aio_poll_free(struct aio_poll_t* poll, struct aio_poll_socket_t* s)
 	locker_unlock(&poll->locker);
 }
 
-struct aio_poll_t* aio_poll_create()
+struct aio_poll_t* aio_poll_create(void)
 {
 	struct aio_poll_t* poll;
 	poll = (struct aio_poll_t*)calloc(1, sizeof(struct aio_poll_t) + sizeof(struct aio_poll_socket_t) * N_SOCKETS);
@@ -83,7 +83,11 @@ struct aio_poll_t* aio_poll_create()
 		LIST_INIT_HEAD(&poll->idles);
 		aio_poll_init_idles(poll);
 
+#if defined(OS_WINDOWS)
 		if (0 != socketpair(PF_INET, SOCK_DGRAM, 0, poll->pair))
+#else
+        if (0 != socketpair(AF_UNIX, SOCK_STREAM, 0, poll->pair))
+#endif
 		{
 			free(poll);
 			return NULL;
@@ -240,7 +244,6 @@ static int aio_poll_do(struct aio_poll_socket_t* s[], int n, int timeout)
 
 	return r;
 #else
-	int j;
 	struct pollfd fds[N_SOCKETS];
 	assert(n < N_SOCKETS);
 	for (i = 0; i < n; i++)

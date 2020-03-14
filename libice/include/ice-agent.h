@@ -34,12 +34,10 @@ int ice_agent_set_local_auth(struct ice_agent_t* ice, const char* usr, const cha
 int ice_agent_set_remote_auth(struct ice_agent_t* ice, int stream, const char* usr, const char* pwd);
 
 /// Add host candidate
-/// @param[in] stream audio/video stream id, base 0
 /// @param[in] cand local candidate, priority can be 0, all other value must be set
 int ice_agent_add_local_candidate(struct ice_agent_t* ice, const struct ice_candidate_t* cand);
 
 /// Add remote candidate(host/server reflexive/relayed)
-/// @param[in] stream audio/video stream id, base 0
 /// @param[in] cand remote candidate
 int ice_agent_add_remote_candidate(struct ice_agent_t* ice, const struct ice_candidate_t* cand);
 

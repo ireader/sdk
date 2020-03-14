@@ -23,8 +23,8 @@
 /// @param[in] backlog Maximum queue length specifiable by listen, use SOMAXCONN if you don't known how to choose value
 /// @param[in] ipv4 0-ipv6 only, 1-ipv6 dual stack
 /// @return >=0-socket, <0-socket_error(by socket_geterror())
-static inline socket_t socket_tcp_listen(IN const char* ipv4_or_dns, IN u_short port, IN int backlog);
 static inline socket_t socket_tcp_listen_ipv6(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int backlog, IN int ipv4);
+static inline socket_t socket_tcp_listen(IN const char* ipv4_or_dns, IN u_short port, IN int backlog);
 static inline socket_t socket_udp_bind(IN const char* ipv4_or_dns, IN u_short port);
 static inline socket_t socket_udp_bind_ipv6(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int ipv4);
 
@@ -190,7 +190,7 @@ static inline socket_t socket_bind_addr(const struct sockaddr* addr, int socktyp
 }
 
 /// create a new TCP socket, bind, and listen
-/// @param[in] ip socket bind local address, NULL-bind any address
+/// @param[in] ipv4_or_dns socket bind local address, NULL-bind any address
 /// @param[in] port bind local port
 /// @param[in] backlog the maximum length to which the queue of pending connections for socket may grow
 /// @return socket_invalid-error, use socket_geterror() to get error code, other-ok 
