@@ -64,6 +64,7 @@ static inline int locker_lock(locker_t* locker)
 	EnterCriticalSection(locker);
 	return 0;
 #else
+    // These functions shall not return an error code of [EINTR].
 	return pthread_mutex_lock(locker);
 #endif
 }

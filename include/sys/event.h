@@ -99,7 +99,7 @@ static inline int event_wait(event_t* event)
 	int r = 0;
 	pthread_mutex_lock(&event->mutex);
 	if(0 == event->count)
-		r = pthread_cond_wait(&event->event, &event->mutex);
+		r = pthread_cond_wait(&event->event, &event->mutex); // These functions shall not return an error code of [EINTR].
 	event->count = 0;
 	pthread_mutex_unlock(&event->mutex);
 	return r;
@@ -139,7 +139,7 @@ static inline int event_timewait(event_t* event, int timeout)
 
 	pthread_mutex_lock(&event->mutex);
 	if(0 == event->count)
-		r = pthread_cond_timedwait(&event->event, &event->mutex, &ts);
+		r = pthread_cond_timedwait(&event->event, &event->mutex, &ts); // These functions shall not return an error code of [EINTR].
 	event->count = 0;
 	pthread_mutex_unlock(&event->mutex);
 	return r;

@@ -118,14 +118,18 @@ static inline int sema_wait(sema_t* sema)
 	DWORD r = WaitForSingleObjectEx(*sema, INFINITE, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
 #else
-    
+    int r;
 #if defined(OS_MAC)
     // OSX unnamed semaphore
     if(!sema->name[0])
         return 0 == dispatch_semaphore_wait(sema->dispatch, DISPATCH_TIME_FOREVER) ? 0 : WAIT_TIMEOUT;
 #endif
     
-    return sem_wait(sema->semaphore);
+    // http://man7.org/linux/man-pages/man7/signal.7.html
+    r = sem_wait(sema->semaphore);
+    while(-1 == r && EINTR == errno)
+        r = sem_wait(sema->semaphore);
+    return r;
 #endif
 }
 
@@ -148,6 +152,7 @@ static inline int sema_timewait(sema_t* sema, int timeout)
 #else
 static inline int sema_timewait(sema_t* sema, int timeout)
 {
+    int r;
     struct timespec ts;
     
 #if defined(CLOCK_REALTIME)
@@ -166,7 +171,12 @@ static inline int sema_timewait(sema_t* sema, int timeout)
 	// tv_nsec >= 1000000000 ==> EINVAL
 	ts.tv_sec += ts.tv_nsec / 1000000000;
 	ts.tv_nsec %= 1000000000;
-	return -1==sem_timedwait(sema->semaphore, &ts) ? errno : 0;
+    
+    // http://man7.org/linux/man-pages/man7/signal.7.html
+    r = sem_timedwait(sema->semaphore, &ts);
+    while(-1 == r && EINTR == errno)
+        r = sem_timedwait(sema->semaphore, &ts);
+	return -1 == r ? errno : 0;
 }
 #endif
 
