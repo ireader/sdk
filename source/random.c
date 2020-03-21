@@ -27,7 +27,7 @@ static int read_random_file(const char *file, void* ptr, int bytes)
     fp = fopen(file, "rb");
     if (NULL == fp)
         return -1;
-    n = fread(ptr, bytes, 1, fp);
+    n = (int)fread(ptr, bytes, 1, fp);
     fclose(fp);
     return n;
 }

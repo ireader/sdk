@@ -37,7 +37,7 @@ static html_entities s_entities[] = {
 	html_entity("euro",	8364), // euro(€)
 };
 
-int html_entities_count()
+int html_entities_count(void)
 {
 	return sizeof(s_entities)/sizeof(s_entities[0]);
 }

@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:test.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:libhttp/libhttp.xcodeproj">
    </FileRef>
    <FileRef

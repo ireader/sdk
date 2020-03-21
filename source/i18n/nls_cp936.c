@@ -11112,7 +11112,7 @@ static int char2uni(const unsigned char *rawstring, int boundlen,
 int gb2312_mbtowc(const unsigned char *src, wchar_t *tgt, int tgtLen)
 {
 	int i, j, n;
-	int srcLen = src?strlen((const char*)src):0;
+	int srcLen = src?(int)strlen((const char*)src):0;
 
 	for(i=0, j=0; i<tgtLen && j<srcLen && *src; i++)
 	{
@@ -11130,7 +11130,7 @@ int gb2312_mbtowc(const unsigned char *src, wchar_t *tgt, int tgtLen)
 int gb2312_wctomb(const wchar_t* src, unsigned char *tgt, int tgtLen)
 {
 	int i, j, n;
-	int srcLen = src?wcslen(src):0;
+	int srcLen = src?(int)wcslen(src):0;
 
 	for(i=0, j=0; i<tgtLen && j<srcLen && *src; j++)
 	{

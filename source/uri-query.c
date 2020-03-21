@@ -55,14 +55,14 @@ int uri_query(const char* query, const char* end, struct uri_query_t** items)
 		}
 
 		pp->name = query;
-		pp->n_name = p - query;
+		pp->n_name = (int)(p - query);
 
 		if ('=' == *p)
 		{
 			pp->value = p + 1;
 			p = strchr(pp->value, '&');
 			if (NULL == p) p = end;
-			pp->n_value = p - pp->value; // empty-value
+			pp->n_value = (int)(p - pp->value); // empty-value
 		}
 		else
 		{

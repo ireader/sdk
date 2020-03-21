@@ -34,7 +34,6 @@ enum ESERIAL_FLOWCONTROL
 };
 
 /// @param[in] name serial name, etc. /dev/ttyS0 or COM1 or \\.\COM10
-/// @param[in] block 1-block, 0-nonblock
 /// @return NULL-error, other-ok
 void* serial_port_open(const char *name);
 

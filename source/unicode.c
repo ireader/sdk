@@ -57,7 +57,7 @@ int unicode_to_utf8(IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, IN s
 			*p++ = (char)(0x80 | (src[i]&0x3F));
 		}
 	}
-	return p-tgt;
+	return (int)(p-tgt);
 #endif
 }
 
@@ -123,7 +123,7 @@ int unicode_from_utf8(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt, IN
 			*wc++ = ((wchar_t)src[i]) & 0xFF;
 		}
 	}
-	return wc-tgt;
+	return (int)(wc-tgt);
 #endif
 }
 
@@ -140,7 +140,7 @@ int unicode_to_mbcs(IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, IN s
 		assert(0);
 		return -1;
 	}
-	return wcstombs(tgt, src, tgtBytes);
+	return (int)wcstombs(tgt, src, tgtBytes);
 #endif
 }
 
@@ -157,7 +157,7 @@ int unicode_from_mbcs(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt, IN
 		assert(0);
 		return -1;
 	}
-	return mbstowcs(tgt, src, tgtBytes);
+	return (int)mbstowcs(tgt, src, tgtBytes);
 #endif
 }
 
@@ -178,7 +178,7 @@ int unicode_to_gb18030(IN const wchar_t* src, IN size_t srcLen, OUT char* tgt, I
 		assert(0);
 		return -1;
 	}
-	return gb2312_wctomb(src, (unsigned char*)tgt, tgtBytes);
+	return gb2312_wctomb(src, (unsigned char*)tgt, (int)tgtBytes);
 	//return wcstombs(tgt, src, tgtBytes);
 #endif
 }
@@ -197,7 +197,7 @@ int unicode_from_gb18030(IN const char* src, IN size_t srcLen, OUT wchar_t* tgt,
 		assert(0);
 		return -1;
 	}
-	return gb2312_mbtowc((unsigned char*)src, tgt, tgtBytes);
+	return gb2312_mbtowc((unsigned char*)src, tgt, (int)tgtBytes);
 	//return mbstowcs(tgt, src, tgtBytes);
 #endif
 }

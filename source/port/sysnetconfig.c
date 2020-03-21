@@ -359,7 +359,7 @@ int network_setgateway(const char* gateway)
 	char buffer[128];
 
 	strcpy(buffer, "route del default gw ");
-	r = strlen(buffer);
+	r = (int)strlen(buffer);
 
 	r = network_getgateway(buffer+r);
 	if(0 == r)

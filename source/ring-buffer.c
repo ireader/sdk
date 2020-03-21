@@ -168,7 +168,7 @@ void ring_buffer_test(void)
 	j = 1000;
 	while (i < N)
 	{
-		n = 1000 - ring_buffer_size(&rb);
+		n = 1000 - (int)ring_buffer_size(&rb);
 		n = (N - i) > n ? n : (N - i);
 		n = rand() % (n + 1);
 
@@ -182,7 +182,7 @@ void ring_buffer_test(void)
 		assert(j <= i);
 	}
 
-	n = ring_buffer_size(&rb);
+	n = (int)ring_buffer_size(&rb);
 	assert(0 == ring_buffer_read(&rb, dst + j, n));
 	j += n;
 

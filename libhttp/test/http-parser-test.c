@@ -165,7 +165,7 @@ static void sip_response_test(void)
 
 static void sip_payload(void* param, const void* data, int bytes)
 {
-	printf("%.*s", bytes, (const char*)data);
+	//printf("%.*s", bytes, (const char*)data);
 }
 
 static void sip_request_test2(void)

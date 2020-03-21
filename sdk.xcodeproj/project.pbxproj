@@ -51,6 +51,7 @@
 		4601F97123C42E51009B797A /* nls_cp936.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F93423C42E50009B797A /* nls_cp936.c */; };
 		4601F97223C42E51009B797A /* task-queue.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F93523C42E50009B797A /* task-queue.c */; };
 		4601F97323C42E51009B797A /* uri-parse.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F93623C42E50009B797A /* uri-parse.c */; };
+		46CA26302425AF0E00AF5BAF /* tools.c in Sources */ = {isa = PBXBuildFile; fileRef = 46CA262F2425AF0E00AF5BAF /* tools.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -100,6 +101,7 @@
 		4601F93423C42E50009B797A /* nls_cp936.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = nls_cp936.c; sourceTree = "<group>"; };
 		4601F93523C42E50009B797A /* task-queue.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "task-queue.c"; sourceTree = "<group>"; };
 		4601F93623C42E50009B797A /* uri-parse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "uri-parse.c"; sourceTree = "<group>"; };
+		46CA262F2425AF0E00AF5BAF /* tools.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tools.c; path = deprecated/tools.c; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -133,6 +135,7 @@
 		4601F8F523C42E50009B797A /* source */ = {
 			isa = PBXGroup;
 			children = (
+				46CA25C924205DD600AF5BAF /* deprecated */,
 				4601F8F623C42E50009B797A /* darray.c */,
 				4601F8F723C42E50009B797A /* twtimer.c */,
 				4601F8F823C42E50009B797A /* rbtree.c */,
@@ -203,6 +206,14 @@
 				4601F93423C42E50009B797A /* nls_cp936.c */,
 			);
 			path = i18n;
+			sourceTree = "<group>";
+		};
+		46CA25C924205DD600AF5BAF /* deprecated */ = {
+			isa = PBXGroup;
+			children = (
+				46CA262F2425AF0E00AF5BAF /* tools.c */,
+			);
+			name = deprecated;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -308,6 +319,7 @@
 				4601F96A23C42E51009B797A /* sysnetconfig.c in Sources */,
 				4601F93C23C42E50009B797A /* time64.c in Sources */,
 				4601F96E23C42E51009B797A /* aio-socket-kqueue.c in Sources */,
+				46CA26302425AF0E00AF5BAF /* tools.c in Sources */,
 				4601F96323C42E51009B797A /* sysreboot.c in Sources */,
 				4601F97323C42E51009B797A /* uri-parse.c in Sources */,
 				4601F94723C42E50009B797A /* md5.c in Sources */,
@@ -381,6 +393,7 @@
 				USER_HEADER_SEARCH_PATHS = (
 					.,
 					./include,
+					./deprecated,
 				);
 			};
 			name = Debug;
@@ -437,6 +450,7 @@
 				USER_HEADER_SEARCH_PATHS = (
 					.,
 					./include,
+					./deprecated,
 				);
 			};
 			name = Release;

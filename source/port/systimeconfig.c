@@ -93,7 +93,7 @@ int system_settime(const char* time)
 	struct timeval tv;
 
 	memset(&t, 0, sizeof(t));
-	n = strlen(time);
+	n = (int)strlen(time);
 	if(23 == n)
 	{
 		if(7 != sscanf(time, "%d-%d-%d %d:%d:%d.%d", &t.tm_year, &t.tm_mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &t.tm_sec, &n))

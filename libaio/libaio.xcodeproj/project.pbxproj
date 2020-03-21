@@ -18,6 +18,7 @@
 		46C5B1B42182E23600419E57 /* aio-tcp-transport.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1A22182E23600419E57 /* aio-tcp-transport.c */; };
 		46C5B1C32182E58A00419E57 /* twtimer.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1C22182E58A00419E57 /* twtimer.c */; };
 		46C5B1C52182E59700419E57 /* aio-socket-kqueue.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1C42182E59700419E57 /* aio-socket-kqueue.c */; };
+		46CA26092421B6F500AF5BAF /* aio-poll.c in Sources */ = {isa = PBXBuildFile; fileRef = 46CA26082421B6F500AF5BAF /* aio-poll.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		46C5B1B52182E24000419E57 /* include */ = {isa = PBXFileReference; lastKnownFileType = folder; path = include; sourceTree = "<group>"; };
 		46C5B1C22182E58A00419E57 /* twtimer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = twtimer.c; path = ../../source/twtimer.c; sourceTree = "<group>"; };
 		46C5B1C42182E59700419E57 /* aio-socket-kqueue.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "aio-socket-kqueue.c"; path = "../../source/port/aio-socket-kqueue.c"; sourceTree = "<group>"; };
+		46CA26082421B6F500AF5BAF /* aio-poll.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-poll.c"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,6 +69,7 @@
 		46C5B1902182E23600419E57 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				46CA26082421B6F500AF5BAF /* aio-poll.c */,
 				46C5B1C42182E59700419E57 /* aio-socket-kqueue.c */,
 				46C5B1C22182E58A00419E57 /* twtimer.c */,
 				46C5B1922182E23600419E57 /* aio-connect.c */,
@@ -157,6 +160,7 @@
 				46C5B1A52182E23600419E57 /* aio-recv.c in Sources */,
 				46C5B1C32182E58A00419E57 /* twtimer.c in Sources */,
 				46C5B1B22182E23600419E57 /* aio-send.c in Sources */,
+				46CA26092421B6F500AF5BAF /* aio-poll.c in Sources */,
 				46C5B1AD2182E23600419E57 /* aio-timeout.c in Sources */,
 				46C5B1C52182E59700419E57 /* aio-socket-kqueue.c in Sources */,
 				46C5B1A82182E23600419E57 /* aio-accept.c in Sources */,

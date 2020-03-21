@@ -9,7 +9,7 @@ extern "C" {
 
 /// Get HTML entities count
 /// @return html entities count
-int html_entities_count();
+int html_entities_count(void);
 
 /// Get HTML entities
 /// @param[in] index from 0 to count-1
