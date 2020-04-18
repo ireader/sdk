@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdio.h>
 
 /*
 0000 0000 0000 0000 0000 0000 0000 0000
@@ -380,4 +381,56 @@ static int uri_parse_complex(struct uri_t* uri, const char* str, int len)
 	}
 
 	return 0;
+}
+
+int uri_path(const struct uri_t* uri, char* buf, int len)
+{
+    int r, n;
+    n = snprintf(buf, len, "%s", uri->path);
+    if(n < 0 || n >= len)
+        return -1;
+    
+    if(uri->query && *uri->query)
+    {
+        r = snprintf(buf + n, len - n, "?%s", uri->query);
+        if(r < 0 || r + n >= len)
+            return -1;
+        n += r;
+    }
+
+    if(uri->fragment && *uri->fragment)
+    {
+        r = snprintf(buf + n, len - n, "#%s", uri->fragment);
+        if(r < 0 || r + n >= len)
+            return -1;
+        n += r;
+    }
+    
+    return n;
+}
+
+int uri_userinfo(const struct uri_t* uri, char* usr, int n1, char* pwd, int n2)
+{
+    const char* sep;
+    if(!uri->userinfo)
+    {
+        usr[0] = 0;
+        pwd[0] = 0;
+    }
+    else
+    {
+        sep = strchr(uri->userinfo, ':');
+        if(sep)
+        {
+            snprintf(usr, n1, "%*s", (int)(sep - uri->userinfo), uri->userinfo);
+            snprintf(pwd, n2, "%s", sep + 1);
+        }
+        else
+        {
+            snprintf(usr, n1, "%s", uri->userinfo);
+            pwd[0] = 0;
+        }
+    }
+    
+    return 0;
 }

@@ -30,6 +30,12 @@ struct uri_t* uri_parse(const char* uri, int len);
 /// @param[in] uri return by uri_parse
 void uri_free(struct uri_t* uri);
 
+/// uri path with query + fragment
+/// e.g. http://host:port/path?query#fragment --> path?query#fragment
+/// @return uri path length
+int uri_path(const struct uri_t* uri, char* buf, int len);
+
+int uri_userinfo(const struct uri_t* uri, char* usr, int n1, char* pwd, int n2);
 
 struct uri_query_t
 {
