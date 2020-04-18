@@ -746,7 +746,7 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 
 	memset(&hdr, 0, sizeof(hdr));
 	memset(control, 0, sizeof(control));
-	hdr.msg_name = &peer;
+	hdr.msg_name = (void*)peer;
 	hdr.msg_namelen = peerlen;
 	hdr.msg_iov = (struct iovec*)vec;
 	hdr.msg_iovlen = n;
