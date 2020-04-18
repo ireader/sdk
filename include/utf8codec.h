@@ -71,7 +71,7 @@ public:
 	~UTF8Encode()
 	{
 		if(m_p)
-			delete m_p;
+			delete[] m_p;
 	}
 
 	operator const char* () const

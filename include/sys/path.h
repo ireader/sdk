@@ -10,13 +10,13 @@
 #else
 #include <unistd.h>
 #include <limits.h>
-#include <stdlib.h>
-#include <string.h>
 #include <errno.h>
 #endif
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 
 /// test file

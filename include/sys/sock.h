@@ -1010,8 +1010,8 @@ static inline int socket_isip(IN const char* ip)
 	if (0 != getaddrinfo(ip, NULL, &hints, &addr))
 		return 0;
 	freeaddrinfo(&addr);
+    return 1;
 #endif
-	return 1;
 }
 
 static inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN])

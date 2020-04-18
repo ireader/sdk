@@ -202,6 +202,7 @@ private:
 		{
 			assert(m_total > 0);
 			free(m_ptr);
+            m_ptr = NULL;
 		}
 		m_total = m_len = 0;
 	}

@@ -93,7 +93,7 @@ int tools_grep(const char* in, const char* pattern, char* buf, int len)
 			}
 		}
 	}
-	return strlen(buf);
+	return (int)strlen(buf);
 }
 
 int tools_tokenline(const char* str, tools_tokenline_fcb fcb, ...)
@@ -108,9 +108,9 @@ int tools_tokenline(const char* str, tools_tokenline_fcb fcb, ...)
 	{
 		r = strchr(l, '\n');
 		if(r)
-			n = r+1-l;
+			n = (int)(r+1-l);
 		else
-			n = strlen(l);
+			n = (int)strlen(l);
 
 		va_start(val, fcb);
 		ret = fcb(l, n, val);

@@ -37,6 +37,7 @@ static void* OnThread(void* p)
 	//printf("[%d] accept: %d/%d\n", (int)p, r, errno);
 	usleep(10 * 1000 * 1000);
 	//close(r);
+    free(x);
 }
 
 static void epoll_thundering_herd_test(void)

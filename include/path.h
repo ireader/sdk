@@ -3,6 +3,7 @@
 
 #include "sys/path.h"
 #include <assert.h>
+#include <stdlib.h>
 #include <stdarg.h>
 #include <string>
 #include <vector>

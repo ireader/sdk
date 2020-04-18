@@ -10,7 +10,7 @@ template <typename T>
 class auto_obj
 {
 public:
-	explicit auto_obj(T* obj= (T*)0):m_obj(obj){}
+	explicit auto_obj(T* obj = NULL):m_obj(obj){}
 
 	~auto_obj()
 	{
@@ -50,7 +50,7 @@ private:
 	{
 		if (m_obj)
 			m_obj->release();
-		m_obj = (T*)0;
+		m_obj = NULL;
 	}
 
 private:

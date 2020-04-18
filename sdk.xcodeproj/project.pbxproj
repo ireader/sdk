@@ -101,6 +101,7 @@
 		4601F93423C42E50009B797A /* nls_cp936.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = nls_cp936.c; sourceTree = "<group>"; };
 		4601F93523C42E50009B797A /* task-queue.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "task-queue.c"; sourceTree = "<group>"; };
 		4601F93623C42E50009B797A /* uri-parse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "uri-parse.c"; sourceTree = "<group>"; };
+		46AEF4D2242AEE3500BE6A13 /* deprecated */ = {isa = PBXFileReference; lastKnownFileType = folder; path = deprecated; sourceTree = "<group>"; };
 		46CA262F2425AF0E00AF5BAF /* tools.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tools.c; path = deprecated/tools.c; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -118,6 +119,7 @@
 		4601F8E423C42DE6009B797A = {
 			isa = PBXGroup;
 			children = (
+				46AEF4D2242AEE3500BE6A13 /* deprecated */,
 				4601F8F523C42E50009B797A /* source */,
 				4601F8F423C42E2A009B797A /* include */,
 				4601F8EE23C42DE6009B797A /* Products */,
@@ -460,6 +462,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
@@ -470,6 +473,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
