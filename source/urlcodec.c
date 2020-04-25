@@ -54,7 +54,7 @@ int url_encode(const char* source, int srcBytes, char* target, int tgtBytes)
 
 	if(i < tgtBytes)
 		target[i] = '\0';
-	return r;
+	return r < 0 ? r : i;
 }
 
 int url_decode(const char* source, int srcBytes, char* target, int tgtBytes)
@@ -101,5 +101,5 @@ int url_decode(const char* source, int srcBytes, char* target, int tgtBytes)
 
 	if(i < tgtBytes)
 		target[i] = 0;
-	return r;
+	return r < 0 ? r : i;
 }

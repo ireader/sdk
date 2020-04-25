@@ -14,11 +14,13 @@ usage:
 */
 
 /// url encode, auto fill target with '\0'
-/// param[in] srcBytes -1-strlen(source)
+/// @param[in] srcBytes -1-strlen(source)
+/// @return <0-error, >=0-encoded bytes
 int url_encode(const char* source, int srcBytes, char* target, int tgtBytes);
 
 /// url decode, auto fill target with '\0'
 /// param[in] srcBytes -1-strlen(source)
+/// @return <0-error, >=0-decoded bytes
 int url_decode(const char* source, int srcBytes, char* target, int tgtBytes);
 
 
