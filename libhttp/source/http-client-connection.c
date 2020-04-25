@@ -1,131 +1,169 @@
-#include "http-client-internal.h"
 #include "sockutil.h"
+#include "sys/onetime.h"
+#include "http-transport.h"
+#include "http-client-internal.h"
 #include <stdlib.h>
 
-static void* http_socket_create(http_client_t* http)
+struct http_tcp_transport_t
 {
-	http->timeout.conn = 20000;
-	http->timeout.recv = 20000;
-	http->timeout.send = 20000;
-	return http;
+    struct http_transport_t* transport;
+    
+    socket_t socket;
+    int recv_timeout;
+    int send_timeout;
+    int conn_timeout;
+    
+    void* buf;
+    int len;
+};
+
+static void http_tcp_transport_destroy(void* c)
+{
+    struct http_tcp_transport_t* tcp;
+    tcp = (struct http_tcp_transport_t*)c;
+    
+    if (socket_invalid != tcp->socket)
+    {
+        socket_close(tcp->socket);
+        tcp->socket = socket_invalid;
+    }
+    
+    free(c);
 }
 
-static void http_socket_destroy(http_client_t* http)
+static int http_tcp_transport_connect(struct http_tcp_transport_t* tcp, const char* scheme, const char* host, int port)
 {
-	if (socket_invalid != http->socket)
-	{
-		socket_close(http->socket);
-		http->socket = socket_invalid;
-	}
+    // check connection
+    if(socket_invalid != tcp->socket && 1==socket_readable(tcp->socket))
+    {
+        socket_close(tcp->socket);
+        tcp->socket = socket_invalid;
+    }
+
+    if(socket_invalid == tcp->socket)
+    {
+        socket_t socket;
+        socket = socket_connect_host(host, (u_short)port, tcp->conn_timeout);
+        if(socket_invalid == socket)
+            return -1;
+
+        socket_setnonblock(socket, 0); // restore block status
+        tcp->socket = socket;
+    }
+
+    return 0;
 }
 
-static int http_socket_connect(http_client_t* http)
+static void* http_tcp_transport_create(struct http_transport_t* transport, const char* scheme, const char* host, int port)
 {
-	// check connection
-	if(socket_invalid != http->socket && 1==socket_readable(http->socket))
-	{
-		socket_close(http->socket);
-		http->socket = socket_invalid;
-	}
-
-	if(socket_invalid == http->socket)
-	{
-		socket_t socket;
-		socket = socket_connect_host(http->host, http->port, http->timeout.conn);
-		if(socket_invalid == socket)
-			return -1;
-
-		socket_setnonblock(socket, 0); // restore block status
-		http->socket = socket;
-	}
-
-	return 0;
+    struct http_tcp_transport_t* tcp;
+    tcp = http_transport_pool_fetch(transport->priv, scheme, host, port);
+    if(tcp)
+        return tcp;
+        
+    tcp = calloc(1, sizeof(struct http_tcp_transport_t) + transport->read_buffer_size);
+    if(!tcp) return NULL;
+    
+    tcp->socket = socket_invalid;
+    tcp->recv_timeout = 20000;
+	tcp->send_timeout = 20000;
+    tcp->conn_timeout = transport->connect_timeout;
+    tcp->transport = transport;
+    tcp->len = transport->read_buffer_size;
+    tcp->buf = tcp + 1;
+    
+    if(0 != http_tcp_transport_connect(tcp, scheme, host, port))
+    {
+        http_tcp_transport_destroy(tcp);
+        return NULL;
+    }
+    
+	return tcp;
 }
 
-static int http_socket_send(socket_t socket, int timeout, const char* req, size_t nreq, const void* msg, size_t bytes)
+static int http_tcp_transport_close(void* c)
 {
+    struct http_tcp_transport_t* tcp;
+    tcp = (struct http_tcp_transport_t*)c;
+    return http_transport_pool_put(tcp->transport->priv, c, http_tcp_transport_destroy);
+}
+
+static int http_tcp_transport_send(void* c, const char* req, int nreq, const void* msg, int bytes, void (*onsend)(void* param, int code), void* param)
+{
+    int r;
 	socket_bufvec_t vec[2];
+    struct http_tcp_transport_t* tcp;
+    tcp = (struct http_tcp_transport_t*)c;
+
 	socket_setbufvec(vec, 0, (void*)req, nreq);
 	socket_setbufvec(vec, 1, (void*)msg, bytes);
-	return ((int)(nreq + bytes) == socket_send_v_all_by_time(socket, vec, bytes > 0 ? 2 : 1, 0, timeout)) ? 0 : -1;
+    r = socket_send_v_all_by_time(tcp->socket, vec, bytes > 0 ? 2 : 1, 0, tcp->send_timeout);
+    onsend(param, r == (int)(nreq + bytes) ? 0 : -1);
+    return 0;
 }
 
-static int http_socket_request(http_client_t* http, const char* req, size_t nreq, const void* msg, size_t bytes)
+static int http_tcp_transport_recv(void* c, void (*onrecv)(void* param, int code, const void* buf, int len), void* param)
 {
-	int r = -1;
-	int tryagain = 0; // retry connection
-	char buffer[1024] = {0};
-
-RETRY_REQUEST:
-	// clear status
-	http_parser_clear(http->parser);
-
-	// connection
-	r = http_socket_connect(http);
-	if(0 != r) return r;
-
-	// send request
-	r = http_socket_send(http->socket, http->timeout.send, req, nreq, msg, bytes);
-	if(0 != r)
-	{
-		socket_close(http->socket);
-		http->socket = socket_invalid;
-		return r; // send failed(timeout)
-	}
-
-	// recv reply
-	r = 1;
-	while(r > 0)
-	{
-		++tryagain;
-		r = socket_recv_by_time(http->socket, buffer, sizeof(buffer), 0, http->timeout.recv);
-		if(r >= 0)
-		{
-			// need input length 0 for http client detect server close connection
-			int state;
-			size_t n = (size_t)r;
-			state = http_parser_input(http->parser, buffer, &n);
-			if(state <= 0)
-			{
-				// Connection: close
-				if (0 == state && 1 == http_get_connection(http->parser))
-				{
-					socket_close(http->socket);
-					http->socket = socket_invalid;
-				}
-				assert(0 == n);
-				http_client_handle(http, state);
-				return 0;
-			}
-		}
-		else
-		{
-			// EPIPE/ENOTCONN
-			socket_close(http->socket);
-			http->socket = socket_invalid;
-			if(1 == tryagain)
-				goto RETRY_REQUEST;
-		}
-	}
-
-	return r;
+    int r;
+    struct http_tcp_transport_t* tcp;
+    tcp = (struct http_tcp_transport_t*)c;
+    
+    r = socket_recv_by_time(tcp->socket, tcp->buf, tcp->len, 0, tcp->recv_timeout);
+    onrecv(param, r >= 0 ? 0 : r, tcp->buf, r);
+    return 0;
 }
 
-static void http_socket_timeout(struct http_client_t* http, int conn, int recv, int send)
+static void http_tcp_transport_timeout(void* c, int conn, int recv, int send)
 {
-	assert(conn >= 0 && recv >= 0 && send >= 0);
-	http->timeout.conn = conn;
-	http->timeout.recv = recv;
-	http->timeout.send = send;
+	struct http_tcp_transport_t* tcp;
+    tcp = (struct http_tcp_transport_t*)c;
+    assert(conn >= 0 && recv >= 0 && send >= 0);
+	tcp->conn_timeout = conn;
+	tcp->recv_timeout = recv;
+	tcp->send_timeout = send;
 }
 
-struct http_client_connection_t* http_client_connection(void)
+int http_transport_tcp(struct http_transport_t* t)
 {
-	static struct http_client_connection_t conn = {
-		http_socket_create,
-		http_socket_destroy,
-		http_socket_timeout,
-		http_socket_request,
-	};
-	return &conn;
+    struct http_transport_pool_t* pool;
+    pool = (struct http_transport_pool_t*)calloc(1, sizeof(*pool));
+    if(!pool) return -ENOMEM;
+    
+    memset(t, 0, sizeof(*t));
+    t->priv = pool;
+    t->is_aio = 0;
+    t->keep_alive = 1;
+    t->connect_timeout = 5000;
+    t->idle_timeout = 2 * 60 * 1000;
+    t->idle_connections = 100;
+    t->read_buffer_size = 32 * 1024;
+    t->write_buffer_size = 16 * 1024;
+    
+    t->connect = http_tcp_transport_create;
+    t->close = http_tcp_transport_close;
+    t->recv = http_tcp_transport_recv;
+    t->send = http_tcp_transport_send;
+    t->settimeout = http_tcp_transport_timeout;
+    return 0;
+}
+
+static pthread_once_t s_once;
+static struct http_transport_t s_default;
+static struct http_transport_t s_default_aio;
+void http_transport_default_init(void)
+{
+    http_transport_tcp(&s_default);
+    http_transport_tcp_aio(&s_default_aio);
+}
+
+struct http_transport_t* http_transport_default(void)
+{
+    pthread_once(&s_once, http_transport_default_init);
+    return &s_default;
+}
+
+struct http_transport_t* http_transport_default_aio(void)
+{
+    pthread_once(&s_once, http_transport_default_init);
+    return &s_default_aio;
 }

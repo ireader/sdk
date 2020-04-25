@@ -13,30 +13,30 @@
 // CTL = 0-31 and DEL(127)
 static const char* s_separators = "()<>@,;:\\\"/[]?={} \t";
 
-static const char* strskip(const char* s)
+static inline const char* strskip(const char* s)
 {
 	assert(s);
 	while (' ' == *s || '\t' == *s) ++s;
 	return s;
 }
 
-static int istoken(char c)
-{
-	//token = 1*<any CHAR except CTLs or separators>
-	//1. CHAR = <any US-ASCII character (octets 0 - 127)>
-	//2. CTLs 0-31 and DEL(127)
-	//3. separators
-	if (c <= 31 || c >= 127 || strchr(s_separators, c))
-		return 0;
-	return 1;
-}
+//static inline int istoken(char c)
+//{
+//	//token = 1*<any CHAR except CTLs or separators>
+//	//1. CHAR = <any US-ASCII character (octets 0 - 127)>
+//	//2. CTLs 0-31 and DEL(127)
+//	//3. separators
+//	if (c <= 31 || c >= 127 || strchr(s_separators, c))
+//		return 0;
+//	return 1;
+//}
 
-static const char* strtoken(const char* s)
-{
-	assert(s);
-	while (*s && istoken(*s)) s++;
-	return s;
-}
+//static inline const char* strtoken(const char* s)
+//{
+//	assert(s);
+//	while (*s && istoken(*s)) s++;
+//	return s;
+//}
 
 static int http_header_authorization_scheme(const char* scheme, size_t bytes)
 {

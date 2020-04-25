@@ -21,25 +21,30 @@ static const char* http_path(const char* url)
 	return p ? p : url;
 }
 
-static void http_ondownload(void* param, int code)
+static void http_ondownload(void* fp, int code, void* buf, size_t len)
 {
+    fwrite(buf, 1, len, (FILE*)fp);
+}
+
+static void http_onreply(void* param, int code, int http_status_code, int http_content_length)
+{
+    static char buf[64 * 1024];
+    
 	FILE* fp;
-	const char* name;
+    const char* name;
 	struct http_download_t* http;
 	http = (struct http_download_t*)param;
 	name = path_basename(http->uri->path);
 
 	if (0 == code && name)
 	{
+        assert(http_content_length > 0 && http_content_length < sizeof(buf));
 		fp = fopen(name, "wb");
 		if (fp)
 		{
-			size_t bytes;
-			const void* content;
-			http_client_get_content(http->http, &content, &bytes);
-			fwrite(content, 1, bytes, fp);
+			http_client_read(http->http, buf, http_content_length, HTTP_READ_FLAGS_WHOLE, http_ondownload, fp);
 			fclose(fp);
-			printf("http download: %s, bytes: %u\n", name, (unsigned int)bytes);
+			printf("http download: %s, bytes: %u\n", name, (unsigned int)http_content_length);
 		}
 	}
 	else
@@ -65,8 +70,8 @@ void http_download(const char* url)
 	assert(http.uri);
 
 	socket_init();
-	http.http = http_client_create(http.uri->host, http.uri->port ? http.uri->port : 80, 1);
-	http_client_get(http.http, http_path(url), headers, sizeof(headers) / sizeof(headers[0]), http_ondownload, &http);
+	http.http = http_client_create(NULL, http.uri->scheme, http.uri->host, http.uri->port ? http.uri->port : 80);
+	http_client_get(http.http, http_path(url), headers, sizeof(headers) / sizeof(headers[0]), http_onreply, &http);
 	http_client_destroy(http.http);
 	uri_free(http.uri);
 	socket_cleanup();

@@ -46,7 +46,6 @@
 		4601F96A23C42E51009B797A /* sysnetconfig.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F92C23C42E50009B797A /* sysnetconfig.c */; };
 		4601F96C23C42E51009B797A /* systimeconfig.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F92E23C42E50009B797A /* systimeconfig.c */; };
 		4601F96D23C42E51009B797A /* sysntpconfig.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F92F23C42E50009B797A /* sysntpconfig.c */; };
-		4601F96E23C42E51009B797A /* aio-socket-kqueue.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F93023C42E50009B797A /* aio-socket-kqueue.c */; };
 		4601F96F23C42E51009B797A /* route-netlink2.h in Headers */ = {isa = PBXBuildFile; fileRef = 4601F93123C42E50009B797A /* route-netlink2.h */; };
 		4601F97123C42E51009B797A /* nls_cp936.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F93423C42E50009B797A /* nls_cp936.c */; };
 		4601F97223C42E51009B797A /* task-queue.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F93523C42E50009B797A /* task-queue.c */; };
@@ -96,7 +95,6 @@
 		4601F92C23C42E50009B797A /* sysnetconfig.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sysnetconfig.c; sourceTree = "<group>"; };
 		4601F92E23C42E50009B797A /* systimeconfig.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = systimeconfig.c; sourceTree = "<group>"; };
 		4601F92F23C42E50009B797A /* sysntpconfig.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sysntpconfig.c; sourceTree = "<group>"; };
-		4601F93023C42E50009B797A /* aio-socket-kqueue.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-socket-kqueue.c"; sourceTree = "<group>"; };
 		4601F93123C42E50009B797A /* route-netlink2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "route-netlink2.h"; sourceTree = "<group>"; };
 		4601F93423C42E50009B797A /* nls_cp936.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = nls_cp936.c; sourceTree = "<group>"; };
 		4601F93523C42E50009B797A /* task-queue.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "task-queue.c"; sourceTree = "<group>"; };
@@ -196,7 +194,6 @@
 				4601F92C23C42E50009B797A /* sysnetconfig.c */,
 				4601F92E23C42E50009B797A /* systimeconfig.c */,
 				4601F92F23C42E50009B797A /* sysntpconfig.c */,
-				4601F93023C42E50009B797A /* aio-socket-kqueue.c */,
 				4601F93123C42E50009B797A /* route-netlink2.h */,
 			);
 			path = port;
@@ -320,7 +317,6 @@
 				4601F97123C42E51009B797A /* nls_cp936.c in Sources */,
 				4601F96A23C42E51009B797A /* sysnetconfig.c in Sources */,
 				4601F93C23C42E50009B797A /* time64.c in Sources */,
-				4601F96E23C42E51009B797A /* aio-socket-kqueue.c in Sources */,
 				46CA26302425AF0E00AF5BAF /* tools.c in Sources */,
 				4601F96323C42E51009B797A /* sysreboot.c in Sources */,
 				4601F97323C42E51009B797A /* uri-parse.c in Sources */,

@@ -1132,7 +1132,7 @@ int http_parser_input(struct http_parser_t* http, const void* data, size_t *byte
 		assert(http->content_length < 0 || http->raw_body_length == (size_t)http->content_length);
 		*bytes = end - ptr;
 	}
-	return http->stateM == SM_DONE ? INPUT_DONE : (SM_BODY == http->stateM ? INPUT_HEADER : INPUT_NEEDMORE);
+	return http->stateM == SM_DONE ? INPUT_DONE : (SM_BODY <= http->stateM ? INPUT_HEADER : INPUT_NEEDMORE);
 }
 
 size_t http_get_max_size(void)
@@ -1247,7 +1247,7 @@ int http_get_header_by_name2(const struct http_parser_t* http, const char* name,
 int http_get_content_length(const struct http_parser_t* http)
 {
 	assert(http->stateM>=SM_BODY);
-	if(-1 == http->content_length)
+	if(-1 == http->content_length && http->callback)
 		return (int)http->raw_body_length;
 	return http->content_length;
 }

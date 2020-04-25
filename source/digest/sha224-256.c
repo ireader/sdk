@@ -478,7 +478,7 @@ static void SHA224_256Finalize(SHA256Context *context, uint8_t Pad_Byte)
 *
 * Description:
 *	According to the standard, the message must be padded to the next
-*	even multiple of 512 bits. The first padding bit must be a ¡¯1¡¯.
+*	even multiple of 512 bits. The first padding bit must be a '1'.
 *	The last 64 bits represent the length of the original message.
 *	All bits in between should be 0. This helper function will pad
 *	the message according to those rules by filling the

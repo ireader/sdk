@@ -23,7 +23,7 @@
 *	message_array[ ]: [in]
 *		An array of octets representing the message.
 *		Note: in RFC 2104, this parameter is known
-*				as ¡¯text¡¯.
+*				as 'text'.
 *	length: [in]
 *		The length of the message in message_array.
 *	key[ ]: [in]
@@ -111,13 +111,13 @@ int hmacReset(HMACContext *context, enum SHAversion whichSha, const unsigned cha
 	* opad is the byte 0x5c repeated blocksize times,
 	* and text is the data being protected.
 	*/
-	/* store key into the pads, XOR¡¯d with ipad and opad values */
+	/* store key into the pads, XOR'd with ipad and opad values */
 	for (i = 0; i < key_len; i++) {
 		k_ipad[i] = key[i] ^ 0x36;
 		context->k_opad[i] = key[i] ^ 0x5c;
 	}
 
-	/* remaining pad bytes are ¡¯\0¡¯ XOR¡¯d with ipad and opad values */
+	/* remaining pad bytes are '\0' XOR'd with ipad and opad values */
 	for (; i < blocksize; i++) {
 		k_ipad[i] = 0x36;
 		context->k_opad[i] = 0x5c;

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4643D908244C497A00572339 /* http-transport-pool.c in Sources */ = {isa = PBXBuildFile; fileRef = 4643D907244C497A00572339 /* http-transport-pool.c */; };
 		46A0D5052297930D0070E1F5 /* http-header-auth.c in Sources */ = {isa = PBXBuildFile; fileRef = 46A0D5042297930D0070E1F5 /* http-header-auth.c */; };
 		46C5B15D2182E16E00419E57 /* http-client.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1472182E16E00419E57 /* http-client.c */; };
 		46C5B15E2182E16E00419E57 /* http-header-expires.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1482182E16E00419E57 /* http-header-expires.c */; };
@@ -33,6 +34,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		4643D907244C497A00572339 /* http-transport-pool.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "http-transport-pool.c"; sourceTree = "<group>"; };
 		46A0D5042297930D0070E1F5 /* http-header-auth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-header-auth.c"; sourceTree = "<group>"; };
 		46C5B1332182E13000419E57 /* libhttp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libhttp.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		46C5B1472182E16E00419E57 /* http-client.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-client.c"; sourceTree = "<group>"; };
@@ -75,8 +77,8 @@
 			isa = PBXGroup;
 			children = (
 				46C5B1732182E17D00419E57 /* include */,
-				46C5B1462182E16E00419E57 /* source */,
 				46C5B1342182E13000419E57 /* Products */,
+				46C5B1462182E16E00419E57 /* source */,
 			);
 			sourceTree = "<group>";
 		};
@@ -114,6 +116,7 @@
 				46C5B15B2182E16E00419E57 /* http-upload.c */,
 				46A0D5042297930D0070E1F5 /* http-header-auth.c */,
 				46C5B15C2182E16E00419E57 /* http-header-content-type.c */,
+				4643D907244C497A00572339 /* http-transport-pool.c */,
 			);
 			path = source;
 			sourceTree = "<group>";
@@ -170,6 +173,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				Base,
 			);
 			mainGroup = 46C5B12A2182E13000419E57;
 			productRefGroup = 46C5B1342182E13000419E57 /* Products */;
@@ -205,6 +209,7 @@
 				46C5B1662182E16E00419E57 /* http-request.c in Sources */,
 				46C5B16F2182E16E00419E57 /* http-server-sendfile.c in Sources */,
 				46C5B1602182E16E00419E57 /* http-header-www-authenticate.c in Sources */,
+				4643D908244C497A00572339 /* http-transport-pool.c in Sources */,
 				46C5B1712182E16E00419E57 /* http-upload.c in Sources */,
 				46C5B1612182E16E00419E57 /* http-header-host.c in Sources */,
 			);

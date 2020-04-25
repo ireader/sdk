@@ -2,14 +2,21 @@
 #include "sys/sock.h"
 #include "http-client.h"
 
-static void http_client_test_onreply(void* param, int code)
+static void http_client_test_onbody(void* param, int code, void* msg, size_t len)
 {
+}
+
+static void http_client_test_onreply(void* param, int code, int http_status_code, int http_content_length)
+{
+    static char buf[2*1024*1024];
 	http_client_t* http = (http_client_t*)param;
 	if(0 == code)
 	{
 		const char* server = http_client_get_header(http, "Server");
 		if(server)
 			printf("http server: %s\n", server);
+        
+        http_client_read(http, buf, sizeof(buf), HTTP_READ_FLAGS_WHOLE, http_client_test_onbody, &http_content_length);
 	}
 	else
 	{
@@ -28,7 +35,7 @@ extern "C" void http_client_test(void)
 	headers[2].value = "keep-alive";
 
 	socket_init();
-	http_client_t *http = http_client_create("www.baidu.com", 80, 1);
+	http_client_t *http = http_client_create(NULL, "http", "www.ifeng.com", 80);
 	assert(0 == http_client_get(http, "/", headers, sizeof(headers) / sizeof(headers[0]), http_client_test_onreply, http));
 	assert(0 == http_client_get(http, "/img/bdlogo.png", headers, sizeof(headers)/sizeof(headers[0]), http_client_test_onreply, http));
 	assert(0 == http_client_get(http, "/", headers, sizeof(headers)/sizeof(headers[0]), http_client_test_onreply, http));

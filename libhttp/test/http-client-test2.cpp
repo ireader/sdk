@@ -7,6 +7,7 @@
 #include "sys/system.h"
 #include "sys/thread.h"
 #include "http-client.h"
+#include "http-transport.h"
 #include "aio-socket.h"
 #include <assert.h>
 
@@ -82,7 +83,7 @@ static int STDCALL http_server_thread(void* param)
 	return 0;
 }
 
-static void http_client_test_onreply(void* param, int code)
+static void http_client_test_onreply(void* param, int code, int http_status_code, int http_content_length)
 {
 	http_client_t* http = (http_client_t*)param;
 	if(0 == code)
@@ -97,7 +98,7 @@ static void http_client_test_onreply(void* param, int code)
 	}
 }
 
-static void http_client_test_onreply2(void* param, int code)
+static void http_client_test_onreply2(void* param, int code, int http_status_code, int http_content_length)
 {
 	static int i = 0;
 	http_client_t* http = (http_client_t*)param;
@@ -130,14 +131,14 @@ extern "C" void http_client_test2(void)
 	headers[2].value = "keep-alive";
 
 	// block IO
-	http_client_t *http = http_client_create("127.0.0.1", PORT, 1);
+	http_client_t *http = http_client_create(http_transport_default(), "http", "127.0.0.1", PORT);
 	assert(0 == http_client_get(http, "/", headers, sizeof(headers)/sizeof(headers[0]), http_client_test_onreply, http));
 	assert(0 == http_client_get(http, "/img/bdlogo.png", headers, sizeof(headers)/sizeof(headers[0]), http_client_test_onreply, http));
 	assert(0 == http_client_get(http, "/", NULL, 0, http_client_test_onreply, http));
 	http_client_destroy(http);
 
 	// AIO
-	http = http_client_create("127.0.0.1", PORT, 0);
+	http = http_client_create(http_transport_default_aio(), "http", "127.0.0.1", PORT);
 	assert(0 == http_client_get(http, "/", headers, sizeof(headers)/sizeof(headers[0]), http_client_test_onreply2, http));
 	system_sleep(10000);
 

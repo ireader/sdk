@@ -2,7 +2,7 @@
 // unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
 // reserved = gen-delims / sub-delims
 // gen-delims = ":" / "/" / "?" / "#" / "[" / "]" / "@"
-// sub-delims = "!" / "$" / "&" / "¡¯" / "(" / ")" / "*" / "+" / "," / ";" / "="
+// sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
 
 #include "uri-parse.h"
 #include <stdint.h>
