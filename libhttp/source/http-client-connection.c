@@ -147,7 +147,7 @@ int http_transport_tcp(struct http_transport_t* t)
     return 0;
 }
 
-static pthread_once_t s_once;
+static onetime_t s_once;
 static struct http_transport_t s_default;
 static struct http_transport_t s_default_aio;
 void http_transport_default_init(void)
@@ -158,12 +158,12 @@ void http_transport_default_init(void)
 
 struct http_transport_t* http_transport_default(void)
 {
-    pthread_once(&s_once, http_transport_default_init);
+    onetime_exec(&s_once, http_transport_default_init);
     return &s_default;
 }
 
 struct http_transport_t* http_transport_default_aio(void)
 {
-    pthread_once(&s_once, http_transport_default_init);
+    onetime_exec(&s_once, http_transport_default_init);
     return &s_default_aio;
 }
