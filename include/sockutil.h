@@ -28,6 +28,9 @@ static inline socket_t socket_tcp_listen(IN const char* ipv4_or_dns, IN u_short 
 static inline socket_t socket_udp_bind(IN const char* ipv4_or_dns, IN u_short port);
 static inline socket_t socket_udp_bind_ipv6(IN const char* ipv4_or_ipv6_or_dns, IN u_short port, IN int ipv4);
 
+/// @return 0-ok, <0-socket_error(by socket_geterror())
+static inline int socket_udp_multicast(IN socket_t sock, IN const char* group, IN const char* source, IN int ttl);
+
 /// @Notice: need restore block status
 /// @param[in] timeout ms, <0-forever
 /// @return 0-ok, other-error code
@@ -394,6 +397,41 @@ static inline socket_t socket_udp_bind_ipv6(IN const char* ipv4_or_ipv6_or_dns, 
 
 	freeaddrinfo(addr);
 	return sock;
+}
+
+static inline int socket_udp_multicast(IN socket_t sock, IN const char* group, IN const char* source, IN int ttl)
+{
+    int r;
+    int domain;
+    u_short port;
+    char local[SOCKET_ADDRLEN];
+
+    r = socket_getdomain(sock, &domain);
+    if(AF_INET == domain)
+    {
+        r = r ? r : socket_getname(sock, local, &port);
+        r = r ? r : socket_setopt_bool(sock, IP_MULTICAST_LOOP, 0); // disable Loop
+        r = r ? r : socket_setopt_bool(sock, IP_MULTICAST_TTL, ttl <= 0 ? 1 : ttl); // ttl default 1
+        // r = r ? r : setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &imr.imr_interface.s_addr, sizeof(struct in_addr)); // bind to interface
+        if(source && *source)
+            r = r ? r : socket_multicast_join_source(sock, group, source, local);
+        else
+            r = r ? r : socket_multicast_join(sock, group, local);
+        //socket_multicast_leave_source(sock, group, source, local);
+    }
+    else if(AF_INET6 == domain)
+    {
+        r = r ? r : socket_setopt_bool(sock, IPV6_MULTICAST_LOOP, 0); // disable Loop
+        r = r ? r : socket_setopt_bool(sock, IPV6_MULTICAST_HOPS, ttl <= 0 ? 1 : ttl); // ttl default 1
+        r = r ? r : socket_multicast_join6(sock, group);
+    }
+    else
+    {
+        assert(0);
+        r = -1;
+    }
+    
+    return r;
 }
 
 /// wait for client connection

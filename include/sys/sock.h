@@ -192,10 +192,12 @@ static inline void socket_setbufvec(INOUT socket_bufvec_t* vec, IN int idx, IN v
 static inline void socket_getbufvec(IN const socket_bufvec_t* vec, IN int idx, OUT void** ptr, OUT size_t* len);
 
 // multicast
-static inline int socket_multicast_join(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
-static inline int socket_multicast_leave(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
+static inline int socket_multicast_join(IN socket_t sock, IN const char* group, IN const char* local);
+static inline int socket_multicast_leave(IN socket_t sock, IN const char* group, IN const char* local);
 static inline int socket_multicast_join_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
 static inline int socket_multicast_leave_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local);
+static inline int socket_multicast_join6(IN socket_t sock, IN const char* group);
+static inline int socket_multicast_leave6(IN socket_t sock, IN const char* group);
 
 //////////////////////////////////////////////////////////////////////////
 ///
@@ -1249,24 +1251,50 @@ static inline void socket_getbufvec(IN const socket_bufvec_t* vec, IN int idx, O
 #endif
 }
 
-static inline int socket_multicast_join(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
+static inline int socket_multicast_join(IN socket_t sock, IN const char* group, IN const char* local)
 {
-	struct ip_mreq_source imr;
+	struct ip_mreqn imr;
 	memset(&imr, 0, sizeof(imr));
-	inet_pton(AF_INET, source, &imr.imr_sourceaddr);
-	inet_pton(AF_INET, group, &imr.imr_multiaddr);
-	inet_pton(AF_INET, local, &imr.imr_interface);
+    imr.imr_ifindex = 0; // any interface
+	inet_pton(AF_INET, local, &imr.imr_address);
+    inet_pton(AF_INET, group, &imr.imr_multiaddr);
 	return setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *) &imr, sizeof(imr));
 }
 
-static inline int socket_multicast_leave(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
+static inline int socket_multicast_leave(IN socket_t sock, IN const char* group, IN const char* local)
 {
-	struct ip_mreq_source imr;
+	struct ip_mreqn imr;
 	memset(&imr, 0, sizeof(imr));
-	inet_pton(AF_INET, source, &imr.imr_sourceaddr);
-	inet_pton(AF_INET, group, &imr.imr_multiaddr);
-	inet_pton(AF_INET, local, &imr.imr_interface);
+	imr.imr_ifindex = 0; // any interface
+    inet_pton(AF_INET, local, &imr.imr_address);
+    inet_pton(AF_INET, group, &imr.imr_multiaddr);
 	return setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char *) &imr, sizeof(imr));
+}
+
+static inline int socket_multicast_join6(IN socket_t sock, IN const char* group)
+{
+    struct ipv6_mreq imr;
+    memset(&imr, 0, sizeof(imr));
+    inet_pton(AF_INET6, group, &imr.ipv6mr_multiaddr);
+    imr.ipv6mr_interface = 0;
+#if defined(OS_MAC)
+    return setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, (char *) &imr, sizeof(imr));
+#else
+    return setsockopt(sock, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, (char *) &imr, sizeof(imr));
+#endif
+}
+
+static inline int socket_multicast_leave6(IN socket_t sock, IN const char* group)
+{
+    struct ipv6_mreq imr;
+    memset(&imr, 0, sizeof(imr));
+    inet_pton(AF_INET6, group, &imr.ipv6mr_multiaddr);
+    imr.ipv6mr_interface = 0;
+#if defined(OS_MAC)
+    return setsockopt(sock, IPPROTO_IPV6, IPV6_LEAVE_GROUP, (char *) &imr, sizeof(imr));
+#else
+    return setsockopt(sock, IPPROTO_IPV6, IPV6_DROP_MEMBERSHIP, (char *) &imr, sizeof(imr));
+#endif
 }
 
 static inline int socket_multicast_join_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
