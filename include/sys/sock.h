@@ -1167,12 +1167,15 @@ static inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN sock
 {
 	if (AF_INET == sa->sa_family)
 	{
+		// 224.x.x.x ~ 239.x.x.x
+		// b1110xxxx xxxxxxxx xxxxxxxx xxxxxxxx
 		const struct sockaddr_in* in = (const struct sockaddr_in*)sa;
 		assert(sizeof(struct sockaddr_in) == salen);
 		return (ntohl(in->sin_addr.s_addr) & 0xf0000000) == 0xe0000000 ? 1 : 0;
 	}
 	else if (AF_INET6 == sa->sa_family)
 	{
+		// FFxx::/8
 		const struct sockaddr_in6* in6 = (const struct sockaddr_in6*)sa;
 		assert(sizeof(struct sockaddr_in6) == salen);
 		return in6->sin6_addr.s6_addr[0] == 0xff ? 1 : 0;
@@ -1253,22 +1256,38 @@ static inline void socket_getbufvec(IN const socket_bufvec_t* vec, IN int idx, O
 
 static inline int socket_multicast_join(IN socket_t sock, IN const char* group, IN const char* local)
 {
-	struct ip_mreqn imr;
+#if defined(OS_WINDOWS)
+	struct ip_mreq imr;
 	memset(&imr, 0, sizeof(imr));
-    imr.imr_ifindex = 0; // any interface
+	inet_pton(AF_INET, group, &imr.imr_multiaddr);
+	inet_pton(AF_INET, local, &imr.imr_interface);
+	return setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&imr, sizeof(imr));
+#else
+	struct ip_mreq imr;
+	memset(&imr, 0, sizeof(imr));
+	imr.imr_ifindex = 0; // any interface
 	inet_pton(AF_INET, local, &imr.imr_address);
-    inet_pton(AF_INET, group, &imr.imr_multiaddr);
-	return setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *) &imr, sizeof(imr));
+	inet_pton(AF_INET, group, &imr.imr_multiaddr);
+	return setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&imr, sizeof(imr));
+#endif
 }
 
 static inline int socket_multicast_leave(IN socket_t sock, IN const char* group, IN const char* local)
 {
+#if defined(OS_WINDOWS)
+	struct ip_mreq imr;
+	memset(&imr, 0, sizeof(imr));
+	inet_pton(AF_INET, group, &imr.imr_multiaddr);
+	inet_pton(AF_INET, local, &imr.imr_interface);
+	return setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char*)&imr, sizeof(imr));
+#else
 	struct ip_mreqn imr;
 	memset(&imr, 0, sizeof(imr));
 	imr.imr_ifindex = 0; // any interface
     inet_pton(AF_INET, local, &imr.imr_address);
     inet_pton(AF_INET, group, &imr.imr_multiaddr);
 	return setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char *) &imr, sizeof(imr));
+#endif
 }
 
 static inline int socket_multicast_join6(IN socket_t sock, IN const char* group)
