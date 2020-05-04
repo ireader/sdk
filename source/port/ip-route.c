@@ -64,7 +64,7 @@ int ip_route_get(const char* destination, char ip[40])
 	{
 		if(table->table[i].dwIndex == index)
 		{
-			sprintf(ip, "%d.%d.%d.%d", 
+			snprintf(ip, 40, "%d.%d.%d.%d", 
 				(table->table[i].dwAddr >> 0) & 0xFF,
 				(table->table[i].dwAddr >> 8) & 0xFF,
 				(table->table[i].dwAddr >> 16) & 0xFF,
@@ -123,7 +123,7 @@ int ip_local(char ip[40])
 	{
 		if(table->table[i].wType & MIB_IPADDR_PRIMARY)
 		{
-			sprintf(ip, "%d.%d.%d.%d", 
+			snprintf(ip, 40, "%d.%d.%d.%d", 
 				(table->table[i].dwAddr >> 0) & 0xFF,
 				(table->table[i].dwAddr >> 8) & 0xFF,
 				(table->table[i].dwAddr >> 16) & 0xFF,

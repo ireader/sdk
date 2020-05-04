@@ -425,5 +425,8 @@
     <ClInclude Include="algorithm\algorithm.h">
       <Filter>Source Files\algorithm</Filter>
     </ClInclude>
+    <ClInclude Include="include\cbuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

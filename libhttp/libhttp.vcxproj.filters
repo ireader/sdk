@@ -78,6 +78,9 @@
     <ClCompile Include="source\http-header-auth.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\http-transport-pool.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\http-client.h">
@@ -126,6 +129,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="include\http-header-expires.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\http-transport.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

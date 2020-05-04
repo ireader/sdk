@@ -22,29 +22,29 @@
     <ProjectGuid>{B2CA3B5D-F7C6-4DAF-8F32-F8A169427A7C}</ProjectGuid>
     <RootNamespace>libhttp</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -152,6 +152,7 @@
     <ClCompile Include="source\http-server-reply.c" />
     <ClCompile Include="source\http-server.c" />
     <ClCompile Include="source\http-session.c" />
+    <ClCompile Include="source\http-transport-pool.c" />
     <ClCompile Include="source\http-upload.c" />
     <ClCompile Include="source\rfc822-datetime.c" />
   </ItemGroup>
@@ -168,6 +169,7 @@
     <ClInclude Include="include\http-request.h" />
     <ClInclude Include="include\http-route.h" />
     <ClInclude Include="include\http-server.h" />
+    <ClInclude Include="include\http-transport.h" />
     <ClInclude Include="include\http-upload.h" />
     <ClInclude Include="include\rfc822-datetime.h" />
     <ClInclude Include="source\http-client-internal.h" />

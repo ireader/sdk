@@ -49,6 +49,7 @@ void aio_socket_test_cancel(void);
 void ip_route_test(void);
 void onetime_test(void);
 void socketpair_test(void);
+void aio_poll_test(void);
 
 #if defined(HTTP_TEST)
 void http_test(void);
@@ -69,8 +70,8 @@ int main(int argc, char* argv[])
 
 	heap_test();
 	rbtree_test();
-	timer_test();
 	channel_test();
+	timer_test();
 
 	socket_test();
 	locker_test();
@@ -105,6 +106,7 @@ int main(int argc, char* argv[])
 
 	ip_route_test();
 
+	aio_poll_test();
     aio_socket_test_cancel();
     aio_socket_test();
     aio_socket_test2();
