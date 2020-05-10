@@ -1263,7 +1263,7 @@ static inline int socket_multicast_join(IN socket_t sock, IN const char* group, 
 	inet_pton(AF_INET, local, &imr.imr_interface);
 	return setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&imr, sizeof(imr));
 #else
-	struct ip_mreq imr;
+	struct ip_mreqn imr;
 	memset(&imr, 0, sizeof(imr));
 	imr.imr_ifindex = 0; // any interface
 	inet_pton(AF_INET, local, &imr.imr_address);
@@ -1296,11 +1296,7 @@ static inline int socket_multicast_join6(IN socket_t sock, IN const char* group)
     memset(&imr, 0, sizeof(imr));
     inet_pton(AF_INET6, group, &imr.ipv6mr_multiaddr);
     imr.ipv6mr_interface = 0;
-#if defined(OS_MAC)
     return setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, (char *) &imr, sizeof(imr));
-#else
-    return setsockopt(sock, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, (char *) &imr, sizeof(imr));
-#endif
 }
 
 static inline int socket_multicast_leave6(IN socket_t sock, IN const char* group)
@@ -1309,11 +1305,7 @@ static inline int socket_multicast_leave6(IN socket_t sock, IN const char* group
     memset(&imr, 0, sizeof(imr));
     inet_pton(AF_INET6, group, &imr.ipv6mr_multiaddr);
     imr.ipv6mr_interface = 0;
-#if defined(OS_MAC)
     return setsockopt(sock, IPPROTO_IPV6, IPV6_LEAVE_GROUP, (char *) &imr, sizeof(imr));
-#else
-    return setsockopt(sock, IPPROTO_IPV6, IPV6_DROP_MEMBERSHIP, (char *) &imr, sizeof(imr));
-#endif
 }
 
 static inline int socket_multicast_join_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
