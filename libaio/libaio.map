@@ -61,5 +61,9 @@ global:
 
 	aio_worker_init;
 	aio_worker_clean;
+	
+	aio_poll_create;
+	aio_poll_destroy;
+	aio_poll_poll;
 local: *;  
 };
