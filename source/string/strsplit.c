@@ -33,7 +33,7 @@ size_t strsplit(const char* ptr, const char* end, const char* delimiters, const 
 		}
 	}
 
-	if (ppnext && *ppnext)
+	if (ppnext)
 	{
 		*ppnext = p;
 		while (*ppnext && *ppnext < end && strchr(delimiters, **ppnext))
