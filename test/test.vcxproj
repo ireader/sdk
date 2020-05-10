@@ -141,6 +141,7 @@
     <ClCompile Include="socketpair-test.c" />
     <ClCompile Include="spinlock-test.c" />
     <ClCompile Include="stack-test.c" />
+    <ClCompile Include="string-test.c" />
     <ClCompile Include="systimer-test.c" />
     <ClCompile Include="task-queue-test.c" />
     <ClCompile Include="thread-pool-test.c" />

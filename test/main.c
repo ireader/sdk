@@ -13,6 +13,8 @@
 #define HTTP_TEST
 #endif
 
+void string_test(void);
+
 void heap_test(void);
 void rbtree_test(void);
 void timer_test(void);
@@ -67,6 +69,8 @@ int main(int argc, char* argv[])
 	sigaction(SIGCHLD, &sa, 0);
 	sigaction(SIGPIPE, &sa, 0);
 #endif
+
+	string_test();
 
 	heap_test();
 	rbtree_test();

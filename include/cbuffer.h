@@ -62,7 +62,7 @@ static inline int cbuffer_append(struct cbuffer_t* cb, const void* data, size_t 
 	
 	memmove(cb->ptr + cb->len, data, bytes);
 	cb->len += bytes;
-	return cb->len;
+	return (int)cb->len;
 }
 
 static inline int cbuffer_insert(struct cbuffer_t* cb, size_t off, const void* data, size_t bytes)
@@ -76,7 +76,7 @@ static inline int cbuffer_insert(struct cbuffer_t* cb, size_t off, const void* d
 	memmove(cb->ptr + off + bytes, cb->ptr + off, cb->len - off);
 	memmove(cb->ptr + off, data, bytes);
 	cb->len += bytes;
-	return cb->len;
+	return (int)cb->len;
 }
 
 static inline int cbuffer_remove(struct cbuffer_t* cb, size_t off, size_t bytes)
@@ -86,7 +86,7 @@ static inline int cbuffer_remove(struct cbuffer_t* cb, size_t off, size_t bytes)
 
 	memmove(cb->ptr + off, cb->ptr + off + bytes, cb->len - off - bytes);
 	cb->len -= bytes;
-	return cb->len;
+	return (int)cb->len;
 }
 
 #ifdef __cplusplus

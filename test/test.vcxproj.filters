@@ -195,6 +195,9 @@
     <ClCompile Include="..\libaio\test\aio-poll-test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="string-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\libice\test\tls-socket.h">

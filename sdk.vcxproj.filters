@@ -189,6 +189,12 @@
     <ClCompile Include="source\digest\sha384-512.c">
       <Filter>Source Files\digest</Filter>
     </ClCompile>
+    <ClCompile Include="source\string\strsplit.c">
+      <Filter>Source Files\string</Filter>
+    </ClCompile>
+    <ClCompile Include="source\string\strtrim.c">
+      <Filter>Source Files\string</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\aio-socket.h">

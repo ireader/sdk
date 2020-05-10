@@ -44,6 +44,21 @@ extern "C" {
 /// strtoken("abc def", " c") => "ab"
 char *strtoken(char *s, const char *delim, char **saveptr);
 
+/// strsplit("ab,c, def", ",", "", &next) => 2("ab"), next="c, def"
+/// strsplit("'ab,c', def", ",", "'", &next) => 6("'ab,c'"), next=" def"
+/// @param[in] delimiters sperators, such as "\r\n"
+/// @param[in] quotes quotes characters, such as "\'\""
+/// @return token length
+size_t strsplit(const char* ptr, const char* end, const char* delimiters, const char* quotes, const char** ppnext);
+
+/// strtrim("  abc  ", &n, " ", " ") => "abc", n = 3
+/// strtrim("  abc  ", &n, " ", "")  => "abc  ", n = 5
+/// @param[in,out] n input string length, output string length after prefix/suffix trim
+/// @param[in] prefix prefix delimiters
+/// @param[in] suffix suffix delimiters
+/// @return s skip prefix delimiters
+const char* strtrim(const char* s, size_t* n, const char* prefix, const char* suffix);
+
 #if defined(OS_WINDOWS)
 char* strndup(const char* p, size_t n);
 

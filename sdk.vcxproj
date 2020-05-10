@@ -59,7 +59,9 @@
     <ClCompile Include="source\string\strlcpy.c" />
     <ClCompile Include="source\string\strndup.c" />
     <ClCompile Include="source\string\strrev.c" />
+    <ClCompile Include="source\string\strsplit.c" />
     <ClCompile Include="source\string\strtoken.c" />
+    <ClCompile Include="source\string\strtrim.c" />
     <ClCompile Include="source\task-queue.c" />
     <ClCompile Include="source\thread-pool.c" />
     <ClCompile Include="source\time64.c" />
