@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdio.h>
 #include <errno.h>
 
 #if defined(OS_WINDOWS)
@@ -32,33 +33,29 @@ static int http_header_authorization_scheme(const char* scheme, size_t bytes)
 	}
 }
 
-static int s_strcpy(char* dst, size_t size, const char* src, size_t bytes)
-{
-	if (bytes + 1 > size)
-		return -E2BIG;
-
-	memcpy(dst, src, bytes);
-	dst[bytes] = 0;
-	return 0;
-}
-
 static int http_header_authorization_param(struct http_header_www_authenticate_t* auth, const char* name, size_t bytes, const char* value, size_t bytes2)
 {
+	int r;
+
 	if (0 == strncasecmp(name, "realm", bytes))
 	{
-		return s_strcpy(auth->realm, sizeof(auth->realm), value, bytes2);
+		r = snprintf(auth->realm, sizeof(auth->realm), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->realm) ? (r < 0 ? r : -E2BIG) : 0;
 	}
 	else if (0 == strncasecmp(name, "domain", bytes))
 	{
-		return s_strcpy(auth->domain, sizeof(auth->domain), value, bytes2);
+		r = snprintf(auth->domain, sizeof(auth->domain), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->domain) ? (r < 0 ? r : -E2BIG) : 0;
 	}
 	else if (0 == strncasecmp(name, "nonce", bytes))
 	{
-		return s_strcpy(auth->nonce, sizeof(auth->nonce), value, bytes2);
+		r = snprintf(auth->nonce, sizeof(auth->nonce), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->nonce) ? (r < 0 ? r : -E2BIG) : 0;
 	}
 	else if (0 == strncasecmp(name, "opaque", bytes))
 	{
-		return s_strcpy(auth->opaque, sizeof(auth->opaque), value, bytes2);
+		r = snprintf(auth->opaque, sizeof(auth->opaque), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->opaque) ? (r < 0 ? r : -E2BIG) : 0;
 	}
 	else if (0 == strncasecmp(name, "stale", bytes))
 	{
@@ -78,12 +75,14 @@ static int http_header_authorization_param(struct http_header_www_authenticate_t
 	}
 	else if (0 == strncasecmp(name, "algorithm", bytes))
 	{
-		return s_strcpy(auth->algorithm, sizeof(auth->algorithm), value, bytes2);
+		r = snprintf(auth->algorithm, sizeof(auth->algorithm), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->algorithm) ? (r < 0 ? r : -E2BIG) : 0;
 	}
 	else if (0 == strncasecmp(name, "qop", bytes))
 	{
 		// TODO: split qop-options
-		return s_strcpy(auth->qop, sizeof(auth->qop), value, bytes2);
+		r = snprintf(auth->qop, sizeof(auth->qop), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->qop) ? (r < 0 ? r : -E2BIG) : 0;
 	}
 	else
 	{

@@ -1,8 +1,8 @@
 #include "http-header-auth.h"
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdio.h>
 #include <errno.h>
 
 #if defined(OS_WINDOWS)
@@ -55,59 +55,60 @@ static int http_header_authorization_scheme(const char* scheme, size_t bytes)
 	}
 }
 
-static int s_strcpy(char* dst, size_t size, const char* src, size_t bytes)
-{
-	if (bytes + 1 > size)
-		return -E2BIG;
-
-	memcpy(dst, src, bytes);
-	dst[bytes] = 0;
-	return 0;
-}
-
 static int http_header_authorization_param(struct http_header_www_authenticate_t* auth, const char* name, size_t bytes, const char* value, size_t bytes2)
 {
-	if (0 == strncasecmp(name, "username", bytes))
+	int r;
+	if (8 == bytes && 0 == strncasecmp(name, "username", bytes))
 	{
-		return s_strcpy(auth->username, sizeof(auth->username), value, bytes2);
+		r = snprintf(auth->username, sizeof(auth->username), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->username) ? (r < 0 ? r : -E2BIG) : 0;
 	}
-	else if (0 == strncasecmp(name, "realm", bytes))
+	else if (5 == bytes && 0 == strncasecmp(name, "realm", bytes))
 	{
-		return s_strcpy(auth->realm, sizeof(auth->realm), value, bytes2);
+		r = snprintf(auth->realm, sizeof(auth->realm), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->realm) ? (r < 0 ? r : -E2BIG) : 0;
 	}
-	else if (0 == strncasecmp(name, "nonce", bytes))
+	else if (5 == bytes && 0 == strncasecmp(name, "nonce", bytes))
 	{
-		return s_strcpy(auth->nonce, sizeof(auth->nonce), value, bytes2);
+		r = snprintf(auth->nonce, sizeof(auth->nonce), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->nonce) ? (r < 0 ? r : -E2BIG) : 0;
 	}
-	else if (0 == strncasecmp(name, "uri", bytes))
+	else if (3 == bytes && 0 == strncasecmp(name, "uri", bytes))
 	{
-		return s_strcpy(auth->uri, sizeof(auth->uri), value, bytes2);
+		r = snprintf(auth->uri, sizeof(auth->uri), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->uri) ? (r < 0 ? r : -E2BIG) : 0;
 	}
-	else if (0 == strncasecmp(name, "response", bytes))
+	else if (8 == bytes && 0 == strncasecmp(name, "response", bytes))
 	{
-		return s_strcpy(auth->response, sizeof(auth->response), value, bytes2);
+		r = snprintf(auth->response, sizeof(auth->response), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->response) ? (r < 0 ? r : -E2BIG) : 0;
 	}
-	else if (0 == strncasecmp(name, "algorithm", bytes))
+	else if (9 == bytes && 0 == strncasecmp(name, "algorithm", bytes))
 	{
-		return s_strcpy(auth->algorithm, sizeof(auth->algorithm), value, bytes2);
+		r = snprintf(auth->algorithm, sizeof(auth->algorithm), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->algorithm) ? (r < 0 ? r : -E2BIG) : 0;
 	}
-	else if (0 == strncasecmp(name, "cnonce", bytes))
+	else if (6 == bytes && 0 == strncasecmp(name, "cnonce", bytes))
 	{
-		return s_strcpy(auth->cnonce, sizeof(auth->cnonce), value, bytes2);
+		r = snprintf(auth->cnonce, sizeof(auth->cnonce), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->cnonce) ? (r < 0 ? r : -E2BIG) : 0;
 	}
-	else if (0 == strncasecmp(name, "opaque", bytes))
+	else if (6 == bytes && 0 == strncasecmp(name, "opaque", bytes))
 	{
-		return s_strcpy(auth->opaque, sizeof(auth->opaque), value, bytes2);
+		r = snprintf(auth->opaque, sizeof(auth->opaque), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->opaque) ? (r < 0 ? r : -E2BIG) : 0;
 	}
-	else if (0 == strncasecmp(name, "qop", bytes))
+	else if (3 == bytes && 0 == strncasecmp(name, "qop", bytes))
 	{
-		return s_strcpy(auth->qop, sizeof(auth->qop), value, bytes2);
+		r = snprintf(auth->qop, sizeof(auth->qop), "%.*s", (int)bytes2, value);
+		return r < 0 || r >= sizeof(auth->qop) ? (r < 0 ? r : -E2BIG) : 0;
 	}
-	else if (0 == strncasecmp(name, "nc", bytes))
+	else if (2 == bytes && 0 == strncasecmp(name, "nc", bytes))
 	{
 		// 8LHEX, The nc value is the hexadecimal count of the number of requests
 		//return s_strcpy(auth->nc, sizeof(auth->nc), value, bytes2);
-		sscanf(value, "%x", &auth->nc);
+		r = sscanf(value, "%x", &auth->nc);
+		return 1 != r ? -EINVAL : 0;
 	}
 	else
 	{
@@ -130,13 +131,13 @@ int http_header_authorization(const char* field, struct http_header_www_authenti
 
 	if (HTTP_AUTHENTICATION_BASIC == auth->scheme)
 	{
-		s_strcpy(auth->algorithm, sizeof(auth->algorithm), "base64", 6);
+		snprintf(auth->algorithm, sizeof(auth->algorithm), "base64");
 
 		// RFC2617 2. Basic Authentication Scheme
 		// credentials = "Basic" basic-credentials
 		value = strskip(field + bytes);
 		bytes = strcspn(value, " \t\r\n");
-		return s_strcpy(auth->response, sizeof(auth->response), value, bytes);
+		snprintf(auth->response, sizeof(auth->response), "%.*s", (int)bytes, value);
 	}
 	else
 	{

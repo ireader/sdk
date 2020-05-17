@@ -138,8 +138,8 @@ size_t base16_decode(void* target, const char *source, size_t bytes)
 	assert(0 == bytes % 2);
 	for (i = 0; i < bytes / 2; i++)
 	{
-		p[i] = s_base16_dec[source[i * 2]] << 4;
-		p[i] |= s_base16_dec[source[i * 2 + 1]];
+		p[i] = s_base16_dec[(unsigned char)source[i * 2]] << 4;
+		p[i] |= s_base16_dec[(unsigned char)source[i * 2 + 1]];
 	}
 	return i;
 }
