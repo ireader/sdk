@@ -2,13 +2,24 @@
 #include "sys/onetime.h"
 #include "http-transport.h"
 #include "http-client-internal.h"
+#if defined(__OPENSSL__)
+#include "openssl/bio.h"
+#include "openssl/ssl.h"
+#include "openssl/err.h"
+#endif
 #include <stdlib.h>
+#include <assert.h>
+#include "app-log.h"
 
 struct http_tcp_transport_t
 {
     struct http_transport_t* transport;
     
     socket_t socket;
+#if defined(__OPENSSL__)
+    SSL_CTX* ctx;
+    SSL* ssl;
+#endif
     int recv_timeout;
     int send_timeout;
     int conn_timeout;
@@ -22,6 +33,21 @@ static void http_tcp_transport_destroy(void* c)
     struct http_tcp_transport_t* tcp;
     tcp = (struct http_tcp_transport_t*)c;
     
+#if defined(__OPENSSL__)
+    if (tcp->ssl)
+    {
+        SSL_shutdown(tcp->ssl);
+        SSL_free(tcp->ssl);
+        tcp->ssl = NULL;
+    }
+
+    if (tcp->ctx)
+    {
+        SSL_CTX_free(tcp->ctx);
+        tcp->ctx = NULL;
+    }
+#endif
+
     if (socket_invalid != tcp->socket)
     {
         socket_close(tcp->socket);
@@ -34,22 +60,39 @@ static void http_tcp_transport_destroy(void* c)
 static int http_tcp_transport_connect(struct http_tcp_transport_t* tcp, const char* scheme, const char* host, int port)
 {
     // check connection
-    if(socket_invalid != tcp->socket && 1==socket_readable(tcp->socket))
+    if (socket_invalid != tcp->socket && 1 == socket_readable(tcp->socket))
     {
         socket_close(tcp->socket);
         tcp->socket = socket_invalid;
     }
 
-    if(socket_invalid == tcp->socket)
+    if (socket_invalid == tcp->socket)
     {
         socket_t socket;
         socket = socket_connect_host(host, (u_short)port, tcp->conn_timeout);
-        if(socket_invalid == socket)
+        if (socket_invalid == socket)
             return -1;
 
         socket_setnonblock(socket, 0); // restore block status
         tcp->socket = socket;
     }
+
+#if defined(__OPENSSL__)
+    if (0 == strcmp(scheme, "https"))
+    {
+        int r;
+        tcp->ctx = SSL_CTX_new(SSLv23_client_method());
+        if (!tcp->ctx)
+            return -1;
+
+        socket_setnonblock(tcp->socket, 0);
+        tcp->ssl = SSL_new(tcp->ctx);
+        SSL_set_fd(tcp->ssl, tcp->socket);
+        r = SSL_connect(tcp->ssl);
+        if (1 != r)
+            return -1;
+    }
+#endif
 
     return 0;
 }
@@ -91,13 +134,35 @@ static int http_tcp_transport_close(void* c)
 static int http_tcp_transport_send(void* c, const char* req, int nreq, const void* msg, int bytes, void (*onsend)(void* param, int code), void* param)
 {
     int r;
-	socket_bufvec_t vec[2];
+    socket_bufvec_t vec[2];
     struct http_tcp_transport_t* tcp;
     tcp = (struct http_tcp_transport_t*)c;
 
-	socket_setbufvec(vec, 0, (void*)req, nreq);
-	socket_setbufvec(vec, 1, (void*)msg, bytes);
-    r = socket_send_v_all_by_time(tcp->socket, vec, bytes > 0 ? 2 : 1, 0, tcp->send_timeout);
+    socket_setbufvec(vec, 0, (void*)req, nreq);
+    socket_setbufvec(vec, 1, (void*)msg, bytes);
+
+#if defined(__OPENSSL__)
+    if (tcp->ssl)
+    {
+        int i, n;
+        for (r = i = 0; i < 2; i++)
+        {
+            n = SSL_write(tcp->ssl, (void*)vec[i].buf, vec[i].len);
+            if (n < 0)
+            {
+                r = n;
+                break;
+            }
+
+            r += n;
+            if (n != (int)vec[i].len)
+                break;
+        }
+    }
+    else
+#endif
+        r = socket_send_v_all_by_time(tcp->socket, vec, bytes > 0 ? 2 : 1, 0, tcp->send_timeout);
+
     onsend(param, r == (int)(nreq + bytes) ? 0 : -1);
     return 0;
 }
@@ -108,7 +173,13 @@ static int http_tcp_transport_recv(void* c, void (*onrecv)(void* param, int code
     struct http_tcp_transport_t* tcp;
     tcp = (struct http_tcp_transport_t*)c;
     
-    r = socket_recv_by_time(tcp->socket, tcp->buf, tcp->len, 0, tcp->recv_timeout);
+#if defined(__OPENSSL__)
+    if(tcp->ssl)
+        r = SSL_read(tcp->ssl, tcp->buf, tcp->len);
+    else
+#endif
+        r = socket_recv_by_time(tcp->socket, tcp->buf, tcp->len, 0, tcp->recv_timeout);
+
     onrecv(param, r >= 0 ? 0 : r, tcp->buf, r);
     return 0;
 }
@@ -121,6 +192,13 @@ static void http_tcp_transport_timeout(void* c, int conn, int recv, int send)
 	tcp->conn_timeout = conn;
 	tcp->recv_timeout = recv;
 	tcp->send_timeout = send;
+}
+
+static uintptr_t http_tcp_transport_getfd(void* c)
+{
+    struct http_tcp_transport_t* tcp;
+    tcp = (struct http_tcp_transport_t*)c;
+    return (uintptr_t)tcp->socket;
 }
 
 int http_transport_tcp(struct http_transport_t* t)
@@ -143,6 +221,7 @@ int http_transport_tcp(struct http_transport_t* t)
     t->close = http_tcp_transport_close;
     t->recv = http_tcp_transport_recv;
     t->send = http_tcp_transport_send;
+    t->getfd = http_tcp_transport_getfd;
     t->settimeout = http_tcp_transport_timeout;
     return 0;
 }

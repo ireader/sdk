@@ -1,6 +1,8 @@
 #ifndef _http_transport_h_
 #define _http_transport_h_
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,6 +31,9 @@ struct http_transport_t
     
     /// @return 0-ok, other-error
     int (*send)(void* c, const char* req, int nreq, const void* msg, int bytes, void (*onsend)(void* param, int code), void* param);
+
+    /// @return 0-error, other-connection handle(socket)
+    uintptr_t (*getfd)(void* c);
 };
 
 /// default http transport(same as http_transport_tcp with static tcp transport)

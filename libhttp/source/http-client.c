@@ -447,10 +447,19 @@ void http_client_release(struct http_client_t* http)
 	}
 }
 
+uintptr_t http_client_getfd(http_client_t* http)
+{
+    if (http->connection && http->transport)
+        return http->transport->getfd(http->connection);
+    return 0;
+}
+
 void http_client_set_timeout(struct http_client_t* http, int conn, int recv, int send)
 {
 	assert(conn >= 0 && recv >= 0 && send >= 0);
-	http->transport->settimeout(http->connection, conn, recv, send);
+    http->transport->connect_timeout = conn;
+    if(http->connection)
+	    http->transport->settimeout(http->connection, conn, recv, send);
 }
 
 void http_client_set_redirect(http_client_t* http, int (*onredirect)(void* param, const char* urls[], int n), void* param)

@@ -33,6 +33,9 @@ typedef void (*http_client_onresponse)(void *param, int code, int http_status_co
 http_client_t *http_client_create(struct http_transport_t* transport, const char* scheme, const char* ip, unsigned short port);
 void http_client_destroy(http_client_t* http);
 
+/// @return 0-error, other-connection handle(socket)
+uintptr_t http_client_getfd(http_client_t* http);
+
 /// HTTP socket timeout
 /// @param[in] http HTTP handler created by http_client_create
 /// @param[in] conn socket connect timeout(MS)
