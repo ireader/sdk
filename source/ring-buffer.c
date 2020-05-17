@@ -104,9 +104,8 @@ int ring_buffer_resize(struct ring_buffer_t* rb, size_t capacity)
 	if (capacity < rb->capacity && rb->offset + rb->count > capacity)
 	{
 		// move toward to FRONT (|<--|)
-		extend = rb->capacity - capacity;
 		offset = rb->offset - extend;
-		memmove(rb->ptr + offset, rb->ptr + rb->offset, extend);
+		memmove(rb->ptr + offset, rb->ptr + rb->offset, rb->capacity - rb->offset);
 		rb->offset = offset;
 	}
 
@@ -117,9 +116,8 @@ int ring_buffer_resize(struct ring_buffer_t* rb, size_t capacity)
 	if (capacity > rb->capacity && rb->offset + rb->count > rb->capacity)
 	{
 		// move toward to TAIL (|-->|)
-		extend = capacity - rb->capacity;
 		offset = rb->offset + extend;
-		memmove(rb->ptr + offset, rb->ptr + rb->offset, extend);
+		memmove(rb->ptr + offset, rb->ptr + rb->offset, rb->capacity - rb->offset);
 		rb->offset = offset;
 	}
 
