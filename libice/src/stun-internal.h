@@ -44,6 +44,7 @@ struct stun_request_t
 	int timeout;
 	int elapsed;
 	int interval;
+	int authtimes; // avoid too many auth failed
 	void* timer;
 	locker_t locker;
 	stun_agent_t* stun;

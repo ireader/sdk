@@ -134,9 +134,12 @@ static inline int ice_candidate_pair_compare(const struct ice_candidate_pair_t* 
 
 static inline int ice_candidate_pair_compare_addr(const struct ice_candidate_pair_t* pair, const struct stun_address_t* addr)
 {
-	if (0 == socket_addr_compare((const struct sockaddr*)&pair->local.host, (const struct sockaddr*)&addr->host)
-		&& 0 == socket_addr_compare((const struct sockaddr*)&pair->remote.host, (const struct sockaddr*)&addr->peer))
+	if (0 == socket_addr_compare((const struct sockaddr*) & pair->local.host, (const struct sockaddr*) & addr->host)
+		&& 0 == socket_addr_compare((const struct sockaddr*) & pair->remote.host, (const struct sockaddr*) & addr->peer)
+		&& (ICE_CANDIDATE_RELAYED != pair->local.type || 0 == socket_addr_compare((const struct sockaddr*) & pair->local.addr, (const struct sockaddr*)&addr->relay)))
+	{
 		return 0;
+	}
 	return -1;
 }
 
