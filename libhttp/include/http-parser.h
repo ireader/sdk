@@ -1,6 +1,7 @@
 #ifndef _http_parser_h_
 #define _http_parser_h_
 
+#include <stdint.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -58,7 +59,7 @@ const char* http_get_header_by_name(const http_parser_t* parser, const char* nam
 /// @return 0-ok, <0-don't have header
 int http_get_header_by_name2(const http_parser_t* parser, const char* name, int *value);
 /// @return >=0-content-length, <0-don't have content-length header
-int http_get_content_length(const http_parser_t* parser);
+int64_t http_get_content_length(const http_parser_t* parser);
 /// @return 1-close, 0-keep-alive, <0-don't have connection header
 int http_get_connection(const http_parser_t* parser);
 /// @return Content-Type, NULL-don't have this header
