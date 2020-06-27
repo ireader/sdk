@@ -31,9 +31,6 @@ struct http_transport_t
     
     /// @return 0-ok, other-error
     int (*send)(void* c, const char* req, int nreq, const void* msg, int bytes, void (*onsend)(void* param, int code), void* param);
-
-    /// @return 0-error, other-connection handle(socket)
-    uintptr_t (*getfd)(void* c);
 };
 
 /// default http transport(same as http_transport_tcp with static tcp transport)
@@ -41,8 +38,9 @@ struct http_transport_t* http_transport_default(void);
 /// default aio transport(same as http_transport_tcp_aio with static aio transport)
 struct http_transport_t* http_transport_default_aio(void);
 
-int http_transport_tcp(struct http_transport_t* tcp);
-int http_transport_tcp_aio(struct http_transport_t* aio);
+enum { HTTP_TRANSPORT_POLL_READ = 0x01, HTTP_TRANSPORT_POLL_WRITE = 0x02 };
+/// default http transport + user poll
+struct http_transport_t* http_transport_user_poll(int (*poll)(void* param, void* c, uintptr_t fd, int event, int timeout, void (*onevent)(void* c, int event)), void* param);
 
 int http_transport_release(struct http_transport_t* t);
 

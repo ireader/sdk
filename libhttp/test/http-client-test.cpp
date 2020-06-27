@@ -6,7 +6,7 @@ static void http_client_test_onbody(void* param, int code, void* msg, size_t len
 {
 }
 
-static void http_client_test_onreply(void* param, int code, int http_status_code, int http_content_length)
+static void http_client_test_onreply(void* param, int code, int http_status_code, int64_t http_content_length)
 {
     static char buf[2*1024*1024];
 	http_client_t* http = (http_client_t*)param;

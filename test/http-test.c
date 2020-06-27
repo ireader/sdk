@@ -9,6 +9,7 @@ void http_header_content_type_test(void);
 void http_header_range_test(void);
 void http_client_test(void);
 void http_client_test2(void);
+void http_client_test3(void);
 
 void http_test(void)
 {
@@ -21,6 +22,8 @@ void http_test(void)
 
 	http_parser_test();
 
+	http_client_test3();
 	http_client_test();
 	http_client_test2();
+	http_client_test3();
 }

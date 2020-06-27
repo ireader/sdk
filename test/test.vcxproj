@@ -103,6 +103,7 @@
     <ClCompile Include="..\libhttp\test\benchmark.c" />
     <ClCompile Include="..\libhttp\test\http-client-test.cpp" />
     <ClCompile Include="..\libhttp\test\http-client-test2.cpp" />
+    <ClCompile Include="..\libhttp\test\http-client-test3.cpp" />
     <ClCompile Include="..\libhttp\test\http-list-dir.cpp" />
     <ClCompile Include="..\libhttp\test\http-parser-test.c" />
     <ClCompile Include="..\libhttp\test\http-server-test.cpp" />

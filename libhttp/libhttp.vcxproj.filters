@@ -81,6 +81,9 @@
     <ClCompile Include="source\http-transport-pool.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\http-client-connection-poll.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\http-client.h">

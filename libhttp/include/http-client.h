@@ -1,6 +1,7 @@
 #ifndef _http_client_h_
 #define _http_client_h_
 
+#include <stdint.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -22,7 +23,7 @@ struct http_header_t
 /// @param[in] code 0-ok, other-error
 /// @param[in] http_status_code http response status code
 /// @param[in] http_content_length -1-chunked, >=0-content length, other-undefined
-typedef void (*http_client_onresponse)(void *param, int code, int http_status_code, int http_content_length);
+typedef void (*http_client_onresponse)(void *param, int code, int http_status_code, int64_t http_content_length);
 
 /// create HTTP client
 /// @param[in] transport NULL use default transport
@@ -33,8 +34,8 @@ typedef void (*http_client_onresponse)(void *param, int code, int http_status_co
 http_client_t *http_client_create(struct http_transport_t* transport, const char* scheme, const char* ip, unsigned short port);
 void http_client_destroy(http_client_t* http);
 
-/// @return 0-error, other-connection handle(socket)
-uintptr_t http_client_getfd(http_client_t* http);
+/// @return http transport connection(session)
+void* http_client_getconnection(http_client_t* http);
 
 /// HTTP socket timeout
 /// @param[in] http HTTP handler created by http_client_create

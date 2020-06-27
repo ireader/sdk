@@ -53,5 +53,13 @@ int http_transport_pool_check(void* priv)
 
 int http_transport_release(struct http_transport_t* t)
 {
-    return http_transport_pool_release(t->priv);
+    if (t == http_transport_default() || t == http_transport_default_aio())
+    {
+        //http_transport_pool_release(t->priv);
+        return 0; // nothing to do
+    }
+    
+    //http_transport_pool_release(t->priv);
+    free(t);
+    return 0;
 }

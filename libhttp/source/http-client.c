@@ -164,7 +164,7 @@ void http_client_handle(struct http_client_t *http, int code)
     
 	locker_lock(&http->locker);
 	if(http->onreply)
-        http->onreply(http->cbparam, code, http_get_status_code(http->parser), http_get_content_length(http->parser));
+        http->onreply(http->cbparam, code, 0 == code ? http_get_status_code(http->parser) : 0, 0==code ? http_get_content_length(http->parser) : 0);
 	locker_unlock(&http->locker);
 
 	http_client_release(http);
@@ -447,11 +447,9 @@ void http_client_release(struct http_client_t* http)
 	}
 }
 
-uintptr_t http_client_getfd(http_client_t* http)
+void* http_client_getconnection(http_client_t* http)
 {
-    if (http->connection && http->transport)
-        return http->transport->getfd(http->connection);
-    return 0;
+    return http->connection;
 }
 
 void http_client_set_timeout(struct http_client_t* http, int conn, int recv, int send)

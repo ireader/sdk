@@ -134,6 +134,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\http-client-connection-aio.c" />
+    <ClCompile Include="source\http-client-connection-poll.c" />
     <ClCompile Include="source\http-client-connection.c" />
     <ClCompile Include="source\http-client.c" />
     <ClCompile Include="source\http-cookie.c" />

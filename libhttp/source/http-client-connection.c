@@ -221,7 +221,6 @@ int http_transport_tcp(struct http_transport_t* t)
     t->close = http_tcp_transport_close;
     t->recv = http_tcp_transport_recv;
     t->send = http_tcp_transport_send;
-    t->getfd = http_tcp_transport_getfd;
     t->settimeout = http_tcp_transport_timeout;
     return 0;
 }
@@ -229,10 +228,18 @@ int http_transport_tcp(struct http_transport_t* t)
 static onetime_t s_once;
 static struct http_transport_t s_default;
 static struct http_transport_t s_default_aio;
-void http_transport_default_init(void)
+int http_transport_tcp_aio_init(struct http_transport_t* t);
+static void http_transport_default_init(void)
 {
+#if defined(__OPENSSL__)
+    SSL_library_init();
+    OpenSSL_add_all_algorithms();
+    SSL_load_error_strings();
+    ERR_load_BIO_strings();
+    ERR_load_crypto_strings();
+#endif
     http_transport_tcp(&s_default);
-    http_transport_tcp_aio(&s_default_aio);
+    http_transport_tcp_aio_init(&s_default_aio);
 }
 
 struct http_transport_t* http_transport_default(void)
@@ -246,3 +253,5 @@ struct http_transport_t* http_transport_default_aio(void)
     onetime_exec(&s_once, http_transport_default_init);
     return &s_default_aio;
 }
+
+int http_transport_tcp_poll_init(struct http_transport_t* t);

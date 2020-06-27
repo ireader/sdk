@@ -83,7 +83,7 @@ static int STDCALL http_server_thread(void* param)
 	return 0;
 }
 
-static void http_client_test_onreply(void* param, int code, int http_status_code, int http_content_length)
+static void http_client_test_onreply(void* param, int code, int http_status_code, int64_t http_content_length)
 {
 	http_client_t* http = (http_client_t*)param;
 	if(0 == code)
@@ -98,7 +98,7 @@ static void http_client_test_onreply(void* param, int code, int http_status_code
 	}
 }
 
-static void http_client_test_onreply2(void* param, int code, int http_status_code, int http_content_length)
+static void http_client_test_onreply2(void* param, int code, int http_status_code, int64_t http_content_length)
 {
 	static int i = 0;
 	http_client_t* http = (http_client_t*)param;

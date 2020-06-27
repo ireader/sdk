@@ -124,14 +124,6 @@ static int http_aio_transport_send(void* c, const char* req, int nreq, const voi
 	return 0;
 }
 
-
-static uintptr_t http_aio_transport_getfd(void* c)
-{
-    struct http_aio_transport_t* aio;
-    aio = (struct http_aio_transport_t*)c;
-    return 0; //error
-}
-
 static void http_aio_transport_timeout(void* c, int conn, int recv, int send)
 {
     struct http_aio_transport_t* aio;
@@ -139,7 +131,7 @@ static void http_aio_transport_timeout(void* c, int conn, int recv, int send)
     aio_client_settimeout(aio->client, conn, recv, send);
 }
 
-int http_transport_tcp_aio(struct http_transport_t* t)
+int http_transport_tcp_aio_init(struct http_transport_t* t)
 {
 	struct http_transport_pool_t* pool;
     pool = (struct http_transport_pool_t*)calloc(1, sizeof(*pool));
@@ -159,7 +151,6 @@ int http_transport_tcp_aio(struct http_transport_t* t)
     t->close = http_aio_transport_close;
     t->recv = http_aio_transport_recv;
     t->send = http_aio_transport_send;
-    t->getfd = http_aio_transport_getfd;
     t->settimeout = http_aio_transport_timeout;
     return 0;
 }
