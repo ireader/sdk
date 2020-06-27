@@ -121,15 +121,12 @@ static inline const char* path_basename(const char* fullname)
 	return p ? p+1 : fullname;
 }
 
-static inline int path_dirname(const char* fullname, char* dir)
+static inline int path_dirname(const char* fullname)
 {
 	const char* p = path_basename(fullname);
 	if(p == fullname)
-		return -1; // don't valid path name
-
-	memmove(dir, fullname, p-fullname);
-	dir[p-fullname - (p-fullname>1? 1 : 0)] = 0;
-	return 0;
+		return 0; // don't valid path name
+	return p - 1 - fullname; // skip /
 }
 
 /// path_concat("a/./b/../c.txt", "e:\dir\") => e:\dir\a\c.txt
