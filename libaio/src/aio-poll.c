@@ -257,7 +257,7 @@ static int aio_poll_do(struct aio_poll_socket_t* s[], int n, int timeout)
 	}
 
 	r = poll(fds, n, timeout);
-	while (-1 == r && EINTR == errno)
+	while (-1 == r && (EINTR == errno || EAGAIN == errno))
 		r = poll(fds, n, timeout);
 
 	for (r = i = 0; i < n && i < 64; i++)

@@ -55,6 +55,9 @@ static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t
 static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* vec, IN int n, IN int flags, OUT struct sockaddr* peer, OUT socklen_t* peerlen, OUT struct sockaddr* local, OUT socklen_t* locallen);
 static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t* vec, IN int n, IN int flags, IN const struct sockaddr* peer, IN socklen_t peerlen, IN const struct sockaddr* local, IN socklen_t locallen);
 
+static inline int64_t socket_poll_read(socket_t s[], int n, int timeout);
+static inline int64_t socket_poll_readv(int timeout, int n, ...);
+
 //////////////////////////////////////////////////////////////////////////
 /// socket connect
 //////////////////////////////////////////////////////////////////////////
@@ -883,7 +886,7 @@ static inline int64_t socket_poll_read(socket_t s[], int n, int timeout)
 	}
 
 	r = poll(fds, j, timeout);
-	while (-1 == r && EINTR == errno)
+	while (-1 == r && (EINTR == errno || EAGAIN == errno))
 		r = poll(fds, j, timeout);
 
 	for (r = i = 0; i < n && i < 64; i++)

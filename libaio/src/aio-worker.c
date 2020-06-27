@@ -14,7 +14,7 @@ static int STDCALL aio_worker(void* param)
 {
 	int i = 0, r = 0;
 	int idx = (int)(intptr_t)param;
-	while (s_running && (r >= 0 || errno == EINTR)) // ignore epoll EINTR
+	while (s_running && (r >= 0 || EINTR == errno || EAGAIN == errno)) // ignore epoll EINTR
 	{
 		r = aio_socket_process(idx ? 2000 : 64);
 		if (0 == idx && (0 == r || i++ > 100))

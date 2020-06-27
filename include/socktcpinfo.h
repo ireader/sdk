@@ -1,5 +1,5 @@
-#ifndef _sockutil_h_
-#define _sockutil_h_
+#ifndef _socktcpinfo_h_
+#define _socktcpinfo_h_
 
 #include "sys/sock.h"
 #include <stdint.h>

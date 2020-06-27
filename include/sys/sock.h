@@ -424,7 +424,7 @@ static inline int socket_select(IN int n, IN fd_set* rfds, IN fd_set* wfds, IN f
 	return select(n, rfds, wfds, efds, timeout);
 #else
 	int r = select(n, rfds, wfds, efds, timeout);
-	while(-1 == r && EINTR == errno)
+	while(-1 == r && (EINTR == errno || EAGAIN == errno))
 		r = select(n, rfds, wfds, efds, timeout);
 	return r;
 #endif
@@ -461,7 +461,7 @@ static inline int socket_select_read(IN socket_t sock, IN int timeout)
 	fds.revents = 0;
 
 	r = poll(&fds, 1, timeout);
-	while(-1 == r && EINTR == errno)
+	while(-1 == r && (EINTR == errno || EAGAIN == errno))
 		r = poll(&fds, 1, timeout);
 	return r;
 #endif
@@ -490,7 +490,7 @@ static inline int socket_select_write(IN socket_t sock, IN int timeout)
 	fds.revents = 0;
 
 	r = poll(&fds, 1, timeout);
-	while(-1 == r && EINTR == errno)
+	while(-1 == r && (EINTR == errno || EAGAIN == errno))
 		r = poll(&fds, 1, timeout);
 	return r;
 #endif
@@ -530,7 +530,7 @@ static inline int socket_select_connect(IN socket_t sock, IN int timeout)
 		r = getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&errcode, &errlen);
 		return 0 == r ? errcode : WSAGetLastError();
 	}
-	return 0 == r ? WSAETIMEDOUT : WSAGetLastError();
+	return 0 == r ? ETIMEDOUT /*WSAETIMEDOUT*/ : WSAGetLastError();
 #else
 	// https://linux.die.net/man/2/connect
 	// The socket is nonblocking and the connection cannot be
