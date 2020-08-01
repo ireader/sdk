@@ -227,7 +227,7 @@ static int ice_add_local_candidate(struct ice_agent_t* ice, int stream, int comp
 
 static int ice_add_remote_candidates(struct ice_agent_t* ice, const struct rtsp_media_t* avmedia, int count)
 {
-	int i, j, total;
+	int r, i, j, total;
 	socklen_t len;
 	struct ice_candidate_t c;
 	const struct rtsp_media_t *m;
@@ -246,7 +246,9 @@ static int ice_add_remote_candidates(struct ice_agent_t* ice, const struct rtsp_
 			snprintf(c.foundation, sizeof(c.foundation), "%s", m->ice.candidates[j]->foundation);
 			socket_addr_from(&c.addr, &len, m->ice.candidates[j]->address, m->ice.candidates[j]->port);
 			memcpy(&c.host, &c.addr, sizeof(struct sockaddr_storage)); // remote candidate c.host = c.addr
-			if(0 == ice_agent_add_remote_candidate(ice, &c))
+			r = ice_agent_add_remote_candidate(ice, &c);
+			//assert(0 == r);
+			if(0 == r)
 				total += 1;
 
 			//char attr[128] = { 0 };

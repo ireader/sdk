@@ -196,6 +196,13 @@ static int http_poll_transport_onconnect(void* c, int event)
             if (!tcp->ctx)
                 return -1;
 
+#if defined(__OPENSSL_VERIFY__)
+            // enable peer verify
+            SSL_CTX_set_options(tcp->ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+            SSL_CTX_set_verify(tcp->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+            SSL_CTX_set_default_verify_paths(tcp->ctx);
+#endif
+
             tcp->ssl = SSL_new(tcp->ctx);
             SSL_set_fd(tcp->ssl, tcp->socket);
             SSL_set_connect_state(tcp->ssl);
