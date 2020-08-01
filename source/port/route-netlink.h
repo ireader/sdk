@@ -145,8 +145,8 @@ static int netlink_getgateway(socket_t s, const struct sockaddr* addr)
 		 * corresponds to a single routing table entry.
 		 */
 		rt = (struct rtmsg *)NLMSG_DATA(hdr);
-		if (rt->rtm_table != RT_TABLE_MAIN)
-			continue;
+		//if (rt->rtm_table != RT_TABLE_MAIN)
+		//	continue;
 
 		/* Parse all the attributes for a single routing table entry. */
 		attrlen = RTM_PAYLOAD(hdr);
@@ -239,8 +239,8 @@ static int netlink_getaddr(socket_t s, int ifidx, int family, struct sockaddr_st
 			ifa = (struct ifaddrmsg *)NLMSG_DATA(hdr);
 			if (ifa->ifa_family != family || (int)ifa->ifa_index != ifidx)
 				continue;
-			if (ifa->ifa_scope != RT_SCOPE_UNIVERSE)
-				continue;
+			//if (ifa->ifa_scope != RT_SCOPE_UNIVERSE)
+			//	continue;
 
 			/* Parse all the attributes for a single interface entry. */
 			attr = IFA_RTA(ifa);

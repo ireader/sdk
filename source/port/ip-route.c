@@ -33,48 +33,64 @@
 #include <errno.h>
 
 #if defined(OS_WINDOWS)
-int ip_route_get(const char* destination, char ip[40])
+int ip_route_get(const char* destination, char ip[64])
 {
-	DWORD index = ~(-1);
-	struct sockaddr_in addrin;
-	MIB_IPADDRTABLE *table = NULL;
-	ULONG dwSize = 0;
-	DWORD errcode = 0;
-	DWORD i = 0;
-
-	addrin.sin_family = AF_INET;
-	addrin.sin_port = htons(0);
-	inet_pton(AF_INET, destination, &addrin.sin_addr);
-	if(NO_ERROR != GetBestInterfaceEx((struct sockaddr*)&addrin, &index))
-		return -1;
-
-	errcode = GetIpAddrTable( table, &dwSize, 0 );
-	assert(ERROR_INSUFFICIENT_BUFFER == errcode);
-
-	table = (MIB_IPADDRTABLE*)malloc(dwSize);
-	errcode = GetIpAddrTable( table, &dwSize, 0 );
-	if(!table || NO_ERROR != errcode)
+	int r;
+	DWORD index;
+	DWORD dwRetVal;
+	ULONG ulOutBufLen;
+	struct addrinfo* ai;
+	PIP_ADAPTER_UNICAST_ADDRESS_LH addr;
+	PIP_ADAPTER_ADDRESSES pAdapter, pAdapterInfo;
+		
+	r = getaddrinfo(destination, NULL, NULL, &ai);
+	if (0 != r)
+		return r;
+	
+	if (NO_ERROR != GetBestInterfaceEx(ai->ai_addr, &index))
 	{
-		free(table);
+		freeaddrinfo(ai);
 		return -1;
 	}
 
-	ip[0] = '\0';
-	for(i = 0; i < table->dwNumEntries; i++)
+	ulOutBufLen = sizeof(IP_ADAPTER_ADDRESSES);
+	pAdapterInfo = (PIP_ADAPTER_ADDRESSES)malloc(ulOutBufLen);
+	if (ERROR_BUFFER_OVERFLOW == GetAdaptersAddresses(ai->ai_family, 0, NULL, pAdapterInfo, &ulOutBufLen))
 	{
-		if(table->table[i].dwIndex == index)
+		free(pAdapterInfo);
+		pAdapterInfo = (PIP_ADAPTER_ADDRESSES)malloc(ulOutBufLen);
+	}
+
+	ip[0] = 0;
+	if ((dwRetVal = GetAdaptersAddresses(ai->ai_family, 0, NULL, pAdapterInfo, &ulOutBufLen)) == ERROR_SUCCESS)
+	{
+		for (pAdapter = pAdapterInfo; 0 == ip[0] && pAdapter; pAdapter = pAdapter->Next)
 		{
-			snprintf(ip, 40, "%d.%d.%d.%d", 
-				(table->table[i].dwAddr >> 0) & 0xFF,
-				(table->table[i].dwAddr >> 8) & 0xFF,
-				(table->table[i].dwAddr >> 16) & 0xFF,
-				(table->table[i].dwAddr >> 24) & 0xFF);
-			break;
+			if (IfOperStatusUp != pAdapter->OperStatus || (pAdapter->IfIndex != index && pAdapter->Ipv6IfIndex != index))
+				continue;
+			//if (IF_TYPE_ETHERNET_CSMACD != pAdapter->IfType && IF_TYPE_IEEE80211 != pAdapter->IfType && IF_TYPE_SOFTWARE_LOOPBACK != pAdapter->IfType)
+			//	continue;
+
+			for (addr = pAdapter->FirstUnicastAddress; 0 == ip[0] && addr; addr = addr->Next)
+			{
+				if (addr->Address.lpSockaddr->sa_family != ai->ai_family)
+					continue;
+
+				if (AF_INET == addr->Address.lpSockaddr->sa_family)
+				{
+					inet_ntop(AF_INET, &((struct sockaddr_in*)addr->Address.lpSockaddr)->sin_addr, ip, 40);
+				}
+				else if (AF_INET6 == addr->Address.lpSockaddr->sa_family)
+				{
+					inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr->Address.lpSockaddr)->sin6_addr, ip, 64);
+				}
+			}
 		}
 	}
 
-	free(table);
-	return 0==ip[0] ? -1 : 0;
+	freeaddrinfo(ai);
+	free(pAdapterInfo);
+	return dwRetVal == ERROR_SUCCESS ? (ip[0] ? 0 : -1) : -(int)dwRetVal;
 }
 #else
 

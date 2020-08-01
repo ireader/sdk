@@ -37,14 +37,20 @@ static void ip_valid_test(void)
 
 void ip_route_test(void)
 {
+	int i;
 	char ip[40] = {0};
+	const char* remotes[] = { "192.168.12.114", "127.0.0.1", "::1", "::ffff:127.0.0.1" };
 
 	ip_valid_test();
 	ip_local(ip);
 	printf("ip: %s\n", ip);
 
-	ip_route_get("192.168.12.114", ip);
-	printf("ip route(192.168.12.114) => %s\n", ip);
+	for (i = 0; i < sizeof(remotes) / sizeof(remotes[0]); i++)
+	{
+		memset(ip, 0, sizeof(ip));
+		ip_route_get(remotes[i], ip);
+		printf("ip route(%s) => %s\n", remotes[i], ip);
+	}
 
 	// don't support DNS
 	//ip_route_get("www.baidu.com", ip);
