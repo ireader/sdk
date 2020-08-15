@@ -121,7 +121,7 @@ static inline uint64_t system_time(void)
 	FILETIME ft;
 	GetSystemTimeAsFileTime(&ft);
 	t = (uint64_t)ft.dwHighDateTime << 32 | ft.dwLowDateTime;
-	return t / 10 - 11644473600000000; /* Jan 1, 1601 */
+	return t / 10000 - 11644473600000ULL; /* Jan 1, 1601 */
 #elif defined(OS_MAC)
 	uint64_t tick;
 	mach_timebase_info_data_t timebase;
