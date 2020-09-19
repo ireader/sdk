@@ -230,26 +230,25 @@ static inline int path_isabsolute(const char* path, size_t n)
 
 /// path_resolve("abc.txt", "/path/to/dir") ==> /path/to/dir/abc.txt
 /// @return 0-ok with non-absolute directory, 1-ok with absolute directory, <0-error
-static inline int path_resolve(char* buf, size_t len, const char* path, const char* base)
+static inline int path_resolve(char* buf, size_t len, const char* path, const char* base, size_t nbase)
 {
     int r;
-    size_t n, m;
+    size_t n;
 
     n = path ? strlen(path) : 0;
-    m = base ? strlen(base) : 0;
     r = path_isabsolute(path, n);
-    if (m > 0 && 0 == r)
+    if (nbase > 0 && 0 == r)
     {
-        r = path_isabsolute(base, m);
-        while (m > 0 && ('/' == base[m - 1] || '\\' == base[m - 1]))
-            m--; // filter last /
+        r = path_isabsolute(base, nbase);
+        while (nbase > 0 && ('/' == base[nbase - 1] || '\\' == base[nbase - 1]))
+            nbase--; // filter last /
 
-        if (m + n + 1 /* '/' */ + 1 /* '\0' */ > len)
+        if (nbase + n + 1 /* '/' */ + 1 /* '\0' */ > len)
             return -1;
 
-        memmove(buf + m + 1, path, n + 1); // with '\0'
-        memmove(buf, base, m);
-        buf[m] = '/'; // TODO: windows \ separator
+        memmove(buf + nbase + 1, path, n + 1); // with '\0'
+        memmove(buf, base, nbase);
+        buf[nbase] = '/'; // TODO: windows \ separator
         return r;
     }
     else
@@ -270,13 +269,13 @@ static inline int path_resolve2(char* buf, size_t len, const char* path, const c
 {
     int r;
     va_list va;
-    r = path_resolve(buf, len, path, base1);
+    r = path_resolve(buf, len, path, base1, base1 ? strlen(base1) : 0);
 
     va_start(va, base1);
     while (0 == r)
     {
         base1 = va_arg(va, const char*);
-        r = path_resolve(buf, len, buf, base1); // memory safe with buf
+        r = path_resolve(buf, len, buf, base1, base1 ? strlen(base1) : 0); // memory safe with buf
     }
     va_end(va);
 
