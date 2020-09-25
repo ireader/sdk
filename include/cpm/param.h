@@ -102,4 +102,8 @@ inline T __CEIL(const T& num, const T& demo)
 #define BOUND(v, min, max) MIN(MAX(v, min), max)
 #endif
 
+#ifndef ALIGN
+#define ALIGN(v, a) (((v)+(a)-1)&~((a)-1))
+#endif
+
 #endif /* !_cpm_param_h_ */
