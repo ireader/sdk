@@ -702,7 +702,7 @@ static int http_parse_header_line(struct http_parser_t *http, const char* data, 
 			assert('\n' == c);
 
 			// copy header line
-			if (0 != http_rawdata(http, data, i))
+			if (0 != http_rawdata(http, data, i+1))
 				return -ENOMEM;
 
 			if (0 == http->header.value.pos)
