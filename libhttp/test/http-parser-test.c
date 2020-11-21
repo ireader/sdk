@@ -221,3 +221,41 @@ void http_parser_test(void)
 	for (i = 0; i < 10000; i++)
 		sip_request_test2();
 }
+
+static void http_parser_test_ondata(void* param, const void* data, int len)
+{
+	fwrite(data, 1, len, (FILE*)param);
+}
+
+void http_parser_test2(const char* responseFile)
+{
+	int r;
+	size_t n;
+	int major, minor;
+	char protocol[64];
+	char buffer[2 * 1024];
+	http_parser_t* parser;
+
+	FILE* rfp = fopen(responseFile, "rb");
+	FILE* wfp = fopen("1.raw", "wb");
+
+	parser = http_parser_create(HTTP_PARSER_RESPONSE, http_parser_test_ondata, wfp);
+	n = fread(buffer, 1, sizeof(buffer), rfp);
+	while (n > 0)
+	{
+		r = http_parser_input(parser, buffer, &n);
+		assert(r >= 0 && 0 == n);
+		if (r == 0 || r == 2)
+		{
+			assert(0 == http_get_version(parser, protocol, &major, &minor) && 1 == major && 1 == minor && 0 == strcmp("HTTP", protocol));
+			assert(200 == http_get_status_code(parser));
+			assert(0 == strcmp(http_get_header_by_name(parser, "Transfer-Encoding"), "chunked"));
+			assert(0 == strcmp(http_get_header_by_name(parser, "Connection"), "close"));
+		}
+		n = fread(buffer, 1, sizeof(buffer), rfp);
+	}
+	http_parser_destroy(parser);
+
+	fclose(rfp);
+	fclose(wfp);
+}

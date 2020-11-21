@@ -265,6 +265,7 @@ void thread_pool_destroy(thread_pool_t pool)
 
 	event_destroy(&ctx->event);
 	locker_destroy(&ctx->locker);
+	free(ctx);
 }
 
 int thread_pool_threads_count(thread_pool_t pool)
