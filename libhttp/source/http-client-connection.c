@@ -154,7 +154,7 @@ static int http_tcp_transport_send(void* c, const char* req, int nreq, const voi
         int i, n;
         for (r = i = 0; i < 2; i++)
         {
-            n = SSL_write(tcp->ssl, (void*)vec[i].buf, vec[i].len);
+            n = SSL_write(tcp->ssl, (void*)vec[i].iov_base, vec[i].iov_len);
             if (n < 0)
             {
                 r = n;
@@ -162,7 +162,7 @@ static int http_tcp_transport_send(void* c, const char* req, int nreq, const voi
             }
 
             r += n;
-            if (n != (int)vec[i].len)
+            if (n != (int)vec[i].iov_len)
                 break;
         }
     }

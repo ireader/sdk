@@ -26,6 +26,9 @@ static void http_session_ondestroy(void* param)
 	session = (struct http_session_t *)param;
 	session->transport = NULL;
 
+	if (session->ws && session->ws->handler.ondestroy)
+		session->ws->handler.ondestroy(session->ws->param);
+
 	if (session->parser)
 	{
 		http_parser_destroy(session->parser);
@@ -67,35 +70,47 @@ static void http_session_onrecv(void* param, int code, size_t bytes)
 	session = (struct http_session_t *)param;
 	session->remain = 0 == code ? (int)bytes : 0;
 
-	if (0 == code)
+	if (!session->ws)
 	{
-		code = http_parser_input(session->parser, session->data, &session->remain);
 		if (0 == code)
 		{
-			// wait for next recv
-			atomic_cas_ptr(&session->rlocker, session, NULL);
-
-			// http pipeline remain data
-			assert(bytes > session->remain);
-			if (session->remain > 0 && bytes > session->remain)
-				memmove(session->data, session->data + (bytes - session->remain), session->remain);
-
-			// clear for save user-defined header
-			http_session_reset(session);
-
-			// call
-			// user must reply(send/send_vec/send_file) in handle
-			if (session->handler)
+			code = http_parser_input(session->parser, session->data, &session->remain);
+			if (0 == code)
 			{
-				const char* uri = http_get_request_uri(session->parser);
-				const char* method = http_get_request_method(session->parser);
-				session->handler(session->param, session, method, uri);
+				// wait for next recv
+				atomic_cas_ptr(&session->rlocker, session, NULL);
+
+				// http pipeline remain data
+				assert(bytes > session->remain);
+				if (session->remain > 0 && bytes > session->remain)
+					memmove(session->data, session->data + (bytes - session->remain), session->remain);
+
+				// clear for save user-defined header
+				http_session_reset(session);
+
+				// call
+				// user must reply(send/send_vec/send_file) in handle
+				if (session->handler)
+				{
+					const char* uri = http_get_request_uri(session->parser);
+					const char* method = http_get_request_method(session->parser);
+					session->handler(session->param, session, method, uri);
+				}
+			}
+			else if (code > 0)
+			{
+				// recv more data
+				assert(0 == session->remain);
+				code = aio_tcp_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER);
 			}
 		}
-		else if (code > 0)
+	}
+	else if(0 == code) // websocket
+	{
+		code = websocket_parser_input(&session->ws->parser, (uint8_t*)session->data, session->remain, session->ws->handler.ondata, session->ws->param);
+		if (0 == code)
 		{
 			// recv more data
-			assert(0 == session->remain);
 			code = aio_tcp_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER);
 		}
 	}
@@ -111,9 +126,11 @@ static void http_session_onsend(void* param, int code, size_t bytes)
 {
 	int r = 0;
 	struct http_session_t *session;
+	struct http_websocket_t* websocket;
 	session = (struct http_session_t*)param;
 	session->vec_count = 0;
 	session->vec = NULL;
+	websocket = session->ws; // HACK: check before onsend callback
 	if (session->onsend)
 	{
 		r = session->onsend(session->onsendparam, code, bytes);
@@ -121,7 +138,7 @@ static void http_session_onsend(void* param, int code, size_t bytes)
 			return; // HACK: has more data to send(such as sendfile)
 	}
 
-	if (0 == r && 0 == code)
+	if (0 == r && 0 == code && NULL == websocket /* exclude websocket mode */ )
 	{
 		http_parser_clear(session->parser); // reset parser
 		if (session->remain > 0)
@@ -180,6 +197,9 @@ int http_server_send_vec(struct http_session_t *session, int code, const struct 
 {
 	int r;
 	char content_length[32];
+	if (session->ws)
+		return -1; // websocket can't use http reply mode
+
 	r = http_session_data(session, vec, num);
 	if (r < 0) 
 		return r;
@@ -284,4 +304,43 @@ int http_session_add_header(struct http_session_t* session, const char* name, co
 		session->http_content_length_flag = 1;
 	}
 	return 0;
+}
+
+//struct http_websocket_t* http_server_websocket_upgrade(http_session_t* session, struct websocket_handler_t* handler, void* param)
+//{
+//	struct http_websocket_t* ws;
+//	ws = calloc(1, sizeof(*ws));
+//	if (!ws)
+//		return NULL;
+//
+//	session->ws = ws;
+//	ws->session = session;
+//	ws->param = param;
+//	memcpy(&ws->handler, handler, sizeof(ws->handler));
+//	return ws;
+//}
+
+int http_session_websocket_send_vec(struct http_websocket_t* ws, int opcode, const struct http_vec_t* vec, int num)
+{
+	int r;
+	r = http_session_data(ws->session, vec, num);
+	if (r < 0)
+		return r;
+
+	// Frame header
+	struct websocket_header_t wsh;
+	memset(&wsh, 0, sizeof(wsh));
+	wsh.fin = 1; // FIN
+	wsh.len = r;
+	wsh.opcode = opcode;
+	r = websocket_header_write(&wsh, (uint8_t*)ws->session->status_line, sizeof(ws->session->status_line));
+	assert(r > 0 && r <= 14); // WebSocket Frame Header max length
+
+	socket_setbufvec(ws->session->vec, 0, ws->session->status_line, r);
+	socket_setbufvec(ws->session->vec, 1, ws->session->status_line, 0); // hack
+	socket_setbufvec(ws->session->vec, 2, ws->session->status_line, 0); // hack
+
+	ws->session->onsend = ws->handler.onsend;
+	ws->session->onsendparam = ws->param;
+	return aio_tcp_transport_send_v(ws->session->transport, ws->session->vec, ws->session->vec_count);
 }

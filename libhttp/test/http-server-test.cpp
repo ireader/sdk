@@ -32,6 +32,29 @@ static int http_server_ondownload(void* /*http*/, http_session_t* session, const
 	return http_server_send(session, 404, "", 0, NULL, NULL);
 }
 
+static void* http_server_onwebsocket(void* param, http_websocket_t* ws, const char* path, const char* subprotocols)
+{
+	printf("WS onupgrade path: %s, subprotocols: %s\n", path ? path : "<nil>", subprotocols ? subprotocols : "<nil>");
+	return ws;
+}
+
+static void http_server_test_ws_ondestroy(void* param)
+{
+}
+
+static int http_server_test_ws_onsend(void* param, int code, size_t bytes)
+{
+	printf("WS send: %u\n", (unsigned int)bytes);
+	assert(0 == code);
+	return 0;
+}
+
+static int http_server_test_ws_ondata(void* param, int opcode, const void* data, size_t bytes, int flags)
+{
+	printf("WS opcode: %d, bytes: %u, flags: %x\n", opcode, (unsigned int)bytes, flags);
+	return websocket_send((struct http_websocket_t*)param, opcode, data, bytes);
+}
+
 extern "C" void http_server_test(const char* ip, int port)
 {
 	size_t num = 0;
@@ -42,6 +65,12 @@ extern "C" void http_server_test(const char* ip, int port)
 	http_server_t* http = http_server_create(ip, port);
 	http_server_set_handler(http, http_server_route, http);
 	http_server_addroute("/download/", http_server_ondownload);
+
+	struct websocket_handler_t handler;
+	handler.ondestroy = http_server_test_ws_ondestroy;
+	handler.onsend = http_server_test_ws_onsend;
+	handler.ondata = http_server_test_ws_ondata;
+	http_server_websocket_sethandler(&handler, http_server_onwebsocket, NULL);
 
 	// timeout process
 	while (aio_socket_process(10000) >= 0)

@@ -3,6 +3,7 @@
 
 #include "http-server.h"
 #include "http-parser.h"
+#include "http-websocket-internal.h"
 #include "aio-tcp-transport.h"
 #include "sys/sock.h"
 #include "sys/atomic.h"
@@ -39,6 +40,8 @@ struct http_session_t
 
 	http_server_onsend onsend;
 	void* onsendparam;
+
+	struct http_websocket_t* ws;
 };
 
 struct http_server_t

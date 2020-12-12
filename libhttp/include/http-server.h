@@ -1,6 +1,7 @@
 #ifndef _http_server_h_
 #define _http_server_h_
 
+#include "http-websocket.h"
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -9,12 +10,6 @@ extern "C" {
 
 typedef struct http_server_t http_server_t;
 typedef struct http_session_t http_session_t;
-
-struct http_vec_t
-{
-	const void* data;
-	size_t bytes;
-};
 
 /// @param[in] code HTTP status-code(200-OK, 301-Move Permanently, ...)
 /// @return 0-ok(continue read), other-close socket
@@ -104,6 +99,9 @@ typedef int (*http_server_handler)(void* param, http_session_t* session, const c
 /// @param[in] param user-defined parameter
 /// @return 0-ok, other-error
 int http_server_set_handler(http_server_t* http, http_server_handler handler, void* param);
+
+
+/// WebSocket
 
 #ifdef __cplusplus
 }

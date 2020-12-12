@@ -155,6 +155,8 @@
     <ClCompile Include="source\http-session.c" />
     <ClCompile Include="source\http-transport-pool.c" />
     <ClCompile Include="source\http-upload.c" />
+    <ClCompile Include="source\http-websocket-parser.c" />
+    <ClCompile Include="source\http-websocket.c" />
     <ClCompile Include="source\rfc822-datetime.c" />
   </ItemGroup>
   <ItemGroup>
@@ -172,9 +174,11 @@
     <ClInclude Include="include\http-server.h" />
     <ClInclude Include="include\http-transport.h" />
     <ClInclude Include="include\http-upload.h" />
+    <ClInclude Include="include\http-websocket.h" />
     <ClInclude Include="include\rfc822-datetime.h" />
     <ClInclude Include="source\http-client-internal.h" />
     <ClInclude Include="source\http-server-internal.h" />
+    <ClInclude Include="source\http-websocket-internal.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

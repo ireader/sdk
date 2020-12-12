@@ -66,7 +66,7 @@ static int http_poll_transport_dosend(struct http_poll_transport_t* tcp)
     {
         for (r = i = 0; i < tcp->send.count; i++)
         {
-            n = SSL_write(tcp->ssl, (void*)tcp->send.vec[i].buf, tcp->send.vec[i].len);
+            n = SSL_write(tcp->ssl, (void*)tcp->send.vec[i].iov_base, tcp->send.vec[i].iov_len);
             if (n < 0)
             {
                 r = n;
@@ -74,7 +74,7 @@ static int http_poll_transport_dosend(struct http_poll_transport_t* tcp)
             }
 
             r += n;
-            if (n != (int)tcp->send.vec[i].len)
+            if (n != (int)tcp->send.vec[i].iov_len)
                 break;
         }
     }
