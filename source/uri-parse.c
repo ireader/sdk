@@ -422,7 +422,7 @@ int uri_userinfo(const struct uri_t* uri, char* usr, int n1, char* pwd, int n2)
         sep = strchr(uri->userinfo, ':');
         if(sep)
         {
-            snprintf(usr, n1, "%*s", (int)(sep - uri->userinfo), uri->userinfo);
+            snprintf(usr, n1, "%.*s", (int)(sep - uri->userinfo), uri->userinfo);
             snprintf(pwd, n2, "%s", sep + 1);
         }
         else

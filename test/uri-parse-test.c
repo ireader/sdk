@@ -117,6 +117,8 @@ static void uri_standard()
 	assert(0 == strcmp("encoding=utf-8&font=small", uri->query));
 	assert(0 == strcmp("tag", uri->fragment));
 	assert(80 == uri->port);
+	char usr[64], pwd[64];
+	assert(0 == uri_userinfo(uri, usr, sizeof(usr), pwd, sizeof(pwd)) && 0 == strcmp(usr, "usr") && 0 == strcmp(pwd, "pwd"));
 	uri_free(uri);
 }
 
