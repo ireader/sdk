@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 
 enum { WEBSOCKET_FRAME_MAXLENGTH = 64 * 1024 }; // 64KB
 
