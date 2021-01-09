@@ -50,7 +50,7 @@ static int handler(void* param, http_session_t* session, const char* method, con
 {
 	const char* msg = (const char*)param;
 	(void)method, (void)path;
-	return http_server_send(session, 200, msg, strlen(msg), NULL, NULL);
+	return http_server_send(session, msg, strlen(msg), NULL, NULL);
 }
 
 void http_benchmark()
