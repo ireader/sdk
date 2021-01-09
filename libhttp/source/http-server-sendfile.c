@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdint.h>
 
 #define N_SENDFILE (2 * 1024 * 1024)
@@ -75,7 +76,7 @@ static void http_file_read(struct http_sendfile_t* sendfile)
 
     size = (sendfile->total - sendfile->sent) > (int64_t)sendfile->capacity ? sendfile->capacity : (size_t)(sendfile->total - sendfile->sent);
 
-    if (1 == sendfile->session->http_transfer_encoding_flag)
+    if (1 == sendfile->session->http_transfer_encoding_chunked_flag)
 	{
 		sendfile->bytes = fread(sendfile->ptr + 8, 1, size, sendfile->fp);
 		sendfile->sent += sendfile->bytes;
@@ -136,7 +137,7 @@ static int http_server_onsendfile(void* param, int code, size_t bytes)
 		}
 		
 		http_file_read(sendfile);
-		code = aio_tcp_transport_send(sendfile->session->transport, sendfile->ptr, sendfile->bytes);
+		code = http_server_send(sendfile->session, sendfile->ptr, sendfile->bytes, http_server_onsendfile, sendfile);
 	}
 
 	if(0 != code)
@@ -228,7 +229,8 @@ int http_server_sendfile(struct http_session_t* session, const char* localpath, 
 	if (0 != http_session_range(sendfile))
 	{
 		// 416 Requested Range Not Satisfiable
-		return http_server_send(sendfile->session, 416, NULL, 0, NULL, NULL);
+		http_server_set_status_code(sendfile->session, 416, NULL);
+		return http_server_send(sendfile->session, NULL, 0, NULL, NULL);
 	}
 
 	if (0 == session->http_content_length_flag)
@@ -239,5 +241,6 @@ int http_server_sendfile(struct http_session_t* session, const char* localpath, 
 
 	http_file_read(sendfile);
 
-	return http_server_send(session, sendfile->code, sendfile->ptr, sendfile->bytes, http_server_onsendfile, sendfile);
+	http_server_set_status_code(sendfile->session, sendfile->code, NULL);
+	return http_server_send(session, sendfile->ptr, sendfile->bytes, http_server_onsendfile, sendfile);
 }

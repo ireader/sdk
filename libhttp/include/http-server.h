@@ -4,6 +4,13 @@
 #include "http-websocket.h"
 #include <stddef.h>
 
+// HTTP Response
+// 1. [OPTIONAL] use http_server_set_status_code to set status code(default 200-OK)
+// 2. [OPTIONAL] use http_server_set_content_length to set content-lenght(default 0)
+// 3. [OPTIONAL] use http_server_set_content_type to set content-type(default don't set)
+// 4. [OPTIONAL] use http_server_set_header/http_server_set_header_int to set other header
+// 5. [MUST] use http_server_send/http_server_send_vec to send response
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12,7 +19,7 @@ typedef struct http_server_t http_server_t;
 typedef struct http_session_t http_session_t;
 
 /// @param[in] code HTTP status-code(200-OK, 301-Move Permanently, ...)
-/// @return 0-ok(continue read), other-close socket
+/// @return 0-ok(continue read), 1-more data to send, other-close socket
 typedef int (*http_server_onsend)(void* param, int code, size_t bytes);
 
 http_server_t* http_server_create(const char* ip, int port);
@@ -42,25 +49,22 @@ int http_server_get_client(http_session_t* session, char ip[65], unsigned short 
 
 // Response
 
-/// Reply
-/// @param[in] session handle callback session parameter
+/// Set HTTP response status code, default 200-OK
 /// @param[in] code HTTP status-code(200-OK, 301-Move Permanently, ...)
 /// @return 0-ok, other-error
-int http_server_send(http_session_t* session, int code, const void* data, size_t bytes, http_server_onsend onsend, void* param);
+int http_server_set_status_code(http_session_t* session, int code, const char* status);
 
-/// Reply
+/// Set response http header Content-Length field value(every reply must set it again), default 0
 /// @param[in] session handle callback session parameter
-/// @param[in] code HTTP status-code(200-OK, 301-Move Permanently, ...)
-/// @param[in] vec bundle array
-/// @param[in] num array elementary number
+/// @param[in] value content-length value, -1-don't auto set Content-Length header
 /// @return 0-ok, other-error
-int http_server_send_vec(http_session_t* session, int code, const struct http_vec_t* vec, int num, http_server_onsend onsend, void* param);
+int http_server_set_content_length(http_session_t* session, int64_t value);
 
-/// Reply a server side file(must be local regular file)
+/// Set response http header Content-Type field value(every reply must set it again)
 /// @param[in] session handle callback session parameter
-/// @param[in] localpath local regular file pathname
+/// @param[in] value content-type value
 /// @return 0-ok, other-error
-int http_server_sendfile(http_session_t* session, const char* localpath, http_server_onsend onsend, void* param);
+int http_server_set_content_type(http_session_t* session, const char* value);
 
 /// Set response http header field(every reply must set it again)
 /// @param[in] session handle callback session parameter
@@ -76,11 +80,23 @@ int http_server_set_header(http_session_t* session, const char* name, const char
 /// @return 0-ok, other-error
 int http_server_set_header_int(http_session_t* session, const char* name, int value);
 
-/// Set response http header Content-Type field value(every reply must set it again)
+/// Response Content(1 or more times)
 /// @param[in] session handle callback session parameter
-/// @param[in] value content-type value
 /// @return 0-ok, other-error
-int http_server_set_content_type(http_session_t* session, const char* value);
+int http_server_send(http_session_t* session, const void* data, size_t bytes, http_server_onsend onsend, void* param);
+
+/// Response Content(1 or more times)
+/// @param[in] session handle callback session parameter
+/// @param[in] vec bundle array
+/// @param[in] num array elementary number
+/// @return 0-ok, other-error
+int http_server_send_vec(http_session_t* session, const struct http_vec_t* vec, int num, http_server_onsend onsend, void* param);
+
+/// Reply a server side file(must be local regular file)
+/// @param[in] session handle callback session parameter
+/// @param[in] localpath local regular file pathname
+/// @return 0-ok, other-error
+int http_server_sendfile(http_session_t* session, const char* localpath, http_server_onsend onsend, void* param);
 
 
 // Handler

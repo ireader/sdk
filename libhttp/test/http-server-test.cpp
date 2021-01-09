@@ -29,7 +29,8 @@ static int http_server_ondownload(void* /*http*/, http_session_t* session, const
 		return http_server_sendfile(session, path, NULL, NULL);
 	}
 
-	return http_server_send(session, 404, "", 0, NULL, NULL);
+	http_server_set_status_code(session, 404, NULL);
+	return http_server_send(session, "", 0, NULL, NULL);
 }
 
 static void* http_server_onwebsocket(void* param, http_websocket_t* ws, const char* path, const char* subprotocols)

@@ -25,8 +25,10 @@ struct http_session_t
 	size_t header_capacity;
 	size_t header_size;
 
+	int http_response_code_flag; // 0-don't set status code
+	int http_response_header_flag; // 0-don't send response header, 1-sent
 	int http_content_length_flag; // 0-calc length, 1-user input value
-	int http_transfer_encoding_flag; // 0-bytes, 1-chunked
+	int http_transfer_encoding_chunked_flag; // 0-bytes, 1-chunked
 	
 	// send buffer vector
 	int vec_count;

@@ -84,7 +84,8 @@ int http_server_route(void* http, http_session_t* session, const char* method, c
 		}
 	}
 
-	return http_server_send(session, 404, "", 0, NULL, NULL);
+	http_server_set_status_code(session, 404, NULL);
+	return http_server_send(session, "", 0, NULL, NULL);
 }
 
 void http_server_websocket_sethandler(struct websocket_handler_t* wsh, http_server_onupgrade handler, void* param)
@@ -121,8 +122,11 @@ static int http_server_upgrade_websocket(http_session_t* session, const char* pa
 	ws->session = session;
 	memcpy(&ws->handler, &s_router.wsh, sizeof(ws->handler));
 	ws->param = s_router.onupgrade(s_router.wsparam, ws, path, protocols);
-	if(!ws->param)
-		return http_server_send(session, 401, "", 0, NULL, NULL);
+	if (!ws->param)
+	{
+		http_server_set_status_code(session, 401, NULL);
+		return http_server_send(session, "", 0, NULL, NULL);
+	}
 
 	uint8_t sha1[SHA1HashSize];
 	char wsaccept[64] = { 0 };
@@ -136,5 +140,6 @@ static int http_server_upgrade_websocket(http_session_t* session, const char* pa
 	http_server_set_header(session, "Upgrade", "WebSocket");
 	http_server_set_header(session, "Connection", "Upgrade");
 	http_server_set_header(session, "Sec-WebSocket-Accept", wsaccept);
-	return http_server_send(session, 101, "", 0, http_server_onsend_upgrade, ws);
+	http_server_set_status_code(session, 101, NULL);
+	return http_server_send(session, "", 0, http_server_onsend_upgrade, ws);
 }

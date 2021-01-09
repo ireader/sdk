@@ -2,6 +2,8 @@
 #include "aio-tcp-transport.h"
 #include "http-reason.h"
 #include "http-parser.h"
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -16,7 +18,7 @@
 #define HTTP_RECV_BUFFER (2*1024)
 
 static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int count);
-static int http_session_data(struct http_session_t *session, const struct http_vec_t* vec, int num);
+static int http_session_data(struct http_session_t *session, const struct http_vec_t* vec, int num, int reserved);
 
 static const char* s_http_header_end = "\r\n";
 
@@ -60,8 +62,10 @@ static void http_session_ondestroy(void* param)
 static void http_session_reset(struct http_session_t *session)
 {
 	session->header_size = 0;
+	session->http_response_code_flag = 0;
+	session->http_response_header_flag = 0;
 	session->http_content_length_flag = 0;
-	session->http_transfer_encoding_flag = 0;
+	session->http_transfer_encoding_chunked_flag = 0;
 }
 
 static void http_session_onrecv(void* param, int code, size_t bytes)
@@ -185,37 +189,66 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	return 0;
 }
 
-int http_server_send(struct http_session_t *session, int code, const void* data, size_t bytes, http_server_onsend onsend, void* param)
+int http_server_set_content_length(http_session_t* session, int64_t value)
+{
+	int len;
+	char str[64];
+
+	if (value < 0)
+	{
+		session->http_content_length_flag = 1; // don't need Content-Length
+		return 0;
+	}
+
+	len = snprintf(str, sizeof(str), "%" PRIu64, value);
+	return http_session_add_header(session, "Content-Length", str, len);
+}
+
+int http_server_set_status_code(http_session_t* session, int code, const char* status)
+{
+	int r;
+	session->http_response_code_flag = 1;
+	r = snprintf(session->status_line, sizeof(session->status_line)-1, "HTTP/1.1 %d %s\r\n", code, (status && *status) ? status : http_reason_phrase(code));
+	return r >= sizeof(session->status_line)-1 ? -E2BIG : (r < 0 ? r : 0);
+}
+
+int http_server_send(struct http_session_t *session, const void* data, size_t bytes, http_server_onsend onsend, void* param)
 {
 	struct http_vec_t vec;
 	vec.data = data;
 	vec.bytes = bytes;
-	return http_server_send_vec(session, code, &vec, 1, onsend, param);
+	return http_server_send_vec(session, &vec, 1, onsend, param);
 }
 
-int http_server_send_vec(struct http_session_t *session, int code, const struct http_vec_t* vec, int num, http_server_onsend onsend, void* param)
+int http_server_send_vec(struct http_session_t *session, const struct http_vec_t* vec, int num, http_server_onsend onsend, void* param)
 {
 	int r;
 	char content_length[32];
 	if (session->ws)
 		return -1; // websocket can't use http reply mode
 
-	r = http_session_data(session, vec, num);
+	r = http_session_data(session, vec, num, session->http_response_header_flag ? 0 : 3);
 	if (r < 0) 
 		return r;
 
-	// Content-Length
-	if (0 == session->http_content_length_flag)
+	// HTTP Response Header, only one
+	if (0 == session->http_response_header_flag)
 	{
-		r = snprintf(content_length, sizeof(content_length), "%d", r);
-		http_session_add_header(session, "Content-Length", content_length, r);
-	}
+		session->http_response_header_flag = 1;
 
-	// HTTP Response Header
-	r = snprintf(session->status_line, sizeof(session->status_line), "HTTP/1.1 %d %s\r\n", code, http_reason_phrase(code));
-	socket_setbufvec(session->vec, 0, session->status_line, r);
-	socket_setbufvec(session->vec, 1, session->header, session->header_size);
-	socket_setbufvec(session->vec, 2, (void*)s_http_header_end, 2);
+		// Content-Length
+		if (0 == session->http_content_length_flag)
+		{
+			r = snprintf(content_length, sizeof(content_length), "%d", r);
+			http_session_add_header(session, "Content-Length", content_length, r);
+		}
+
+		if(!session->http_response_code_flag)
+			snprintf(session->status_line, sizeof(session->status_line), "HTTP/1.1 %d %s\r\n", 200, http_reason_phrase(200));
+		socket_setbufvec(session->vec, 0, session->status_line, strlen(session->status_line));
+		socket_setbufvec(session->vec, 1, session->header, session->header_size);
+		socket_setbufvec(session->vec, 2, (void*)s_http_header_end, 2);
+	}
 
 	session->onsend = onsend;
 	session->onsendparam = param;
@@ -241,7 +274,7 @@ static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int 
 	return session->__vec;
 }
 
-static int http_session_data(struct http_session_t *session, const struct http_vec_t* vec, int num)
+static int http_session_data(struct http_session_t *session, const struct http_vec_t* vec, int num, int reserved)
 {
 	int i;
 	int len = 0;
@@ -249,18 +282,18 @@ static int http_session_data(struct http_session_t *session, const struct http_v
 	// multi-thread onrecv maybe before onsend
 	assert(NULL == session->vec);
 	assert(0 == session->vec_count);
-	session->vec = socket_bufvec_alloc(session, num + 3);
+	session->vec = socket_bufvec_alloc(session, num + reserved);
 	if (!session->vec || num < 1)
 		return -1;
 
 	// HTTP Response Data
 	for (i = 0; i < num; i++)
 	{
-		socket_setbufvec(session->vec, i + 3, (void*)vec[i].data, vec[i].bytes);
+		socket_setbufvec(session->vec, i + reserved, (void*)vec[i].data, vec[i].bytes);
 		len += vec[i].bytes;
 	}
 
-	session->vec_count = num + 3;
+	session->vec_count = num + reserved;
 	return len;
 }
 
@@ -296,7 +329,7 @@ int http_session_add_header(struct http_session_t* session, const char* name, co
 	// check http header
 	if (0 == strcasecmp(name, "Transfer-Encoding") && 0 == strcasecmp("chunked", value))
 	{
-		session->http_transfer_encoding_flag = 1;
+		session->http_transfer_encoding_chunked_flag = 1;
 		session->http_content_length_flag = 1; // don't need Content-Length
 	}
 	else if (0 == strcasecmp(name, "Content-Length"))
@@ -323,7 +356,7 @@ int http_session_add_header(struct http_session_t* session, const char* name, co
 int http_session_websocket_send_vec(struct http_websocket_t* ws, int opcode, const struct http_vec_t* vec, int num)
 {
 	int r;
-	r = http_session_data(ws->session, vec, num);
+	r = http_session_data(ws->session, vec, num, 1);
 	if (r < 0)
 		return r;
 
@@ -337,8 +370,6 @@ int http_session_websocket_send_vec(struct http_websocket_t* ws, int opcode, con
 	assert(r > 0 && r <= 14); // WebSocket Frame Header max length
 
 	socket_setbufvec(ws->session->vec, 0, ws->session->status_line, r);
-	socket_setbufvec(ws->session->vec, 1, ws->session->status_line, 0); // hack
-	socket_setbufvec(ws->session->vec, 2, ws->session->status_line, 0); // hack
 
 	ws->session->onsend = ws->handler.onsend;
 	ws->session->onsendparam = ws->param;
