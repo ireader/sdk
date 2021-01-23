@@ -75,31 +75,22 @@ size_t base64_encode_url(char* target, const void *source, size_t bytes)
 
 size_t base64_decode(void* target, const char *src, size_t bytes)
 {
-	size_t i, j;
+	size_t i;
 	uint8_t* p = (uint8_t*)target;
 	const uint8_t* source = (const uint8_t*)src;
 	const uint8_t* end;
 
 	//assert(0 == bytes % 4);
-	
-	i = 0;
-	end = source + bytes;
-	for (j = 1; j < bytes / 4; j++)
-	{
-		p[i++] = (s_base64_dec[source[0]] << 2) | (s_base64_dec[source[1]] >> 4);
-		p[i++] = (s_base64_dec[source[1]] << 4) | (s_base64_dec[source[2]] >> 2);
-		p[i++] = (s_base64_dec[source[2]] << 6) | s_base64_dec[source[3]];
-		source += 4;
-	}
 
-	if (source < end)
-	{
+	end = source + bytes;
 #define S(i) ((source+i < end) ? source[i] : '=')
+	for (i = 0; source < end && '=' != *source; source += 4)
+	{
 		p[i++] = (s_base64_dec[S(0)] << 2) | (s_base64_dec[S(1)] >> 4);
 		if ('=' != S(2)) p[i++] = (s_base64_dec[S(1)] << 4) | (s_base64_dec[S(2)] >> 2);
 		if ('=' != S(3)) p[i++] = (s_base64_dec[S(2)] << 6) | s_base64_dec[S(3)];
-#undef S
 	}
+#undef S
 	return i;
 }
 
@@ -216,33 +207,23 @@ size_t base32_encode(char* target, const void *source, size_t bytes)
 
 size_t base32_decode(void* target, const char *src, size_t bytes)
 {
-	size_t i, j;
+	size_t i;
 	uint8_t* p = (uint8_t*)target;
 	const uint8_t* source = (const uint8_t*)src;
 	const uint8_t* end;
 
-	i = 0;
 	end = source + bytes;
-	for (j = 1; j < bytes / 8; j++)
-	{
-		p[i++] = (s_base32_dec[source[0]] << 3) | (s_base32_dec[source[1]] >> 2);
-		p[i++] = (s_base32_dec[source[1]] << 6) | (s_base32_dec[source[2]] << 1) | (s_base32_dec[source[3]] >> 4);
-		p[i++] = (s_base32_dec[source[3]] << 4) | (s_base32_dec[source[4]] >> 1);
-		p[i++] = (s_base32_dec[source[4]] << 7) | (s_base32_dec[source[5]] << 2) | (s_base32_dec[source[6]] >> 3);
-		p[i++] = (s_base32_dec[source[6]] << 5) | s_base32_dec[source[7]];
-		source += 8;
-	}
-
-	if (source < end)
-	{
 #define S(i) ((source+i < end) ? source[i] : '=')
+	for(i = 0; source < end && '=' != *source; source += 8)
+	{
 		p[i++] = (s_base32_dec[S(0)] << 3) | (s_base32_dec[S(1)] >> 2);
 		if ('=' != S(2)) p[i++] = (s_base32_dec[S(1)] << 6) | (s_base32_dec[S(2)] << 1) | (s_base32_dec[S(3)] >> 4);
 		if ('=' != S(4)) p[i++] = (s_base32_dec[S(3)] << 4) | (s_base32_dec[S(4)] >> 1);
 		if ('=' != S(5)) p[i++] = (s_base32_dec[S(4)] << 7) | (s_base32_dec[S(5)] << 2) | (s_base32_dec[S(6)] >> 3);
 		if ('=' != S(7)) p[i++] = (s_base32_dec[S(6)] << 5) | s_base32_dec[S(7)];
-#undef S
 	}
+#undef S
+
 	return i;
 }
 
@@ -256,60 +237,42 @@ void base64_test(void)
 	char target[512];
 	const uint8_t p[] = { 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0xde, 0xad, 0xbe, 0xef };
 
-	assert(8 == base64_encode(source, "4444", 4));
-	assert(4 == base64_decode(target, source, 8));
-	assert(0 == memcmp(source, "NDQ0NA==", 8));
-	assert(0 == memcmp(target, "4444", 4));
+	assert(8 == base64_encode(source, "4444", 4) && 0 == memcmp(source, "NDQ0NA==", 8));
+	assert(4 == base64_decode(target, "NDQ0NA======", 12) && 0 == memcmp(target, "4444", 4));
+	assert(4 == base64_decode(target, "NDQ0NA==", 8) && 0 == memcmp(target, "4444", 4));
+	assert(4 == base64_decode(target, "NDQ0NA=", 7) && 0 == memcmp(target, "4444", 4));
+	assert(4 == base64_decode(target, "NDQ0NA", 6) && 0 == memcmp(target, "4444", 4));
 
-	assert(8 == base64_encode(source, "55555", 5));
-	assert(5 == base64_decode(target, source, 8));
-	assert(0 == memcmp(source, "NTU1NTU=", 8));
-	assert(0 == memcmp(target, "55555", 5));
+	assert(8 == base64_encode(source, "55555", 5) && 0 == memcmp(source, "NTU1NTU=", 8));
+	assert(5 == base64_decode(target, "NTU1NTU=", 8) && 0 == memcmp(target, "55555", 5));
+	assert(5 == base64_decode(target, "NTU1NTU", 7) && 0 == memcmp(target, "55555", 5));
 
-	assert(8 == base64_encode(source, "666666", 6));
-	assert(6 == base64_decode(target, source, 8));
-	assert(0 == memcmp(source, "NjY2NjY2", 8));
-	assert(0 == memcmp(target, "666666", 6));
+	assert(8 == base64_encode(source, "666666", 6) && 0 == memcmp(source, "NjY2NjY2", 8));
+	assert(6 == base64_decode(target, "NjY2NjY2====", 12) && 0 == memcmp(target, "666666", 6));
+	assert(6 == base64_decode(target, "NjY2NjY2", 8) && 0 == memcmp(target, "666666", 6));
 
 	// RFC2617 2.Basic Authentication Scheme (p6)
 	s = "Aladdin:open sesame";
 	r = "QWxhZGRpbjpvcGVuIHNlc2FtZQ==";
-	assert(strlen(r) == base64_encode(source, s, strlen(s)));
-	assert(strlen(s) == base64_decode(target, source, strlen(r)));
-	assert(0 == memcmp(source, r, strlen(r)));
-	assert(0 == memcmp(target, s, strlen(s)));
+	assert(strlen(r) == base64_encode(source, s, strlen(s)) && 0 == memcmp(source, r, strlen(r)));
+	assert(strlen(s) == base64_decode(target, source, strlen(r)) && 0 == memcmp(target, s, strlen(s)));
 
 	assert(8 == base16_encode(source, "4444", 4));
-	assert(4 == base16_decode(target, source, 8));
-	assert(0 == memcmp(target, "4444", 4));
+	assert(4 == base16_decode(target, source, 8) && 0 == memcmp(target, "4444", 4));
 
-	assert(16 == base32_encode(source, p, 10));
-	assert(0 == memcmp(source, "JBSWY3DPEHPK3PXP", 16));
-	assert(10 == base32_decode(target, source, 16));
-	assert(0 == memcmp(target, p, sizeof(p)));
-	assert(8 == base32_encode(source, "H", 1));
-	assert(0 == memcmp(source, "JA======", 8));
-	assert(1 == base32_decode(target, source, 8));
-	assert(0 == memcmp(target, "H", 1));
-	assert(1 == base32_decode(target, "JA", 2));
-	assert(0 == memcmp(target, "H", 1));
-	assert(8 == base32_encode(source, "He", 2));
-	assert(0 == memcmp(source, "JBSQ====", 8));
-	assert(2 == base32_decode(target, source, 8));
-	assert(0 == memcmp(target, "He", 2));
-	assert(2 == base32_decode(target, "JBSQ", 4));
-	assert(0 == memcmp(target, "He", 2));
-	assert(8 == base32_encode(source, "Hel", 3));
-	assert(0 == memcmp(source, "JBSWY===", 8));
-	assert(3 == base32_decode(target, source, 8));
-	assert(0 == memcmp(target, "Hel", 3));
-	assert(3 == base32_decode(target, "JBSWY", 5));
-	assert(0 == memcmp(target, "Hel", 3));
-	assert(8 == base32_encode(source, "Hell", 4));
-	assert(0 == memcmp(source, "JBSWY3A=", 8));
-	assert(4 == base32_decode(target, source, 8));
-	assert(0 == memcmp(target, "Hell", 4));
-	assert(4 == base32_decode(target, "JBSWY3A", 7));
-	assert(0 == memcmp(target, "Hell", 4));
+	assert(16 == base32_encode(source, p, 10) && 0 == memcmp(source, "JBSWY3DPEHPK3PXP", 16));
+	assert(10 == base32_decode(target, source, 16) && 0 == memcmp(target, p, sizeof(p)));
+	assert(8 == base32_encode(source, "H", 1) && 0 == memcmp(source, "JA======", 8));
+	assert(1 == base32_decode(target, source, 8) && 0 == memcmp(target, "H", 1));
+	assert(1 == base32_decode(target, "JA", 2) && 0 == memcmp(target, "H", 1));
+	assert(8 == base32_encode(source, "He", 2) && 0 == memcmp(source, "JBSQ====", 8));
+	assert(2 == base32_decode(target, source, 8) && 0 == memcmp(target, "He", 2));
+	assert(2 == base32_decode(target, "JBSQ", 4) && 0 == memcmp(target, "He", 2));
+	assert(8 == base32_encode(source, "Hel", 3) && 0 == memcmp(source, "JBSWY===", 8));
+	assert(3 == base32_decode(target, source, 8) && 0 == memcmp(target, "Hel", 3));
+	assert(3 == base32_decode(target, "JBSWY", 5) && 0 == memcmp(target, "Hel", 3));
+	assert(8 == base32_encode(source, "Hell", 4) && 0 == memcmp(source, "JBSWY3A=", 8));
+	assert(4 == base32_decode(target, source, 8) && 0 == memcmp(target, "Hell", 4));
+	assert(4 == base32_decode(target, "JBSWY3A", 7) && 0 == memcmp(target, "Hell", 4));
 }
 #endif
