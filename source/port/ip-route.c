@@ -55,14 +55,16 @@ int ip_route_get(const char* destination, char ip[64])
 
 	ulOutBufLen = sizeof(IP_ADAPTER_ADDRESSES);
 	pAdapterInfo = (PIP_ADAPTER_ADDRESSES)malloc(ulOutBufLen);
-	if (ERROR_BUFFER_OVERFLOW == GetAdaptersAddresses(ai->ai_family, 0, NULL, pAdapterInfo, &ulOutBufLen))
+	dwRetVal = GetAdaptersAddresses(ai->ai_family, 0, NULL, pAdapterInfo, &ulOutBufLen);
+	if (ERROR_BUFFER_OVERFLOW == dwRetVal)
 	{
 		free(pAdapterInfo);
 		pAdapterInfo = (PIP_ADAPTER_ADDRESSES)malloc(ulOutBufLen);
+		dwRetVal = GetAdaptersAddresses(ai->ai_family, 0, NULL, pAdapterInfo, &ulOutBufLen);
 	}
 
 	ip[0] = 0;
-	if ((dwRetVal = GetAdaptersAddresses(ai->ai_family, 0, NULL, pAdapterInfo, &ulOutBufLen)) == ERROR_SUCCESS)
+	if (ERROR_SUCCESS == dwRetVal)
 	{
 		for (pAdapter = pAdapterInfo; 0 == ip[0] && pAdapter; pAdapter = pAdapter->Next)
 		{
