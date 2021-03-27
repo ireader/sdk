@@ -722,26 +722,40 @@ static inline int socket_getreuseaddr(IN socket_t sock, OUT int* enable)
 	return socket_getopt_bool(sock, SO_REUSEADDR, enable);
 }
 
-#if defined(SO_REUSEPORT)
 static inline int socket_setreuseport(IN socket_t sock, IN int enable)
 {
-	return socket_setopt_bool(sock, SO_REUSEPORT, enable);
+#if defined(OS_WINDOWS)
+	// Windows: SO_REUSEADDR = SO_REUSEADDR + SO_REUSEPORT
+	return socket_setopt_bool(sock, SO_REUSEADDR, enable);
+#elif defined(SO_REUSEPORT)
+	return socket_setopt_bool(sock, SO_REUSEPORT, enable);	
+#else
+	return -1;
+#endif
 }
 
 static inline int socket_getreuseport(IN socket_t sock, OUT int* enable)
 {
+#if defined(OS_WINDOWS)
+	return socket_getopt_bool(sock, SO_REUSEADDR, enable);
+#elif defined(SO_REUSEPORT)
 	return socket_getopt_bool(sock, SO_REUSEPORT, enable);
-}
+#else
+	return -1;
 #endif
+}
 
-#if defined(TCP_CORK)
 // 1-cork, 0-uncork
 static inline int socket_setcork(IN socket_t sock, IN int cork)
 {
-    //return setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &cork, sizeof(cork));
+#if defined(TCP_CORK)
+	//return setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &cork, sizeof(cork));
     return setsockopt(sock, IPPROTO_TCP, TCP_CORK, &cork, sizeof(cork));
-}
+#else
+	(void)sock, (void)cork;
+	return -1;
 #endif
+}
 
 static inline int socket_setnonblock(IN socket_t sock, IN int noblock)
 {
