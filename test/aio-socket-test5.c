@@ -45,7 +45,7 @@ void aio_socket_test5(void)
 	socket_init();
 	aio_socket_init(1);
 
-	socket = socket_tcp_listen(NULL, PORT, 64);
+	socket = socket_tcp_listen_ipv4(NULL, PORT, 64);
 	thread_create(&thread, aio_socket_recv_test, NULL);
 
 	client = socket_accept(socket, &addr, &len);

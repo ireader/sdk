@@ -29,16 +29,11 @@ static int http_server_listen(struct http_server_t *server, const char* ip, int 
 	socket_t socket;
 
 	// create server socket(IPv6 and IPv4)
-	socket = socket_tcp_listen_ipv6(ip, (u_short)port, SOMAXCONN, 1);
+	socket = socket_tcp_listen(0 /*AF_UNSPEC*/, ip, (u_short)port, SOMAXCONN, 0, 1);
 	if (socket_invalid == socket)
 	{
-		// try IPv4 only
-		socket = socket_tcp_listen(ip, (u_short)port, SOMAXCONN);
-		if (socket_invalid == socket)
-		{
-			printf("http_server_create(%s, %d): create socket error.\n", ip, port);
-			return -1;
-		}
+		printf("http_server_create(%s, %d): create socket error.\n", ip, port);
+		return -1;
 	}
 
 	server->aio = aio_accept_start(socket, http_server_onaccept, server);

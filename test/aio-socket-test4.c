@@ -15,7 +15,7 @@ static int STDCALL worker0(IN void* param)
 	socklen_t len = sizeof(addr);
 
 	param = param;
-	socket = socket_tcp_listen(NULL, 8008, 64);
+	socket = socket_tcp_listen_ipv4(NULL, 8008, 64);
 
 //	while(1)
 	{

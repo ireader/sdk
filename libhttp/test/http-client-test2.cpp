@@ -59,7 +59,7 @@ static int STDCALL http_server_thread(void* param)
 {
 	char req[1024] = {0};
 	bool* running = (bool*)param;
-	socket_t socket = socket_tcp_listen(NULL, PORT, SOMAXCONN);
+	socket_t socket = socket_tcp_listen_ipv4(NULL, PORT, SOMAXCONN);
 
 	while(*running)
 	{

@@ -274,7 +274,7 @@ extern "C" void stun_server_test()
     handler.onpermission = stun_onpermission;
     handler.onchannel = stun_onchannel;
     
-    ctx.udp = socket_udp_bind(NULL, STUN_PORT);
+    ctx.udp = socket_udp_bind_ipv4(NULL, STUN_PORT);
 	socket_setpktinfo(ctx.udp, 1);
     ctx.tcp = socket_tcp();
     ctx.tls = socket_tcp();
@@ -463,12 +463,12 @@ static int rtp_socket_create(struct sockaddr_in* addr, socket_t rtp[2], unsigned
         i = i/2*2 + 49152;
         
         addr->sin_port = htons(i);
-        sock[0] = socket_bind_addr((const struct sockaddr*)addr, SOCK_DGRAM);
+        sock[0] = socket_bind_addr((const struct sockaddr*)addr, SOCK_DGRAM, 0, 1);
         if(socket_invalid == sock[0])
             continue;
         
         addr->sin_port = htons(i + 1);
-        sock[1] = socket_bind_addr((const struct sockaddr*)addr, SOCK_DGRAM);
+        sock[1] = socket_bind_addr((const struct sockaddr*)addr, SOCK_DGRAM, 0, 1);
         if(socket_invalid == sock[1])
         {
             socket_close(sock[0]);

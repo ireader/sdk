@@ -124,7 +124,7 @@ void aio_socket_test_cancel(void)
 	aio_socket_init(1);
 
 	// local service
-	socket = socket_tcp_listen(NULL, 8008, 1);
+	socket = socket_tcp_listen_ipv4(NULL, 8008, 1);
 	assert(socket_invalid != socket);
 	aiosocket = aio_socket_create(socket, 1);
 	assert(invalid_aio_socket != aiosocket);

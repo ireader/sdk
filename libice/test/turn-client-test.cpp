@@ -90,7 +90,7 @@ extern "C" void turn_client_test()
 	handler.ondata = turn_ondata;
 
 	memset(&ctx, 0, sizeof(ctx));
-	ctx.udp = socket_udp_bind(local, 0);
+	ctx.udp = socket_udp_bind_ipv4(local, 0);
 	ctx.stun = stun_agent_create(STUN_RFC_5389, &handler, &ctx);
 
 	getsockname(ctx.udp, (struct sockaddr*)&host, &addrlen);

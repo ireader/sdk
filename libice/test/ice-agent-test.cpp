@@ -13,9 +13,9 @@
 
 //#define STUN_SERVER "numb.viagenie.ca"
 //#define STUN_SERVER "stun.linphone.org"
-#define STUN_SERVER "10.95.49.51"
-#define TURN_USR "test"
-#define TURN_PWD "12345678"
+#define STUN_SERVER "158.69.221.198"
+#define TURN_USR "tao3@outlook.com"
+#define TURN_PWD "123456789"
 
 struct ice_agent_test_t
 {
@@ -74,6 +74,8 @@ static void ice_agent_test_onconnected(void* param, int64_t streams)
 {
 	struct ice_agent_test_t* ctx = (struct ice_agent_test_t*)param;
 	printf("ice connected: %lld\n", (long long)streams);
+	ice_transport_send(ctx->avt, 0, 1, "hello stream 0, component 1", 27);
+	//ice_transport_send(ctx->avt, 0, 2, "hello stream 0, component 2", 27);
 }
 
 static void ice_agent_test_ondata(void* param, int stream, int component, const void* data, int bytes)
@@ -89,11 +91,12 @@ extern "C" void ice_agent_test(void)
 	struct ice_agent_test_t ctx;
 	struct ice_transport_handler_t handler;
 	
+	int controlling = 1; // controlling
 	memset(&handler, 0, sizeof(handler));
 	handler.ondata = ice_agent_test_ondata;
 	handler.onbind = ice_agent_test_onbind;
 	handler.onconnected = ice_agent_test_onconnected;
-	ctx.avt = ice_transport_create(1, &handler, &ctx);
+	ctx.avt = ice_transport_create(controlling, &handler, &ctx);
 	ctx.onbind = 0;
 	ctx.stream = 1;
 	ctx.component = 2;
@@ -101,7 +104,7 @@ extern "C" void ice_agent_test(void)
 	struct sockaddr_storage stun;
 	socklen_t len = sizeof(stun);
 	//assert(0 == socket_addr_from(&stun, &len, "numb.viagenie.ca", STUN_PORT));
-	assert(0 == socket_addr_from(&stun, &len, STUN_SERVER, STUN_PORT));
+	assert(0 == socket_addr_from(&stun, &len, STUN_SERVER, STUN_PORT ));
 	ice_transport_bind(ctx.avt, ctx.stream, ctx.component, (const sockaddr*)&stun, 1, TURN_USR, TURN_PWD);
 
 	while (1)

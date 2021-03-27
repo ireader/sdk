@@ -62,7 +62,7 @@ extern "C" void http_client_test3(void)
 	headers[2].value = "keep-alive";
 
 	http_transport_t* t = http_transport_user_poll(http_client_test_poll, NULL);
-	http_client_t* http = http_client_create(t, "https", "github.com", 443);
+	http_client_t* http = http_client_create(t, "https", "bing.com", 443);
 	assert(0 == http_client_get(http, "/", headers, sizeof(headers) / sizeof(headers[0]), http_client_test_onreply, http));
 	assert(0 == http_client_get(http, "/img/bdlogo.png", headers, sizeof(headers) / sizeof(headers[0]), http_client_test_onreply, http));
 	assert(0 == http_client_get(http, "/", headers, sizeof(headers) / sizeof(headers[0]), http_client_test_onreply, http));

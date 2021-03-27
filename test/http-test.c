@@ -22,7 +22,6 @@ void http_test(void)
 
 	http_parser_test();
 
-	http_client_test3();
 	http_client_test();
 	http_client_test2();
 	http_client_test3();

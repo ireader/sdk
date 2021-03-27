@@ -172,8 +172,8 @@ void aio_socket_test3(void)
 	memset(&server, 0, sizeof(server));
 	socket_addr_from_ipv4(&client.addr, "127.0.0.1", PORT);
 	socket_addr_from_ipv4(&server.addr, "127.0.0.1", PORT + 1);
-	server.socket = aio_socket_create(socket_udp_bind("127.0.0.1", PORT), 1);
-	client.socket = aio_socket_create(socket_udp_bind("127.0.0.1", PORT+1), 1);
+	server.socket = aio_socket_create(socket_udp_bind_ipv4("127.0.0.1", PORT), 1);
+	client.socket = aio_socket_create(socket_udp_bind_ipv4("127.0.0.1", PORT+1), 1);
 
 	assert(0 == aio_socket_recvfrom(server.socket, server.msg, strlen(s_cmsg1), aio_server_onrecvfrom, &server));
 	assert(0 == aio_socket_sendto(client.socket, (struct sockaddr*)&client.addr, sizeof(client.addr), s_cmsg1, strlen(s_cmsg1), aio_client_onsendto, &client));

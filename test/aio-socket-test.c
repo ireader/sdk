@@ -21,7 +21,7 @@ static int STDCALL worker(IN void* param)
 	socklen_t len = sizeof(addr);
 
 	param = param;
-	socket = socket_tcp_listen(NULL, PORT, 64);
+	socket = socket_tcp_listen_ipv4(NULL, PORT, 64);
 
 	client = socket_accept(socket, &addr, &len); // recv
 	client = socket_accept(socket, &addr, &len); // send

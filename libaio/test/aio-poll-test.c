@@ -59,7 +59,7 @@ void aio_poll_test(void)
 	struct aio_poll_test_t t;
 
 	socket_init();
-	tcp = socket_tcp_listen(TCP_IP, TCP_PORT, 64);
+	tcp = socket_tcp_listen_ipv4(TCP_IP, TCP_PORT, 64);
 
 	t.poll = aio_poll_create();
 	aio_poll_poll(t.poll, tcp, AIO_POLL_IN, 10 * 1000, aio_poll_test_onaccept, &t);

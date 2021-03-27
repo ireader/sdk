@@ -67,7 +67,7 @@ tls_socket_t* tls_socket_bind(const char* ip, unsigned int port)
     struct tls_socket_t* tls;
     tls = (struct tls_socket_t*)calloc(1, sizeof(*tls));
     
-    tls->tcp = socket_tcp_listen(ip, (unsigned short)port, 64);
+    tls->tcp = socket_tcp_listen(AF_UNSPEC, ip, (unsigned short)port, 64, 0, 1);
     if(socket_invalid == tls->tcp)
     {
         tls_socket_close(tls);
