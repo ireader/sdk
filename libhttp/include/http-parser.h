@@ -29,8 +29,11 @@ http_parser_t* http_parser_create(enum HTTP_PARSER_MODE mode, void(*ondata)(void
 /// @return 0-ok, other-error
 int http_parser_destroy(http_parser_t* parser);
 
-/// clear state
+/// clear state(deprecated, use http_parser_reset instead)
 void http_parser_clear(http_parser_t* parser);
+
+/// reset state(clear + set mode)
+void http_parser_reset(http_parser_t* parser, enum HTTP_PARSER_MODE mode);
 
 /// input data
 /// @param[in] data content

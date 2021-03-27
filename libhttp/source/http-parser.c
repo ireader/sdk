@@ -1035,6 +1035,12 @@ void http_parser_clear(struct http_parser_t* http)
 	http->location = 0;
 }
 
+void http_parser_reset(http_parser_t* parser, enum HTTP_PARSER_MODE mode)
+{
+	parser->request = mode;
+	http_parser_clear(parser);	
+}
+
 int http_parser_input(struct http_parser_t* http, const void* data, size_t *bytes)
 {
 	enum { INPUT_NEEDMORE = 1, INPUT_DONE = 0, INPUT_HEADER = 2, };
