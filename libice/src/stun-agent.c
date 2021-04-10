@@ -358,7 +358,7 @@ static int stun_agent_onresponse(stun_agent_t* stun, int protocol, const struct 
 	if (!req)
 		return 0; //unknown request, ignore
 
-	if (req->addr.protocol != protocol || 0 != socket_addr_compare((const struct sockaddr*)&req->addr.host, local) || 0 != socket_addr_compare((const struct sockaddr*)&req->addr.peer, remote))
+	if (req->addr.protocol != protocol || (local && 0 != socket_addr_compare((const struct sockaddr*)&req->addr.host, local)) || 0 != socket_addr_compare((const struct sockaddr*)&req->addr.peer, remote))
 	{
 		assert(0);
 		stun_request_release(req);

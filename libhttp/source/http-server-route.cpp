@@ -5,6 +5,7 @@
 #include "uri-parse.h"
 #include "sha.h"
 #include "base64.h"
+#include "utf8codec.h"
 #include "cstringext.h"
 #include <algorithm>
 #include <string>
@@ -18,8 +19,14 @@ struct http_server_route_t
 	struct websocket_handler_t wsh;
 	void* wsparam; // upgrade handler parameter
 };
-static http_server_route_t s_router;
 
+static http_server_route_t& http_server_get_route()
+{
+	static http_server_route_t router;
+	return router;
+}
+
+static int http_server_try_upgrade(http_session_t* session);
 static int http_server_upgrade_websocket(http_session_t* session, const char* path, const char* wskey, const char* protocols);
 
 static bool http_route_cmp(const http_server_route_t::http_route_t& l, const http_server_route_t::http_route_t& r)
@@ -29,19 +36,21 @@ static bool http_route_cmp(const http_server_route_t::http_route_t& l, const htt
 
 int http_server_addroute(const char* path, http_server_handler handler)
 {
-	s_router.handlers.push_back(std::make_pair(path, handler));
-	std::sort(s_router.handlers.begin(), s_router.handlers.end(), http_route_cmp);
+	http_server_route_t& router = http_server_get_route();
+	router.handlers.push_back(std::make_pair(path, handler));
+	std::sort(router.handlers.begin(), router.handlers.end(), http_route_cmp);
 	return 0;
 }
 
 int http_server_delroute(const char* path)
 {
+	http_server_route_t& router = http_server_get_route();
 	std::vector<http_server_route_t::http_route_t>::iterator it;
-	for (it = s_router.handlers.begin(); it != s_router.handlers.end(); ++it)
+	for (it = router.handlers.begin(); it != router.handlers.end(); ++it)
 	{
 		if (it->first == path)
 		{
-			s_router.handlers.erase(it);
+			router.handlers.erase(it);
 			return 0;
 		}
 	}
@@ -56,27 +65,22 @@ int http_server_route(void* http, http_session_t* session, const char* method, c
 	url_decode(uri->path, -1, reqpath, sizeof(reqpath));
 	uri_free(uri);
 
+	//UTF8Decode utf8(reqpath);
 	// TODO: path resolve to fix /rootpath/../pathtosystem -> /pathtosystem
+	//path_resolve(buffer, sizeof(buffer), utf8, CWD, strlen(CWD));
+	//path_realpath(buffer, live->path);
 
-	if (s_router.onupgrade && 0 == strcasecmp(method, "GET"))
+	http_server_route_t& router = http_server_get_route();
+	if (router.onupgrade && 0 == strcasecmp(method, "GET") && http_server_try_upgrade(session))
 	{
-		const char* upgrade = http_server_get_header(session, "Upgrade");
-		const char* connection = http_server_get_header(session, "Connection"); // keep-alive, Upgrade
 		const char* wskey = http_server_get_header(session, "Sec-WebSocket-Key");
-		const char* version = http_server_get_header(session, "Sec-WebSocket-Version");
 		const char* protocols = http_server_get_header(session, "Sec-WebSocket-Protocol");
 		//const char* extensions = http_server_get_header(session, "Sec-WebSocket-Extensions");
-
-		if (upgrade && 0 == strcasecmp(upgrade, "websocket")
-			&& connection && strstr(connection, "Upgrade")
-			&& wskey && version && 0 == strcasecmp(version, "13"))
-		{
-			return http_server_upgrade_websocket(session, path, wskey, protocols);
-		}
+		return http_server_upgrade_websocket(session, path, wskey, protocols);
 	}
 
 	std::vector<http_server_route_t::http_route_t>::iterator it;
-	for (it = s_router.handlers.begin(); it != s_router.handlers.end(); ++it)
+	for (it = router.handlers.begin(); it != router.handlers.end(); ++it)
 	{
 		if (0 == strncmp(it->first.c_str(), reqpath, it->first.length()))
 		{
@@ -90,9 +94,10 @@ int http_server_route(void* http, http_session_t* session, const char* method, c
 
 void http_server_websocket_sethandler(struct websocket_handler_t* wsh, http_server_onupgrade handler, void* param)
 {
-	memcpy(&s_router.wsh, wsh, sizeof(s_router.wsh));
-	s_router.onupgrade = handler;
-	s_router.wsparam = param;
+	http_server_route_t& router = http_server_get_route();
+	memcpy(&router.wsh, wsh, sizeof(router.wsh));
+	router.onupgrade = handler;
+	router.wsparam = param;
 }
 
 static int http_server_onsend_upgrade(void* param, int code, size_t bytes)
@@ -110,6 +115,23 @@ static int http_server_onsend_upgrade(void* param, int code, size_t bytes)
 	return 0;
 }
 
+static int http_server_try_upgrade(http_session_t* session)
+{
+	const char* upgrade = http_server_get_header(session, "Upgrade");
+	if (!upgrade || 0 != strcasecmp(upgrade, "websocket"))
+		return 0;
+
+	const char* connection = http_server_get_header(session, "Connection"); // keep-alive, Upgrade
+	if (!connection || !strstr(connection, "Upgrade"))
+		return 0;
+
+	const char* wskey = http_server_get_header(session, "Sec-WebSocket-Key");
+	const char* version = http_server_get_header(session, "Sec-WebSocket-Version");
+	//const char* protocols = http_server_get_header(session, "Sec-WebSocket-Protocol");
+	//const char* extensions = http_server_get_header(session, "Sec-WebSocket-Extensions");
+	return wskey && version && 0 == strcasecmp(version, "13") ? 1 : 0;
+}
+
 static int http_server_upgrade_websocket(http_session_t* session, const char* path, const char* wskey, const char* protocols)
 {
 	static const char* wsuuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -119,9 +141,10 @@ static int http_server_upgrade_websocket(http_session_t* session, const char* pa
 	if (!ws)
 		return -ENOMEM;
 
+	http_server_route_t& router = http_server_get_route();
 	ws->session = session;
-	memcpy(&ws->handler, &s_router.wsh, sizeof(ws->handler));
-	ws->param = s_router.onupgrade(s_router.wsparam, ws, path, protocols);
+	memcpy(&ws->handler, &router.wsh, sizeof(ws->handler));
+	ws->param = router.onupgrade(router.wsparam, ws, path, protocols);
 	if (!ws->param)
 	{
 		http_server_set_status_code(session, 401, NULL);

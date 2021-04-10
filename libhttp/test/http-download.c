@@ -26,7 +26,7 @@ static void http_ondownload(void* fp, int code, void* buf, size_t len)
     fwrite(buf, 1, len, (FILE*)fp);
 }
 
-static void http_onreply(void* param, int code, int http_status_code, int http_content_length)
+static void http_onreply(void* param, int code, int http_status_code, int64_t http_content_length)
 {
     static char buf[64 * 1024];
     

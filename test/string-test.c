@@ -5,6 +5,8 @@ void strsplit_test(void);
 
 void string_test(void)
 {
+#if !defined(NDEBUG)
 	strtrim_test();
 	strsplit_test();
+#endif
 }

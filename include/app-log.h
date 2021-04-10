@@ -15,6 +15,14 @@
 extern "C" {
 #endif
 
+#define APP_LOG_WITH_LINE(level, fmt, ...)	app_log(level, "(%s:%d) " ## fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define APP_LOG_ERROR(fmt, ...)				APP_LOG_WITH_LINE(LOG_ERROR, fmt, ##__VA_ARGS__)
+#define APP_LOG_WARNING(fmt, ...)			APP_LOG_WITH_LINE(LOG_WARNING, fmt, ##__VA_ARGS__)
+#define APP_LOG_NOTICE(fmt, ...)			APP_LOG_WITH_LINE(LOG_NOTICE, fmt, ##__VA_ARGS__)
+#define APP_LOG_INFO(fmt, ...)				APP_LOG_WITH_LINE(LOG_INFO, fmt, ##__VA_ARGS__)
+#define APP_LOG_DEBUG(fmt, ...)				APP_LOG_WITH_LINE(LOG_DEBUG, fmt, ##__VA_ARGS__)
+
+
 void app_log(int level, const char* format, ...);
 
 void app_log_setlevel(int level);
