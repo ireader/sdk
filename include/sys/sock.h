@@ -1213,13 +1213,14 @@ static inline int socket_addr_compare(const struct sockaddr* sa, const struct so
 	switch (sa->sa_family)
 	{
 	case AF_INET:
-		return ((struct sockaddr_in*)sa)->sin_port==((struct sockaddr_in*)sb)->sin_port 
-			&& 0 == memcmp(&((struct sockaddr_in*)sa)->sin_addr, &((struct sockaddr_in*)sb)->sin_addr, sizeof(struct in_addr))
-			? 0 : -1;
+		return ((struct sockaddr_in*)sa)->sin_port != ((struct sockaddr_in*)sb)->sin_port ? 
+			((struct sockaddr_in*)sa)->sin_port - ((struct sockaddr_in*)sb)->sin_port : 
+			memcmp(&((struct sockaddr_in*)sa)->sin_addr, &((struct sockaddr_in*)sb)->sin_addr, sizeof(struct in_addr));
+
 	case AF_INET6:
-		return ((struct sockaddr_in6*)sa)->sin6_port == ((struct sockaddr_in6*)sb)->sin6_port 
-			&& 0 == memcmp(&((struct sockaddr_in6*)sa)->sin6_addr, &((struct sockaddr_in6*)sb)->sin6_addr, sizeof(struct in6_addr))
-			? 0 : -1;
+		return ((struct sockaddr_in6*)sa)->sin6_port != ((struct sockaddr_in6*)sb)->sin6_port ?
+			((struct sockaddr_in6*)sa)->sin6_port - ((struct sockaddr_in6*)sb)->sin6_port :
+			memcmp(&((struct sockaddr_in6*)sa)->sin6_addr, &((struct sockaddr_in6*)sb)->sin6_addr, sizeof(struct in6_addr));
 
 #if defined(OS_LINUX) || defined(OS_MAC) // Windows build 17061
 	// https://blogs.msdn.microsoft.com/commandline/2017/12/19/af_unix-comes-to-windows/
