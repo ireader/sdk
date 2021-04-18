@@ -21,9 +21,6 @@
     <ClCompile Include="src\aio-rwutil.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\aio-tcp-transport.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\aio-timeout.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -51,15 +48,15 @@
     <ClCompile Include="src\aio-poll.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\aio-transport.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\aio-accept.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\aio-rwutil.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\aio-tcp-transport.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\aio-timeout.h">
@@ -84,6 +81,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\aio-poll.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\aio-transport.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

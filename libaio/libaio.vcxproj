@@ -157,8 +157,8 @@
     <ClCompile Include="src\aio-rwutil.c" />
     <ClCompile Include="src\aio-connect.c" />
     <ClCompile Include="src\aio-send.c" />
-    <ClCompile Include="src\aio-tcp-transport.c" />
     <ClCompile Include="src\aio-timeout.c" />
+    <ClCompile Include="src\aio-transport.c" />
     <ClCompile Include="src\aio-worker.c" />
   </ItemGroup>
   <ItemGroup>
@@ -170,8 +170,8 @@
     <ClInclude Include="include\aio-connect.h" />
     <ClInclude Include="include\aio-send.h" />
     <ClInclude Include="include\aio-client.h" />
-    <ClInclude Include="include\aio-tcp-transport.h" />
     <ClInclude Include="include\aio-timeout.h" />
+    <ClInclude Include="include\aio-transport.h" />
     <ClInclude Include="include\aio-worker.h" />
   </ItemGroup>
   <ItemGroup>
