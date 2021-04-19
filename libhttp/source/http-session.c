@@ -1,5 +1,5 @@
 #include "http-server-internal.h"
-#include "aio-tcp-transport.h"
+#include "aio-transport.h"
 #include "http-reason.h"
 #include "http-parser.h"
 #include <inttypes.h>
@@ -158,7 +158,7 @@ static void http_session_onsend(void* param, int code, size_t bytes)
 int http_session_create(struct http_server_t *server, socket_t socket, const struct sockaddr* sa, socklen_t salen)
 {
 	struct http_session_t *session;
-	struct aio_tcp_transport_handler_t handler;
+	struct aio_transport_handler_t handler;
 	memset(&handler, 0, sizeof(handler));
 	handler.ondestroy = http_session_ondestroy;
 	handler.onrecv = http_session_onrecv;

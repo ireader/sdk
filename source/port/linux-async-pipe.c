@@ -137,7 +137,7 @@ int async_pipe_read(async_pipe_t pipe, void* msg, int len, async_pipe_onread cal
 	o->aio.aio_nbytes = len;
 	o->aio.aio_buf = msg;
 	o->aio.aio_sigevent.sigev_notify = SIGEV_THREAD;
-	o->aio.aio_sigevent.sigev_notify_function = aio_onread;
+	o->aio.aio_sigevent.sigev_notify_function = aio_read;
 	o->aio.aio_sigevent.sigev_notify_attributes = NULL;
 	o->aio.aio_sigevent.sigev_value.sival_ptr = o;
 
