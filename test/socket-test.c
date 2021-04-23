@@ -111,7 +111,7 @@ static void socket_accept_errno_9_test()
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 
-	s = socket_tcp_listen(NULL, 33333, SOMAXCONN);
+	s = socket_tcp_listen(AF_INET, NULL, 33333, SOMAXCONN, 0, 0);
 	assert(socket_invalid != s);
 
 	c = socket_connect_host("127.0.0.1", 33333, 5000);

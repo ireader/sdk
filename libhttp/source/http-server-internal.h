@@ -4,14 +4,14 @@
 #include "http-server.h"
 #include "http-parser.h"
 #include "http-websocket-internal.h"
-#include "aio-tcp-transport.h"
+#include "aio-transport.h"
 #include "sys/sock.h"
 #include "sys/atomic.h"
 
 struct http_session_t
 {
 	http_parser_t* parser; // HTTP parser
-	aio_tcp_transport_t* transport; // TCP transporot
+	aio_transport_t* transport; // TCP transporot
 	socket_t socket;
 	socklen_t addrlen;
 	struct sockaddr_storage addr;

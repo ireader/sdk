@@ -1,5 +1,5 @@
 #include "http-server-internal.h"
-#include "aio-tcp-transport.h"
+#include "aio-transport.h"
 #include "http-reason.h"
 #include "http-parser.h"
 #include <inttypes.h>
@@ -105,7 +105,7 @@ static void http_session_onrecv(void* param, int code, size_t bytes)
 			{
 				// recv more data
 				assert(0 == session->remain);
-				code = aio_tcp_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER);
+				code = aio_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER);
 			}
 		}
 	}
@@ -115,14 +115,14 @@ static void http_session_onrecv(void* param, int code, size_t bytes)
 		if (0 == code)
 		{
 			// recv more data
-			code = aio_tcp_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER);
+			code = aio_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER);
 		}
 	}
 	
 	// error or peer closed
 	if(0 != code || 0 == bytes)
 	{
-		code = aio_tcp_transport_destroy(session->transport);
+		code = aio_transport_destroy(session->transport);
 	}	
 }
 
@@ -148,17 +148,17 @@ static void http_session_onsend(void* param, int code, size_t bytes)
 		if (session->remain > 0)
 			http_session_onrecv(session, 0, session->remain); // next round
 		else if(atomic_cas_ptr(&session->rlocker, NULL, session))
-			r = aio_tcp_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER);
+			r = aio_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER);
 	}
 
 	if (0 != code || 0 != r)
-		code = aio_tcp_transport_destroy(session->transport);
+		code = aio_transport_destroy(session->transport);
 }
 
 int http_session_create(struct http_server_t *server, socket_t socket, const struct sockaddr* sa, socklen_t salen)
 {
 	struct http_session_t *session;
-	struct aio_tcp_transport_handler_t handler;
+	struct aio_transport_handler_t handler;
 	memset(&handler, 0, sizeof(handler));
 	handler.ondestroy = http_session_ondestroy;
 	handler.onrecv = http_session_onrecv;
@@ -180,10 +180,10 @@ int http_session_create(struct http_server_t *server, socket_t socket, const str
 	session->socket = socket;
 	session->param = server->param;
 	session->handler = server->handler;
-	session->transport = aio_tcp_transport_create(socket, &handler, session);
-	if (0 != aio_tcp_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER))
+	session->transport = aio_transport_create(socket, &handler, session);
+	if (0 != aio_transport_recv(session->transport, session->data, HTTP_RECV_BUFFER))
 	{
-		aio_tcp_transport_destroy(session->transport);
+		aio_transport_destroy(session->transport);
 		return -1;
 	}
 	return 0;
@@ -252,7 +252,7 @@ int http_server_send_vec(struct http_session_t *session, const struct http_vec_t
 
 	session->onsend = onsend;
 	session->onsendparam = param;
-	return aio_tcp_transport_send_v(session->transport, session->vec, session->vec_count);
+	return aio_transport_send_v(session->transport, session->vec, session->vec_count);
 }
 
 static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int count)
@@ -373,5 +373,5 @@ int http_session_websocket_send_vec(struct http_websocket_t* ws, int opcode, con
 
 	ws->session->onsend = ws->handler.onsend;
 	ws->session->onsendparam = ws->param;
-	return aio_tcp_transport_send_v(ws->session->transport, ws->session->vec, ws->session->vec_count);
+	return aio_transport_send_v(ws->session->transport, ws->session->vec, ws->session->vec_count);
 }
