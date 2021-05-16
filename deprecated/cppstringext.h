@@ -193,4 +193,18 @@ inline std::string Join(const StdStrContainer& container, const char* sep)
 	return s;
 }
 
+inline bool Replace(std::string& str, const std::string& from, const std::string& to)
+{
+	std::string::size_type pos = str.find(from);
+	if (pos == std::string::npos)
+		return false;
+	str.replace(pos, from.length(), to);
+	return true;
+}
+
+inline void ReplaceAll(std::string& str, const std::string& from, const std::string& to)
+{
+	while (Replace(str, from, to));
+}
+
 #endif /* !_cppstringext_h_ */
