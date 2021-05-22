@@ -38,6 +38,7 @@ static inline int rwlocker_destroy(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	//MSDN: SRW locks do not need to be explicitly destroyed.
+	(void)locker;
 	return 0;
 #else
 	return pthread_rwlock_destroy(locker);
