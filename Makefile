@@ -12,11 +12,13 @@ else
 endif
 
 all:
+	$(MAKE) -C libsdk
 	$(MAKE) -C libaio
 	$(MAKE) -C libhttp
 	$(MAKE) -C libice
 	
 clean:
+	$(MAKE) -C libsdk clean
 	$(MAKE) -C libaio clean
 	$(MAKE) -C libhttp clean
 	$(MAKE) -C libice clean
