@@ -41,7 +41,7 @@ public:
 
 	T* operator->() const { return m_obj; }
 
-	operator T*&() const { return m_obj; }
+	operator T* () const { return m_obj; }
 
 	operator bool() const { return !!m_obj; }
 

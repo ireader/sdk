@@ -1,15 +1,13 @@
 #ifndef _ntp_time_h_
 #define _ntp_time_h_
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C"{
 #endif
 
-#if defined(OS_WINDOWS)
-	typedef unsigned __int64 ntp64_t;
-#else
-	typedef unsigned long long ntp64_t;
-#endif
+typedef uint64_t ntp64_t;
 
 /// NTP 64-bit timestamp
 /// high 32-bit unsigned seconds since January 1, 1900 (UTC)

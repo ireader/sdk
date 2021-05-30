@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-#define APP_LOG_WITH_LINE(level, fmt, ...)	app_log(level, "(%s:%d) " ## fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define APP_LOG_WITH_LINE(level, fmt, ...)	app_log(level, "(%s:%d) " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 #define APP_LOG_ERROR(fmt, ...)				APP_LOG_WITH_LINE(LOG_ERROR, fmt, ##__VA_ARGS__)
 #define APP_LOG_WARNING(fmt, ...)			APP_LOG_WITH_LINE(LOG_WARNING, fmt, ##__VA_ARGS__)
 #define APP_LOG_NOTICE(fmt, ...)			APP_LOG_WITH_LINE(LOG_NOTICE, fmt, ##__VA_ARGS__)

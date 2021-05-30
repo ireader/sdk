@@ -87,12 +87,12 @@ void app_log(int level, const char* format, ...)
 {
 	va_list args;
 
-	va_start(args, format);
-	app_log_print(level, format, args);
-	va_end(args);
-
 	if (level <= s_syslog_level)
 	{
+		va_start(args, format);
+		app_log_print(level, format, args);
+		va_end(args);
+
 		va_start(args, format);
 		app_log_syslog(level, format, args);
 		va_end(args);

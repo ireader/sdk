@@ -1,15 +1,13 @@
 #ifndef _system_time64_h_
 #define _system_time64_h_
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C"{
 #endif
 
-#if defined(OS_WINDOWS)
-	typedef unsigned __int64 time64_t;
-#else
-	typedef unsigned long long time64_t;
-#endif
+typedef uint64_t time64_t;
 
 #define MIN_UTC_TIME			(0L)
 #define MAX_UTC_TIME			((time64_t)0x7fff6200 * 1000)

@@ -585,7 +585,7 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 	char control[64];
 	
 #if defined(OS_WINDOWS) && _WIN32_WINNT >= 0x0600
-	struct cmsghdr *cmsg;
+	WSACMSGHDR* cmsg;
 	struct in_pktinfo* pktinfo;
 	struct in6_pktinfo* pktinfo6;
 	static INIT_ONCE wsarecvmsgonce;
@@ -608,7 +608,7 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 		return r;
 
 	*peerlen = wsamsg.namelen;
-	for (cmsg = CMSG_FIRSTHDR(&wsamsg); !!cmsg && local && locallen; cmsg = CMSG_NXTHDR(&wsamsg, cmsg))
+	for (cmsg = WSA_CMSG_FIRSTHDR(&wsamsg); !!cmsg && local && locallen; cmsg = WSA_CMSG_NXTHDR(&wsamsg, cmsg))
 	{
 		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO && *locallen >= sizeof(struct sockaddr_in))
 		{
@@ -687,7 +687,7 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 	char control[64];
 
 #if defined(OS_WINDOWS) && _WIN32_WINNT >= 0x0600
-	struct cmsghdr *cmsg;
+	WSACMSGHDR* cmsg;
 	struct in_pktinfo* pktinfo;
 	struct in6_pktinfo* pktinfo6;
 
@@ -701,7 +701,7 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 	wsamsg.Control.len = sizeof(control);
 	wsamsg.dwFlags = 0;
 
-	cmsg = CMSG_FIRSTHDR(&wsamsg);
+	cmsg = WSA_CMSG_FIRSTHDR(&wsamsg);
 	if (AF_INET == local->sa_family && locallen >= sizeof(struct sockaddr_in))
 	{
 		cmsg->cmsg_level = IPPROTO_IP;
@@ -710,7 +710,7 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 		pktinfo = (struct in_pktinfo*)WSA_CMSG_DATA(cmsg);
 		memset(pktinfo, 0, sizeof(struct in_pktinfo));
 		memcpy(&pktinfo->ipi_addr, &((struct sockaddr_in*)local)->sin_addr, sizeof(pktinfo->ipi_addr));
-		wsamsg.Control.len = CMSG_SPACE(sizeof(struct in_pktinfo));
+		wsamsg.Control.len = WSA_CMSG_SPACE(sizeof(struct in_pktinfo));
 	}
 	else if (AF_INET6 == local->sa_family && locallen >= sizeof(struct sockaddr_in6))
 	{
@@ -720,7 +720,7 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 		pktinfo6 = (struct in6_pktinfo*)WSA_CMSG_DATA(cmsg);
 		memset(pktinfo6, 0, sizeof(struct in6_pktinfo));
 		memcpy(&pktinfo6->ipi6_addr, &((struct sockaddr_in6*)local)->sin6_addr, sizeof(pktinfo6->ipi6_addr));
-		wsamsg.Control.len = CMSG_SPACE(sizeof(struct in6_pktinfo));
+		wsamsg.Control.len = WSA_CMSG_SPACE(sizeof(struct in6_pktinfo));
 	}
 	else
 	{

@@ -32,6 +32,13 @@ typedef WSABUF	socket_bufvec_t;
 	#define IP_PMTUDISC_DONT	2
 #endif
 
+#ifndef AI_V4MAPPED
+	#define AI_V4MAPPED	0x00000800
+#endif
+#ifndef AI_NUMERICSERV
+	#define AI_NUMERICSERV	0x00000008
+#endif
+
 #else
 #include <sys/time.h>
 #include <sys/types.h>

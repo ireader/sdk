@@ -1,11 +1,13 @@
 #ifndef _platform_system_h_
 #define _platform_system_h_
 
+#include <stdint.h>
+
 #if defined(OS_WINDOWS)
 #include <Windows.h>
 
 typedef HMODULE module_t;
-typedef DWORD   useconds_t;
+typedef uint32_t useconds_t;
 typedef FARPROC funcptr_t;
 
 #else
