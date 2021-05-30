@@ -40,9 +40,9 @@ enum
 
 struct websocket_handler_t
 {
-	int (*onsend)(void* param, int code, size_t bytes);
-
 	void (*ondestroy)(void* param);
+
+	int (*onsend)(void* param, int code, size_t bytes);
 
 	/// Data Frames
 	/// @param[in] opcode websocket message type, binary, text, ping, pong, close, etc...

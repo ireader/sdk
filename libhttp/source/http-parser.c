@@ -376,7 +376,9 @@ static int http_parse_request_line(struct http_parser_t *http, const char* data,
 				break;
 
 			default:
-				http->stateM = SM_REQUEST_URI;
+				*(v[SM_REQUEST_URI - SM_REQUEST_START]) = *(v[SM_REQUEST_SP2 - SM_REQUEST_START]) + *(v[SM_REQUEST_VERSION - SM_REQUEST_START]) - *(v[SM_REQUEST_URI - SM_REQUEST_START - 1]);
+				http->stateM = SM_REQUEST_SP2;
+				i -= 1; // go back
 				break;
 			}
 			break;
@@ -409,7 +411,7 @@ static int http_parse_request_line(struct http_parser_t *http, const char* data,
 				|| http->header.name.len < 5
 				|| 3 != sscanf(http->raw + http->header.name.pos, "%16[^/]/%d.%d", http->protocol, &http->vermajor, &http->verminor))
 			{
-				assert(0);
+				//assert(0);
 				return -1;
 			}
 
@@ -1154,7 +1156,7 @@ int http_set_max_size(size_t bytes)
 
 int http_get_version(const struct http_parser_t* http, char protocol[64], int *major, int *minor)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 	assert(64 >= sizeof(http->protocol));
 	strcpy(protocol, http->protocol);
 	*major = http->vermajor;
@@ -1164,28 +1166,28 @@ int http_get_version(const struct http_parser_t* http, char protocol[64], int *m
 
 int http_get_status_code(const struct http_parser_t* http)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 	assert(HTTP_PARSER_RESPONSE == http->request);
 	return http->u.reply.code;
 }
 
 const char* http_get_status_reason(const struct http_parser_t* http)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 	assert(HTTP_PARSER_RESPONSE == http->request);
 	return http->raw + http->u.reply.reason.pos;
 }
 
 const char* http_get_request_method(const struct http_parser_t* http)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 	assert(HTTP_PARSER_REQUEST == http->request);
 	return http->raw + http->u.req.method.pos;
 }
 
 const char* http_get_request_uri(const struct http_parser_t* http)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 	assert(HTTP_PARSER_REQUEST == http->request);
 	return http->raw + http->u.req.uri.pos;
 }
@@ -1200,13 +1202,13 @@ const void* http_get_content(const struct http_parser_t* http)
 
 int http_get_header_count(const struct http_parser_t* http)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 	return http->header_size;
 }
 
 int http_get_header(const struct http_parser_t* http, int idx, const char** name, const char** value)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 
 	if(idx < 0 || idx >= http->header_size)
 		return EINVAL;
@@ -1219,7 +1221,7 @@ int http_get_header(const struct http_parser_t* http, int idx, const char** name
 const char* http_get_header_by_name(const struct http_parser_t* http, const char* name)
 {
 	int i;
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 
 	for(i = 0; i < http->header_size; i++)
 	{
@@ -1236,7 +1238,7 @@ const char* http_get_header_by_name(const struct http_parser_t* http, const char
 int http_get_header_by_name2(const struct http_parser_t* http, const char* name, int *value)
 {
 	int i;
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 
 	for(i = 0; i < http->header_size; i++)
 	{
@@ -1252,7 +1254,7 @@ int http_get_header_by_name2(const struct http_parser_t* http, const char* name,
 
 int64_t http_get_content_length(const struct http_parser_t* http)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 	if(-1 == http->content_length && http->callback)
 		return http->raw_body_length;
 	return http->content_length;
@@ -1260,7 +1262,7 @@ int64_t http_get_content_length(const struct http_parser_t* http)
 
 int http_get_connection(const struct http_parser_t* http)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 	return http->connection_close;
 }
 
@@ -1271,7 +1273,7 @@ const char* http_get_content_type(const struct http_parser_t* http)
 
 const char* http_get_content_encoding(const struct http_parser_t* http)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 	if(0 == http->content_encoding)
 		return NULL;
 	return http->raw + http->content_encoding;
@@ -1279,7 +1281,7 @@ const char* http_get_content_encoding(const struct http_parser_t* http)
 
 const char* http_get_transfer_encoding(const struct http_parser_t* http)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 	if(0 == http->transfer_encoding)
 		return NULL;
 	return http->raw + http->transfer_encoding;
@@ -1287,7 +1289,7 @@ const char* http_get_transfer_encoding(const struct http_parser_t* http)
 
 const char* http_get_cookie(const struct http_parser_t* http)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 	if(0 == http->cookie)
 		return NULL;
 	return http->raw + http->cookie;
@@ -1295,7 +1297,7 @@ const char* http_get_cookie(const struct http_parser_t* http)
 
 const char* http_get_location(const struct http_parser_t* http)
 {
-	assert(http->stateM>=SM_BODY);
+	assert(http->stateM >= SM_HEADER);
 	assert(HTTP_PARSER_RESPONSE == http->request);
 	if(0 == http->location)
 		return NULL;

@@ -258,8 +258,8 @@ int http_server_send_vec(struct http_session_t *session, const struct http_vec_t
 static socket_bufvec_t* socket_bufvec_alloc(struct http_session_t *session, int count)
 {
 	void* p;
-	if (count <= 5)
-		return session->vec5;
+	if (count <= 12)
+		return session->vec12;
 
 	if (count > session->vec_capacity)
 	{

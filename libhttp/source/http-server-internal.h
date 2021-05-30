@@ -34,7 +34,7 @@ struct http_session_t
 	int vec_count;
 	int vec_capacity;
 	socket_bufvec_t *vec;
-	socket_bufvec_t vec5[5];
+	socket_bufvec_t vec12[12];
 	socket_bufvec_t *__vec;
 
 	http_server_handler handler;
