@@ -108,11 +108,11 @@ struct epoll_context_recvfrom_v
 struct epoll_context
 {
 	spinlock_t locker; // memory alignment, see more about Apple Developer spinlock
-	struct epoll_event ev;
-	socket_t socket;
+	struct epoll_event ev[2];
+	socket_t socket[2];
 	volatile int32_t ref;
 	int own;
-	int init; // epoll_ctl add
+	int init[2]; // epoll_ctl add
 
 	aio_ondestroy ondestroy;
 	void* param;
@@ -137,44 +137,50 @@ struct epoll_context
 	} out;
 };
 
-#define EPollCtrl(ctx, flag) do {				\
+#define EPollCtrl(ctx, flag, idx) do {			\
 	int r;										\
 	__sync_add_and_fetch_4(&ctx->ref, 1);		\
-	spinlock_lock(&ctx->locker);			\
-	ctx->ev.events |= flag;						\
-	if(0 == ctx->init)							\
+	spinlock_lock(&ctx->locker);				\
+	ctx->ev[idx].events |= flag;				\
+	if(0 == ctx->init[idx])						\
 	{											\
-		r = epoll_ctl(s_epoll, EPOLL_CTL_ADD, ctx->socket, &ctx->ev);	\
-		ctx->init = (0 == r ? 1 : 0);			\
+		r = epoll_ctl(s_epoll, EPOLL_CTL_ADD, ctx->socket[idx], &ctx->ev[idx]);	\
+		ctx->init[idx] = (0 == r ? 1 : 0);		\
 	}											\
 	else										\
 	{											\
-		r = epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev);	\
+		r = epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket[idx], &ctx->ev[idx]);	\
 	}											\
 	if(0 != r)									\
 	{											\
-		ctx->ev.events &= ~flag;				\
+		ctx->ev[idx].events &= ~flag;			\
 		__sync_sub_and_fetch_4(&ctx->ref, 1);	\
 	}											\
 	spinlock_unlock(&ctx->locker);			\
 	if(0 == r) return 0;						\
 } while(0)
 
-#define EPollIn(ctx, callback)	ctx->read = callback; EPollCtrl(ctx, EPOLLIN)
-#define EPollOut(ctx, callback)	ctx->write = callback; EPollCtrl(ctx, EPOLLOUT)
+#define EPollIn(ctx, callback)	ctx->read = callback; EPollCtrl(ctx, EPOLLIN, 0)
+#define EPollOut(ctx, callback)	ctx->write = callback; EPollCtrl(ctx, EPOLLOUT, 1)
 
 static int aio_socket_release(struct epoll_context* ctx)
 {
 	if( 0 == __sync_sub_and_fetch_4(&ctx->ref, 1) )
 	{
-		if(0 != ctx->init && 0 != epoll_ctl(s_epoll, EPOLL_CTL_DEL, ctx->socket, &ctx->ev))
+		if(0 != ctx->init[0] && 0 != epoll_ctl(s_epoll, EPOLL_CTL_DEL, ctx->socket[0], &ctx->ev[0]))
+		{
+			assert(EBADF == errno); // EBADF: socket close by user
+			//		return errno;
+		}
+		if (0 != ctx->init[1] && 0 != epoll_ctl(s_epoll, EPOLL_CTL_DEL, ctx->socket[1], &ctx->ev[1]))
 		{
 			assert(EBADF == errno); // EBADF: socket close by user
 			//		return errno;
 		}
 
 		if(ctx->own)
-			close(ctx->socket);
+			close(ctx->socket[0]);
+		close(ctx->socket[1]);
 
 		spinlock_destroy(&ctx->locker);
 
@@ -223,6 +229,7 @@ int aio_socket_process(int timeout)
 #if defined(EPOLLRDHUP)
 		flags |= EPOLLRDHUP;
 #endif
+		userevent = 0;
 		assert(events[i].data.ptr);
 		ctx = (struct epoll_context*)events[i].data.ptr;
 		assert(ctx->ref > 0);
@@ -230,8 +237,16 @@ int aio_socket_process(int timeout)
 		{
 			// save event
 			spinlock_lock(&ctx->locker);
-			userevent = ctx->ev.events;
-			ctx->ev.events &= ~(EPOLLIN|EPOLLOUT);
+			if (ctx->ev[0].events & EPOLLIN)
+			{
+				userevent = ctx->ev[0].events;
+				ctx->ev[0].events &= ~(EPOLLIN | EPOLLOUT);
+			}
+			else if (ctx->ev[1].events & EPOLLOUT)
+			{
+				userevent = ctx->ev[1].events;
+				ctx->ev[1].events &= ~(EPOLLIN | EPOLLOUT);
+			}
 			spinlock_unlock(&ctx->locker);
 
 			// epoll oneshot don't need change event
@@ -264,6 +279,16 @@ int aio_socket_process(int timeout)
 
 			// clear IN/OUT event
 			spinlock_lock(&ctx->locker);
+			if ( (events[i].events & EPOLLIN) & ctx->ev[0].events)
+			{
+				userevent = EPOLLIN;
+				ctx->ev[0].events &= ~EPOLLIN;
+			}
+			else if ((events[i].events & EPOLLOUT) & ctx->ev[1].events)
+			{
+				userevent = EPOLLOUT;
+				ctx->ev[1].events &= ~EPOLLOUT;
+			}
 	
 			// 1. thread-1 aio_socket_send() set ctx->ev.events to EPOLLOUT
 			// 2. thread-2 epoll_wait -> events[i].events EPOLLOUT
@@ -273,10 +298,15 @@ int aio_socket_process(int timeout)
 			// 6. thread-2 check ctx->ev.events with EPOLLOUT failed
 			//assert(events[i].events == (events[i].events & ctx->ev.events));
 
-			events[i].events &= ctx->ev.events; // check events again(multi-thread condition)
-			ctx->ev.events &= ~(events[i].events & (EPOLLIN | EPOLLOUT));
-			if(ctx->ev.events & (EPOLLIN|EPOLLOUT))
-				epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev); // update epoll event(clear in/out cause EPOLLHUP)
+			//events[i].events &= ctx->ev.events; // check events again(multi-thread condition)
+			//ctx->ev.events &= ~(events[i].events & (EPOLLIN | EPOLLOUT));
+			
+			// fix: multi-thread release crash, handle one-event per epoll_wait
+			//if (events[i].events & (ctx->ev.events & (EPOLLIN | EPOLLOUT)))
+			//{
+			//	__sync_add_and_fetch_4(&ctx->ref, 1);
+			//	epoll_ctl(s_epoll, EPOLL_CTL_MOD, ctx->socket, &ctx->ev); // update epoll event(clear in/out cause EPOLLHUP)
+			//}	
 			spinlock_unlock(&ctx->locker);
 
 			//if(EPOLLRDHUP & events[i].events)
@@ -285,17 +315,21 @@ int aio_socket_process(int timeout)
 			//	assert(EPOLLIN & events[i].events);
 			//}
 
-			if(EPOLLIN & events[i].events)
+			if(EPOLLIN & userevent)
 			{
 				assert(ctx->read);
 				ctx->read(ctx, 1, 0);
 				aio_socket_release(ctx);
 			}
-
-			if(EPOLLOUT & events[i].events)
+			else if(EPOLLOUT & userevent)
 			{
 				assert(ctx->write);
 				ctx->write(ctx, 1, 0);
+				aio_socket_release(ctx);
+			}
+			else if(events[i].events & (EPOLLIN|EPOLLOUT))
+			{
+				// nothing to do
 				aio_socket_release(ctx);
 			}
 		}
@@ -315,13 +349,21 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 	spinlock_create(&ctx->locker);
 	ctx->own = own;
 	ctx->ref = 1; // 1-for EPOLLHUP(no in/out, shutdown), 2-destroy release
-	ctx->socket = socket;
-//	ctx->ev.events |= EPOLLET; // Edge Triggered, for multi-thread epoll_wait(see more at epoll-wait-multithread.c)
-	ctx->ev.events |= EPOLLONESHOT; // since Linux 2.6.2(include EPOLLWAKEUP|EPOLLONESHOT|EPOLLET, see: linux/fs/eventpoll.c)
+	ctx->socket[0] = socket;
+//	ctx->ev[0].events |= EPOLLET; // Edge Triggered, for multi-thread epoll_wait(see more at epoll-wait-multithread.c)
+	ctx->ev[0].events |= EPOLLONESHOT; // since Linux 2.6.2(include EPOLLWAKEUP|EPOLLONESHOT|EPOLLET, see: linux/fs/eventpoll.c)
 #if defined(EPOLLRDHUP)
-	ctx->ev.events |= EPOLLRDHUP; // since Linux 2.6.17
+	ctx->ev[0].events |= EPOLLRDHUP; // since Linux 2.6.17
 #endif
-	ctx->ev.data.ptr = ctx;
+	ctx->ev[0].data.ptr = ctx;
+
+	ctx->socket[1] = dup(socket);
+//	ctx->ev[1].events |= EPOLLET; // Edge Triggered, for multi-thread epoll_wait(see more at epoll-wait-multithread.c)
+	ctx->ev[1].events |= EPOLLONESHOT; // since Linux 2.6.2(include EPOLLWAKEUP|EPOLLONESHOT|EPOLLET, see: linux/fs/eventpoll.c)
+#if defined(EPOLLRDHUP)
+	ctx->ev[1].events |= EPOLLRDHUP; // since Linux 2.6.17
+#endif
+	ctx->ev[1].data.ptr = ctx;
 
 	// don't add to epoll until read/write
 	//if(0 != epoll_ctl(s_epoll, EPOLL_CTL_ADD, socket, &ctx->ev))
@@ -340,12 +382,12 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 int aio_socket_destroy(aio_socket_t socket, aio_ondestroy ondestroy, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
-	assert(ctx->ev.data.ptr == ctx);
+	assert(ctx->ev[0].data.ptr == ctx);
 	ctx->ondestroy = ondestroy;
 	ctx->param = param;
 
-	shutdown(ctx->socket, SHUT_RDWR);
-//	close(sock); // can't close socket now, avoid socket reuse
+	shutdown(ctx->socket[0], SHUT_RDWR);
+//	close(sock[0]); // can't close socket now, avoid socket reuse
 
 	aio_socket_release(ctx); // shutdown will generate EPOLLHUP event
 	return 0;
@@ -364,7 +406,7 @@ static int epoll_accept(struct epoll_context* ctx, int flags, int error)
 		return error;
 	}
 
-	client = accept(ctx->socket, (struct sockaddr*)&addr, &addrlen);
+	client = accept(ctx->socket[0], (struct sockaddr*)&addr, &addrlen);
 	if(client > 0)
 	{
 		ctx->in.accept.proc(ctx->in.accept.param, 0, client, (struct sockaddr*)&addr, addrlen);
@@ -385,8 +427,8 @@ static int epoll_accept(struct epoll_context* ctx, int flags, int error)
 int aio_socket_accept(aio_socket_t socket, aio_onaccept proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
-	assert(0 == (ctx->ev.events & EPOLLIN));
-	if(ctx->ev.events & EPOLLIN)
+	assert(0 == (ctx->ev[0].events & EPOLLIN));
+	if(ctx->ev[0].events & EPOLLIN)
 		return EBUSY;
 
 	ctx->in.accept.proc = proc;
@@ -416,7 +458,7 @@ static int epoll_connect(struct epoll_context* ctx, int flags, int error)
     {
         // man connect to see more (EINPROGRESS)
 		len = sizeof(error);
-        getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&error, &len);
+        getsockopt(ctx->socket[1], SOL_SOCKET, SO_ERROR, (void*)&error, &len);
         ctx->out.connect.proc(ctx->out.connect.param, error);
         return error;
     }
@@ -426,8 +468,8 @@ int aio_socket_connect(aio_socket_t socket, const struct sockaddr *addr, socklen
 {
 	int r;
 	struct epoll_context* ctx = (struct epoll_context*)socket;
-	assert(0 == (ctx->ev.events & EPOLLOUT));
-	if(ctx->ev.events & EPOLLOUT)
+	assert(0 == (ctx->ev[1].events & EPOLLOUT));
+	if(ctx->ev[1].events & EPOLLOUT)
 		return EBUSY;
 
 	ctx->out.connect.addrlen = addrlen > sizeof(ctx->out.connect.addr) ? sizeof(ctx->out.connect.addr) : addrlen;
@@ -438,7 +480,7 @@ int aio_socket_connect(aio_socket_t socket, const struct sockaddr *addr, socklen
 //	r = epoll_connect(ctx, 0, 0);
 //	if(EINPROGRESS != r) return r;
 
-    r = connect(ctx->socket, (const struct sockaddr*)&ctx->out.connect.addr, ctx->out.connect.addrlen);
+    r = connect(ctx->socket[1], (const struct sockaddr*)&ctx->out.connect.addr, ctx->out.connect.addrlen);
     if(0 == r || EINPROGRESS == errno)
     {
         EPollOut(ctx, epoll_connect);
@@ -458,7 +500,7 @@ static int epoll_recv(struct epoll_context* ctx, int flags, int error)
 	//	return error;
 	//}
 
-	r = recv(ctx->socket, ctx->in.recv.buffer, ctx->in.recv.bytes, 0);
+	r = recv(ctx->socket[0], ctx->in.recv.buffer, ctx->in.recv.bytes, 0);
 	if(r >= 0)
 	{
 		ctx->in.recv.proc(ctx->in.recv.param, 0, (size_t)r);
@@ -478,8 +520,8 @@ static int epoll_recv(struct epoll_context* ctx, int flags, int error)
 int aio_socket_recv(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecv proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
-	assert(0 == (ctx->ev.events & EPOLLIN));
-	if(ctx->ev.events & EPOLLIN)
+	assert(0 == (ctx->ev[0].events & EPOLLIN));
+	if(ctx->ev[0].events & EPOLLIN)
 		return EBUSY;
 
 	ctx->in.recv.proc = proc;
@@ -504,7 +546,7 @@ static int epoll_send(struct epoll_context* ctx, int flags, int error)
 		return error;
 	}
 
-	r = send(ctx->socket, ctx->out.send.buffer, ctx->out.send.bytes, 0);
+	r = send(ctx->socket[1], ctx->out.send.buffer, ctx->out.send.bytes, 0);
 	if(r >= 0)
 	{
 		ctx->out.send.proc(ctx->out.send.param, 0, (size_t)r);
@@ -524,8 +566,8 @@ static int epoll_send(struct epoll_context* ctx, int flags, int error)
 int aio_socket_send(aio_socket_t socket, const void* buffer, size_t bytes, aio_onsend proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
-	assert(0 == (ctx->ev.events & EPOLLOUT));
-	if(ctx->ev.events & EPOLLOUT)
+	assert(0 == (ctx->ev[1].events & EPOLLOUT));
+	if(ctx->ev[1].events & EPOLLOUT)
 		return EBUSY;
 
 	ctx->out.send.proc = proc;
@@ -557,7 +599,7 @@ static int epoll_recv_v(struct epoll_context* ctx, int flags, int error)
 	msg.msg_iov = (struct iovec*)ctx->in.recv_v.vec;
 	msg.msg_iovlen = ctx->in.recv_v.n;
 
-	r = recvmsg(ctx->socket, &msg, 0);
+	r = recvmsg(ctx->socket[0], &msg, 0);
 	if(r >= 0)
 	{
 		ctx->in.recv_v.proc(ctx->in.recv_v.param, 0, (size_t)r);
@@ -577,8 +619,8 @@ static int epoll_recv_v(struct epoll_context* ctx, int flags, int error)
 int aio_socket_recv_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecv proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
-	assert(0 == (ctx->ev.events & EPOLLIN));
-	if(ctx->ev.events & EPOLLIN)
+	assert(0 == (ctx->ev[0].events & EPOLLIN));
+	if(ctx->ev[0].events & EPOLLIN)
 		return EBUSY;
 
 	ctx->in.recv_v.proc = proc;
@@ -609,7 +651,7 @@ static int epoll_send_v(struct epoll_context* ctx, int flags, int error)
 	msg.msg_iov = (struct iovec*)ctx->out.send_v.vec;
 	msg.msg_iovlen = ctx->out.send_v.n;
 
-	r = sendmsg(ctx->socket, &msg, 0);
+	r = sendmsg(ctx->socket[1], &msg, 0);
 	if(r >= 0)
 	{
 		ctx->out.send_v.proc(ctx->out.send_v.param, 0, (size_t)r);
@@ -629,8 +671,8 @@ static int epoll_send_v(struct epoll_context* ctx, int flags, int error)
 int aio_socket_send_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
-	assert(0 == (ctx->ev.events & EPOLLOUT));	
-	if(ctx->ev.events & EPOLLOUT)
+	assert(0 == (ctx->ev[1].events & EPOLLOUT));
+	if(ctx->ev[1].events & EPOLLOUT)
 		return EBUSY;
 
 	ctx->out.send_v.proc = proc;
@@ -658,7 +700,7 @@ static int epoll_recvfrom(struct epoll_context* ctx, int flags, int error)
 		return error;
 	}
 
-	r = recvfrom(ctx->socket, ctx->in.recvfrom.buffer, ctx->in.recvfrom.bytes, 0, (struct sockaddr*)&addr, &addrlen);
+	r = recvfrom(ctx->socket[0], ctx->in.recvfrom.buffer, ctx->in.recvfrom.bytes, 0, (struct sockaddr*)&addr, &addrlen);
 	if(r >= 0)
 	{
 		ctx->in.recvfrom.proc(ctx->in.recvfrom.param, 0, (size_t)r, (struct sockaddr*)&addr, addrlen);
@@ -678,8 +720,8 @@ static int epoll_recvfrom(struct epoll_context* ctx, int flags, int error)
 int aio_socket_recvfrom(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecvfrom proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
-	assert(0 == (ctx->ev.events & EPOLLIN));	
-	if(ctx->ev.events & EPOLLIN)
+	assert(0 == (ctx->ev[0].events & EPOLLIN));
+	if(ctx->ev[0].events & EPOLLIN)
 		return EBUSY;
 
 	ctx->in.recvfrom.proc = proc;
@@ -704,7 +746,7 @@ static int epoll_sendto(struct epoll_context* ctx, int flags, int error)
 		return error;
 	}
 
-	r = sendto(ctx->socket, ctx->out.send.buffer, ctx->out.send.bytes, 0, (struct sockaddr*)&ctx->out.send.addr, ctx->out.send.addrlen);
+	r = sendto(ctx->socket[1], ctx->out.send.buffer, ctx->out.send.bytes, 0, (struct sockaddr*)&ctx->out.send.addr, ctx->out.send.addrlen);
 	if(r >= 0)
 	{
 		ctx->out.send.proc(ctx->out.send.param, 0, (size_t)r);
@@ -724,8 +766,8 @@ static int epoll_sendto(struct epoll_context* ctx, int flags, int error)
 int aio_socket_sendto(aio_socket_t socket, const struct sockaddr *addr, socklen_t addrlen, const void* buffer, size_t bytes, aio_onsend proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
-	assert(0 == (ctx->ev.events & EPOLLOUT));
-	if(ctx->ev.events & EPOLLOUT)
+	assert(0 == (ctx->ev[1].events & EPOLLOUT));
+	if(ctx->ev[1].events & EPOLLOUT)
 		return EBUSY;
 
 	ctx->out.send.addrlen = addrlen > sizeof(ctx->out.send.addr) ? sizeof(ctx->out.send.addr) : addrlen;
@@ -762,7 +804,7 @@ static int epoll_recvfrom_v(struct epoll_context* ctx, int flags, int error)
 	msg.msg_iov = (struct iovec*)ctx->in.recvfrom_v.vec;
 	msg.msg_iovlen = ctx->in.recvfrom_v.n;
 
-	r = recvmsg(ctx->socket, &msg, 0);
+	r = recvmsg(ctx->socket[0], &msg, 0);
 	if(r >= 0)
 	{
 		ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, 0, (size_t)r, (struct sockaddr*)&addr, msg.msg_namelen);
@@ -782,8 +824,8 @@ static int epoll_recvfrom_v(struct epoll_context* ctx, int flags, int error)
 int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
-	assert(0 == (ctx->ev.events & EPOLLIN));
-	if(ctx->ev.events & EPOLLIN)
+	assert(0 == (ctx->ev[0].events & EPOLLIN));
+	if(ctx->ev[0].events & EPOLLIN)
 		return EBUSY;
 
 	ctx->in.recvfrom_v.proc = proc;
@@ -816,7 +858,7 @@ static int epoll_sendto_v(struct epoll_context* ctx, int flags, int error)
 	msg.msg_iov = (struct iovec*)ctx->out.send_v.vec;
 	msg.msg_iovlen = ctx->out.send_v.n;
 
-	r = sendmsg(ctx->socket, &msg, 0);
+	r = sendmsg(ctx->socket[1], &msg, 0);
 	if(r >= 0)
 	{
 		ctx->out.send_v.proc(ctx->out.send_v.param, 0, (size_t)r);
@@ -836,8 +878,8 @@ static int epoll_sendto_v(struct epoll_context* ctx, int flags, int error)
 int aio_socket_sendto_v(aio_socket_t socket, const struct sockaddr *addr, socklen_t addrlen, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
 {
 	struct epoll_context* ctx = (struct epoll_context*)socket;
-	assert(0 == (ctx->ev.events & EPOLLOUT));	
-	if(ctx->ev.events & EPOLLOUT)
+	assert(0 == (ctx->ev[1].events & EPOLLOUT));
+	if(ctx->ev[1].events & EPOLLOUT)
 		return EBUSY;
 
 	ctx->out.send_v.addrlen = addrlen > sizeof(ctx->out.send_v.addr) ? sizeof(ctx->out.send_v.addr) : addrlen;
