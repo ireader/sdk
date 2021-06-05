@@ -153,12 +153,14 @@ static inline int socket_setreuseport(IN socket_t sock, IN int enable); // reuse
 static inline int socket_getreuseport(IN socket_t sock, OUT int* enable);
 static inline int socket_setipv6only(IN socket_t sock, IN int ipv6_only); // 1-ipv6 only, 0-both ipv4 and ipv6
 static inline int socket_getdomain(IN socket_t sock, OUT int* domain); // get socket protocol address family(sock don't need bind)
+#if defined(OS_LINUX)
 static inline int socket_setpriority(IN socket_t sock, IN int priority);
 static inline int socket_getpriority(IN socket_t sock, OUT int* priority);
 static inline int socket_settos(IN socket_t sock, IN int dscp); // ipv4 only
 static inline int socket_gettos(IN socket_t sock, OUT int* dscp); // ipv4 only
 static inline int socket_settclass(IN socket_t sock, IN int dscp); // ipv6 only
 static inline int socket_gettclass(IN socket_t sock, OUT int* dscp); // ipv6 only
+#endif
 static inline int socket_setttl(IN socket_t sock, IN int ttl); // ipv4 only
 static inline int socket_getttl(IN socket_t sock, OUT int* ttl); // ipv4 only
 static inline int socket_setttl6(IN socket_t sock, IN int ttl); // ipv6 only
@@ -768,7 +770,8 @@ static inline int socket_setnonblock(IN socket_t sock, IN int noblock)
 {
 	// 0-block, 1-no-block
 #if defined(OS_WINDOWS)
-	return ioctlsocket(sock, FIONBIO, (u_long*)&noblock);
+	u_long arg = noblock;
+	return ioctlsocket(sock, FIONBIO, &arg);
 #else
 	// http://stackoverflow.com/questions/1150635/unix-nonblocking-i-o-o-nonblock-vs-fionbio
 	// Prior to standardization there was ioctl(...FIONBIO...) and fcntl(...O_NDELAY...) ...
@@ -1125,7 +1128,7 @@ static inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_
 
 	// fixed ios getaddrinfo don't set port if node is ipv4 address
 	socket_addr_setport(addr->ai_addr, (socklen_t)addr->ai_addrlen, port);
-	assert(addr->ai_addrlen <= sizeof(struct sockaddr_storage));
+	assert((size_t)addr->ai_addrlen <= sizeof(struct sockaddr_storage));
 	memcpy(ss, addr->ai_addr, addr->ai_addrlen);
 	if(len) *len = (socklen_t)addr->ai_addrlen;
 	freeaddrinfo(addr);
@@ -1278,38 +1281,38 @@ static inline void socket_getbufvec(IN const socket_bufvec_t* vec, IN int idx, O
 
 static inline int socket_multicast_join(IN socket_t sock, IN const char* group, IN const char* local)
 {
-#if defined(OS_WINDOWS)
+//#if defined(OS_WINDOWS)
 	struct ip_mreq imr;
 	memset(&imr, 0, sizeof(imr));
 	inet_pton(AF_INET, group, &imr.imr_multiaddr);
 	inet_pton(AF_INET, local, &imr.imr_interface);
 	return setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&imr, sizeof(imr));
-#else
-	struct ip_mreqn imr;
-	memset(&imr, 0, sizeof(imr));
-	imr.imr_ifindex = 0; // any interface
-	inet_pton(AF_INET, local, &imr.imr_address);
-	inet_pton(AF_INET, group, &imr.imr_multiaddr);
-	return setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&imr, sizeof(imr));
-#endif
+// #else
+// 	struct ip_mreqn imr;
+// 	memset(&imr, 0, sizeof(imr));
+// 	imr.imr_ifindex = 0; // any interface
+// 	inet_pton(AF_INET, local, &imr.imr_address);
+// 	inet_pton(AF_INET, group, &imr.imr_multiaddr);
+// 	return setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&imr, sizeof(imr));
+// #endif
 }
 
 static inline int socket_multicast_leave(IN socket_t sock, IN const char* group, IN const char* local)
 {
-#if defined(OS_WINDOWS)
+//#if defined(OS_WINDOWS)
 	struct ip_mreq imr;
 	memset(&imr, 0, sizeof(imr));
 	inet_pton(AF_INET, group, &imr.imr_multiaddr);
 	inet_pton(AF_INET, local, &imr.imr_interface);
 	return setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char*)&imr, sizeof(imr));
-#else
-	struct ip_mreqn imr;
-	memset(&imr, 0, sizeof(imr));
-	imr.imr_ifindex = 0; // any interface
-    inet_pton(AF_INET, local, &imr.imr_address);
-    inet_pton(AF_INET, group, &imr.imr_multiaddr);
-	return setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char *) &imr, sizeof(imr));
-#endif
+// #else
+// 	struct ip_mreqn imr;
+// 	memset(&imr, 0, sizeof(imr));
+// 	imr.imr_ifindex = 0; // any interface
+//     inet_pton(AF_INET, local, &imr.imr_address);
+//     inet_pton(AF_INET, group, &imr.imr_multiaddr);
+// 	return setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char *) &imr, sizeof(imr));
+// #endif
 }
 
 static inline int socket_multicast_join6(IN socket_t sock, IN const char* group)

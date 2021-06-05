@@ -62,7 +62,7 @@ const char* strtrim(const char* s, size_t* n, const char* prefix, const char* su
 #if defined(OS_WINDOWS)
 char* strndup(const char* p, size_t n);
 
-#if _MSC_VER < 1900 // VS2015
+#if defined(_MSC_VER) && _MSC_VER < 1900 // VS2015
 // the _snprintf functions do not guarantee NULL termination
 int snprintf(char *str, size_t size, const char *format, ...);
 #endif

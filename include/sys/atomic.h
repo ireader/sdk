@@ -3,14 +3,12 @@
 
 #if defined(OS_WINDOWS)
 #include <Windows.h>
-#if _MSC_VER >= 1900
-#include <stdint.h>
-#else
+#if defined(_MSC_VER) && _MSC_VER < 1900
 typedef int		int32_t;
 typedef __int64 int64_t;
-#endif
-#elif defined(OS_LINUX)
+#else
 #include <stdint.h>
+#endif
 #elif defined(OS_MAC)
 #if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12 || __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_10_0
 #if defined(__cplusplus)
@@ -20,6 +18,8 @@ typedef __int64 int64_t;
 #else
 #include <libkern/OSAtomic.h>
 #endif
+#else
+#include <stdint.h>
 #endif
 
 #include <stddef.h>

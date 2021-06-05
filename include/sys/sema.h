@@ -174,8 +174,9 @@ static inline int sema_timewait(sema_t* sema, int timeout)
     
     // http://man7.org/linux/man-pages/man7/signal.7.html
     r = sem_timedwait(sema->semaphore, &ts);
-    while(-1 == r && EINTR == errno)
-        r = sem_timedwait(sema->semaphore, &ts);
+	while (-1 == r && EINTR == errno) {
+		r = sem_timedwait(sema->semaphore, &ts);
+	}
 	return -1 == r ? errno : 0;
 }
 #endif

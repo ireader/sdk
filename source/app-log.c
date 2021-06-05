@@ -70,11 +70,14 @@ static void app_log_syslog(int level, const char* format, va_list args)
 
 static void app_log_print(int level, const char* format, va_list args)
 {
-	char timestr[65] = { 0 };
-	app_log_time(timestr, sizeof(timestr) - 1);
-	printf("%s%s%s|", s_level_color[LOG_LEVEL(level)], timestr, s_level_tag[LOG_LEVEL(level)]);
-	vprintf(format, args);
-	printf("\033[0m");
+	int n;
+	char timestr[65];
+	char log[1024 * 4];
+	app_log_time(timestr, sizeof(timestr));
+	n = snprintf(log, sizeof(log) - 1, "%s%s%s|", s_level_color[LOG_LEVEL(level)], timestr, s_level_tag[LOG_LEVEL(level)]);
+	n += vsnprintf(log + n, sizeof(log) - n - 1, format, args);
+	n += snprintf(log + n, sizeof(log) - n - 1, "\033[0m");
+	printf("%.*s", n, log);
 }
 
 static int s_syslog_level = LOG_INFO;

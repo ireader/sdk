@@ -21,7 +21,7 @@
 #include "route-rtm.h"
 #elif defined(OS_ANDROID)
 #include "route-linux.h"
-#else
+#elif defined(OS_LINUX)
 #include "route-netlink.h"
 #endif
 

@@ -4,10 +4,7 @@
 #include <stddef.h> // size_t/ptrdiff_t/nullptr_t/max_align_t
 
 #if defined(OS_WINDOWS)
-#if _MSC_VER >= 1900
-	#include <inttypes.h>
-	#include <stdint.h>
-#else
+#if defined(_MSC_VER) && _MSC_VER < 1900
 	typedef char				int8_t;
 	typedef short				int16_t;
 	typedef int					int32_t;
@@ -22,6 +19,9 @@
 	#define PRIu64				"I64u"
 
 	#define INT64_MIN			(-9223372036854775807i64 - 1)
+#else
+	#include <inttypes.h>
+	#include <stdint.h>
 #endif
 	#define PRIsize_t			"Iu"	// MSDN: Size Specification
 	#define PRIptrdiff_t		"Ix"	// MSDN: Size Specification
