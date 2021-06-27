@@ -84,6 +84,11 @@ static int http_header_authorization_param(struct http_header_www_authenticate_t
 		r = snprintf(auth->qop, sizeof(auth->qop), "%.*s", (int)bytes2, value);
 		return r < 0 || r >= sizeof(auth->qop) ? (r < 0 ? r : -E2BIG) : 0;
 	}
+    else if (8 == bytes && 0 == strncasecmp(name, "username", bytes))
+    {
+        r = snprintf(auth->username, sizeof(auth->username), "%.*s", (int)bytes2, value);
+        return r < 0 || r >= sizeof(auth->username) ? (r < 0 ? r : -E2BIG) : 0;
+    }
 	else
 	{
 		// ignore

@@ -1,3 +1,6 @@
+#include <string>
+#include <vector>
+#include <algorithm>
 #include "http-route.h"
 #include "http-server-internal.h"
 #include "sys/path.h"
@@ -7,9 +10,6 @@
 #include "base64.h"
 #include "utf8codec.h"
 #include "cstringext.h"
-#include <algorithm>
-#include <string>
-#include <vector>
 
 struct http_server_route_t
 {

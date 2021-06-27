@@ -42,6 +42,7 @@ struct aio_client_t
 	int32_t ref;
 	spinlock_t locker;
 	aio_socket_t socket;
+	void* wflags;
 
 	int state; // 0-unconnect, 1-connecting, 2-connected
 	char* host;
@@ -82,6 +83,7 @@ aio_client_t* aio_client_create(const char* host, int port, struct aio_client_ha
 	client->port = port;
 	client->host = (char*)(client + 1);
 	memcpy(client->host, host, len + 1);
+	client->wflags = client;
 	
 	spinlock_create(&client->locker);
 	client->socket = invalid_aio_socket;
@@ -96,6 +98,9 @@ aio_client_t* aio_client_create(const char* host, int port, struct aio_client_ha
 
 int aio_client_destroy(aio_client_t* client)
 {
+	if (!client || 0 != atomic_cas_ptr(&client->wflags, client, NULL))
+		return 0;
+
 	aio_client_disconnect(client);
 	aio_client_release(client);
 	return 0;

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		461263D7263BE29600E07FD8 /* aio-transport.c in Sources */ = {isa = PBXBuildFile; fileRef = 461263D6263BE29600E07FD8 /* aio-transport.c */; };
 		46C5B1A42182E23600419E57 /* aio-connect.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1922182E23600419E57 /* aio-connect.c */; };
 		46C5B1A52182E23600419E57 /* aio-recv.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1932182E23600419E57 /* aio-recv.c */; };
 		46C5B1A62182E23600419E57 /* aio-client.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1942182E23600419E57 /* aio-client.c */; };
@@ -15,13 +16,13 @@
 		46C5B1B02182E23600419E57 /* aio-worker.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B19E2182E23600419E57 /* aio-worker.c */; };
 		46C5B1B22182E23600419E57 /* aio-send.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1A02182E23600419E57 /* aio-send.c */; };
 		46C5B1B32182E23600419E57 /* aio-rwutil.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1A12182E23600419E57 /* aio-rwutil.c */; };
-		46C5B1B42182E23600419E57 /* aio-tcp-transport.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1A22182E23600419E57 /* aio-tcp-transport.c */; };
 		46C5B1C32182E58A00419E57 /* twtimer.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1C22182E58A00419E57 /* twtimer.c */; };
 		46C5B1C52182E59700419E57 /* aio-socket-kqueue.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B1C42182E59700419E57 /* aio-socket-kqueue.c */; };
 		46CA26092421B6F500AF5BAF /* aio-poll.c in Sources */ = {isa = PBXBuildFile; fileRef = 46CA26082421B6F500AF5BAF /* aio-poll.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		461263D6263BE29600E07FD8 /* aio-transport.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-transport.c"; sourceTree = "<group>"; };
 		46C5B17D2182E20900419E57 /* libaio.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libaio.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		46C5B1922182E23600419E57 /* aio-connect.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-connect.c"; sourceTree = "<group>"; };
 		46C5B1932182E23600419E57 /* aio-recv.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-recv.c"; sourceTree = "<group>"; };
@@ -31,7 +32,6 @@
 		46C5B19E2182E23600419E57 /* aio-worker.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-worker.c"; sourceTree = "<group>"; };
 		46C5B1A02182E23600419E57 /* aio-send.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-send.c"; sourceTree = "<group>"; };
 		46C5B1A12182E23600419E57 /* aio-rwutil.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-rwutil.c"; sourceTree = "<group>"; };
-		46C5B1A22182E23600419E57 /* aio-tcp-transport.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "aio-tcp-transport.c"; sourceTree = "<group>"; };
 		46C5B1B52182E24000419E57 /* include */ = {isa = PBXFileReference; lastKnownFileType = folder; path = include; sourceTree = "<group>"; };
 		46C5B1C22182E58A00419E57 /* twtimer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = twtimer.c; path = ../../source/twtimer.c; sourceTree = "<group>"; };
 		46C5B1C42182E59700419E57 /* aio-socket-kqueue.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "aio-socket-kqueue.c"; path = "../../source/port/aio-socket-kqueue.c"; sourceTree = "<group>"; };
@@ -80,7 +80,7 @@
 				46C5B19E2182E23600419E57 /* aio-worker.c */,
 				46C5B1A02182E23600419E57 /* aio-send.c */,
 				46C5B1A12182E23600419E57 /* aio-rwutil.c */,
-				46C5B1A22182E23600419E57 /* aio-tcp-transport.c */,
+				461263D6263BE29600E07FD8 /* aio-transport.c */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -152,7 +152,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				46C5B1B42182E23600419E57 /* aio-tcp-transport.c in Sources */,
 				46C5B1A42182E23600419E57 /* aio-connect.c in Sources */,
 				46C5B1B02182E23600419E57 /* aio-worker.c in Sources */,
 				46C5B1B32182E23600419E57 /* aio-rwutil.c in Sources */,
@@ -164,6 +163,7 @@
 				46C5B1AD2182E23600419E57 /* aio-timeout.c in Sources */,
 				46C5B1C52182E59700419E57 /* aio-socket-kqueue.c in Sources */,
 				46C5B1A82182E23600419E57 /* aio-accept.c in Sources */,
+				461263D7263BE29600E07FD8 /* aio-transport.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

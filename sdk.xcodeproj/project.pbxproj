@@ -51,6 +51,8 @@
 		4601F97223C42E51009B797A /* task-queue.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F93523C42E50009B797A /* task-queue.c */; };
 		4601F97323C42E51009B797A /* uri-parse.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F93623C42E50009B797A /* uri-parse.c */; };
 		46CA26302425AF0E00AF5BAF /* tools.c in Sources */ = {isa = PBXBuildFile; fileRef = 46CA262F2425AF0E00AF5BAF /* tools.c */; };
+		46E55E4924681D5800D8BDBA /* strtrim.c in Sources */ = {isa = PBXBuildFile; fileRef = 46E55E4824681D5800D8BDBA /* strtrim.c */; };
+		46E55E4B24681D5F00D8BDBA /* strsplit.c in Sources */ = {isa = PBXBuildFile; fileRef = 46E55E4A24681D5F00D8BDBA /* strsplit.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -101,6 +103,8 @@
 		4601F93623C42E50009B797A /* uri-parse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "uri-parse.c"; sourceTree = "<group>"; };
 		46AEF4D2242AEE3500BE6A13 /* deprecated */ = {isa = PBXFileReference; lastKnownFileType = folder; path = deprecated; sourceTree = "<group>"; };
 		46CA262F2425AF0E00AF5BAF /* tools.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tools.c; path = deprecated/tools.c; sourceTree = SOURCE_ROOT; };
+		46E55E4824681D5800D8BDBA /* strtrim.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = strtrim.c; path = string/strtrim.c; sourceTree = "<group>"; };
+		46E55E4A24681D5F00D8BDBA /* strsplit.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = strsplit.c; path = string/strsplit.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -135,6 +139,7 @@
 		4601F8F523C42E50009B797A /* source */ = {
 			isa = PBXGroup;
 			children = (
+				46E55E4724681D3900D8BDBA /* string */,
 				46CA25C924205DD600AF5BAF /* deprecated */,
 				4601F8F623C42E50009B797A /* darray.c */,
 				4601F8F723C42E50009B797A /* twtimer.c */,
@@ -213,6 +218,15 @@
 				46CA262F2425AF0E00AF5BAF /* tools.c */,
 			);
 			name = deprecated;
+			sourceTree = "<group>";
+		};
+		46E55E4724681D3900D8BDBA /* string */ = {
+			isa = PBXGroup;
+			children = (
+				46E55E4A24681D5F00D8BDBA /* strsplit.c */,
+				46E55E4824681D5800D8BDBA /* strtrim.c */,
+			);
+			name = string;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -308,6 +322,7 @@
 				4601F96623C42E51009B797A /* serial-port-posix.c in Sources */,
 				4601F93A23C42E50009B797A /* unicode.c in Sources */,
 				4601F94123C42E50009B797A /* hmac.c in Sources */,
+				46E55E4B24681D5F00D8BDBA /* strsplit.c in Sources */,
 				4601F95423C42E50009B797A /* uuid.c in Sources */,
 				4601F93D23C42E50009B797A /* heap.c in Sources */,
 				4601F95023C42E50009B797A /* uri-query.c in Sources */,
@@ -323,6 +338,7 @@
 				4601F94723C42E50009B797A /* md5.c in Sources */,
 				4601F94023C42E50009B797A /* bitmap.c in Sources */,
 				4601F94A23C42E50009B797A /* random.c in Sources */,
+				46E55E4924681D5800D8BDBA /* strtrim.c in Sources */,
 				4601F97223C42E51009B797A /* task-queue.c in Sources */,
 				4601F93923C42E50009B797A /* rbtree.c in Sources */,
 				4601F94D23C42E50009B797A /* channel.c in Sources */,

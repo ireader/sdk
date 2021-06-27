@@ -191,6 +191,10 @@ void http_header_auth_test(void)
 {
 	char buffer[1024];
 	struct http_header_www_authenticate_t auth;
+    memset(&auth, 0, sizeof(auth));
+    http_header_authorization("Digest username=\"34020100001180000002\", realm=\"3402000000\", nonce=\"7c4d7bbb0407d1e2\", uri=\"sip:34020000002000000001@3402000000\", response=\"a2fb4c1715872ca3d847c866c331a38a\", algorithm=MD5, cnonce=\"0a4f113b\", qop=auth, nc=00000001", &auth);
+    http_header_auth(&auth, "12345678", "REGISTER", NULL, 0, buffer, sizeof(buffer));
+    
 	memset(&auth, 0, sizeof(auth));
 	auth.scheme = HTTP_AUTHENTICATION_DIGEST;
 	strcpy(auth.username, "Mufasa");
@@ -210,5 +214,14 @@ void http_header_auth_test(void)
 	strcpy(auth.username, "Aladdin");
 	http_header_auth(&auth, "open sesame", "GET", NULL, 0, buffer, sizeof(buffer));
 	assert(strstr(buffer, "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ=="));
+    
+    memset(&auth, 0, sizeof(auth));
+    auth.scheme = HTTP_AUTHENTICATION_DIGEST;
+    strcpy(auth.username, "34020100001180000002");
+    strcpy(auth.realm, "34440000");
+    strcpy(auth.nonce, "7891e54b54573f6c");
+    strcpy(auth.uri, "sip:34020000002000000001@3402000000");
+    http_header_auth(&auth, "12345678", "REGISTER", NULL, 0, buffer, sizeof(buffer));
+    assert(strstr(buffer, "response=\"b2d07a89902716f648776b9990eb1d3f\""));
 }
 #endif

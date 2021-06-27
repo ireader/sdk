@@ -17,6 +17,9 @@
 		4620E15F226D6CC500ED9689 /* turn-client-test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4620E15E226D6CC500ED9689 /* turn-client-test.cpp */; };
 		4620E161226F605000ED9689 /* stun-client-test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4620E160226F605000ED9689 /* stun-client-test.cpp */; };
 		4620E16322712E0300ED9689 /* stun-server-test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4620E16222712E0300ED9689 /* stun-server-test.cpp */; };
+		46A7558724AB2B240091E737 /* http-client-test3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 46A7558624AB2B240091E737 /* http-client-test3.cpp */; };
+		46A7558924AB2B2E0091E737 /* aio-poll-test.c in Sources */ = {isa = PBXBuildFile; fileRef = 46A7558824AB2B2E0091E737 /* aio-poll-test.c */; };
+		46A7558B24AB2B410091E737 /* string-test.c in Sources */ = {isa = PBXBuildFile; fileRef = 46A7558A24AB2B400091E737 /* string-test.c */; };
 		46AC0374221300D0003CF43D /* libhttp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 46AC0373221300D0003CF43D /* libhttp.a */; };
 		46AC0376221300D6003CF43D /* libaio.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 46AC0375221300D6003CF43D /* libaio.dylib */; };
 		46AC037822130194003CF43D /* libice.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 46AC037722130194003CF43D /* libice.a */; };
@@ -87,6 +90,9 @@
 		4620E15E226D6CC500ED9689 /* turn-client-test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "turn-client-test.cpp"; path = "libice/test/turn-client-test.cpp"; sourceTree = "<group>"; };
 		4620E160226F605000ED9689 /* stun-client-test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "stun-client-test.cpp"; path = "libice/test/stun-client-test.cpp"; sourceTree = "<group>"; };
 		4620E16222712E0300ED9689 /* stun-server-test.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "stun-server-test.cpp"; path = "libice/test/stun-server-test.cpp"; sourceTree = "<group>"; };
+		46A7558624AB2B240091E737 /* http-client-test3.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "http-client-test3.cpp"; path = "libhttp/test/http-client-test3.cpp"; sourceTree = "<group>"; };
+		46A7558824AB2B2E0091E737 /* aio-poll-test.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "aio-poll-test.c"; path = "libaio/test/aio-poll-test.c"; sourceTree = "<group>"; };
+		46A7558A24AB2B400091E737 /* string-test.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "string-test.c"; path = "test/string-test.c"; sourceTree = "<group>"; };
 		46AC03712212FF99003CF43D /* liblibice.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = liblibice.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		46AC0373221300D0003CF43D /* libhttp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libhttp.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		46AC0375221300D6003CF43D /* libaio.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = libaio.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -290,6 +296,7 @@
 				46E395C32182A070001649FA /* socket-test.c */,
 				46E395BC2182A06E001649FA /* spinlock-test.c */,
 				46E395BF2182A06F001649FA /* stack-test.c */,
+				46A7558A24AB2B400091E737 /* string-test.c */,
 				46E395B52182A06C001649FA /* task-queue-test.c */,
 				46E395B72182A06D001649FA /* thread-pool-test.c */,
 				46E395AE2182A06A001649FA /* timer-test.c */,
@@ -306,6 +313,7 @@
 				46C5B20521836FBF00419E57 /* benchmark.c */,
 				46C5B20721836FBF00419E57 /* http-client-test.cpp */,
 				46C5B20921836FBF00419E57 /* http-client-test2.cpp */,
+				46A7558624AB2B240091E737 /* http-client-test3.cpp */,
 				46C5B20321836FBF00419E57 /* http-download.c */,
 				46C5B20821836FBF00419E57 /* http-list-dir.cpp */,
 				46C5B20421836FBF00419E57 /* http-parser-test.c */,
@@ -317,6 +325,7 @@
 		46C5B20221836F9A00419E57 /* libaio-test */ = {
 			isa = PBXGroup;
 			children = (
+				46A7558824AB2B2E0091E737 /* aio-poll-test.c */,
 				46C5B21121836FCE00419E57 /* aio-connect-test.cpp */,
 			);
 			name = "libaio-test";
@@ -559,6 +568,7 @@
 				46E395D52182A072001649FA /* task-queue-test.c in Sources */,
 				46E395E22182A072001649FA /* bitmap-test.c in Sources */,
 				46C5B1FE21836F8D00419E57 /* aio-socket-test2.c in Sources */,
+				46A7558B24AB2B410091E737 /* string-test.c in Sources */,
 				461F0D0D232B652000A995BD /* sdp.c in Sources */,
 				46CA25C524205D2500AF5BAF /* socketpair-test.c in Sources */,
 				46AC037D2214FCE1003CF43D /* tls-socket.c in Sources */,
@@ -567,8 +577,10 @@
 				46E395D42182A072001649FA /* main.c in Sources */,
 				46E395CC2182A072001649FA /* onetime-test.c in Sources */,
 				46C5B21221836FCE00419E57 /* aio-connect-test.cpp in Sources */,
+				46A7558724AB2B240091E737 /* http-client-test3.cpp in Sources */,
 				46CA25C624205D2500AF5BAF /* channel-test.cpp in Sources */,
 				46C5B1FF21836F8D00419E57 /* aio-socket-test.c in Sources */,
+				46A7558924AB2B2E0091E737 /* aio-poll-test.c in Sources */,
 				46C5B20B21836FBF00419E57 /* http-parser-test.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
