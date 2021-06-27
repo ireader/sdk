@@ -191,7 +191,7 @@ static inline socket_t socket_bind_addr(const struct sockaddr* addr, int socktyp
 		return socket_invalid;
 
 	// disable reuse addr(fixed rtp port reuse error)
-	if (reuse && 0 != socket_setreuseaddr(s, 1))
+	if (reuse && 0 != socket_setreuseport(s, 1))
 	{
 		socket_close(s);
 		return socket_invalid;
