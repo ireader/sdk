@@ -75,6 +75,7 @@ static inline size_t system_getcpucount(void)
 	mib[0] = CTL_HW;
 	mib[1] = HW_AVAILCPU; // alternatively, try HW_NCPU;
 
+    num = 0;
 	len = sizeof(num);
 	sysctl(mib, 2, &num, &len, NULL, 0);
 	if(num < 1)
