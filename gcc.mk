@@ -30,7 +30,6 @@ CC := $(CROSS)gcc
 CXX := $(CROSS)g++
 CFLAGS += -Wall -fPIC
 CXXFLAGS += -Wall
-DEPFLAGS = -MMD -MP -MF $(OUTPATH)/$(*F).d
 
 ifeq ($(RELEASE),1)
 	CFLAGS += -Wall -O2
@@ -64,14 +63,12 @@ ifeq ($(UNICODE),1)
 else
 	OUTPATH += $(BUILD).$(PLATFORM)
 endif
-
-# make output dir
-$(shell mkdir -p $(OUTPATH) > /dev/null)
+OBJSPATH = $(OUTPATH)/objs
 
 OBJECT_FILES := $(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SOURCE_FILES)))
+OBJECT_FILES := $(addprefix $(OBJSPATH)/,$(OBJECT_FILES))
 DEPENDENCE_FILES := $(OBJECT_FILES:%.o=%.d)
-DEPENDENCE_FILES := $(foreach file,$(DEPENDENCE_FILES),$(OUTPATH)/$(notdir $(file)))
-
+MKDIR = @mkdir -p $(dir $@)
 #--------------------------Makefile Rules----------------------------
 #
 #--------------------------------------------------------------------
@@ -82,22 +79,52 @@ else
 ifeq ($(OUTTYPE),1)
 	$(CXX) -o $@ -shared -fPIC -rdynamic -Wl,-rpath . $(LDFLAGS) $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS))
 else
-	$(AR) -rc $@ $^
+	@echo -e "\033[35m	AR	$(notdir $@)\033[0m"
+	@$(AR) -rc $@ $^
 endif
 endif
 	@echo make ok, output: $(OUTPATH)/$(OUTFILE)
 
-%.o : %.c
-	$(COMPILE.CC) -c $(DEPFLAGS) -o $@ $<
+$(OBJSPATH)/%.o : %.c
+	$(MKDIR)
+	@$(COMPILE.CC) -c -o $@ $<
+	@echo -e "\033[35m	CC	$(notdir $@)\033[0m"
 	
-%.o : %.cpp
-	$(COMPILE.CXX) -c $(DEPFLAGS) -o $@ $<
-	
--include $(DEPENDENCE_FILES)
+$(OBJSPATH)/%.o : %.cpp
+	$(MKDIR)
+	@$(COMPILE.CXX) -c -o $@ $<
+	@echo -e "\033[35m	CXX	$(notdir $@)\033[0m"
+
+$(OBJSPATH)/%.d: %.c
+	$(MKDIR)
+	@echo -e "\033[32m	CREATE	$(notdir $@)\033[0m"
+	@rm -f $@; \
+	 $(COMPILE.CC) -MM $(CFLAGS) $< > $@.$$$$; \
+     sed 's,\($(notdir $*)\)\.o[ :]*,$*\.o $@ : ,g' < $@.$$$$ > $@; \
+     rm -f $@.$$$$
+$(OBJSPATH)/%.d: %.cpp
+	$(MKDIR)
+	@echo -e "\033[32m	CREATE	$(notdir $@)\033[0m"
+	@rm -f $@; \
+	 $(COMPILE.CXX) -MM $(CXXFLAGS) $< > $@.$$$$; \
+     sed 's,\($(notdir $*)\)\.o[ :]*,$*\.o $@ : ,g' < $@.$$$$ > $@; \
+     rm -f $@.$$$$
+
+ifeq ($(MAKECMDGOALS), clean)
+else ifeq ($(MAKECMDGOALS), debug)
+else
+sinclude $(DEPENDENCE_FILES)
+endif
 
 version.h : version.ver
 	$(ROOT)/svnver.sh version.ver version.h
 
 .PHONY: clean
 clean:
-	rm -f $(OBJECT_FILES) $(OUTPATH)/$(OUTFILE) $(DEPENDENCE_FILES)
+	@echo -e "\033[35m	 rm -rf *.o  *.d $(OUTPATH)/$(OUTFILE) \033[0m"
+	@rm -f $(OBJECT_FILES) $(OUTPATH)/$(OUTFILE) $(DEPENDENCE_FILES)
+
+debug:
+	echo $(OUTPATH)/$(OUTFILE)
+	echo $(OBJECT_FILES)
+	echo $(DEPENDENCE_FILES)

@@ -24,6 +24,13 @@ clean:
 	$(MAKE) -C libice clean
 	$(MAKE) -C test clean
 
+debug:
+	$(MAKE) -C libsdk   debug
+	$(MAKE) -C libaio   debug
+	$(MAKE) -C libhttp  debug
+	$(MAKE) -C libice   debug
+	$(MAKE) -C test    	debug
+
 .PHONY : test
 test:
 	$(MAKE) -C test
