@@ -98,7 +98,7 @@ aio_client_t* aio_client_create(const char* host, int port, struct aio_client_ha
 
 int aio_client_destroy(aio_client_t* client)
 {
-	if (!client || 0 != atomic_cas_ptr(&client->wflags, client, NULL))
+	if (!client || !atomic_cas_ptr(&client->wflags, client, NULL))
 		return 0;
 
 	aio_client_disconnect(client);
