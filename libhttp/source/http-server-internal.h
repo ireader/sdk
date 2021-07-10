@@ -8,8 +8,20 @@
 #include "sys/sock.h"
 #include "sys/atomic.h"
 
+struct http_server_t
+{
+	void* aio;
+
+	http_server_handler handler;
+	void* param;
+
+	struct websocket_handler_t wshandler;
+	void* wsparam;
+};
+
 struct http_session_t
 {
+	int32_t ref;
 	http_parser_t* parser; // HTTP parser
 	aio_transport_t* transport; // TCP transporot
 	socket_t socket;
@@ -19,11 +31,13 @@ struct http_session_t
 	char* data; // recv buffer
 	size_t remain; // remain size
 	void* rlocker; // recv status
-
 	char status_line[64];
-	char* header;
-	size_t header_capacity;
-	size_t header_size;
+	struct
+	{
+		char* ptr;
+		size_t len;
+		size_t cap;
+	} header;
 
 	int http_response_code_flag; // 0-don't set status code
 	int http_response_header_flag; // 0-don't send response header, 1-sent
@@ -31,27 +45,38 @@ struct http_session_t
 	int http_transfer_encoding_chunked_flag; // 0-bytes, 1-chunked
 	
 	// send buffer vector
-	int vec_count;
-	int vec_capacity;
-	socket_bufvec_t *vec;
-	socket_bufvec_t vec12[12];
-	socket_bufvec_t *__vec;
+	struct
+	{
+		int count;
+		int capacity;
+		socket_bufvec_t* vec;
+		socket_bufvec_t vec12[12];
+		socket_bufvec_t* __vec;
+	} vec;
 
-	http_server_handler handler;
-	void* param;
+	// payload
+	struct
+	{
+		char* ptr;
+		size_t len;
+		size_t cap;
+		size_t max;
+	} payload;
+
+	struct http_server_t* server;
+	struct http_websocket_t websocket;
+
+	struct
+	{
+		struct http_streaming_handler_t handler;
+		void* param;
+	} streaming;
 
 	http_server_onsend onsend;
 	void* onsendparam;
 
-	struct http_websocket_t* ws;
-};
-
-struct http_server_t
-{
-	void* aio;
-
-	http_server_handler handler;
-	void* param;
+	int tryupgrade;
+	void* wsupgrade;
 };
 
 int http_session_create(struct http_server_t *server, socket_t socket, const struct sockaddr* sa, socklen_t salen);

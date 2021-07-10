@@ -31,7 +31,7 @@ public:
 		return *this;
 	}
 
-	void reset(T* obj)
+	void reset(T* obj = NULL)
 	{
 		clear();
 		m_obj = obj;

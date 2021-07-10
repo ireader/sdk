@@ -9,15 +9,13 @@ int websocket_destory(struct http_websocket_t* ws)
 {
 	if (ws)
 	{
-		if (ws->session)
-		{
-			// TODO: close http session
+		// TODO: close http session
+		http_session_websocket_destroy(ws);
 
-			//aio_tcp_transport_destroy(ws->session->transport);
-		}
-
-		websocket_parser_destroy(&ws->parser);
-		free(ws);
+		//aio_tcp_transport_destroy(ws->session->transport);
+		//
+		//websocket_parser_destroy(&ws->parser);
+		//free(ws);
 	}
 	return 0;
 }
@@ -47,7 +45,7 @@ int websocket_send(struct http_websocket_t* ws, int opcode, const void* data, si
 
 int websocket_send_vec(struct http_websocket_t* ws, int opcode, const struct http_vec_t* vec, int num)
 {
-	return http_session_websocket_send_vec(ws, opcode, vec, 1);
+	return http_session_websocket_send_vec(ws, opcode, vec, num);
 }
 
 int websocket_set_maxbufsize(struct http_websocket_t* ws, size_t bytes)

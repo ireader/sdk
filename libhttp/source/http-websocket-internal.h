@@ -50,15 +50,10 @@ struct http_client_t;
 struct http_session_t;
 struct http_websocket_t
 {
-	// union
-	struct http_client_t* client;
-	struct http_session_t* session;
-
 	struct websocket_parser_t parser;
-
-	struct websocket_handler_t handler;
-	void* param;
 };
+
+int http_session_websocket_destroy(struct http_websocket_t* ws);
 
 int http_session_websocket_send_vec(struct http_websocket_t* ws, int opcode, const struct http_vec_t* vec, int num);
 

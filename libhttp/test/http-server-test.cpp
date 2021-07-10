@@ -68,10 +68,11 @@ extern "C" void http_server_test(const char* ip, int port)
 	http_server_addroute("/download/", http_server_ondownload);
 
 	struct websocket_handler_t handler;
+	handler.onupgrade = http_server_onwebsocket;
 	handler.ondestroy = http_server_test_ws_ondestroy;
 	handler.onsend = http_server_test_ws_onsend;
 	handler.ondata = http_server_test_ws_ondata;
-	http_server_websocket_sethandler(&handler, http_server_onwebsocket, NULL);
+	http_server_websocket_sethandler(http, &handler, NULL);
 
 	// timeout process
 	while (aio_socket_process(10000) >= 0)

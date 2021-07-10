@@ -2,7 +2,6 @@
 #define _http_server_h_
 
 #include "http-websocket.h"
-#include <stddef.h>
 
 // HTTP Response
 // 1. [OPTIONAL] use http_server_set_status_code to set status code(default 200-OK)
@@ -19,7 +18,7 @@ typedef struct http_server_t http_server_t;
 typedef struct http_session_t http_session_t;
 
 /// @param[in] code HTTP status-code(200-OK, 301-Move Permanently, ...)
-/// @return 0-ok(continue read), 1-more data to send, other-close socket
+/// @return 0-ok(goto next session), 1-more data to send, other-close socket
 typedef int (*http_server_onsend)(void* param, int code, size_t bytes);
 
 http_server_t* http_server_create(const char* ip, int port);
@@ -116,8 +115,30 @@ typedef int (*http_server_handler)(void* param, http_session_t* session, const c
 /// @return 0-ok, other-error
 int http_server_set_handler(http_server_t* http, http_server_handler handler, void* param);
 
-
 /// WebSocket
+void http_server_websocket_sethandler(http_server_t* http, const struct websocket_handler_t* handler, void* param);
+
+
+/// HTTP session handler, for upload/post big data (>16K)
+struct http_streaming_handler_t
+{
+	/// HTTP session destroy notify
+	void (*ondestroy)(void* param);
+
+	/// HTTP session received data
+	/// @param[in] code 0-OK, other-error
+	/// @param[in] data payload data, upload file content or post data
+	/// @param[in] >0-data length, =0-peer close connection
+	void (*onrecv)(void* param, int code, const void* data, size_t bytes);
+};
+
+/// Set http streaming handler(for upload / flv streaming)
+/// @param[in] bytes >0-data length, =0-connection closed, <0-error
+void http_session_streaming_handler(http_session_t* session, struct http_streaming_handler_t* handler, void* param);
+
+
+/// Close HTTP session(don't need do this in simple mode)
+int http_session_close(http_session_t* session);
 
 #ifdef __cplusplus
 }

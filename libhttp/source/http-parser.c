@@ -1235,7 +1235,7 @@ const char* http_get_header_by_name(const struct http_parser_t* http, const char
 	return NULL; // not found
 }
 
-int http_get_header_by_name2(const struct http_parser_t* http, const char* name, int *value)
+int http_get_header_by_name2(const struct http_parser_t* http, const char* name, int64_t *value)
 {
 	int i;
 	assert(http->stateM >= SM_HEADER);
@@ -1244,7 +1244,7 @@ int http_get_header_by_name2(const struct http_parser_t* http, const char* name,
 	{
 		if(0 == strcasecmp(http->raw + http->headers[i].name.pos, name))
 		{
-			*value = atoi(http->raw + http->headers[i].value.pos);
+			*value = (int64_t)strtoll(http->raw + http->headers[i].value.pos, NULL, 10);
 			return 0;
 		}
 	}

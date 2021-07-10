@@ -40,16 +40,28 @@ enum
 
 struct websocket_handler_t
 {
-	void (*ondestroy)(void* param);
+	/// WebSocket upgrade
+	/// Notice: SHOULD Use http_server_set_header set websocket sub-protocol if subprotocols not empty
+	/// @param[in] param http_server_websocket_handler parameter
+	/// @param[in] path websocket request path
+	/// @param[in] subprotocols client request subprotocols, maybe NULL
+	/// @param[out] wsparam user-defined websocket session parameter
+	/// @return 0-ok(accept with user-defined parameter), other-decline(socket can use again)
+	int (*onupgrade)(void* param, struct http_websocket_t* ws, const char* path, const char* subprotocols, void** wsparam);
 
-	int (*onsend)(void* param, int code, size_t bytes);
+	/// @param[in] wsparam onupgrade return value
+	void (*ondestroy)(void* wsparam);
 
-	/// Data Frames
-	/// @param[in] opcode websocket message type, binary, text, ping, pong, close, etc...
+	/// @param[in] wsparam onupgrade return value
+	int (*onsend)(void* wsparam, int code, size_t bytes);
+
+	/// On Receive WebSocket Frame
+	/// @param[in] wsparam onupgrade return value
+	/// @param[in] opcode <0-error, >=0-websocket message type, binary, text, ping, pong, close, etc...
 	/// @param[in] data websocket data, after de-mask
 	/// @param[in] flags websocket flags, WEBSOCKET_FLAGS_xxx
 	/// @return 0-ok, other-close websocket
-	int (*ondata)(void* param, int opcode, const void* data, size_t bytes, int flags);
+	int (*ondata)(void* wsparam, int opcode, const void* data, size_t bytes, int flags);
 };
 
 int websocket_destory(struct http_websocket_t* ws);

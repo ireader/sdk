@@ -101,15 +101,6 @@ int websocket_parser_input(struct websocket_parser_t* parser, uint8_t* data, siz
 			break;
 
 		case WEBSOCKET_PARSER_PAYLOAD:
-			if (parser->header.mask)
-			{
-				for (i = off; i < bytes; i++)
-				{
-					data[i] ^= parser->header.masking_key[parser->header_masking_key_off];
-					parser->header_masking_key_off = (parser->header_masking_key_off + 1) % 4;
-				}
-			}
-
 			// Buffer to FULL-Frame except: non-fragment(continuation) frame && FIN frame && payload length < max_capability
 			max_capacity = parser->max_capacity ? parser->max_capacity : WEBSOCKET_FRAME_MAXLENGTH;
 			if ((parser->len > 0 || bytes - off < parser->header.len) && parser->header.fin && parser->header.len <= max_capacity && parser->header.opcode > 0 /* exclude continuation frame */)
@@ -119,8 +110,19 @@ int websocket_parser_input(struct websocket_parser_t* parser, uint8_t* data, siz
 				len = MIN(parser->header.len - parser->len, bytes - off);
 				if (len > 0 && 0 == r)
 				{
-					memcpy(parser->ptr + parser->len, data + off, len);
-					parser->len += len;
+					if (parser->header.mask)
+					{
+						for (i = off; i < off + len; i++)
+						{
+							parser->ptr[parser->len++] = data[i] ^ parser->header.masking_key[parser->header_masking_key_off];
+							parser->header_masking_key_off = (parser->header_masking_key_off + 1) % 4;
+						}
+					}
+					else
+					{
+						memcpy(parser->ptr + parser->len, data + off, len);
+						parser->len += len;
+					}
 					off += len;
 				}
 
@@ -133,6 +135,15 @@ int websocket_parser_input(struct websocket_parser_t* parser, uint8_t* data, siz
 			else
 			{
 				len = MIN(parser->header.len - parser->len, bytes - off);
+				if (parser->header.mask)
+				{
+					for (i = off; i < off + len; i++)
+					{
+						data[i] ^= parser->header.masking_key[parser->header_masking_key_off];
+						parser->header_masking_key_off = (parser->header_masking_key_off + 1) % 4;
+					}
+				}
+
 				flags = parser->header.opcode > 0 && 0 == parser->len ? WEBSOCKET_FLAGS_START : 0;
 				flags |= parser->header.fin && (parser->len + len >= parser->header.len) ? WEBSOCKET_FLAGS_FIN : 0;
 				r = handler(param, parser->header_opcode /*frame type*/, data + off, len, flags);

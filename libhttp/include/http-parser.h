@@ -60,7 +60,7 @@ int http_get_header(const http_parser_t* parser, int idx, const char** name, con
 /// @return NULL-don't found header, other-header value
 const char* http_get_header_by_name(const http_parser_t* parser, const char* name);
 /// @return 0-ok, <0-don't have header
-int http_get_header_by_name2(const http_parser_t* parser, const char* name, int *value);
+int http_get_header_by_name2(const http_parser_t* parser, const char* name, int64_t *value);
 /// @return >=0-content-length, <0-don't have content-length header
 int64_t http_get_content_length(const http_parser_t* parser);
 /// @return 1-close, 0-keep-alive, <0-don't have connection header
