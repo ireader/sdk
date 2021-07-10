@@ -31,7 +31,7 @@ _SOURCE_FILES += $(ROOT)/source/port/sysvolume.cpp
 _SOURCE_FILES += $(ROOT)/source/string/snprintf.c
 _SOURCE_FILES += $(ROOT)/source/string/strndup.c
 _SOURCE_FILES += ./http-test.c
-_SOURCE_FILES += ./rtsp-test.c 
+_SOURCE_FILES += ./rtsp-test.c
 _SOURCE_FILES += ./sdp-test.c
 SOURCE_FILES := $(filter-out $(_SOURCE_FILES),$(SOURCE_FILES))
 
@@ -47,7 +47,7 @@ else
 LIBPATHS +=
 endif
 
-LIBS = rt pthread dl aio
+LIBS = rt pthread dl aio asan
 
 STATIC_LIBS = $(ROOT)/libhttp/$(BUILD).$(PLATFORM)/libhttp.a
 
@@ -69,7 +69,7 @@ endif
 ifdef RTSP_TEST
 SOURCE_FILES += sdp-test.c
 SOURCE_FILES += rtsp-test.c
-SOURCE_FILES += $(ROOT)/../media-server/librtsp/source/rtsp-header-range.c 
+SOURCE_FILES += $(ROOT)/../media-server/librtsp/source/rtsp-header-range.c
 SOURCE_FILES += $(ROOT)/../media-server/librtsp/source/rtsp-header-rtp-info.c
 SOURCE_FILES += $(ROOT)/../media-server/librtsp/source/rtsp-header-session.c
 SOURCE_FILES += $(ROOT)/../media-server/librtsp/source/rtsp-header-transport.c
