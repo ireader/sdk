@@ -194,7 +194,7 @@ int http_header_authorization_write(const struct http_header_www_authenticate_t*
 		// base64(usr:pwd)
 		// base64("Aladdin:open sesame") => QWxhZGRpbjpvcGVuIHNlc2FtZQ==
 		n = snprintf(ptr, len, "Basic %s", auth->response);
-		return -1;
+		return n;
 
 	default:
 		assert(0);
