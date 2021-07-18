@@ -88,10 +88,14 @@ struct kqueue_context_recvfrom_v
 struct kqueue_context
 {
 	struct kevent ev[2]; // 0-read, 1-write
-    socket_t socket;
-	int own;
+    socket_t socket[2];
+    volatile int32_t ref;
+    int own;
 	//int ref;
 	//int closed;
+    
+    aio_ondestroy ondestroy;
+    void* param;
 
 	int (*read)(struct kqueue_context *ctx, int flags, int code);
 	int (*write)(struct kqueue_context *ctx, int flags, int code);
@@ -115,19 +119,47 @@ struct kqueue_context
 
 #define KQueueRead(ctx, callback)   do {\
     ctx->read = callback;   \
-    EV_SET(&ctx->ev[0], ctx->socket, EVFILT_READ, EV_ADD|EV_ONESHOT, 0, 0, ctx);    \
+    OSAtomicIncrement32(&ctx->ref);        \
+    EV_SET(&ctx->ev[0], ctx->socket[0], EVFILT_READ, EV_ADD|EV_ONESHOT, 0, 0, ctx);    \
     if(-1 != kevent(s_kqueue, &ctx->ev[0], 1, NULL, 0, NULL))   \
         return 0;   \
     ctx->ev[0].filter = 0; \
+    OSAtomicDecrement32(&ctx->ref);    \
 } while(0)
 
 #define KQueueWrite(ctx, callback)  do {\
     ctx->write = callback;         \
-    EV_SET(&ctx->ev[1], ctx->socket, EVFILT_WRITE, EV_ADD|EV_ONESHOT, 0, 0, ctx);   \
+    OSAtomicIncrement32(&ctx->ref);        \
+    EV_SET(&ctx->ev[1], ctx->socket[1], EVFILT_WRITE, EV_ADD|EV_ONESHOT, 0, 0, ctx);   \
     if(-1 != kevent(s_kqueue, &ctx->ev[1], 1, NULL, 0, NULL))   \
         return 0;   \
     ctx->ev[1].filter = 0;  \
+    OSAtomicDecrement32(&ctx->ref);    \
 } while(0)
+
+static int aio_socket_release(struct kqueue_context* ctx)
+{
+    if( 0 == OSAtomicDecrement32(&ctx->ref) )
+    {
+        //EV_SET(&ctx->ev[0], ctx->socket, 0, EV_DELETE, 0, 0, ctx);
+        //EV_SET(&ctx->ev[1], ctx->socket, 0, EV_DELETE, 0, 0, ctx);
+
+        if(ctx->own)
+            close(ctx->socket[0]);
+        close(ctx->socket[1]);
+
+        //spinlock_destroy(&ctx->locker);
+
+        if (ctx->ondestroy)
+            ctx->ondestroy(ctx->param);
+
+#if defined(DEBUG) || defined(_DEBUG)
+        memset(ctx, 0xCC, sizeof(*ctx));
+#endif
+        free(ctx);
+    }
+    return 0;
+}
 
 int aio_socket_init(int threads)
 {
@@ -166,6 +198,7 @@ int aio_socket_process(int timeout)
                 ctx->ev[0].filter = 0;
 				assert(ctx->read);
 				ctx->read(ctx, 1, -1);
+                aio_socket_release(ctx);
 			}
 
 			if(EVFILT_WRITE == ctx->ev[1].filter)
@@ -173,6 +206,7 @@ int aio_socket_process(int timeout)
                 ctx->ev[1].filter = 0;
                 assert(ctx->write);
 				ctx->write(ctx, 1, -1);
+                aio_socket_release(ctx);
 			}
 		}
 		else
@@ -190,6 +224,7 @@ int aio_socket_process(int timeout)
 				//	 while there is still data pending in the socket buffer.
 				assert(ctx->read);
 				ctx->read(ctx, 1, 0);
+                aio_socket_release(ctx);
 			}
 
 			if(EVFILT_WRITE == events[i].filter)
@@ -201,6 +236,7 @@ int aio_socket_process(int timeout)
 				//   this may be cleared by use of EV_CLEAR.
 				assert(ctx->write);
 				ctx->write(ctx, 1, 0);
+                aio_socket_release(ctx);
 			}
 		}
 	}
@@ -218,7 +254,9 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 
 	memset(ctx, 0, sizeof(struct kqueue_context));
 	ctx->own = own;
-	ctx->socket = socket;
+    ctx->ref = 1; // 1-for EPOLLHUP(no in/out, shutdown), 2-destroy release
+	ctx->socket[0] = socket;
+    ctx->socket[1] = dup(socket);
     ctx->ev[0].udata = ctx;
     ctx->ev[1].udata = ctx;
 //    EV_SET(&ctx->ev[0], ctx->socket, EVFILT_READ, EV_ADD|EV_ONESHOT, 0, 0, ctx);
@@ -230,8 +268,10 @@ aio_socket_t aio_socket_create(socket_t socket, int own)
 //    }
 
 	// set non-blocking socket, for Edge Triggered
-	flags = fcntl(socket, F_GETFL, 0);
-	fcntl(socket, F_SETFL, flags | O_NONBLOCK);
+//	flags = fcntl(socket[0], F_GETFL, 0);
+//	fcntl(socket[0], F_SETFL, flags | O_NONBLOCK);
+//    flags = fcntl(socket[1], F_GETFL, 0);
+//    fcntl(socket[1], F_SETFL, flags | O_NONBLOCK);
 
 	return ctx;
 }
@@ -241,6 +281,8 @@ int aio_socket_destroy(aio_socket_t socket, aio_ondestroy ondestroy, void* param
     struct kqueue_context* ctx = (struct kqueue_context*)socket;
     assert(ctx->ev[0].udata == ctx);
     assert(ctx->ev[1].udata == ctx);
+    ctx->ondestroy = ondestroy;
+    ctx->param = param;
 
 //    EV_SET(&ctx->ev[0], ctx->socket, 0, EV_DELETE, 0, 0, ctx);
 //    EV_SET(&ctx->ev[1], ctx->socket, 0, EV_DELETE, 0, 0, ctx);
@@ -251,9 +293,8 @@ int aio_socket_destroy(aio_socket_t socket, aio_ondestroy ondestroy, void* param
 //    }
 
 	if(ctx->own)
-		close(ctx->socket);
-	ctx->socket = -1;
-	free(ctx);
+		shutdown(ctx->socket[0], SHUT_RDWR);
+    aio_socket_release(ctx); // shutdown will generate EPOLLHUP event
 	return 0;
 }
 
@@ -271,7 +312,7 @@ static int kqueue_accept(struct kqueue_context* ctx, int flags, int error)
 		return error;
 	}
 
-	client = accept(ctx->socket, (struct sockaddr*)&addr, &addrlen);
+	client = accept(ctx->socket[0], (struct sockaddr*)&addr, &addrlen);
 	if(client > 0)
 	{
 		ctx->in.accept.proc(ctx->in.accept.param, 0, client, (struct sockaddr*)&addr, addrlen);
@@ -326,7 +367,7 @@ static int kqueue_connect(struct kqueue_context* ctx, int flags, int error)
     {
         // man connect to see more (EINPROGRESS)
         addrlen = sizeof(r);
-        getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&r, &addrlen);
+        getsockopt(ctx->socket[1], SOL_SOCKET, SO_ERROR, (void*)&r, &addrlen);
         ctx->out.connect.proc(ctx->out.connect.param, r);
         return r;
     }
@@ -347,17 +388,18 @@ int aio_socket_connect(aio_socket_t socket, const struct sockaddr *addr, socklen
 
     //r = kqueue_connect(ctx, 0, 0);
     addrlen = sizeof(ctx->out.connect.addr);
-    r = connect(ctx->socket, (const struct sockaddr*)&ctx->out.connect.addr, ctx->out.connect.addrlen);
-    if(0 == r)
-    {
-        // man 2 connect to see more(ERRORS: EINPROGRESS)
-        addrlen = sizeof(r);
-        if(0 == getsockopt(ctx->socket, SOL_SOCKET, SO_ERROR, (void*)&r, &addrlen) && 0 == r)
-            ctx->out.connect.proc(ctx->out.connect.param, r);
-        return r;
-    }
-
-    if(EINPROGRESS == errno)
+    r = connect(ctx->socket[1], (const struct sockaddr*)&ctx->out.connect.addr, ctx->out.connect.addrlen);
+//    if(0 == r)
+//    {
+//        // man 2 connect to see more(ERRORS: EINPROGRESS)
+//        addrlen = sizeof(r);
+//        if(0 == getsockopt(ctx->socket[1], SOL_SOCKET, SO_ERROR, (void*)&r, &addrlen) && 0 == r)
+//            ctx->out.connect.proc(ctx->out.connect.param, r);
+//        return r;
+//    }
+//
+//    if(EINPROGRESS == errno)
+    if(0 == r || EINPROGRESS == errno)
     {
     	KQueueWrite(ctx, kqueue_connect);
 	}
@@ -375,7 +417,7 @@ static int kqueue_recv(struct kqueue_context* ctx, int flags, int error)
 		return error;
 	}
 
-	r = recv(ctx->socket, ctx->in.recv.buffer, ctx->in.recv.bytes, 0);
+	r = recv(ctx->socket[0], ctx->in.recv.buffer, ctx->in.recv.bytes, 0);
 	if(r >= 0)
 	{
 		ctx->in.recv.proc(ctx->in.recv.param, 0, (size_t)r);
@@ -423,7 +465,7 @@ static int kqueue_send(struct kqueue_context* ctx, int flags, int error)
 		return error;
 	}
 
-	r = send(ctx->socket, ctx->out.send.buffer, ctx->out.send.bytes, 0);
+	r = send(ctx->socket[1], ctx->out.send.buffer, ctx->out.send.bytes, 0);
 	if(r >= 0)
 	{
 		ctx->out.send.proc(ctx->out.send.param, 0, (size_t)r);
@@ -477,7 +519,7 @@ static int kqueue_recv_v(struct kqueue_context* ctx, int flags, int error)
 	msg.msg_iov = (struct iovec*)ctx->in.recv_v.vec;
 	msg.msg_iovlen = ctx->in.recv_v.n;
 
-	r = recvmsg(ctx->socket, &msg, 0);
+	r = recvmsg(ctx->socket[0], &msg, 0);
 	if(r >= 0)
 	{
 		ctx->in.recv_v.proc(ctx->in.recv_v.param, 0, (size_t)r);
@@ -531,7 +573,7 @@ static int kqueue_send_v(struct kqueue_context* ctx, int flags, int error)
 	msg.msg_iov = (struct iovec*)ctx->out.send_v.vec;
 	msg.msg_iovlen = ctx->out.send_v.n;
 
-	r = sendmsg(ctx->socket, &msg, 0);
+	r = sendmsg(ctx->socket[1], &msg, 0);
 	if(r >= 0)
 	{
 		ctx->out.send_v.proc(ctx->out.send_v.param, 0, (size_t)r);
@@ -582,7 +624,7 @@ static int kqueue_recvfrom(struct kqueue_context* ctx, int flags, int error)
 		return error;
 	}
 
-	r = recvfrom(ctx->socket, ctx->in.recvfrom.buffer, ctx->in.recvfrom.bytes, 0, (struct sockaddr*)&addr, &addrlen);
+	r = recvfrom(ctx->socket[0], ctx->in.recvfrom.buffer, ctx->in.recvfrom.bytes, 0, (struct sockaddr*)&addr, &addrlen);
 	if(r >= 0)
 	{
 		ctx->in.recvfrom.proc(ctx->in.recvfrom.param, 0, (size_t)r, (struct sockaddr*)&addr, addrlen);
@@ -630,7 +672,7 @@ static int kqueue_sendto(struct kqueue_context* ctx, int flags, int error)
 		return error;
 	}
 
-	r = sendto(ctx->socket, ctx->out.send.buffer, ctx->out.send.bytes, 0, (struct sockaddr*)&ctx->out.send.addr, ctx->out.send.addrlen);
+	r = sendto(ctx->socket[1], ctx->out.send.buffer, ctx->out.send.bytes, 0, (struct sockaddr*)&ctx->out.send.addr, ctx->out.send.addrlen);
 	if(r >= 0)
 	{
 		ctx->out.send.proc(ctx->out.send.param, 0, (size_t)r);
@@ -689,7 +731,7 @@ static int kqueue_recvfrom_v(struct kqueue_context* ctx, int flags, int error)
 	msg.msg_iov = (struct iovec*)ctx->in.recvfrom_v.vec;
 	msg.msg_iovlen = ctx->in.recvfrom_v.n;
 
-	r = recvmsg(ctx->socket, &msg, 0);
+	r = recvmsg(ctx->socket[0], &msg, 0);
 	if(r >= 0)
 	{
 		ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, 0, (size_t)r, (struct sockaddr*)&addr, msg.msg_namelen);
@@ -745,7 +787,7 @@ static int kqueue_sendto_v(struct kqueue_context* ctx, int flags, int error)
 	msg.msg_iov = (struct iovec*)ctx->out.send_v.vec;
 	msg.msg_iovlen = ctx->out.send_v.n;
 
-	r = sendmsg(ctx->socket, &msg, 0);
+	r = sendmsg(ctx->socket[1], &msg, 0);
 	if(r >= 0)
 	{
 		ctx->out.send_v.proc(ctx->out.send_v.param, 0, (size_t)r);
