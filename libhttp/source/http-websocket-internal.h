@@ -33,9 +33,9 @@ struct websocket_parser_t
 
 	uint8_t h[14];
 	uint8_t* ptr;
-	unsigned int len;
-	unsigned int capacity;
-	unsigned int max_capacity;
+	uint64_t len;
+	uint64_t capacity;
+	uint64_t max_capacity;
 };
 
 typedef int (*websocket_parser_handler)(void* param, int opcode, const void* data, size_t bytes, int flags);
@@ -44,18 +44,6 @@ typedef int (*websocket_parser_handler)(void* param, int opcode, const void* dat
 int websocket_parser_input(struct websocket_parser_t* parser, uint8_t* data, size_t bytes, websocket_parser_handler handler, void* param);
 
 int websocket_parser_destroy(struct websocket_parser_t* parser);
-
-
-struct http_client_t;
-struct http_session_t;
-struct http_websocket_t
-{
-	struct websocket_parser_t parser;
-};
-
-int http_session_websocket_destroy(struct http_websocket_t* ws);
-
-int http_session_websocket_send_vec(struct http_websocket_t* ws, int opcode, const struct http_vec_t* vec, int num);
 
 #ifdef __cplusplus
 }

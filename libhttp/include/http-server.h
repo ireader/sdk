@@ -133,7 +133,6 @@ struct http_streaming_handler_t
 };
 
 /// Set http streaming handler(for upload / flv streaming)
-/// @param[in] bytes >0-data length, =0-connection closed, <0-error
 void http_session_streaming_handler(http_session_t* session, struct http_streaming_handler_t* handler, void* param);
 
 

@@ -43,7 +43,7 @@ static int websocket_parser_alloc(struct websocket_parser_t* parser, size_t byte
 		if (!ptr)
 			return -ENOMEM;
 		parser->ptr = (uint8_t*)ptr;
-		parser->capacity = bytes;
+		parser->capacity = (unsigned int)bytes;
 	}
 
 	return 0;
@@ -53,8 +53,8 @@ int websocket_parser_input(struct websocket_parser_t* parser, uint8_t* data, siz
 {
 	int r, flags;
 	size_t i, off;
-	unsigned int len;
-	uint32_t max_capacity;
+	uint64_t len;
+	uint64_t max_capacity;
 
 	r = 0;
 	for (off = 0; 0 == r && off < bytes;)
@@ -78,7 +78,7 @@ int websocket_parser_input(struct websocket_parser_t* parser, uint8_t* data, siz
 			len = parser->h[1] & 0x7F;
 			len = 2 + ((parser->h[1] & 0x80) /*mask*/ ? 4 : 0) + (len < 126 ? 0 : (len == 126 ? 2 : 8));
 			assert(len >= parser->len && len <= sizeof(parser->h));
-			i = MIN(len - parser->len, bytes - off);
+			i = MIN((size_t)(len - parser->len), bytes - off);
 			if (i > 0)
 			{
 				// mask & extended payload length
@@ -107,7 +107,7 @@ int websocket_parser_input(struct websocket_parser_t* parser, uint8_t* data, siz
 			{
 				// Merge to Full-Frame
 				r = websocket_parser_alloc(parser, parser->header.len);
-				len = MIN(parser->header.len - parser->len, bytes - off);
+				len = MIN((unsigned int)(parser->header.len - parser->len), (unsigned int)(bytes - off));
 				if (len > 0 && 0 == r)
 				{
 					if (parser->header.mask)
@@ -134,7 +134,7 @@ int websocket_parser_input(struct websocket_parser_t* parser, uint8_t* data, siz
 			}
 			else
 			{
-				len = MIN(parser->header.len - parser->len, bytes - off);
+				len = MIN(parser->header.len - parser->len, (uint64_t)(bytes - off));
 				if (parser->header.mask)
 				{
 					for (i = off; i < off + len; i++)

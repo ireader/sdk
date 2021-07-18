@@ -8,6 +8,11 @@
 #include "sys/sock.h"
 #include "sys/atomic.h"
 
+struct http_websocket_t
+{
+    struct websocket_parser_t parser;
+};
+
 struct http_server_t
 {
 	void* aio;
@@ -82,5 +87,10 @@ struct http_session_t
 int http_session_create(struct http_server_t *server, socket_t socket, const struct sockaddr* sa, socklen_t salen);
 
 int http_session_add_header(struct http_session_t* session, const char* name, const char* value, size_t bytes);
+
+int http_session_websocket_destroy(struct http_websocket_t* ws);
+
+int http_session_websocket_send_vec(struct http_websocket_t* ws, int opcode, const struct http_vec_t* vec, int num);
+
 
 #endif /* !_http_server_internal_h_ */

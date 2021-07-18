@@ -11,7 +11,7 @@
 
 // RFC2616 HTTP/1.1 2.2 Basic Rules (p13)
 // CTL = 0-31 and DEL(127)
-static const char* s_separators = "()<>@,;:\\\"/[]?={} \t";
+//static const char* s_separators = "()<>@,;:\\\"/[]?={} \t";
 
 static inline const char* strskip(const char* s)
 {

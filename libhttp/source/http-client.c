@@ -89,7 +89,7 @@ static int http_client_redirect_handler(struct http_client_t* http)
     
     http->redirect.urls[http->redirect.n++] = strdup(uri);
     if(http->redirect.onredirect)
-        return http->redirect.onredirect(http->redirect.param, http->redirect.urls, http->redirect.n);
+        return http->redirect.onredirect(http->redirect.param, (const char**)http->redirect.urls, http->redirect.n);
     return 1; // enable redirect
 }
 

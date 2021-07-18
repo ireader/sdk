@@ -1255,8 +1255,8 @@ int http_get_header_by_name2(const struct http_parser_t* http, const char* name,
 int64_t http_get_content_length(const struct http_parser_t* http)
 {
 	assert(http->stateM >= SM_HEADER);
-	if(-1 == http->content_length && http->callback)
-		return http->raw_body_length;
+//	if(-1 == http->content_length && http->callback)
+//		return http->raw_body_length;
 	return http->content_length;
 }
 

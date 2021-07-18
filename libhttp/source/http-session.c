@@ -139,8 +139,8 @@ static int http_session_upgrade_websocket(http_session_t* session, const char* p
 	//session->onsendparam = session->wsupgrade;
 
 	SHA1Reset(&ctx);
-	SHA1Input(&ctx, (const uint8_t*)wskey, strlen(wskey));
-	SHA1Input(&ctx, (const uint8_t*)wsuuid, strlen(wsuuid));
+	SHA1Input(&ctx, (const uint8_t*)wskey, (unsigned int)strlen(wskey));
+	SHA1Input(&ctx, (const uint8_t*)wsuuid, (unsigned int)strlen(wsuuid));
 	SHA1Result(&ctx, sha1);
 	base64_encode(wsaccept, sha1, sizeof(sha1));
 

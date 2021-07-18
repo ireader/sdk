@@ -295,7 +295,7 @@ static inline socket_t socket_tcp_listen_ipv6(IN const char* ipv4_or_ipv6_or_dns
 
 /// create a new UDP socket and bind with ip/port
 /// @param[in] family AF_INET-IPv4, AF_INET6-IPv6, AF_UNSPEC-any
-/// @param[in] ipv4_or_dns socket bind local address, NULL-bind any address
+/// @param[in] ipv4_or_ipv6_or_dns socket bind local address, NULL-bind any address
 /// @param[in] port bind local port
 /// @param[in] reuse 1-enable reuse addr
 /// @param[in] dual 1-enable ipv6 dual stack

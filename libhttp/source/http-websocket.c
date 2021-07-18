@@ -1,5 +1,6 @@
 #include "http-server.h"
 #include "http-websocket.h"
+#include "http-server-internal.h"
 #include "http-websocket-internal.h"
 #include <stdlib.h>
 #include <string.h>
@@ -53,6 +54,6 @@ int websocket_set_maxbufsize(struct http_websocket_t* ws, size_t bytes)
 	if (bytes > 1 * 1024 * 1024 * 1024 || bytes < 64)
 		return -1;
 
-	ws->parser.max_capacity = bytes;
+	ws->parser.max_capacity = (unsigned int)bytes;
 	return 0;
 }
