@@ -33,10 +33,11 @@ static int http_server_ondownload(void* /*http*/, http_session_t* session, const
 	return http_server_send(session, "", 0, NULL, NULL);
 }
 
-static void* http_server_onwebsocket(void* param, http_websocket_t* ws, const char* path, const char* subprotocols)
+static int http_server_onwebsocket(void* param, http_websocket_t* ws, const char* path, const char* subprotocols, void** wsparam)
 {
 	printf("WS onupgrade path: %s, subprotocols: %s\n", path ? path : "<nil>", subprotocols ? subprotocols : "<nil>");
-	return ws;
+	*wsparam = ws;
+	return 0;
 }
 
 static void http_server_test_ws_ondestroy(void* param)
