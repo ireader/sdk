@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdatomic.h>
 
 //#define MAX_EVENT 64
 
@@ -89,7 +90,7 @@ struct kqueue_context
 {
 	struct kevent ev[2]; // 0-read, 1-write
     socket_t socket[2];
-    volatile int32_t ref;
+    volatile atomic_int ref;
     int own;
 	//int ref;
 	//int closed;
@@ -119,27 +120,27 @@ struct kqueue_context
 
 #define KQueueRead(ctx, callback)   do {\
     ctx->read = callback;   \
-    OSAtomicIncrement32(&ctx->ref);        \
+    atomic_fetch_add(&ctx->ref,1);        \
     EV_SET(&ctx->ev[0], ctx->socket[0], EVFILT_READ, EV_ADD|EV_ONESHOT, 0, 0, ctx);    \
     if(-1 != kevent(s_kqueue, &ctx->ev[0], 1, NULL, 0, NULL))   \
         return 0;   \
     ctx->ev[0].filter = 0; \
-    OSAtomicDecrement32(&ctx->ref);    \
+    atomic_fetch_sub(&ctx->ref,1);    \
 } while(0)
 
 #define KQueueWrite(ctx, callback)  do {\
     ctx->write = callback;         \
-    OSAtomicIncrement32(&ctx->ref);        \
+    atomic_fetch_add(&ctx->ref,1);        \
     EV_SET(&ctx->ev[1], ctx->socket[1], EVFILT_WRITE, EV_ADD|EV_ONESHOT, 0, 0, ctx);   \
     if(-1 != kevent(s_kqueue, &ctx->ev[1], 1, NULL, 0, NULL))   \
         return 0;   \
     ctx->ev[1].filter = 0;  \
-    OSAtomicDecrement32(&ctx->ref);    \
+    atomic_fetch_sub(&ctx->ref,1);    \
 } while(0)
 
 static int aio_socket_release(struct kqueue_context* ctx)
 {
-    if( 0 == OSAtomicDecrement32(&ctx->ref) )
+    if( 0 == atomic_fetch_sub(&ctx->ref,1) )
     {
         //EV_SET(&ctx->ev[0], ctx->socket, 0, EV_DELETE, 0, 0, ctx);
         //EV_SET(&ctx->ev[1], ctx->socket, 0, EV_DELETE, 0, 0, ctx);
