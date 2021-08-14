@@ -65,9 +65,18 @@ static inline int32_t atomic_add32(volatile int32_t *value, int32_t incr)
 
 static inline int32_t atomic_load32(volatile int32_t *value)
 {
-    assert((intptr_t)value % 4 == 0);
+#if defined(InterlockedOr)
+	assert((intptr_t)value % 4 == 0);
     assert(sizeof(LONG) == sizeof(int32_t));
     return InterlockedOr((LONG volatile*)value, 0);
+#else
+	int32_t old;
+	assert((intptr_t)value % 4 == 0);
+    assert(sizeof(LONG) == sizeof(int32_t));
+	do {
+		old = *value;
+	} while(old != InterlockedCompareExchange((LONG volatile*)value, old, old));
+#endif
 }
 
 static inline int atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t newvalue)
@@ -112,9 +121,18 @@ static inline int64_t atomic_add64(volatile int64_t *value, int64_t incr)
 
 static inline int64_t atomic_load64(volatile int64_t *value)
 {
-    assert((intptr_t)value % 8 == 0);
-    assert(sizeof(LONGLONG) == sizeof(int64_t));
+#if defined(InterlockedOr64)
+	assert((intptr_t)value % 8 == 0);
+	assert(sizeof(LONGLONG) == sizeof(int64_t));
     return InterlockedOr64((LONGLONG volatile*)value, 0);
+#else
+	int64_t old;
+	assert((intptr_t)value % 8 == 0);
+	assert(sizeof(LONGLONG) == sizeof(int64_t));
+	do {
+		old = *value;
+	} while (old != InterlockedCompareExchange64(value, old, old));
+#endif
 }
 
 static inline int atomic_cas64(volatile int64_t *value, int64_t oldvalue, int64_t newvalue)

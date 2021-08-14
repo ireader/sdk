@@ -85,7 +85,11 @@ static inline int rwlocker_wrunlock(rwlocker_t* locker)
 static inline int rwlocker_tryrdlock(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
+#if (_WIN32_WINNT >= 0x0601 /*win7*/ )
 	return 0 == TryAcquireSRWLockShared(locker) ? -1 : 0;
+#else
+	return -1;
+#endif
 #else
 	return pthread_rwlock_tryrdlock(locker);
 #endif
@@ -95,7 +99,11 @@ static inline int rwlocker_tryrdlock(rwlocker_t* locker)
 static inline int rwlocker_trywrlock(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
+#if (_WIN32_WINNT >= 0x0601 /*win7*/ )
 	return 0 == TryAcquireSRWLockExclusive(locker) ? -1 : 0;
+#else
+	return -1;
+#endif
 #else
 	return pthread_rwlock_trywrlock(locker);
 #endif

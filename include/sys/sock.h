@@ -25,6 +25,10 @@ typedef WSABUF	socket_bufvec_t;
 #define SHUT_WR SD_SEND
 #define SHUT_RDWR SD_BOTH
 
+#ifndef ETIMEDOUT
+	#define ETIMEDOUT 138
+#endif
+
 // IPv6 MTU
 #ifndef IPV6_MTU_DISCOVER
 	#define IPV6_MTU_DISCOVER	71
@@ -67,6 +71,7 @@ typedef struct iovec socket_bufvec_t;
 #endif
 
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #ifndef IN
