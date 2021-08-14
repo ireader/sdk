@@ -130,12 +130,12 @@ struct kqueue_context
 
 #define KQueueWrite(ctx, callback)  do {\
     ctx->write = callback;         \
-    atomic_increment32(&ctx->ref,1);        \
+    atomic_increment32(&ctx->ref);        \
     EV_SET(&ctx->ev[1], ctx->socket[1], EVFILT_WRITE, EV_ADD|EV_ONESHOT, 0, 0, ctx);   \
     if(-1 != kevent(s_kqueue, &ctx->ev[1], 1, NULL, 0, NULL))   \
         return 0;   \
     ctx->ev[1].filter = 0;  \
-    atomic_ecrement32(&ctx->ref);    \
+    atomic_decrement32(&ctx->ref);    \
 } while(0)
 
 static int aio_socket_release(struct kqueue_context* ctx)
