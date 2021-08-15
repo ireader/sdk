@@ -66,7 +66,9 @@ static int aio_handler_check(struct aio_recv_t* recv)
 	// Thread 1 -> reset timer will failed
 	if (!atomic_cas32(&recv->status, AIO_STATUS_TIMEOUT, AIO_STATUS_INIT))
 	{
-		assert(0);
+        // wait for later timeout
+        // should check socket handle leak!!!
+		// assert(0);
 	}
 
 	return 0;

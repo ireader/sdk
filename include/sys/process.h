@@ -50,7 +50,6 @@ typedef struct
 #endif
 } process_create_param_t;
 
-
 //////////////////////////////////////////////////////////////////////////
 ///
 /// process
@@ -81,7 +80,7 @@ static inline int process_createve(const char* filename, process_create_param_t 
 	return 0;
 
 #else
-	int i;
+	int i, n;
 	pid_t r = fork();
 	if(r < 0)
 	{
@@ -94,8 +93,8 @@ static inline int process_createve(const char* filename, process_create_param_t 
 		// 0-2 stdin/stdout/stderr
 		if(1 != param->bInheritHandles)
 		{
-			int max_fd = sysconf(_SC_OPEN_MAX)
-			for (i = 3; i < max_fd; i++)
+            n = (int)sysconf(_SC_OPEN_MAX);
+			for (i = 3; i < n; i++)
 				close(i);
 		}
 
