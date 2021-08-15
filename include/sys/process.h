@@ -94,7 +94,8 @@ static inline int process_createve(const char* filename, process_create_param_t 
 		// 0-2 stdin/stdout/stderr
 		if(1 != param->bInheritHandles)
 		{
-			for(i=3;i<getdtablesize();i++)
+			int max_fd = sysconf(_SC_OPEN_MAX)
+			for (i = 3; i < max_fd; i++)
 				close(i);
 		}
 
