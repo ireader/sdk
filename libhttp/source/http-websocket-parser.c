@@ -97,8 +97,14 @@ int websocket_parser_input(struct websocket_parser_t* parser, uint8_t* data, siz
 				parser->len = 0; // for payload data
 				parser->header_masking_key_off = 0;
 				parser->state = WEBSOCKET_PARSER_PAYLOAD;
+
+				// fix: 0-length payload (such as close)
+				// Fallthrough to WEBSOCKET_PARSER_PAYLOAD
 			}
-			break;
+			else
+			{
+				break;
+			}
 
 		case WEBSOCKET_PARSER_PAYLOAD:
 			// Buffer to FULL-Frame except: non-fragment(continuation) frame && FIN frame && payload length < max_capability
