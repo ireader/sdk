@@ -27,8 +27,8 @@ static inline int path_testfile(const char* filename)
 #if defined(OS_WINDOWS)
 	// we must use GetFileAttributes() instead of the ANSI C functions because
 	// it can cope with network (UNC) paths unlike them
-	size_t ret = GetFileAttributesA(filename);
-	return ((ret != (size_t)-1) && !(ret & FILE_ATTRIBUTE_DIRECTORY)) ? 1 : 0;
+    DWORD ret = GetFileAttributesA(filename);
+	return ((ret != INVALID_FILE_ATTRIBUTES) && !(ret & FILE_ATTRIBUTE_DIRECTORY)) ? 1 : 0;
 #else
 	struct stat info;
 	return (stat(filename, &info)==0 && (info.st_mode&S_IFREG)) ? 1 : 0;
@@ -40,8 +40,8 @@ static inline int path_testfile(const char* filename)
 static inline int path_testdir(const char* path)
 {
 #if defined(OS_WINDOWS)
-	size_t ret = GetFileAttributesA(path);
-	return ((ret != (size_t)-1) && (ret & FILE_ATTRIBUTE_DIRECTORY)) ? 1 : 0;
+	DWORD ret = GetFileAttributesA(path);
+	return ((ret != INVALID_FILE_ATTRIBUTES) && (ret & FILE_ATTRIBUTE_DIRECTORY)) ? 1 : 0;
 #else
 	struct stat info;
 	return (stat(path, &info)==0 && (info.st_mode&S_IFDIR)) ? 1 : 0;
@@ -54,7 +54,7 @@ static inline int path_makedir(const char* path)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = CreateDirectoryA(path, NULL);
-	return TRUE==r ? 0 : (int)GetLastError();
+	return r ? 0 : (int)GetLastError();
 #else
 	int r = mkdir(path, 0777);
 	return 0 == r ? 0 : errno;
@@ -67,10 +67,10 @@ static inline int path_rmdir(const char* path)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = RemoveDirectoryA(path);
-	return TRUE==r?0:(int)GetLastError();
+	return r ? 0 : (int)GetLastError();
 #else
 	int r = rmdir(path);
-	return 0 == r? 0 : errno;
+	return 0 == r ? 0 : errno;
 #endif
 }
 
@@ -80,7 +80,7 @@ static inline int path_getcwd(char* path, unsigned int bytes)
 {
 #if defined(OS_WINDOWS)
 	DWORD r = GetCurrentDirectoryA(bytes, path);
-	return 0==r ? GetLastError() : 0;
+	return r > 0 ? 0 : (int)GetLastError();
 #else
 	char* p = getcwd(path, bytes);
 	return p ? 0 : errno;
@@ -93,10 +93,10 @@ static inline int path_chcwd(const char* path)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = SetCurrentDirectoryA(path);
-	return TRUE==r ? 0 : (int)GetLastError();
+	return r ? 0 : (int)GetLastError();
 #else
 	int r = chdir(path);
-	return 0 == r? 0 : errno;
+	return 0 == r ? 0 : errno;
 #endif
 }
 
@@ -106,7 +106,7 @@ static inline int path_realpath(const char* path, char resolved_path[PATH_MAX])
 {
 #if defined(OS_WINDOWS)
 	DWORD r = GetFullPathNameA(path, PATH_MAX, resolved_path, NULL);
-	return 0==r ? 0 : (int)GetLastError();
+	return r > 0 ? 0 : (int)GetLastError();
 #else
 	char* p = realpath(path, resolved_path);
 	return p ? 0 : errno;
@@ -152,10 +152,10 @@ static inline int path_rmfile(const char* file)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = DeleteFileA(file);
-	return TRUE==r ? 0 : (int)GetLastError();
+	return r ? 0 : (int)GetLastError();
 #else
 	int r = remove(file);
-	return 0 == r? 0 : errno;
+	return 0 == r ? 0 : errno;
 #endif
 }
 
@@ -165,7 +165,7 @@ static inline int path_rename(const char* oldpath, const char* newpath)
 {
 #if defined(OS_WINDOWS)
 	BOOL r = MoveFileA(oldpath, newpath);
-	return TRUE==r?0:(int)GetLastError();
+	return r ? 0:(int)GetLastError();
 #else
 	int r = rename(oldpath, newpath);
 	return 0 == r? 0 : errno;
