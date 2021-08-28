@@ -84,7 +84,7 @@ struct http_session_t
 	void* wsupgrade;
 };
 
-int http_session_create(struct http_server_t *server, socket_t socket, const struct sockaddr* sa, socklen_t salen);
+struct http_session_t* http_session_create(struct http_server_t *server, socket_t socket, const struct sockaddr* sa, socklen_t salen);
 
 int http_session_add_header(struct http_session_t* session, const char* name, const char* value, size_t bytes);
 
