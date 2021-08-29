@@ -105,9 +105,9 @@ const char* http_server_get_header(struct http_session_t *session, const char *n
 int http_server_get_content(struct http_session_t *session, void **content, size_t *length)
 {
 	//*content = (void*)http_get_content(session->parser);
-	//*length = (size_t)http_get_content_length(session->parser);
+	*length = (size_t)http_get_content_length(session->parser);
 	*content = session->payload.ptr;
-	*length = session->payload.len;
+	//*length = session->payload.len; // fix: session->payload.len reset by http_session_reset
 	return 0;
 }
 
