@@ -195,6 +195,9 @@
     <ClCompile Include="source\string\strtrim.c">
       <Filter>Source Files\string</Filter>
     </ClCompile>
+    <ClCompile Include="source\port\win32-minidump.c">
+      <Filter>Source Files\port</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\aio-socket.h">

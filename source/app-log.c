@@ -17,7 +17,7 @@
 //static const char s_month[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 //static const char* s_level_tag[] = { "EMERG", "ALERT", "CRIT", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG" };
 static const char* s_level_tag[] = { "X", "A", "C", "E", "W", "N", "I", "D" };
-static const char* s_level_color[] = { "\033[0;35m", "\033[0;34m", "\033[0;33m", "\033[0;31m", "\033[0;31m", "\033[0;37m", "\033[0;32m", "\033[0m" };
+static const char* s_level_color[] = { "\033[0m", "\033[0;35m", "\033[0;34m", "\033[0;33m", "\033[0;31m", "\033[0;31m", "\033[0;37m", "\033[0;32m", "\033[0m", };
 
 #define LOG_LEVEL(level) ((LOG_EMERG <= level && level <= LOG_DEBUG) ? level : LOG_DEBUG)
 
@@ -74,9 +74,8 @@ static void app_log_print(int level, const char* format, va_list args)
 	char timestr[65];
 	char log[1024 * 4];
 	app_log_time(timestr, sizeof(timestr));
-	n = snprintf(log, sizeof(log) - 1, "%s%s%s|", s_level_color[LOG_LEVEL(level)], timestr, s_level_tag[LOG_LEVEL(level)]);
+	n = snprintf(log, sizeof(log) - 1, "%s%s%s%s|", s_level_color[0], s_level_color[LOG_LEVEL(level)+1], timestr, s_level_tag[LOG_LEVEL(level)]);
 	n += vsnprintf(log + n, sizeof(log) - n - 1, format, args);
-	n += snprintf(log + n, sizeof(log) - n - 1, "\033[0m");
 	printf("%.*s", n, log);
 }
 

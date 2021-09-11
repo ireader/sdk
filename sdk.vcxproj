@@ -50,6 +50,7 @@
     <ClCompile Include="source\port\systimer.c" />
     <ClCompile Include="source\port\sysvolume.cpp" />
     <ClCompile Include="source\port\win32-async-pipe.c" />
+    <ClCompile Include="source\port\win32-minidump.c" />
     <ClCompile Include="source\random.c" />
     <ClCompile Include="source\rbtree.c" />
     <ClCompile Include="source\ring-buffer.c" />
