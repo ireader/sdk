@@ -55,12 +55,12 @@ int sockpair_create2(const struct sockaddr* addr, socket_t pair[2], unsigned sho
 		i = i / 2 * 2 + s_base_port;
 
 		socket_addr_setport((struct sockaddr*)&ss, socket_addr_len(addr), i);
-		sock[0] = socket_udp_bind_addr((struct sockaddr*)&ss, 0, 0);
+		sock[0] = socket_udp_bind_addr((struct sockaddr*)&ss, 0, 1);
 		if (socket_invalid == sock[0])
 			continue;
 
 		socket_addr_setport((struct sockaddr*)&ss, socket_addr_len(addr), i+1);
-		sock[1] = socket_udp_bind_addr((struct sockaddr*)&ss, 0, 0);
+		sock[1] = socket_udp_bind_addr((struct sockaddr*)&ss, 0, 1);
 		if (socket_invalid == sock[1])
 		{
 			socket_close(sock[0]);
