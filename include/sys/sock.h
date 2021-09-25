@@ -1202,22 +1202,23 @@ static inline int socket_addr_is_local(IN const struct sockaddr* sa, IN socklen_
 		// link-local unicast: 169.254.x.x
 		const struct sockaddr_in* in = (const struct sockaddr_in*)sa;
 		assert(sizeof(struct sockaddr_in) == salen);
-		return 0 == in->sin_addr.s_addr || 127 == in->sin_addr.s_net || (169 == in->sin_addr.s_net && 254 == in->sin_addr.s_host);
+		return 0 == in->sin_addr.s_addr || 127 == (htonl(in->sin_addr.s_addr) >> 24) || (0xA9FE == (htonl(in->sin_addr.s_addr) >> 16)) ? 1 : 0;
 	}
 	else if (AF_INET6 == sa->sa_family)
-	{
+	{		
 		// unspecified: ::
 		// loopback: ::1
 		// link-local unicast: 0xFE 0x80
 		// link-local multicast: 0xFF 0x01/0x02
-		static const unsigned char ipv6_unspecified[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		static const unsigned char ipv6_unspecified[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; // IN6ADDR_ANY_INIT
 		static const unsigned char ipv6_loopback[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
 		const struct sockaddr_in6* in6 = (const struct sockaddr_in6*)sa;
 		assert(sizeof(struct sockaddr_in6) == salen);
-		return 0 == memcmp(ipv6_unspecified, in6->sin6_addr.s6_addr, sizeof(ipv6_unspecified))
-			|| 0 == memcmp(ipv6_loopback, in6->sin6_addr.s6_addr, sizeof(ipv6_loopback))
-			|| (in6->sin6_addr.s6_addr[0] == 0xfe && (in6->sin6_addr.s6_addr[1] & 0xc0) == 0x80)
-			|| (in6->sin6_addr.s6_addr[0] == 0xff && ((in6->sin6_addr.s6_addr[1] & 0x0f) == 0x01 || (in6->sin6_addr.s6_addr[1] & 0x0f) == 0x02));
+		return 0 == memcmp(ipv6_unspecified, in6->sin6_addr.s6_addr, sizeof(ipv6_unspecified)) // IN6_IS_ADDR_UNSPECIFIED
+			|| 0 == memcmp(ipv6_loopback, in6->sin6_addr.s6_addr, sizeof(ipv6_loopback)) // IN6_IS_ADDR_LOOPBACK
+			|| (in6->sin6_addr.s6_addr[0] == 0xfe && (in6->sin6_addr.s6_addr[1] & 0xc0) == 0x80) // IN6_IS_ADDR_LINKLOCAL
+			|| (in6->sin6_addr.s6_addr[0] == 0xff && ((in6->sin6_addr.s6_addr[1] & 0x0f) == 0x01 || (in6->sin6_addr.s6_addr[1] & 0x0f) == 0x02)) // IN6_IS_ADDR_MULTICAST
+			? 1 : 0;
 	}
 	else
 	{
@@ -1231,6 +1232,7 @@ static inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN sock
 {
 	if (AF_INET == sa->sa_family)
 	{
+		// IN_MULTICAST
 		// 224.x.x.x ~ 239.x.x.x
 		// b1110xxxx xxxxxxxx xxxxxxxx xxxxxxxx
 		const struct sockaddr_in* in = (const struct sockaddr_in*)sa;
