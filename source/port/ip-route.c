@@ -33,7 +33,7 @@
 #include <errno.h>
 
 #if defined(OS_WINDOWS)
-int ip_route_get(const char* destination, char ip[64])
+int ip_route_get(const char* destination, char ip[65])
 {
 	int r;
 	DWORD index;
@@ -96,7 +96,7 @@ int ip_route_get(const char* destination, char ip[64])
 }
 #else
 
-int ip_route_get(const char* destination, char ip[40])
+int ip_route_get(const char* destination, char ip[65])
 {
     int r;
     u_short port;

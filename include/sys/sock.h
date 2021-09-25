@@ -198,6 +198,7 @@ static inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_
 static inline int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t salen, OUT char ip[SOCKET_ADDRLEN], OUT u_short* port);
 static inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN socklen_t hostlen);
 static inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen, u_short port);
+static inline int socket_addr_is_local(IN const struct sockaddr* sa, IN socklen_t salen);
 static inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t salen);
 static inline int socket_addr_compare(const struct sockaddr* first, const struct sockaddr* second); // 0-equal, other-don't equal
 static inline int socket_addr_len(const struct sockaddr* addr);
@@ -1190,6 +1191,40 @@ static inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen
 static inline int socket_addr_name(IN const struct sockaddr* sa, IN socklen_t salen, OUT char* host, IN socklen_t hostlen)
 {
 	return getnameinfo(sa, salen, host, hostlen, NULL, 0, 0);
+}
+
+static inline int socket_addr_is_local(IN const struct sockaddr* sa, IN socklen_t salen)
+{
+	if (AF_INET == sa->sa_family)
+	{
+		// unspecified: 0.0.0.0
+		// loopback: 127.x.x.x
+		// link-local unicast: 169.254.x.x
+		const struct sockaddr_in* in = (const struct sockaddr_in*)sa;
+		assert(sizeof(struct sockaddr_in) == salen);
+		return 0 == in->sin_addr.s_addr || 127 == in->sin_addr.s_net || (169 == in->sin_addr.s_net && 254 == in->sin_addr.s_host);
+	}
+	else if (AF_INET6 == sa->sa_family)
+	{
+		// unspecified: ::
+		// loopback: ::1
+		// link-local unicast: 0xFE 0x80
+		// link-local multicast: 0xFF 0x01/0x02
+		static const unsigned char ipv6_unspecified[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		static const unsigned char ipv6_loopback[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
+		const struct sockaddr_in6* in6 = (const struct sockaddr_in6*)sa;
+		assert(sizeof(struct sockaddr_in6) == salen);
+		return 0 == memcmp(ipv6_unspecified, in6->sin6_addr.s6_addr, sizeof(ipv6_unspecified))
+			|| 0 == memcmp(ipv6_loopback, in6->sin6_addr.s6_addr, sizeof(ipv6_loopback))
+			|| (in6->sin6_addr.s6_addr[0] == 0xfe && (in6->sin6_addr.s6_addr[1] & 0xc0) == 0x80)
+			|| (in6->sin6_addr.s6_addr[0] == 0xff && ((in6->sin6_addr.s6_addr[1] & 0x0f) == 0x01 || (in6->sin6_addr.s6_addr[1] & 0x0f) == 0x02));
+	}
+	else
+	{
+		assert(0);
+	}
+
+	return 0;
 }
 
 static inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN socklen_t salen)
