@@ -3,12 +3,12 @@
 
 #pragma comment(lib, "Dbghelp.lib")
 
-LONG WINAPI CreateMiniDump(struct _EXCEPTION_POINTERS* pep)
+LONG WINAPI CreateMiniDump(const char* filename, struct _EXCEPTION_POINTERS* pep)
 {
     HANDLE hFile;
     MINIDUMP_EXCEPTION_INFORMATION info;
     
-    hFile = CreateFileA("core.dmp", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    hFile = CreateFileA(filename, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
         return EXCEPTION_CONTINUE_SEARCH;
 
