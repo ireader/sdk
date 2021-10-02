@@ -1,5 +1,6 @@
 RELEASE ?= 0 # default debug
 UNICODE ?= 0 # default ansi
+VERSION ?= 0
 
 ifdef PLATFORM
 	CROSS:=$(PLATFORM)-
@@ -42,6 +43,10 @@ else
 	DEFINES += DEBUG _DEBUG
 endif
 
+ifeq ($(VERSION),1)
+	VERSIONFILE = version.h
+endif
+
 # default don't export anything
 CFLAGS += -fvisibility=hidden
 
@@ -69,10 +74,14 @@ OBJECT_FILES := $(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SOURCE_FILES)))
 OBJECT_FILES := $(addprefix $(OBJSPATH)/,$(OBJECT_FILES))
 DEPENDENCE_FILES := $(OBJECT_FILES:%.o=%.d)
 MKDIR = @mkdir -p $(dir $@)
+
 #--------------------------Makefile Rules----------------------------
 #
 #--------------------------------------------------------------------
-$(OUTPATH)/$(OUTFILE): $(OBJECT_FILES) $(STATIC_LIBS)
+$(OUTPATH)/$(OUTFILE): $(VERSIONFILE) $(OBJECT_FILES) $(STATIC_LIBS)
+ifeq ($(VERSION),1)
+	$(ROOT)/gitver.sh version.ver version.h
+endif
 ifeq ($(OUTTYPE),0)
 	$(CXX) -o $@ -Wl,-rpath . $(LDFLAGS) $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS))
 else
@@ -85,24 +94,24 @@ endif
 endif
 	@echo make ok, output: $(OUTPATH)/$(OUTFILE)
 
-$(OBJSPATH)/%.o : %.c
+$(OBJSPATH)/%.o : %.c $(VERSIONFILE) 
 	$(MKDIR)
 	@$(COMPILE.CC) -c -o $@ $<
 	@echo -e "\033[35m	CC	$(notdir $@)\033[0m"
 	
-$(OBJSPATH)/%.o : %.cpp
+$(OBJSPATH)/%.o : %.cpp $(VERSIONFILE) 
 	$(MKDIR)
 	@$(COMPILE.CXX) -c -o $@ $<
 	@echo -e "\033[35m	CXX	$(notdir $@)\033[0m"
 
-$(OBJSPATH)/%.d: %.c
+$(OBJSPATH)/%.d: %.c $(VERSIONFILE) 
 	$(MKDIR)
 	@echo -e "\033[32m	CREATE	$(notdir $@)\033[0m"
 	@rm -f $@; \
 	 $(COMPILE.CC) -MM $(CFLAGS) $< > $@.$$$$; \
      sed 's,\($(notdir $*)\)\.o[ :]*,$*\.o $@ : ,g' < $@.$$$$ > $@; \
      rm -f $@.$$$$
-$(OBJSPATH)/%.d: %.cpp
+$(OBJSPATH)/%.d: %.cpp $(VERSIONFILE) 
 	$(MKDIR)
 	@echo -e "\033[32m	CREATE	$(notdir $@)\033[0m"
 	@rm -f $@; \
@@ -116,13 +125,14 @@ else
 sinclude $(DEPENDENCE_FILES)
 endif
 
-version.h : version.ver
-	$(ROOT)/svnver.sh version.ver version.h
+version.h: version.ver
+	$(ROOT)/gitver.sh version.ver version.h
 
 .PHONY: clean
 clean:
-	@echo -e "\033[35m	 rm -rf *.o  *.d $(OUTPATH)/$(OUTFILE) \033[0m"
+	@echo -e "\033[35m	 rm -rf *.o  *.d version.h $(OUTPATH)/$(OUTFILE) \033[0m"
 	@rm -f $(OBJECT_FILES) $(OUTPATH)/$(OUTFILE) $(DEPENDENCE_FILES)
+	@rm -f version.h
 
 debug:
 	echo $(OUTPATH)/$(OUTFILE)
