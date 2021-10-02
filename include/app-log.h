@@ -27,6 +27,8 @@ void app_log(int level, const char* format, ...);
 
 void app_log_setlevel(int level);
 
+void app_log_setcolor(int enable);
+
 #ifdef __cplusplus
 }
 #endif
