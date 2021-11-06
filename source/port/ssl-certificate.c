@@ -3,6 +3,7 @@
 #include "openssl/err.h"
 #include <assert.h>
 #include <stdio.h>
+#include <errno.h>
 
 X509* openssl_generate_certificate(EVP_PKEY* pkey, const char* common_name)
 {
@@ -92,4 +93,54 @@ EVP_PKEY* openssl_generate_private_key(int keytype)
     }
 
     return pkey;
+}
+
+/// @param[in] algorithm 0-SHA1, 1-SHA224, 2-SHA256, 3-SHA384, 4-SHA512
+int openssl_certificate_fingerprint(const X509* x509, int algorithm, char* fingerprint, int bytes)
+{
+    uint8_t binaryFingerprint[EVP_MAX_MD_SIZE];
+    unsigned int n = sizeof(binaryFingerprint);
+    unsigned int i;
+
+    const EVP_MD* hashFunction;
+    switch (algorithm)
+    {
+    case 0:
+        hashFunction = EVP_sha1();
+        break;
+
+    case 1:
+        hashFunction = EVP_sha224();
+        break;
+
+    case 2:
+        hashFunction = EVP_sha256();
+        break;
+
+    case 3:
+        hashFunction = EVP_sha384();
+        break;
+
+    case 4:
+        hashFunction = EVP_sha512();
+        break;
+
+    default:
+        assert(0);
+        return -1;
+    }
+
+    if (0 == X509_digest(x509, hashFunction, binaryFingerprint, &n))
+        return -1;
+
+    if (bytes < n * 3 || n < 1)
+        return -E2BIG;
+
+    for (i = 0; i < n; i++)
+    {
+        snprintf(fingerprint + i * 3, 4, "%.2X:", (unsigned int)binaryFingerprint[i]);
+    }
+
+    fingerprint[i * 3 - 1] = '\0';
+    return 0;
 }
