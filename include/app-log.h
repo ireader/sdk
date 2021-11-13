@@ -15,7 +15,13 @@
 extern "C" {
 #endif
 
+// GCC: CFLAGS += -Wno-builtin-macro-redefined -D'__FILE_NAME__="$(notdir $<)"'
+// MSVC: C/C++ -> Preprocessor -> Preprocessor Definitions: __FILE_NAME__="%(Filename)%(Extension)"
+#ifdef __FILE_NAME__
+#define APP_LOG_WITH_LINE(level, fmt, ...)	app_log(level, "(%s:%d) " fmt, __FILE_NAME__, __LINE__, ##__VA_ARGS__)
+#else
 #define APP_LOG_WITH_LINE(level, fmt, ...)	app_log(level, "(%s:%d) " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#endif
 #define APP_LOG_ERROR(fmt, ...)				APP_LOG_WITH_LINE(LOG_ERROR, fmt, ##__VA_ARGS__)
 #define APP_LOG_WARNING(fmt, ...)			APP_LOG_WITH_LINE(LOG_WARNING, fmt, ##__VA_ARGS__)
 #define APP_LOG_NOTICE(fmt, ...)			APP_LOG_WITH_LINE(LOG_NOTICE, fmt, ##__VA_ARGS__)

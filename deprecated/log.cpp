@@ -10,7 +10,14 @@
 #include "sys/path.h"
 #include "log.h"
 
-static int g_logLevel = LOG_WARNING;
+#define LOG_ALL			0
+#define LOG_DEBUG		1
+#define LOG_WARNING		2
+#define LOG_INFO		3
+#define LOG_ERROR		4
+#define LOG_DISABLE		9
+
+static int g_logLevel = LOG_ALL;
 static char g_logFile[255] = {0};
 static const char* g_logLevelDesc[] = { "debug", "warning", "info", "error" };
 
@@ -157,5 +164,6 @@ void log_log(int level, const char* format, ...)
 
 void log_flush()
 {
-	fflush(g_fp);
+	if(g_fp)
+		fflush(g_fp);
 }

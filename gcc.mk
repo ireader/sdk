@@ -1,6 +1,7 @@
 RELEASE ?= 0 # default debug
 UNICODE ?= 0 # default ansi
 VERSION ?= 0
+FILENAME ?= 1
 
 ifdef PLATFORM
 	CROSS:=$(PLATFORM)-
@@ -41,6 +42,10 @@ else
 #	CFLAGS += -fsanitize=address
 	CXXFLAGS += $(CFLAGS)
 	DEFINES += DEBUG _DEBUG
+endif
+
+ifeq ($(FILENAME),1)
+	CFLAGS += -Wno-builtin-macro-redefined -D'__FILE_NAME__="$(notdir $<)"'
 endif
 
 ifeq ($(VERSION),1)

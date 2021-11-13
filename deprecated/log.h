@@ -3,15 +3,18 @@
 
 #include <stdarg.h>
 
-#define LOG_ALL			0
-#define LOG_DEBUG		1
-#define LOG_WARNING		2
-#define LOG_INFO		3
-#define LOG_ERROR		4
-#define LOG_DISABLE		9
-
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#ifdef __FILE_NAME__
+#define FILE_LOG_ERROR(fmt, ...)			log_error("(%s:%d) " fmt, __FILE_NAME__, __LINE__, ##__VA_ARGS__)
+#define FILE_LOG_INFO(fmt, ...)				log_info("(%s:%d) " fmt, __FILE_NAME__, __LINE__, ##__VA_ARGS__)
+#define FILE_LOG_DEBUG(fmt, ...)			log_debug("(%s:%d) " fmt, __FILE_NAME__, __LINE__, ##__VA_ARGS__)
+#else
+#define FILE_LOG_ERROR(fmt, ...)			log_error("(%s:%d) " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define FILE_LOG_INFO(fmt, ...)				log_info("(%s:%d) " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define FILE_LOG_DEBUG(fmt, ...)			log_debug("(%s:%d) " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 #endif
 
 	int log_getlevel();
