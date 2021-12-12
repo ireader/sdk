@@ -40,8 +40,10 @@
     <ClCompile Include="source\heap.c" />
     <ClCompile Include="source\hweight.c" />
     <ClCompile Include="source\ntp-time.c" />
+    <ClCompile Include="source\port\file-watcher-win32.c" />
     <ClCompile Include="source\port\ip-route.c" />
     <ClCompile Include="source\port\serial-port-win32.c" />
+    <ClCompile Include="source\port\sysdirlist.c" />
     <ClCompile Include="source\port\sysnetconfig.c" />
     <ClCompile Include="source\port\sysntpconfig.c" />
     <ClCompile Include="source\port\sysprocess.c" />
@@ -110,6 +112,7 @@
     <ClInclude Include="include\ntp-time.h" />
     <ClInclude Include="include\path.h" />
     <ClInclude Include="include\port\async-pipe.h" />
+    <ClInclude Include="include\port\file-watcher.h" />
     <ClInclude Include="include\port\ip-route.h" />
     <ClInclude Include="include\port\network.h" />
     <ClInclude Include="include\port\process.h" />

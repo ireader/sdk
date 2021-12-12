@@ -67,7 +67,7 @@
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalDependencies>libssl.lib;libcrypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../../3rd/openssl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>../../3rd/openssl/win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -98,6 +98,7 @@
     <ClCompile Include="..\..\media-server\librtsp\source\rtsp-media.c" />
     <ClCompile Include="..\..\media-server\librtsp\source\sdp-a-fmtp.c" />
     <ClCompile Include="..\..\media-server\librtsp\source\sdp-a-rtpmap.c" />
+    <ClCompile Include="..\..\media-server\librtsp\source\sdp-options.c" />
     <ClCompile Include="..\..\media-server\librtsp\source\sdp.c" />
     <ClCompile Include="..\libaio\test\aio-poll-test.c" />
     <ClCompile Include="..\libhttp\test\benchmark.c" />
@@ -123,6 +124,7 @@
     <ClCompile Include="atomic-test2.c" />
     <ClCompile Include="bitmap-test.c" />
     <ClCompile Include="channel-test.cpp" />
+    <ClCompile Include="dir-test.c" />
     <ClCompile Include="event-test.c" />
     <ClCompile Include="http-test.c" />
     <ClCompile Include="ip-route-test.c" />

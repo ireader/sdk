@@ -27,6 +27,7 @@ void spinlock_test(void);
 void event_test(void);
 void semaphore_test(void);
 void onetime_test(void);
+void dir_test(void);
 
 void bits_test(void);
 void stack_test(void);
@@ -90,6 +91,7 @@ int main(int argc, char* argv[])
 #endif
 	onetime_test();
 	socketpair_test();
+	dir_test();
 
 	bits_test();
 	stack_test();

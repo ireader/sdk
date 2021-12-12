@@ -103,37 +103,36 @@ static void socket_addr_is_multicast_test(void)
 
 void socket_opt_dontfrag_test(void);
 
-static void socket_accept_errno_9_test()
-{
-	int i, n;
-	char msg[128];
-	socket_t s, c;
-	struct sockaddr_storage addr;
-	socklen_t addrlen;
-
-	s = socket_tcp_listen(AF_INET, NULL, 33333, SOMAXCONN, 0, 0);
-	assert(socket_invalid != s);
-
-	c = socket_connect_host("127.0.0.1", 33333, 5000);
-	socket_close(s);
-
-	addrlen = sizeof(addr);
-	c = socket_accept(s, &addr, &addrlen);
-	printf("errno: %d\n", errno);
-	assert(socket_invalid != c);
-	n = socket_recv_by_time(c, msg, sizeof(msg), 0, 1000);
-	socket_send_all_by_time(c, msg, n, 0, 1000); // echo
-	socket_close(c);
-
-	socket_close(s);
-	return 0;
-}
+//static void socket_accept_errno_9_test()
+//{
+//	int i, n;
+//	char msg[128];
+//	socket_t s, c;
+//	struct sockaddr_storage addr;
+//	socklen_t addrlen;
+//
+//	s = socket_tcp_listen(AF_INET, NULL, 33333, SOMAXCONN, 0, 0);
+//	assert(socket_invalid != s);
+//
+//	c = socket_connect_host("127.0.0.1", 33333, 5000);
+//	socket_close(c);
+//
+//	addrlen = sizeof(addr);
+//	c = socket_accept(s, &addr, &addrlen);
+//	printf("errno: %d\n", errno);
+//	assert(socket_invalid != c);
+//
+//	n = socket_recv_by_time(c, msg, sizeof(msg), 0, 1000);
+//	socket_send_all_by_time(c, msg, n, 0, 1000); // echo
+//	socket_close(c);
+//	socket_close(s);
+//}
 
 void socket_test(void)
 {
 	socket_init();
 
-	socket_accept_errno_9_test();
+	//socket_accept_errno_9_test();
 	socket_ip_test();
 	socket_name_ipv4_test();
 	socket_name_ipv6_test();

@@ -201,6 +201,12 @@
     <ClCompile Include="..\libhttp\test\http-client-test3.cpp">
       <Filter>libhttp</Filter>
     </ClCompile>
+    <ClCompile Include="dir-test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\media-server\librtsp\source\sdp-options.c">
+      <Filter>librtsp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\libice\test\tls-socket.h">

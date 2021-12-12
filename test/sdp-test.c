@@ -6,24 +6,26 @@ void sdp_a_rtpmap_test(void);
 
 static void sdp_test1(void)
 {
+	int rt;
 	FILE* fp;
 	void* sdp;
 	char buffer[5*1024] = {0};
 	fp = fopen("sdp/sdp1.txt", "r");
-	fread(buffer, 1, sizeof(buffer), fp);
-	sdp = sdp_parse(buffer);
+	rt = fread(buffer, 1, sizeof(buffer), fp);
+	sdp = sdp_parse(buffer, rt);
 	sdp_destroy(sdp);
 	fclose(fp);
 }
 
 static void sdp_test2(void)
 {
+	int rt;
 	FILE* fp;
 	void* sdp;
 	char buffer[5*1024] = {0};
 	fp = fopen("sdp/sdp2.txt", "r");
-	fread(buffer, 1, sizeof(buffer), fp);
-	sdp = sdp_parse(buffer);
+	rt = fread(buffer, 1, sizeof(buffer), fp);
+	sdp = sdp_parse(buffer, rt);
 	sdp_destroy(sdp);
 	fclose(fp);
 }

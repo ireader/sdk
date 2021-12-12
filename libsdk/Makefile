@@ -19,6 +19,8 @@ SOURCE_PATHS = $(ROOT)/source $(ROOT)/source/digest
 SOURCE_FILES = $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.cpp))
 #SOURCE_FILES += $(ROOT)/source/string/strtoken.c
 SOURCE_FILES += $(ROOT)/source/port/ip-route.c
+SOURCE_FILES += $(ROOT)/source/port/sysdirlist.c
+SOURCE_FILES += $(ROOT)/source/port/file-watcher-linux.c
 
 SOURCE_FILES += $(foreach dir,$(SOURCE_PATHS),$(wildcard $(dir)/*.c))
 
