@@ -200,12 +200,12 @@ static inline int path_isabsolute(const char* path, size_t n)
 
 #if defined(OS_WINDOWS)
     // 1. \ (relative to current working directory root)
-    // 2. [driver_letter]:\ 
-    // 3. \\[server]\]sharename]\ 
-    // 4. \\?\[driver_spec]:\ 
-    // 5. \\?\[server]\[sharename]\ 
-    // 6. \\?\UNC\[server]\[sharename]\ 
-    // 7. \\.\[physical_device]\  e.g. \\.\COM1\ 
+    // 2. [driver_letter]:\ -
+    // 3. \\[server]\]sharename]\ -
+    // 4. \\?\[driver_spec]:\ -
+    // 5. \\?\[server]\[sharename]\ -
+    // 6. \\?\UNC\[server]\[sharename]\ -
+    // 7. \\.\[physical_device]\  e.g. \\.\COM1\ -
 
     if (n > 3)
     {
