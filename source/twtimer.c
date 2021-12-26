@@ -200,7 +200,6 @@ static int twtimer_add(struct time_wheel_t* tm, struct twtimer_t* timer)
 	}
 	else
 	{
-		spinlock_unlock(&tm->locker);
 		assert(0); // exceed max timeout value
 		return -1;
 	}

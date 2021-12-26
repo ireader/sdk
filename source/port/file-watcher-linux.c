@@ -97,7 +97,7 @@ int file_watcher_process(file_watcher_t watcher, int timeout, int (*onnotify)(vo
 	while (-1 == r && (EINTR == errno || EAGAIN == errno))
 		r = poll(fds, 1, timeout);
 	if (r <= 0)
-		return -1;
+		return 0 == r ? -ETIMEDOUT : -1;
 
 	n = read(fd, buf, sizeof(buf));
 	if (n <= 0)
