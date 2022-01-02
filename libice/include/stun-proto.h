@@ -103,4 +103,16 @@ enum
     STUN_CREDENTIAL_LONG_TERM,
 };
 
+enum
+{
+    // https://datatracker.ietf.org/doc/html/rfc5389#section-15.3
+    STUN_LIMIT_USERNAME_MAX     = 513,
+
+    // https://datatracker.ietf.org/doc/html/rfc5245#section-15.4
+    STUN_LIMIT_ICEUFRAG_MAX     = 256, // 256 + ':' + 256 = 513
+    STUN_LIMIT_ICEUFRAG_MIN     = 4,
+    STUN_LIMIT_ICEPASSWORD_MAX  = 256,
+    STUN_LIMIT_ICEPASSWORD_MIN  = 22,
+};
+
 #endif /* _stun_proto_h_ */

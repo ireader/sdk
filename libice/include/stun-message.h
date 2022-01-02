@@ -6,6 +6,10 @@
 #include "stun-attr.h"
 #include "stun-proto.h"
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #define STUN_ATTR_N 32
 
 // rfc5389 19. Changes since RFC 3489 (46)
@@ -13,7 +17,8 @@
 struct stun_credential_t
 {
 	int credential; // STUN_CREDENTIAL_SHORT_TERM/STUN_CREDENTIAL_LONG_TERM
-	char usr[512], pwd[512];
+	char usr[STUN_LIMIT_USERNAME_MAX];
+	char pwd[STUN_LIMIT_USERNAME_MAX];
 	char realm[128], nonce[128];
 };
 
@@ -65,4 +70,9 @@ int stun_message_attr_list(const struct stun_message_t* msg, uint16_t attr, int 
 
 int stun_transaction_id(uint8_t* id, int bytes);
 
+int stun_credential_setauth(struct stun_credential_t* auth, int credential, const char* usr, const char* pwd, const char* realm, const char* nonce);
+
+#if defined(__cplusplus)
+}
+#endif
 #endif /* !_stun_message_h_ */

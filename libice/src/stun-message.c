@@ -369,6 +369,32 @@ int stun_message_has_fingerprint(const struct stun_message_t* msg)
 	return msg->nattrs > 0 && STUN_ATTR_FINGERPRINT == msg->attrs[msg->nattrs - 1].type ? 1 : 0;
 }
 
+int stun_credential_setauth(struct stun_credential_t* auth, int credential, const char* usr, const char* pwd, const char* realm, const char* nonce)
+{
+	int r;
+	if (!usr || !*usr || !pwd || !*pwd || (STUN_CREDENTIAL_SHORT_TERM != credential && STUN_CREDENTIAL_LONG_TERM != credential))
+		return -1;
+
+	auth->credential = credential;
+	r = snprintf(auth->usr, sizeof(auth->usr), "%s", usr);
+	if (r < 0 || r >= sizeof(auth->usr)) return -1;
+	r = snprintf(auth->pwd, sizeof(auth->pwd), "%s", pwd);
+	if (r < 0 || r >= sizeof(auth->pwd)) return -1;
+
+	if (STUN_CREDENTIAL_LONG_TERM == credential)
+	{
+		if (!realm || !*realm || !nonce || !*nonce)
+			return -1;
+
+		r = snprintf(auth->realm, sizeof(auth->realm), "%s", realm);
+		if (r < 0 || r >= sizeof(auth->realm)) return -1;
+		r = snprintf(auth->nonce, sizeof(auth->nonce), "%s", nonce);
+		if (r < 0 || r >= sizeof(auth->nonce)) return -1;
+	}
+
+	return 0;
+}
+
 #if defined(DEBUG) || defined(_DEBUG)
 // https://tools.ietf.org/html/rfc5769#section-2.2
 void stun_message_test(void)

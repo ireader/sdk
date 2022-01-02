@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 typedef struct stun_agent_t stun_agent_t;
+typedef struct stun_message_t stun_message_t;
 typedef struct stun_request_t stun_request_t;
 typedef struct stun_response_t stun_response_t;
 
@@ -39,6 +40,9 @@ int stun_request_setauth(stun_request_t* req, int credential, const char* usr, c
 /// stun_agent_shared_secret response username/password
 /// @return 0-ok, other-error
 int stun_request_getauth(const stun_request_t* req, char usr[512], char pwd[512], char realm[128], char nonce[128]);
+
+/// @return stun message from request
+const stun_message_t* stun_request_getmessage(const stun_request_t* req);
 
 /// @param[in] timeout ms
 void stun_request_settimeout(stun_request_t* req, int timeout);
@@ -106,6 +110,8 @@ int turn_agent_channel_bind(stun_request_t* req, const struct sockaddr* peer, ui
 int turn_agent_send(stun_agent_t* stun, const struct sockaddr* relay, const struct sockaddr* peer, const void* data, int bytes);
 
 // RESPONSE
+
+int stun_response_setauth(struct stun_response_t* resp, int credential, const char* usr, const char* pwd, const char* realm, const char* nonce);
 
 /// ignore request
 int stun_agent_discard(struct stun_response_t* resp);

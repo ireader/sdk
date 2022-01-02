@@ -37,7 +37,7 @@ static void ice_agent_test_parse_remote_candidates(struct ice_agent_test_t *ctx)
 	n = base64_decode(sdp, buffer, buffer[n-1]=='\n' ? n-1 : n);
 	sdp[n] = 0;
 	struct rtsp_media_t m[2];
-	n = rtsp_media_sdp(sdp, m, 2);
+	n = rtsp_media_sdp(sdp, n, m, 2);
 	assert(ctx->stream == n);
 	ice_transport_connect(ctx->avt, m, n);
 }

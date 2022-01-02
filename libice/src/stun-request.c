@@ -104,28 +104,7 @@ int stun_request_getaddr(const stun_request_t* req, int* protocol, struct sockad
 
 int stun_request_setauth(stun_request_t* req, int credential, const char* usr, const char* pwd, const char* realm, const char* nonce)
 {
-	int r;
-	if (!usr || !*usr || !pwd || !*pwd || (STUN_CREDENTIAL_SHORT_TERM != credential && STUN_CREDENTIAL_LONG_TERM != credential))
-		return -1;
-	
-	req->auth.credential = credential;
-	r = snprintf(req->auth.usr, sizeof(req->auth.usr), "%s", usr);
-	if (r < 0 || r >= sizeof(req->auth.usr)) return -1;
-	r = snprintf(req->auth.pwd, sizeof(req->auth.pwd), "%s", pwd);
-	if (r < 0 || r >= sizeof(req->auth.pwd)) return -1;
-
-	if (STUN_CREDENTIAL_LONG_TERM == credential)
-	{
-		if (!realm || !*realm || !nonce || !*nonce)
-			return -1;
-
-		r = snprintf(req->auth.realm, sizeof(req->auth.realm), "%s", realm);
-		if (r < 0 || r >= sizeof(req->auth.realm)) return -1;
-		r = snprintf(req->auth.nonce, sizeof(req->auth.nonce), "%s", nonce);
-		if (r < 0 || r >= sizeof(req->auth.nonce)) return -1;
-	}
-
-	return 0;
+	return stun_credential_setauth(&req->auth, credential, usr, pwd, realm, nonce);
 }
 
 int stun_request_getauth(const stun_request_t* req, char usr[512], char pwd[512], char realm[128], char nonce[128])
@@ -135,6 +114,11 @@ int stun_request_getauth(const stun_request_t* req, char usr[512], char pwd[512]
     if (realm) snprintf(realm, 128, "%s", req->auth.realm);
     if (nonce) snprintf(nonce, 128, "%s", req->auth.nonce);
 	return 0;
+}
+
+const stun_message_t* stun_request_getmessage(const stun_request_t* req)
+{
+	return &req->msg;
 }
 
 void stun_request_settimeout(stun_request_t* req, int timeout)

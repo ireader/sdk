@@ -47,3 +47,8 @@ int stun_response_send(struct stun_agent_t* stun, struct stun_response_t* resp)
 	stun_response_destroy(&resp);
 	return r;
 }
+
+int stun_response_setauth(struct stun_response_t* resp, int credential, const char* usr, const char* pwd, const char* realm, const char* nonce)
+{
+	return stun_credential_setauth(&resp->auth, credential, usr, pwd, realm, nonce);
+}

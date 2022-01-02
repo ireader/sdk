@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include "sys/sock.h"
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #define ALGIN_4BYTES(v) (((v)+3) / 4 * 4)
 
 struct stun_message_t;
@@ -34,4 +38,7 @@ int stun_attr_read(const struct stun_message_t* msg, const uint8_t* data, const 
 
 uint8_t* stun_attr_write(const struct stun_message_t* msg, uint8_t* data, const uint8_t* end, const struct stun_attr_t *attrs, int n);
 
+#if defined(__cplusplus)
+}
+#endif
 #endif /* !_stun_attr_h_ */
