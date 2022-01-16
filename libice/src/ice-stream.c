@@ -42,12 +42,12 @@ static int ice_stream_onbind(void* param, struct ice_checklist_t* l, const struc
 static int ice_stream_oncomplete(void* param, struct ice_checklist_t* l, int failed)
 {
 	int status;
-	uint64_t flags;
+	uint64_t mask, flags;
 	struct list_head* ptr;
 	struct ice_stream_t* s;
 	struct ice_agent_t* ice;
 
-	flags = 0;
+	mask = flags = 0;
 	assert(0 == failed || 1 == failed);
 	ice = (struct ice_agent_t*)param;
 	list_for_each(ptr, &ice->streams)
@@ -58,6 +58,7 @@ static int ice_stream_oncomplete(void* param, struct ice_checklist_t* l, int fai
 		else
 			status = ice_checklist_getstatus(s->checklist);
 
+		mask |= ((uint64_t)1) << s->stream;
 		switch (status)
 		{
 		case ICE_CHECKLIST_FAILED:
@@ -76,7 +77,7 @@ static int ice_stream_oncomplete(void* param, struct ice_checklist_t* l, int fai
 	// TODO: bind relay channel
 
 	// TODO: call once time
-	ice->handler.onconnected(ice->param, flags);
+	ice->handler.onconnected(ice->param, flags, mask);
 	return 0;
 }
 

@@ -18,8 +18,9 @@ struct ice_transport_handler_t
 	void (*onbind)(void* param, int code);
 
 	/// ICE nominated
-	/// @param[in] streams stream connected bitmask flags, base 0, from Least Significant Bit(LSB), 1-connected, 0-failed
-	void (*onconnected)(void* param, int64_t streams);
+	/// @param[in] flags connected stream bitmask flags, base 0, from Least Significant Bit(LSB), 1-connected, 0-failed
+	/// @param[in] mask all streams, base 0, from Least Significant Bit(LSB), 1-connected, 0-failed
+	void (*onconnected)(void* param, uint64_t flags, uint64_t mask);
 };
 
 struct ice_transport_t* ice_transport_create(int controlling, struct ice_transport_handler_t* handler, void* param);

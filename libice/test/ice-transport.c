@@ -158,11 +158,11 @@ static void ice_transport_ongather(void* param, int code)
 	avt->handler.onbind(avt->param, code);
 }
 
-static void ice_transport_onconnected(void* param, uint64_t streams)
+static void ice_transport_onconnected(void* param, uint64_t flags, uint64_t mask)
 {
 	struct ice_transport_t* avt = (struct ice_transport_t*)param;
-	avt->connected = streams;
-	avt->handler.onconnected(avt->param, streams);
+	avt->connected = flags;
+	avt->handler.onconnected(avt->param, flags, mask);
 	//TODO: close other socket
 }
 
@@ -473,7 +473,7 @@ int ice_transport_getaddr(struct ice_transport_t* avt, int stream, int component
 int ice_transport_connect(struct ice_transport_t* avt, const struct rtsp_media_t* avmedia, int count)
 {
 	int i, j, r;
-	uint64_t flags;
+	uint64_t flags, mask;
 	socklen_t len;
 	struct ice_candidate_t c;
 	const struct rtsp_media_t *m;
@@ -485,7 +485,7 @@ int ice_transport_connect(struct ice_transport_t* avt, const struct rtsp_media_t
 		return ice_agent_start(avt->ice);
 
 	// add default candidate(for non-ice mode)
-	for (flags = i = 0; i < count; i++)
+	for (mask = flags = i = 0; i < count; i++)
 	{
 		m = avmedia + i;
 		for (j = 0; j < m->nport; j++)
@@ -503,9 +503,10 @@ int ice_transport_connect(struct ice_transport_t* avt, const struct rtsp_media_t
 		}
 
 		flags |= (uint64_t)1 << i;
+		mask |= (uint64_t)1 << i;
 	}
 	
-	avt->handler.onconnected(avt->param, flags);
+	avt->handler.onconnected(avt->param, flags, mask);
 	return 0;
 }
 
