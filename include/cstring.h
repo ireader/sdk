@@ -152,7 +152,7 @@ static inline long cstrtol(const struct cstring_t* s, char** endptr, int base)
 	long v;
 	char* end;
 
-	v = strtol(s->p, &end, base);
+	v = (long)strtoul(s->p, &end, base);
 	while (end > s->p + s->n)
 	{
 		v /= base;
@@ -168,7 +168,7 @@ static inline long long cstrtoll(const struct cstring_t* s, char** endptr, int b
 	long long v;
 	char* end;
 
-	v = strtoll(s->p, &end, base);
+	v = (long long)strtoull(s->p, &end, base);
 	while (end > s->p + s->n)
 	{
 		v /= base;

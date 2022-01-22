@@ -47,7 +47,7 @@ int http_header_host(const char* field, char host[], size_t bytes, unsigned shor
 
 	if (p && ':' == *p)
 	{
-		*port = (unsigned short)strtol(p + 1, (char**)&p, 10);
+		*port = (unsigned short)strtoul(p + 1, (char**)&p, 10);
 		if (0 != *p)
 			return -1; // should be end with port
 	}

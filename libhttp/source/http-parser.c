@@ -229,7 +229,7 @@ static int http_header_handler(struct http_parser_t *http, size_t npos, size_t v
 		if(is_transfer_encoding_chunked(http))
 			http->content_length = -1;
 		else
-			http->content_length = strtoll(value, NULL, 10);
+			http->content_length = (int64_t)strtoull(value, NULL, 10);
 		assert(http->content_length >= 0 && (0==s_body_max_size || http->content_length < (int64_t)s_body_max_size));
 	}
 	else if(0 == strcasecmp("Connection", name))
@@ -1244,7 +1244,7 @@ int http_get_header_by_name2(const struct http_parser_t* http, const char* name,
 	{
 		if(0 == strcasecmp(http->raw + http->headers[i].name.pos, name))
 		{
-			*value = (int64_t)strtoll(http->raw + http->headers[i].value.pos, NULL, 10);
+			*value = (int64_t)strtoull(http->raw + http->headers[i].value.pos, NULL, 10);
 			return 0;
 		}
 	}
