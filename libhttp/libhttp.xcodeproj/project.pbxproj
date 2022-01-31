@@ -35,6 +35,7 @@
 		46C5B1712182E16E00419E57 /* http-upload.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B15B2182E16E00419E57 /* http-upload.c */; };
 		46C5B1722182E16E00419E57 /* http-header-content-type.c in Sources */ = {isa = PBXBuildFile; fileRef = 46C5B15C2182E16E00419E57 /* http-header-content-type.c */; };
 		46E55E6F24A742CF00D8BDBA /* http-client-connection-poll.c in Sources */ = {isa = PBXBuildFile; fileRef = 46E55E6E24A742CF00D8BDBA /* http-client-connection-poll.c */; };
+		4CEE46EA27A70D0A00740460 /* http-server-test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CEE46E927A70D0A00740460 /* http-server-test.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -68,6 +69,7 @@
 		46C5B15C2182E16E00419E57 /* http-header-content-type.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-header-content-type.c"; sourceTree = "<group>"; };
 		46C5B1732182E17D00419E57 /* include */ = {isa = PBXFileReference; lastKnownFileType = folder; path = include; sourceTree = "<group>"; };
 		46E55E6E24A742CF00D8BDBA /* http-client-connection-poll.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "http-client-connection-poll.c"; sourceTree = "<group>"; };
+		4CEE46E927A70D0A00740460 /* http-server-test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "http-server-test.cpp"; path = "test/http-server-test.cpp"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,6 +103,7 @@
 		46C5B1462182E16E00419E57 /* source */ = {
 			isa = PBXGroup;
 			children = (
+				4CEE46E927A70D0A00740460 /* http-server-test.cpp */,
 				46C5B1472182E16E00419E57 /* http-client.c */,
 				46C5B1482182E16E00419E57 /* http-header-expires.c */,
 				46C5B1492182E16E00419E57 /* http-server-route.cpp */,
@@ -219,6 +222,7 @@
 				46C5B1642182E16E00419E57 /* http-cookie.c in Sources */,
 				46C5B1672182E16E00419E57 /* http-reason.c in Sources */,
 				46C5B16A2182E16E00419E57 /* http-client-connection-aio.c in Sources */,
+				4CEE46EA27A70D0A00740460 /* http-server-test.cpp in Sources */,
 				4680238B25997F4700AD5A52 /* http-websocket.c in Sources */,
 				46C5B16B2182E16E00419E57 /* rfc822-datetime.c in Sources */,
 				46C5B16C2182E16E00419E57 /* http-client-connection.c in Sources */,
