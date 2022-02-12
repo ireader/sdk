@@ -160,21 +160,26 @@ static inline int ice_candidate_pairs_remove(ice_candidate_pairs_t* arr, const s
 
 //////////////////////////////////////////////////////////////////////////
 typedef struct darray_t ice_candidate_components_t;
+typedef struct ice_candidate_component_t
+{
+	uint16_t id;
+	ice_candidate_pairs_t component;
+} ice_candidate_component_t;
 
 static inline void ice_candidate_components_init(ice_candidate_components_t* components)
 {
 	memset(components, 0, sizeof(*components));
-	darray_init(components, sizeof(ice_candidate_pairs_t), 2); // RTP/RTCP
+	darray_init(components, sizeof(ice_candidate_component_t), 2); // RTP/RTCP
 }
 
 static inline void ice_candidate_components_free(ice_candidate_components_t* components)
 {
 	int i;
-	ice_candidate_pairs_t* component;
+	ice_candidate_component_t* component;
 	for (i = 0; i < darray_count(components); i++)
 	{
-		component = (ice_candidate_pairs_t*)darray_get(components, i);
-		ice_candidate_pairs_free(component);
+		component = (ice_candidate_component_t*)darray_get(components, i);
+		ice_candidate_pairs_free(&component->component);
 	}
 	darray_free(components);
 }
@@ -182,11 +187,11 @@ static inline void ice_candidate_components_free(ice_candidate_components_t* com
 static inline void ice_candidate_components_clear(ice_candidate_components_t* components)
 {
 	int i;
-	ice_candidate_pairs_t* component;
+	ice_candidate_component_t* component;
 	for (i = 0; i < darray_count(components); i++)
 	{
-		component = (ice_candidate_pairs_t*)darray_get(components, i);
-		darray_clear(component);
+		component = (ice_candidate_component_t*)darray_get(components, i);
+		darray_clear(&component->component);
 	}
 	darray_clear(components); // reset pairs size
 }
@@ -196,46 +201,44 @@ static inline int ice_candidate_components_count(ice_candidate_components_t* com
 	return darray_count(components);
 }
 
-static inline ice_candidate_pairs_t* ice_candidate_components_get(ice_candidate_components_t* components, int i)
+static inline ice_candidate_component_t* ice_candidate_components_get(ice_candidate_components_t* components, int i)
 {
-	return (ice_candidate_pairs_t*)darray_get(components, i);
+	return (ice_candidate_component_t*)darray_get(components, i);
 }
 
 static inline struct ice_candidate_pair_t* ice_candidate_components_find(ice_candidate_components_t* components, const struct stun_address_t* addr)
 {
 	int i;
 	struct ice_candidate_pair_t *pair;
-	ice_candidate_pairs_t* component;
+	ice_candidate_component_t* component;
 
 	pair = NULL;
 	for (i = 0; i < ice_candidate_components_count(components) && NULL == pair; i++)
 	{
 		component = ice_candidate_components_get(components, i);
-		pair = ice_candidate_pairs_find(component, ice_candidate_pair_compare_addr, addr);
+		pair = ice_candidate_pairs_find(&component->component, ice_candidate_pair_compare_addr, addr);
 	}
 	return pair;
 }
 
-static inline int ice_candidate_component_compare(const ice_candidate_pairs_t* component, const uint16_t *id)
+static inline int ice_candidate_component_compare(const ice_candidate_component_t* component, const uint16_t *id)
 {
-	const struct ice_candidate_pair_t* pair;
-	assert(ice_candidate_pairs_count(component) > 0);
-	pair = ice_candidate_pairs_get((ice_candidate_pairs_t*)component, 0);
-	return (int)(pair->local.component - *id);
+	return (int)(component->id - *id);
 }
 
-static ice_candidate_pairs_t* ice_candidate_components_fetch(ice_candidate_components_t* components, uint16_t id)
+static ice_candidate_component_t* ice_candidate_components_fetch(ice_candidate_components_t* components, uint16_t id)
 {
 	int pos;
-	ice_candidate_pairs_t arr, *component;
+	ice_candidate_component_t arr, *component;
 	component = darray_find(components, &id, &pos, (darray_compare)ice_candidate_component_compare);
 	if (NULL == component)
 	{
 		memset(&arr, 0, sizeof(arr));
-		darray_init(&arr, sizeof(struct ice_candidate_pair_t), 9);
+		arr.id = id;
+		darray_init(&arr.component, sizeof(struct ice_candidate_pair_t), 9);
 		if (0 != darray_insert(components, pos, &arr))
 			return NULL;
-		component = (ice_candidate_pairs_t*)darray_get(components, pos);
+		component = (ice_candidate_component_t*)darray_get(components, pos);
 	}
 	return component;
 }
