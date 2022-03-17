@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <aio.h>
-
+#include <signal.h>
 typedef struct
 {
 	int rpipe; // read only
