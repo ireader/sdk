@@ -29,6 +29,7 @@ _SOURCE_FILES += $(ROOT)/source/port/serial-port-win32.c
 _SOURCE_FILES += $(ROOT)/source/port/file-watcher-win32.c
 _SOURCE_FILES += $(ROOT)/source/port/win32-async-pipe.c
 _SOURCE_FILES += $(ROOT)/source/port/win32-minidump.c
+_SOURCE_FILES += $(ROOT)/source/port/win32-backtrace.c
 _SOURCE_FILES += $(ROOT)/source/port/sysvolume.cpp
 _SOURCE_FILES += $(ROOT)/source/string/snprintf.c
 _SOURCE_FILES += $(ROOT)/source/string/strndup.c
