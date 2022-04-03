@@ -1,5 +1,6 @@
 #include "aio-socket.h"
 #include <WS2tcpip.h>
+#include <stdlib.h>
 #include <assert.h>
 
 // aio_socket_process(socket)
