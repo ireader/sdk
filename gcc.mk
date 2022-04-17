@@ -49,7 +49,7 @@ ifeq ($(FILENAME),1)
 endif
 
 ifeq ($(VERSION),1)
-	VERSIONFILE = version.h
+	VERSIONFILE = version.o
 endif
 
 # default don't export anything
@@ -83,10 +83,7 @@ MKDIR = @mkdir -p $(dir $@)
 #--------------------------Makefile Rules----------------------------
 #
 #--------------------------------------------------------------------
-$(OUTPATH)/$(OUTFILE): $(VERSIONFILE) $(OBJECT_FILES) $(STATIC_LIBS)
-ifeq ($(VERSION),1)
-	$(ROOT)/gitver.sh version.ver version.h
-endif
+$(OUTPATH)/$(OUTFILE): $(OBJECT_FILES) $(STATIC_LIBS) $(VERSIONFILE) 
 ifeq ($(OUTTYPE),0)
 	$(CXX) -o $@ -Wl,-rpath . $(LDFLAGS) $^ $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS))
 else
@@ -99,24 +96,24 @@ endif
 endif
 	@echo make ok, output: $(OUTPATH)/$(OUTFILE)
 
-$(OBJSPATH)/%.o : %.c $(VERSIONFILE) 
+$(OBJSPATH)/%.o : %.c
 	$(MKDIR)
 	@$(COMPILE.CC) -c -o $@ $<
 	@echo -e "\033[35m	CC	$(notdir $@)\033[0m"
 	
-$(OBJSPATH)/%.o : %.cpp $(VERSIONFILE) 
+$(OBJSPATH)/%.o : %.cpp
 	$(MKDIR)
 	@$(COMPILE.CXX) -c -o $@ $<
 	@echo -e "\033[35m	CXX	$(notdir $@)\033[0m"
 
-$(OBJSPATH)/%.d: %.c $(VERSIONFILE) 
+$(OBJSPATH)/%.d: %.c
 	$(MKDIR)
 	@echo -e "\033[32m	CREATE	$(notdir $@)\033[0m"
 	@rm -f $@; \
 	 $(COMPILE.CC) -MM $(CFLAGS) $< > $@.$$$$; \
      sed 's,\($(notdir $*)\)\.o[ :]*,$*\.o $@ : ,g' < $@.$$$$ > $@; \
      rm -f $@.$$$$
-$(OBJSPATH)/%.d: %.cpp $(VERSIONFILE) 
+$(OBJSPATH)/%.d: %.cpp
 	$(MKDIR)
 	@echo -e "\033[32m	CREATE	$(notdir $@)\033[0m"
 	@rm -f $@; \
@@ -130,14 +127,15 @@ else
 sinclude $(DEPENDENCE_FILES)
 endif
 
-version.h: version.ver
-	$(ROOT)/gitver.sh version.ver version.h
+version.o: version.ver $(OBJECT_FILES) $(STATIC_LIBS)
+	$(ROOT)/gitver.sh version.ver version.c
+	@$(COMPILE.CXX) -c -o $@ version.c
 
 .PHONY: clean
 clean:
 	@echo -e "\033[35m	 rm -rf *.o  *.d version.h $(OUTPATH)/$(OUTFILE) \033[0m"
 	@rm -f $(OBJECT_FILES) $(OUTPATH)/$(OUTFILE) $(DEPENDENCE_FILES)
-	@rm -f version.h
+	@rm -f version.c version.o
 
 debug:
 	echo $(OUTPATH)/$(OUTFILE)
