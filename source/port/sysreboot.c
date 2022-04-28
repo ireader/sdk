@@ -2,9 +2,8 @@
 
 #if defined(OS_WINDOWS)
 #include <Windows.h>
-#else
-#include <stdlib.h>
 #endif
+#include <stdlib.h>
 
 #if defined(OS_WINDOWS)
 int windows_exit(int action)

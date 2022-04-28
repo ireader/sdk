@@ -6,6 +6,8 @@
 #else
 #include <dirent.h>
 #endif
+#include <stdlib.h>
+#include <string.h>
 
 int dir_list(const char* path, int (onlist)(void* param, const char* name, int isdir), void* param)
 {

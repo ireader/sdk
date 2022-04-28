@@ -1,12 +1,12 @@
 #include "port/system.h"
 
 #if defined(OS_LINUX)
+#include <sys/utsname.h>
+#endif
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/utsname.h>
-#endif
 
 #if defined(OS_LINUX)
 int system_call(const char* call, char* output, int outputLen)
