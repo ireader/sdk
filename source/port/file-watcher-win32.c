@@ -1,5 +1,5 @@
 // https://blog.csdn.net/wzsy/article/details/6697613
-
+#if defined(OS_WINDOWS)
 #include "port/file-watcher.h"
 #include <errno.h>
 #include <stdlib.h>
@@ -248,3 +248,5 @@ int file_watcher_process(file_watcher_t p, int timeout, file_watcher_notify onno
 
 	return WAIT_TIMEOUT == r ? -ETIMEDOUT : -1;
 }
+
+#endif

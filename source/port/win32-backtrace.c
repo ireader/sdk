@@ -1,3 +1,4 @@
+#if defined(OS_WINDOWS)
 #include <Windows.h>
 #include <Dbghelp.h>
 #include <stdint.h>
@@ -52,3 +53,4 @@ int system_symbol_resolve(void* address, char* line, int size)
 
 	return n;
 }
+#endif

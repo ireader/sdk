@@ -1,3 +1,4 @@
+#if defined(OS_WINDOWS)
 #include "aio-socket.h"
 #include <WS2tcpip.h>
 #include <assert.h>
@@ -614,3 +615,5 @@ int aio_socket_sendto_v(aio_socket_t socket, const struct sockaddr *addr, sockle
 	}
 	return 0;
 }
+
+#endif

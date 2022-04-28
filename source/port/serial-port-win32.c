@@ -1,3 +1,4 @@
+#if defined(OS_WINDOWS)
 #include "port/serial-port.h"
 #include <Windows.h>
 
@@ -190,3 +191,5 @@ int serial_port_read(void* port, void* data, int bytes)
 
 	return n;
 }
+
+#endif

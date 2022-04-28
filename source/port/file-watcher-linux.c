@@ -1,3 +1,4 @@
+#if defined(OS_LINUX)
 #include "port/file-watcher.h"
 #include <errno.h>
 #include <stdio.h>
@@ -119,3 +120,4 @@ int file_watcher_process(file_watcher_t watcher, int timeout, int (*onnotify)(vo
 	
 	return 0;
 }
+#endif

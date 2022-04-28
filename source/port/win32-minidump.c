@@ -1,3 +1,4 @@
+#if defined(OS_WINDOWS)
 #include <Windows.h>
 #include <minidumpapiset.h>
 
@@ -28,3 +29,4 @@ LONG WINAPI CreateMiniDump(const char* filename, struct _EXCEPTION_POINTERS* pep
     CloseHandle(hFile);
     return EXCEPTION_EXECUTE_HANDLER;
 }
+#endif
