@@ -116,10 +116,12 @@ static int http_rawdata(struct http_parser_t *http, const void* data, size_t byt
 {
 	void *p;
 	size_t capacity;
+
+	if (/*-1*/ bytes > HTTP_BODY_LENGTH_MAX || http->raw_size + bytes > HTTP_BODY_LENGTH_MAX + http->raw_header_offset)
+		return E2BIG;
+
 	if(http->raw_capacity - http->raw_size < bytes + 1)
 	{
-		if(http->raw_size + bytes > HTTP_BODY_LENGTH_MAX + http->raw_header_offset)
-			return E2BIG;
 		capacity = (http->raw_capacity > 4*MB) ? 50*MB : (http->raw_capacity > 16*KB ? 2*MB : 8*KB);
 		capacity = (bytes + 1) > capacity ? (bytes + 1) : capacity;
 		p = realloc(http->raw, http->raw_capacity + capacity);
@@ -223,14 +225,14 @@ static int http_header_handler(struct http_parser_t *http, size_t npos, size_t v
 	const char* name = http->raw + npos;
 	const char* value = http->raw + vpos;
 
-	if(0 == strcasecmp("Content-Length", name))
+	if (0 == strcasecmp("Content-Length", name))
 	{
 		// H4.4 Message Length, section 3, ignore content-length if in chunked mode
-		if(is_transfer_encoding_chunked(http))
+		if (is_transfer_encoding_chunked(http))
 			http->content_length = -1;
 		else
 			http->content_length = (int64_t)strtoull(value, NULL, 10);
-		assert(http->content_length >= 0 && (0==s_body_max_size || http->content_length < (int64_t)s_body_max_size));
+		assert(http->content_length >= -1 && (0 == s_body_max_size || http->content_length < (int64_t)s_body_max_size));
 	}
 	else if(0 == strcasecmp("Connection", name))
 	{
