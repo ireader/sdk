@@ -152,7 +152,8 @@ static inline long cstrtol(const struct cstring_t* s, char** endptr, int base)
 	long v;
 	char* end;
 
-	v = (long)strtoul(s->p, &end, base);
+	end = (char*)s->p + s->n;
+	v = cstrvalid(s) ? (long)strtoul(s->p, &end, base) : 0;
 	while (end > s->p + s->n)
 	{
 		v /= base;
@@ -168,7 +169,8 @@ static inline long long cstrtoll(const struct cstring_t* s, char** endptr, int b
 	long long v;
 	char* end;
 
-	v = (long long)strtoull(s->p, &end, base);
+	end = (char*)s->p + s->n;
+	v = cstrvalid(s) ? (long long)strtoull(s->p, &end, base) : 0;
 	while (end > s->p + s->n)
 	{
 		v /= base;
@@ -182,11 +184,12 @@ static inline long long cstrtoll(const struct cstring_t* s, char** endptr, int b
 static inline double cstrtod(const struct cstring_t* s, char** endptr)
 {
 	double v;
+	char* end;
 
-	v = strtod(s->p, endptr);
-	//while (end > s->p + s->n)
-	//{
-	//}
+	end = (char*)s->p + s->n;
+	v = cstrvalid(s) ? strtod(s->p, &end) : 0.0;
+
+	if(endptr) *endptr = end;
 	return v;
 }
 
