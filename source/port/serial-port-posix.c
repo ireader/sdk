@@ -1,3 +1,4 @@
+#if defined(OS_MAC) || defined(OS_LINUX)
 #include "port/serial-port.h"
 #include <stdio.h>
 #include <string.h>
@@ -173,3 +174,5 @@ int serial_port_read(void* port, void* data, int bytes)
 	int fd = (int)(intptr_t)port;
 	return (int)read(fd, data, bytes);
 }
+
+#endif

@@ -1,3 +1,4 @@
+#if defined(OS_WINDOWS)
 #include "port/async-pipe.h"
 #include <assert.h>
 #include <Windows.h>
@@ -152,3 +153,5 @@ int async_pipe_read(async_pipe_t pipe, void* msg, int len, async_pipe_onread cal
 	}
 	return 0;
 }
+
+#endif

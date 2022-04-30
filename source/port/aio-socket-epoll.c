@@ -1,3 +1,4 @@
+#if defined(OS_LINUX)
 #include "aio-socket.h"
 #include "sys/spinlock.h"
 #include <sys/epoll.h>
@@ -895,3 +896,5 @@ int aio_socket_sendto_v(aio_socket_t socket, const struct sockaddr *addr, sockle
 	EPollOut(ctx, epoll_sendto_v);
 	return errno; // epoll_ctl return -1
 }
+
+#endif

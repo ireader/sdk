@@ -1,3 +1,4 @@
+#if defined(OS_MAC)
 #include "aio-socket.h"
 #include "sys/atomic.h"
 #include <sys/types.h>
@@ -827,3 +828,5 @@ int aio_socket_sendto_v(aio_socket_t socket, const struct sockaddr *addr, sockle
 
     return 0 == r ? 0 : errno;
 }
+
+#endif
