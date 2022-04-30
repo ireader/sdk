@@ -729,7 +729,7 @@ static int http_parse_header_line(struct http_parser_t *http, const char* data, 
 				}
 
 				h = &http->headers[http->header_size - 1];
-				for (j = h->value.len; j < http->header.value.pos; j++)
+				for (j = h->value.pos + h->value.len; j < http->header.value.pos; j++)
 				{
 					http->raw[j] = ' '; // replace with SP
 				}
