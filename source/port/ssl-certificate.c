@@ -1,3 +1,4 @@
+#if defined(__OPENSSL__)
 #include "openssl/bio.h"
 #include "openssl/ssl.h"
 #include "openssl/err.h"
@@ -144,3 +145,5 @@ int openssl_certificate_fingerprint(const X509* x509, int algorithm, char* finge
     fingerprint[i * 3 - 1] = '\0';
     return 0;
 }
+
+#endif /* __OPENSSL__ */

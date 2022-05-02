@@ -50,7 +50,7 @@ else
 LIBPATHS +=
 endif
 
-LIBS = rt pthread dl aio ssl crypto
+LIBS = rt pthread dl aio #ssl crypto
 
 STATIC_LIBS = $(ROOT)/libhttp/$(BUILD).$(PLATFORM)/libhttp.a
 
