@@ -163,7 +163,7 @@ int ip_local(char ip[65])
 	struct ifaddrs *ifaddr, *ifa;
 
 	if(0 != getifaddrs(&ifaddr))
-		return errno;
+		return -errno;
 
 	for(ifa = ifaddr; ifa; ifa = ifa->ifa_next)
 	{

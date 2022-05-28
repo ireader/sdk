@@ -136,7 +136,7 @@ int http_request_set_header(void* request, const char* name, const char* value)
 		else
 			p = (char *)realloc(req->ptr, req->capacity + nc + vc + 1024 + sizeof(unsigned int));
 		if(!p)
-			return ENOMEM;
+			return -ENOMEM;
 
 		// copy content
 		if(req->ptr == (char*)(req + 1))

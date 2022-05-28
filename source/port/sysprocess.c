@@ -318,7 +318,7 @@ int process_getmodules(pid_t pid, fcb_process_getmodules callback, void* param)
 
 	fp = fopen(p, "r");
 	if(!fp)
-		return errno;
+		return -errno;
 
 	while(fgets(p, sizeof(p)-1, fp))
 	{
@@ -354,7 +354,7 @@ int process_getmodulename(const void *address, char *name, int len)
 
 	fp = fopen(p, "r");
 	if(!fp)
-		return errno;
+		return -errno;
 
 	r = -1;
 	while(fgets(p, sizeof(p)-1, fp))
@@ -433,7 +433,7 @@ int process_getcommandline(pid_t pid, char* cmdline, int bytes)
 	sprintf(file, "/proc/%d/cmdline", pid);
 	fp = fopen(file, "rb");
 	if(!fp)
-		return errno;
+		return -errno;
 
 	total = 0;
 	remain = 0;

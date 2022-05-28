@@ -992,7 +992,8 @@ static inline int socket_getdomain(IN socket_t sock, OUT int* domain)
 	r = getsockopt(sock, SOL_SOCKET, SO_PROTOCOL_INFOW, (char*)&protocolInfo, &len);
 	if (0 == r)
 		*domain = protocolInfo.iAddressFamily;
-#elif defined(OS_LINUX) 
+#elif defined(OS_LINUX) && !defined(OS_WINDOWS_WSL)
+	// fixme: wsl errno 92
 	socklen_t len = sizeof(domain);
 	r = getsockopt(sock, SOL_SOCKET, SO_DOMAIN, (char*)domain, &len);
 #else

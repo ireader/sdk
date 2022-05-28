@@ -8,7 +8,7 @@
 int ring_buffer_alloc(struct ring_buffer_t* rb, size_t capacity)
 {
 	rb->ptr = (uint8_t*)malloc(capacity);
-	if (NULL == rb->ptr) return ENOMEM;
+	if (NULL == rb->ptr) return -ENOMEM;
 	rb->capacity = capacity;
 	rb->offset = 0;
 	rb->count = 0;
@@ -18,7 +18,7 @@ int ring_buffer_alloc(struct ring_buffer_t* rb, size_t capacity)
 int ring_buffer_free(struct ring_buffer_t* rb)
 {
 	if (!rb || !rb->ptr)
-		return EINVAL;
+		return -EINVAL;
 	
 	free(rb->ptr);
 	rb->ptr = NULL;
@@ -40,7 +40,7 @@ int ring_buffer_write(struct ring_buffer_t* rb, const void* data, size_t bytes)
 	p = (const uint8_t*)data;
 	
 	if (bytes + rb->count > rb->capacity)
-		return E2BIG;
+		return -E2BIG;
 
 	write = (rb->offset + rb->count) % rb->capacity;
 	n = (bytes + write) < rb->capacity ? bytes : (rb->capacity - write);
@@ -63,7 +63,7 @@ int ring_buffer_read(struct ring_buffer_t* rb, void* data, size_t bytes)
 	p = (uint8_t*)data;
 
 	if (bytes > rb->count)
-		return ENOMEM;
+		return -ENOMEM;
 
 	n = (bytes + rb->offset) < rb->capacity ? bytes : (rb->capacity - rb->offset);
 	memcpy(p, rb->ptr + rb->offset, n);
@@ -96,7 +96,7 @@ int ring_buffer_resize(struct ring_buffer_t* rb, size_t capacity)
 	size_t extend;
 
 	if (capacity < rb->count)
-		return ENOSPC;
+		return -ENOSPC;
 	else if (capacity == rb->capacity)
 		return 0;
 
@@ -111,7 +111,7 @@ int ring_buffer_resize(struct ring_buffer_t* rb, size_t capacity)
 
 	ptr = realloc(rb->ptr, capacity);
 	if (!ptr)
-		return ENOMEM;
+		return -ENOMEM;
 
 	if (capacity > rb->capacity && rb->offset + rb->count > rb->capacity)
 	{

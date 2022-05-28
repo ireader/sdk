@@ -169,7 +169,7 @@ static int twtimer_add(struct time_wheel_t* tm, struct twtimer_t* timer)
 	if (timer->pprev)
 	{
 		assert(0); // timer have been started
-		return EEXIST;
+		return -EEXIST;
 	}
 
 	diff = TIME(timer->expire - tm->clock); // per 64ms

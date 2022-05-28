@@ -118,7 +118,7 @@ static int http_rawdata(struct http_parser_t *http, const void* data, size_t byt
 	size_t capacity;
 
 	if (/*-1*/ bytes > HTTP_BODY_LENGTH_MAX || http->raw_size + bytes > HTTP_BODY_LENGTH_MAX + http->raw_header_offset)
-		return E2BIG;
+		return -E2BIG;
 
 	if(http->raw_capacity - http->raw_size < bytes + 1)
 	{
@@ -126,7 +126,7 @@ static int http_rawdata(struct http_parser_t *http, const void* data, size_t byt
 		capacity = (bytes + 1) > capacity ? (bytes + 1) : capacity;
 		p = realloc(http->raw, http->raw_capacity + capacity);
 		if(!p)
-			return ENOMEM;
+			return -ENOMEM;
 
 		http->raw_capacity += capacity;
 		http->raw = p;
@@ -276,7 +276,7 @@ static int http_header_add(struct http_parser_t *http, struct http_header_t* hea
 		size = http->header_capacity < 16 ? 16 : (http->header_size * 3 / 2);
 		p = (struct http_header_t*)realloc(http->headers, sizeof(struct http_header_t) * size);
 		if(!p)
-			return ENOMEM;
+			return -ENOMEM;
 
 		http->headers = p;
 		http->header_capacity = size;
@@ -724,7 +724,7 @@ static int http_parse_header_line(struct http_parser_t *http, const char* data, 
 
 				if (http->header_size < 1)
 				{
-					assert(0);
+					//assert(0);
 					return -1;
 				}
 
@@ -742,7 +742,7 @@ static int http_parse_header_line(struct http_parser_t *http, const char* data, 
 			{
 				if (http->header.name.len < 1)
 				{
-					assert(0);
+					//assert(0);
 					return -1;
 				}
 
@@ -1213,7 +1213,7 @@ int http_get_header(const struct http_parser_t* http, int idx, const char** name
 	assert(http->stateM >= SM_HEADER);
 
 	if(idx < 0 || idx >= http->header_size)
-		return EINVAL;
+		return -EINVAL;
 
 	*name = http->raw + http->headers[idx].name.pos;
 	*value = http->raw + http->headers[idx].value.pos;

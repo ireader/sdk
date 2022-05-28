@@ -476,7 +476,7 @@ int network_getip(network_getip_fcb fcb, void* param)
 	network_getgateway(gateway);
 
 	if(0 != getifaddrs(&ifaddr))
-		return errno;
+		return -errno;
 
 	for(ifa = ifaddr; ifa; ifa = ifa->ifa_next)
 	{

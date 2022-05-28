@@ -74,7 +74,7 @@ int heap_push(struct heap_t* heap, void* ptr)
 	{
 		heap_reserve(heap, heap->size + 2014);
 		if (heap->size + 1 >= heap->capacity)
-			return ENOMEM;
+			return -ENOMEM;
 	}
 
 	heap->elts[heap->size++] = ptr;

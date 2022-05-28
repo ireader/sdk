@@ -117,7 +117,7 @@ int aio_connect(const char* host, int port, int timeout, void (*onconnect)(void*
 		return r;
 
 	conn = calloc(1, sizeof(*conn));
-    if (!conn) return ENOMEM;
+    if (!conn) return -ENOMEM;
 
 	conn->onconnect = onconnect;
 	conn->param = param;

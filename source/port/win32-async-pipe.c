@@ -107,7 +107,7 @@ int async_pipe_close(async_pipe_t pipe)
 
 	// free
 	GlobalFree(o);
-	return err;
+	return -err;
 }
 
 static VOID WINAPI winpipe_onwrite(DWORD code, DWORD bytes, LPOVERLAPPED lpOverlapped)

@@ -16,7 +16,7 @@ static int http_client_setcookie(struct http_client_t* http, const char* cookie,
 		char* p;
 		p = (char*)realloc(http->cookie, bytes+1);
 		if(!p)
-			return ENOMEM;
+			return -ENOMEM;
 		http->cookie = p;
 		http->ncookie = bytes+1;
 	}

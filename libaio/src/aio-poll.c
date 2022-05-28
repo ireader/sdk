@@ -121,11 +121,11 @@ int aio_poll_poll(struct aio_poll_t* poll, socket_t socket, int flags, int timeo
 	struct aio_poll_socket_t* s;
 
 	if (0 == (flags & (AIO_POLL_IN | AIO_POLL_OUT)) || !callback || timeout <= 0 || socket_invalid == socket)
-		return EINVAL;
+		return -EINVAL;
 
 	s = aio_poll_alloc(poll);
 	if (!s)
-		return ENOMEM;
+		return -ENOMEM;
 
 	memset(s, 0, sizeof(*s));
 	s->fd = socket;
