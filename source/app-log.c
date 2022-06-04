@@ -46,13 +46,13 @@ static int app_log_time(char timestr[], unsigned int bytes)
 #if defined(OS_WINDOWS)
 	SYSTEMTIME t;
 	GetLocalTime(&t);
-	return snprintf(timestr, bytes, "%02hu:%02hu:%02hu.%03hu|", t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
+	return snprintf(timestr, bytes, "%04hu-%02hu-%02huT%02hu:%02hu:%02hu.%03hu|", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
 #else
 	struct tm t;
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	localtime_r(&tv.tv_sec, &t);
-	return snprintf(timestr, bytes, "%02d:%02d:%02d.%03d|", (int)t.tm_hour, (int)t.tm_min, (int)t.tm_sec, (int)(tv.tv_usec / 1000) % 1000);
+	return snprintf(timestr, bytes, "%04d-%02d-%02dT%02d:%02d:%02d.%03d|", (int)t.tm_year + 1900, (int)t.tm_mon+1, (int)t.tm_mday, (int)t.tm_hour, (int)t.tm_min, (int)t.tm_sec, (int)(tv.tv_usec / 1000) % 1000);
 #endif
 	//return snprintf(timestr, sizeof(timestr), "%s-%02d %02d:%02d:%02d.%03d|", /*t.year+1900,*/ s_month[t.month % 12], t.day, t.hour, t.minute, t.second, t.millisecond);
 }
