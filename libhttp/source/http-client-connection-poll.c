@@ -192,6 +192,9 @@ static int http_poll_transport_onconnect(void* c, int event)
 #if defined(__OPENSSL__)
         if (!tcp->ctx)
         {
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+            static unsigned char protos[] = { 8, 'h', 't', 't', 'p', '/', '1', '.', '1' };
+#endif
             tcp->ctx = SSL_CTX_new(SSLv23_client_method());
             if (!tcp->ctx)
                 return -1;
@@ -201,6 +204,10 @@ static int http_poll_transport_onconnect(void* c, int event)
             SSL_CTX_set_options(tcp->ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
             SSL_CTX_set_verify(tcp->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
             SSL_CTX_set_default_verify_paths(tcp->ctx);
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+            SSL_CTX_set_alpn_protos(tcp->ctx, protos, sizeof(protos));
 #endif
 
             tcp->ssl = SSL_new(tcp->ctx);
