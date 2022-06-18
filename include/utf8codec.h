@@ -99,9 +99,9 @@ public:
 	~UTF8Decode()
 	{
 		if(m_pc)
-			delete m_pc;
+			delete[] m_pc;
 		if(m_pw)
-			delete m_pw;
+			delete[] m_pw;
 	}
 
 	const char* ToMBCS()
