@@ -693,6 +693,9 @@ static int http_parse_header_line(struct http_parser_t *http, const char* data, 
 			break;
 
 		case SM_HEADER_CR:
+			if ('\r' == c)
+				break;
+
 			if ('\n' != c)
 			{
 				assert(0);
