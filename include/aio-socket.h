@@ -66,6 +66,14 @@ typedef void (*aio_onrecv)(void* param, int code, size_t bytes);
 /// @param[in] addrlen peer socket address length in bytes
 typedef void (*aio_onrecvfrom)(void* param, int code, size_t bytes, const struct sockaddr* addr, socklen_t addrlen);
 
+/// aio_socket_recvmsg/aio_socket_recvmsg_v callback
+/// @param[in] param user-defined parameter
+/// @param[in] code 0-ok, other-error
+/// @param[in] bytes 0-means socket closed, >0-transfered bytes
+/// @param[in] addr peer socket address(IPv4/IPv6)
+/// @param[in] addrlen peer socket address length in bytes
+typedef void (*aio_onrecvmsg)(void* param, int code, size_t bytes, const struct sockaddr* peer, socklen_t peerlen, const struct sockaddr* local, socklen_t locallen);
+
 /// aio initialization
 /// @param[in] threads max concurrent thread call aio_socket_process
 /// @return 0-ok, other-error
@@ -163,6 +171,59 @@ int aio_socket_sendto_v(aio_socket_t socket, const struct sockaddr *addr, sockle
 /// @param[in] param user-defined parameter
 /// @return 0-ok, <0-error, don't call proc if return error
 int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvfrom proc, void* param);
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// extension send/recv local addr
+/// 
+/// aio_socket_recvfrom -> aio_socket_recvmsg
+/// aio_socket_sendto -> aio_socket_sendmsg
+/// aio_socket_recvfrom_v -> aio_socket_recvmsg_v
+/// aio_socket_sendto_v -> aio_socket_sendmsg_v
+
+/// aio udp recv
+/// @param[out] buffer data buffer(must valid before aio_onrecvfrom callback)
+/// @param[out] bytes buffer size
+/// @param[in] proc user-defined callback
+/// @param[in] param user-defined parameter
+/// @return 0-ok, <0-error, don't call proc if return error
+int aio_socket_recvmsg(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecvmsg proc, void* param);
+
+/// aio udp recv
+/// @param[in] socket aio socket
+/// @param[in] vec buffer array(must valid before aio_onrecvfrom callback)
+/// @param[in] n vec item number
+/// @param[in] proc user-defined callback
+/// @param[in] param user-defined parameter
+/// @return 0-ok, <0-error, don't call proc if return error
+int aio_socket_recvmsg_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvmsg proc, void* param);
+
+/// aio udp send
+/// @param[in] socket aio socket
+/// @param[in] peer peer socket address(IPv4 or IPv6)
+/// @param[in] peerlen peer addr length in bytes
+/// @param[in] local send with local socket address(IPv4 or IPv6)
+/// @param[in] locallen local addr length in bytes
+/// @param[in] buffer outbound buffer
+/// @param[in] bytes buffer size
+/// @param[in] proc user-defined callback
+/// @param[in] param user-defined parameter
+/// @return 0-ok, <0-error, don't call proc if return error
+int aio_socket_sendmsg(aio_socket_t socket, const struct sockaddr* peer, socklen_t peerlen, const struct sockaddr* local, socklen_t locallen, const void* buffer, size_t bytes, aio_onsend proc, void* param);
+
+/// aio udp send
+/// @param[in] socket aio socket
+/// @param[in] peer peer socket address(IPv4 or IPv6)
+/// @param[in] peerlen peer addr length in bytes
+/// @param[in] local send with local socket address(IPv4 or IPv6)
+/// @param[in] locallen local addr length in bytes
+/// @param[in] vec buffer array(must valid before aio_onsend callback)
+/// @param[in] n vec item number
+/// @param[in] proc user-defined callback
+/// @param[in] param user-defined parameter
+/// @return 0-ok, <0-error, don't call proc if return error
+int aio_socket_sendmsg_v(aio_socket_t socket, const struct sockaddr* peer, socklen_t peerlen, const struct sockaddr* local, socklen_t locallen, socket_bufvec_t* vec, int n, aio_onsend proc, void* param);
 
 #ifdef __cplusplus
 }

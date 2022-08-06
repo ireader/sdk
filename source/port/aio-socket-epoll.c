@@ -68,8 +68,10 @@ struct epoll_context_send
 	void *param;
 	const void *buffer;
 	size_t bytes;
-	struct sockaddr_storage addr;  // for send to
-	socklen_t addrlen;
+	struct sockaddr_storage peer;  // for send to
+	socklen_t peerlen;
+	struct sockaddr_storage local;  // for sendmsg
+	socklen_t locallen;
 };
 
 struct epoll_context_recv_v
@@ -86,8 +88,10 @@ struct epoll_context_send_v
 	void *param;
 	socket_bufvec_t *vec;
 	int n;
-	struct sockaddr_storage addr;  // for send to
-	socklen_t addrlen;
+	struct sockaddr_storage peer;  // for send to
+	socklen_t peerlen;
+	struct sockaddr_storage local;  // for sendmsg
+	socklen_t locallen;
 };
 
 struct epoll_context_recvfrom
@@ -101,6 +105,7 @@ struct epoll_context_recvfrom
 struct epoll_context_recvfrom_v
 {
 	aio_onrecvfrom proc;
+	aio_onrecvmsg proc2;
 	void *param;
 	socket_bufvec_t *vec;
 	int n;
@@ -129,6 +134,7 @@ struct epoll_context
 		struct epoll_context_recvfrom recvfrom;
 		struct epoll_context_recvfrom_v recvfrom_v;
 	} in;
+	socket_bufvec_t vec[2][1]; // for recvmsg/sendmsg
 
 	union
 	{
@@ -747,7 +753,7 @@ static int epoll_sendto(struct epoll_context* ctx, int flags, int error)
 		return error;
 	}
 
-	r = sendto(ctx->socket[1], ctx->out.send.buffer, ctx->out.send.bytes, 0, (struct sockaddr*)&ctx->out.send.addr, ctx->out.send.addrlen);
+	r = sendto(ctx->socket[1], ctx->out.send.buffer, ctx->out.send.bytes, 0, (struct sockaddr*)&ctx->out.send.peer, ctx->out.send.peerlen);
 	if(r >= 0)
 	{
 		ctx->out.send.proc(ctx->out.send.param, 0, (size_t)r);
@@ -771,8 +777,8 @@ int aio_socket_sendto(aio_socket_t socket, const struct sockaddr *addr, socklen_
 	if(ctx->ev[1].events & EPOLLOUT)
 		return EBUSY;
 
-	ctx->out.send.addrlen = addrlen > sizeof(ctx->out.send.addr) ? sizeof(ctx->out.send.addr) : addrlen;
-	memcpy(&ctx->out.send.addr, addr, ctx->out.send.addrlen);
+	ctx->out.send.peerlen = addrlen > sizeof(ctx->out.send.peer) ? sizeof(ctx->out.send.peer) : addrlen;
+	memcpy(&ctx->out.send.peer, addr, ctx->out.send.peerlen);
 	ctx->out.send.proc = proc;
 	ctx->out.send.param = param;
 	ctx->out.send.buffer = buffer;
@@ -788,27 +794,62 @@ int aio_socket_sendto(aio_socket_t socket, const struct sockaddr *addr, socklen_
 static int epoll_recvfrom_v(struct epoll_context* ctx, int flags, int error)
 {
 	ssize_t r;
-	struct sockaddr_storage addr;
-	struct msghdr msg;
+	char control[64];
+	struct msghdr hdr;
+	struct cmsghdr *cmsg;
+	socklen_t locallen;
+	struct sockaddr_storage peer, local;
 
 	if(0 != error)
 	{
 		assert(1 == flags); // only in epoll_wait thread
-		ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, error, 0, NULL, 0);
+		ctx->in.recvfrom_v.proc ? ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, error, 0, NULL, 0) :
+									ctx->in.recvfrom_v.proc2(ctx->in.recvfrom_v.param, error, 0, NULL, 0, NULL, 0);
 		return error;
 	}
 
-	memset(&addr, 0, sizeof(addr));
-	memset(&msg, 0, sizeof(msg));
-	msg.msg_name = &addr;
-	msg.msg_namelen = sizeof(addr);
-	msg.msg_iov = (struct iovec*)ctx->in.recvfrom_v.vec;
-	msg.msg_iovlen = ctx->in.recvfrom_v.n;
+	memset(&peer, 0, sizeof(peer));
+	memset(&hdr, 0, sizeof(hdr));
+	memset(control, 0, sizeof(control));
+	hdr.msg_name = &peer;
+	hdr.msg_namelen = sizeof(peer);
+	hdr.msg_iov = (struct iovec*)ctx->in.recvfrom_v.vec;
+	hdr.msg_iovlen = ctx->in.recvfrom_v.n;
+	hdr.msg_control = control;
+	hdr.msg_controllen = sizeof(control);
+	hdr.msg_flags = 0;
 
-	r = recvmsg(ctx->socket[0], &msg, 0);
+	r = recvmsg(ctx->socket[0], &hdr, 0);
 	if(r >= 0)
 	{
-		ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, 0, (size_t)r, (struct sockaddr*)&addr, msg.msg_namelen);
+		locallen = 0;
+		memset(&local, 0, sizeof(local));
+		for (cmsg = CMSG_FIRSTHDR(&hdr); !!cmsg && ctx->in.recvfrom_v.proc2; cmsg = CMSG_NXTHDR(&hdr, cmsg))
+		{
+			if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO)
+			{
+				struct in_pktinfo* pktinfo;
+				pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
+				locallen = sizeof(struct sockaddr_in);
+				((struct sockaddr_in*)&local)->sin_family = AF_INET;
+				memcpy(&((struct sockaddr_in*)&local)->sin_addr, &pktinfo->ipi_addr, sizeof(pktinfo->ipi_addr));
+				break;
+			}
+#if defined(_GNU_SOURCE)
+			else if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO)
+			{
+				struct in6_pktinfo* pktinfo6;
+				pktinfo6 = (struct in6_pktinfo*)CMSG_DATA(cmsg);
+				locallen = sizeof(struct sockaddr_in6);
+				((struct sockaddr_in6*)&local)->sin6_family = AF_INET6;
+				memcpy(&((struct sockaddr_in6*)&local)->sin6_addr, &pktinfo6->ipi6_addr, sizeof(pktinfo6->ipi6_addr));
+				break;
+			}
+#endif
+		}
+
+		ctx->in.recvfrom_v.proc ? ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, 0, (size_t)r, (struct sockaddr*)&peer, hdr.msg_namelen) :
+									ctx->in.recvfrom_v.proc2(ctx->in.recvfrom_v.param, 0, (size_t)r, (struct sockaddr*)&peer, hdr.msg_namelen, (struct sockaddr*)&local, locallen);
 		return 0;
 	}
 	else
@@ -817,7 +858,8 @@ static int epoll_recvfrom_v(struct epoll_context* ctx, int flags, int error)
 			return errno;
 
 		// call in epoll_wait thread
-		ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, errno, 0, NULL, 0);
+		ctx->in.recvfrom_v.proc ? ctx->in.recvfrom_v.proc(ctx->in.recvfrom_v.param, errno, 0, NULL, 0) :
+									ctx->in.recvfrom_v.proc2(ctx->in.recvfrom_v.param, errno, 0, NULL, 0, NULL, 0);
 		return 0;
 	}
 }
@@ -830,6 +872,7 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 		return EBUSY;
 
 	ctx->in.recvfrom_v.proc = proc;
+	ctx->in.recvfrom_v.proc2 = NULL;
 	ctx->in.recvfrom_v.param = param;
 	ctx->in.recvfrom_v.vec = vec;
 	ctx->in.recvfrom_v.n = n;
@@ -844,7 +887,10 @@ int aio_socket_recvfrom_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_
 static int epoll_sendto_v(struct epoll_context* ctx, int flags, int error)
 {
 	ssize_t r;
-	struct msghdr msg;
+	char control[64];
+	struct msghdr hdr;
+	struct cmsghdr* cmsg;
+	struct sockaddr_storage* local;
 
 	if(0 != error)
 	{
@@ -853,13 +899,48 @@ static int epoll_sendto_v(struct epoll_context* ctx, int flags, int error)
 		return error;
 	}
 
-	memset(&msg, 0, sizeof(msg));
-	msg.msg_name = (struct sockaddr*)&ctx->out.send_v.addr;
-	msg.msg_namelen = ctx->out.send_v.addrlen;
-	msg.msg_iov = (struct iovec*)ctx->out.send_v.vec;
-	msg.msg_iovlen = ctx->out.send_v.n;
+	memset(&hdr, 0, sizeof(hdr));
+	memset(control, 0, sizeof(control));
+	hdr.msg_name = (struct sockaddr*)&ctx->out.send_v.peer;
+	hdr.msg_namelen = ctx->out.send_v.peerlen;
+	hdr.msg_iov = (struct iovec*)ctx->out.send_v.vec;
+	hdr.msg_iovlen = ctx->out.send_v.n;
+	hdr.msg_control = control;
+	hdr.msg_controllen = sizeof(control);
+	hdr.msg_flags = 0;
 
-	r = sendmsg(ctx->socket[1], &msg, 0);
+	cmsg = CMSG_FIRSTHDR(&hdr);
+	local = &ctx->out.send_v.local;
+	if (AF_INET == local->ss_family && ctx->out.send_v.locallen >= sizeof(struct sockaddr_in))
+	{
+		struct in_pktinfo* pktinfo;
+		cmsg->cmsg_level = IPPROTO_IP; // SOL_IP
+		cmsg->cmsg_type = IP_PKTINFO;
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+		pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
+		memset(pktinfo, 0, sizeof(struct in_pktinfo));
+		memcpy(&pktinfo->ipi_spec_dst, &((struct sockaddr_in*)local)->sin_addr, sizeof(pktinfo->ipi_spec_dst));
+		hdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
+	}
+#if defined(_GNU_SOURCE)
+	else if (AF_INET6 == local->ss_family && ctx->out.send_v.locallen >= sizeof(struct sockaddr_in6))
+	{
+		struct in6_pktinfo* pktinfo6;
+		cmsg->cmsg_level = IPPROTO_IPV6;
+		cmsg->cmsg_type = IPV6_PKTINFO;
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+		pktinfo6 = (struct in6_pktinfo*)CMSG_DATA(cmsg);
+		memset(pktinfo6, 0, sizeof(struct in6_pktinfo));
+		memcpy(&pktinfo6->ipi6_addr, &((struct sockaddr_in6*)local)->sin6_addr, sizeof(pktinfo6->ipi6_addr));
+		hdr.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+	}
+#endif
+	else
+	{
+		hdr.msg_controllen = 0;
+	}
+
+	r = sendmsg(ctx->socket[1], &hdr, 0);
 	if(r >= 0)
 	{
 		ctx->out.send_v.proc(ctx->out.send_v.param, 0, (size_t)r);
@@ -883,8 +964,9 @@ int aio_socket_sendto_v(aio_socket_t socket, const struct sockaddr *addr, sockle
 	if(ctx->ev[1].events & EPOLLOUT)
 		return EBUSY;
 
-	ctx->out.send_v.addrlen = addrlen > sizeof(ctx->out.send_v.addr) ? sizeof(ctx->out.send_v.addr) : addrlen;
-	memcpy(&ctx->out.send_v.addr, addr, ctx->out.send_v.addrlen);
+	ctx->out.send_v.locallen = 0;
+	ctx->out.send_v.peerlen = addrlen > sizeof(ctx->out.send_v.peer) ? sizeof(ctx->out.send_v.peer) : addrlen;
+	memcpy(&ctx->out.send_v.peer, addr, ctx->out.send_v.peerlen);
 	ctx->out.send_v.proc = proc;
 	ctx->out.send_v.param = param;
 	ctx->out.send_v.vec = vec;
@@ -892,6 +974,65 @@ int aio_socket_sendto_v(aio_socket_t socket, const struct sockaddr *addr, sockle
 
 //	r = epoll_sendto_v(ctx, 0, 0);
 //	if(EAGAIN != r) return r;
+
+	EPollOut(ctx, epoll_sendto_v);
+	return errno; // epoll_ctl return -1
+}
+
+int aio_socket_recvmsg(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecvmsg proc, void* param)
+{
+	struct epoll_context* ctx = (struct epoll_context*)socket;
+	ctx->vec[0][0].iov_base = buffer;
+	ctx->vec[0][0].iov_len = bytes;
+	return aio_socket_recvmsg_v(socket, ctx->vec[0], 1, proc, param);
+}
+
+int aio_socket_sendmsg(aio_socket_t socket, const struct sockaddr* peer, socklen_t peerlen, const struct sockaddr* local, socklen_t locallen, const void* buffer, size_t bytes, aio_onsend proc, void* param)
+{
+	struct epoll_context* ctx = (struct epoll_context*)socket;
+	ctx->vec[1][0].iov_base = (void*)buffer;
+	ctx->vec[1][0].iov_len = bytes;
+	return aio_socket_sendmsg_v(socket, peer, peerlen, local, locallen, ctx->vec[1], 1, proc, param);
+}
+
+int aio_socket_recvmsg_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvmsg proc, void* param)
+{
+	struct epoll_context* ctx = (struct epoll_context*)socket;
+	assert(0 == (ctx->ev[0].events & EPOLLIN));
+	if (ctx->ev[0].events & EPOLLIN)
+		return EBUSY;
+
+	ctx->in.recvfrom_v.proc = NULL;
+	ctx->in.recvfrom_v.proc2 = proc;
+	ctx->in.recvfrom_v.param = param;
+	ctx->in.recvfrom_v.vec = vec;
+	ctx->in.recvfrom_v.n = n;
+
+	//	r = epoll_recvfrom_v(ctx, 0, 0);
+	//	if(EAGAIN != r) return r;
+
+	EPollIn(ctx, epoll_recvfrom_v);
+	return errno; // epoll_ctl return -1
+}
+
+int aio_socket_sendmsg_v(aio_socket_t socket, const struct sockaddr* peer, socklen_t peerlen, const struct sockaddr* local, socklen_t locallen, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
+{
+	struct epoll_context* ctx = (struct epoll_context*)socket;
+	assert(0 == (ctx->ev[1].events & EPOLLOUT));
+	if (ctx->ev[1].events & EPOLLOUT)
+		return EBUSY;
+
+	ctx->out.send_v.peerlen = peerlen > sizeof(ctx->out.send_v.peer) ? sizeof(ctx->out.send_v.peer) : peerlen;
+	memcpy(&ctx->out.send_v.peer, peer, ctx->out.send_v.peerlen);
+	ctx->out.send_v.locallen = locallen > sizeof(ctx->out.send_v.local) ? sizeof(ctx->out.send_v.local) : locallen;
+	memcpy(&ctx->out.send_v.local, local, ctx->out.send_v.locallen);
+	ctx->out.send_v.proc = proc;
+	ctx->out.send_v.param = param;
+	ctx->out.send_v.vec = vec;
+	ctx->out.send_v.n = n;
+
+	//	r = epoll_sendto_v(ctx, 0, 0);
+	//	if(EAGAIN != r) return r;
 
 	EPollOut(ctx, epoll_sendto_v);
 	return errno; // epoll_ctl return -1

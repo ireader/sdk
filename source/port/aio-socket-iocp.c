@@ -21,12 +21,14 @@ typedef VOID (PASCAL FAR * FGetAcceptExSockaddrs)(PVOID, DWORD, DWORD, DWORD, st
 typedef BOOL (PASCAL FAR * FConnectEx)(SOCKET, const struct sockaddr *, int, PVOID, DWORD, LPDWORD, LPOVERLAPPED);
 typedef BOOL (PASCAL FAR * FDisconnectEx)(SOCKET, LPOVERLAPPED, DWORD, DWORD);
 typedef INT  (PASCAL FAR * FWSARECVMSG)(SOCKET, LPWSAMSG, LPDWORD, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
+//typedef INT	 (PASCAL FAR*  FWSASENDMSG)(SOCKET, LPWSAMSG, DWORD, LPDWORD, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
 
 #define WSAID_ACCEPTEX		{0xb5367df1,0xcbac,0x11cf,{0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92}}
 #define WSAID_GETACCEPTEXSOCKADDRS {0xb5367df2,0xcbac,0x11cf,{0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92}}
 #define WSAID_CONNECTEX		{0x25a207b9,0xddf3,0x4660,{0x8e,0xe9,0x76,0xe5,0x8c,0x74,0x06,0x3e}}
 #define WSAID_DISCONNECTEX	{0x7fda2e11,0x8630,0x436f,{0xa0, 0x31, 0xf5, 0x36, 0xa6, 0xee, 0xc1, 0x57}}
 #define WSAID_WSARECVMSG	{0xf689d7c8,0x6f1f,0x436b,{0x8a,0x53,0xe5,0x4f,0xe3,0x51,0xc3,0x22}}
+#define WSAID_WSASENDMSG	{0xa441e712,0x754f,0x43ca,{0x84,0xa7,0x0d,0xee,0x44,0xcf,0x60,0x6d}}
 
 #define SO_UPDATE_ACCEPT_CONTEXT    0x700B
 
@@ -35,6 +37,7 @@ static FGetAcceptExSockaddrs GetAcceptExSockaddrs;
 static FConnectEx ConnectEx;
 static FDisconnectEx DisconnectEx;
 static FWSARECVMSG WSARecvMsg;
+//static FWSASENDMSG WSASendMsg;
 
 enum { AIO_READ = 0x01, AIO_WRITE = 0x02, };
 
@@ -86,6 +89,16 @@ struct aio_context_recvfrom
 	struct sockaddr_storage addr;
 };
 
+struct aio_context_recvmsg
+{
+	aio_onrecvmsg proc;
+	void* param;
+
+	WSAMSG wsamsg;
+	char control[64];
+	struct sockaddr_storage peer;
+};
+
 struct aio_context_action
 {
 	WSAOVERLAPPED overlapped;
@@ -99,6 +112,7 @@ struct aio_context_action
 		struct aio_context_send send;
 		struct aio_context_recv recv;
 		struct aio_context_recvfrom recvfrom;
+		struct aio_context_recvmsg recvmsg;
 	};
 
 	struct aio_context *context;
@@ -121,6 +135,7 @@ static int iocp_init()
 	GUID guid3 = WSAID_CONNECTEX;
 	GUID guid4 = WSAID_DISCONNECTEX;
 	GUID guid5 = WSAID_WSARECVMSG;
+	//GUID guid6 = WSAID_WSASENDMSG;
 
 	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid1, sizeof(GUID), &AcceptEx, sizeof(AcceptEx), &bytes, NULL, NULL);
@@ -128,6 +143,7 @@ static int iocp_init()
 	WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid3, sizeof(GUID), &ConnectEx, sizeof(ConnectEx), &bytes, NULL, NULL);
 	WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid4, sizeof(GUID), &DisconnectEx, sizeof(DisconnectEx), &bytes, NULL, NULL);
 	WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid5, sizeof(GUID), &WSARecvMsg, sizeof(WSARecvMsg), &bytes, NULL, NULL);
+	//WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid6, sizeof(GUID), &WSASendMsg, sizeof(WSASendMsg), &bytes, NULL, NULL);
 	closesocket(sock);
 
 	assert(AcceptEx && GetAcceptExSockaddrs && ConnectEx && DisconnectEx);
@@ -251,6 +267,43 @@ static void iocp_recvfrom(struct aio_context* ctx, struct aio_context_action* ai
 {
 	assert(0 != (AIO_READ & InterlockedAnd(&ctx->flags, ~AIO_READ)));
 	aio->recvfrom.proc(aio->recvfrom.param, error, bytes, (struct sockaddr*)&aio->recvfrom.addr, aio->recvfrom.addrlen);
+}
+
+static void iocp_recvmsg(struct aio_context* ctx, struct aio_context_action* aio, DWORD error, DWORD bytes)
+{
+	WSAMSG* wsamsg;
+	WSACMSGHDR* cmsg;
+	struct in_pktinfo* pktinfo;
+	struct in6_pktinfo* pktinfo6;
+	struct sockaddr_storage local;
+	socklen_t locallen;
+
+	assert(0 != (AIO_READ & InterlockedAnd(&ctx->flags, ~AIO_READ)));
+
+	locallen = 0;
+	wsamsg = &aio->recvmsg.wsamsg;
+	memset(&local, 0, sizeof(local));
+	for (cmsg = WSA_CMSG_FIRSTHDR(wsamsg); !!cmsg; cmsg = WSA_CMSG_NXTHDR(wsamsg, cmsg))
+	{
+		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO)
+		{
+			pktinfo = (struct in_pktinfo*)WSA_CMSG_DATA(cmsg);
+			locallen = sizeof(struct sockaddr_in);
+			((struct sockaddr_in*)&local)->sin_family = AF_INET;
+			memcpy(&((struct sockaddr_in*)&local)->sin_addr, &pktinfo->ipi_addr, sizeof(pktinfo->ipi_addr));
+			break;
+		}
+		else if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO)
+		{
+			pktinfo6 = (struct in6_pktinfo*)WSA_CMSG_DATA(cmsg);
+			locallen = sizeof(struct sockaddr_in6);
+			((struct sockaddr_in6*)&local)->sin6_family = AF_INET6;
+			memcpy(&((struct sockaddr_in6*)&local)->sin6_addr, &pktinfo6->ipi6_addr, sizeof(pktinfo6->ipi6_addr));
+			break;
+		}
+	}
+
+	aio->recvmsg.proc(aio->recvmsg.param, error, bytes, (struct sockaddr*)&aio->recvmsg.peer, wsamsg->namelen, (struct sockaddr*)&local, locallen);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -617,4 +670,112 @@ int aio_socket_sendto_v(aio_socket_t socket, const struct sockaddr *addr, sockle
 	return 0;
 }
 
+int aio_socket_recvmsg(aio_socket_t socket, void* buffer, size_t bytes, aio_onrecvmsg proc, void* param)
+{
+	socket_bufvec_t vec[1];
+	vec[0].buf = buffer;
+	vec[0].len = bytes;
+	return aio_socket_recvmsg_v(socket, vec, 1, proc, param);
+}
+
+int aio_socket_recvmsg_v(aio_socket_t socket, socket_bufvec_t* vec, int n, aio_onrecvmsg proc, void* param)
+{
+	DWORD bytes = 0;
+	DWORD flags = 0;
+	struct aio_context* ctx = (struct aio_context*)socket;
+	struct aio_context_action* aio;
+	WSAMSG *wsamsg;
+
+	aio = util_alloc(ctx);
+	aio->action = iocp_recvmsg;
+	aio->recvmsg.proc = proc;
+	aio->recvmsg.param = param;
+
+	wsamsg = &aio->recvmsg.wsamsg;
+	memset(wsamsg, 0, sizeof(*wsamsg));
+	wsamsg->name = (struct sockaddr*)&aio->recvmsg.peer;
+	wsamsg->namelen = sizeof(aio->recvmsg.peer);
+	wsamsg->lpBuffers = vec;
+	wsamsg->dwBufferCount = n;
+	wsamsg->Control.buf = aio->recvmsg.control;
+	wsamsg->Control.len = sizeof(aio->recvmsg.control);
+	wsamsg->dwFlags = flags;
+
+	assert(0 == (AIO_READ & InterlockedOr(&ctx->flags, AIO_READ)));
+	if (SOCKET_ERROR == WSARecvMsg(ctx->socket, wsamsg, &bytes, &aio->overlapped, NULL))
+	{
+		return aio_socket_result(aio, AIO_READ);
+	}
+	return 0;
+}
+
+int aio_socket_sendmsg(aio_socket_t socket, const struct sockaddr* peer, socklen_t peerlen, const struct sockaddr* local, socklen_t locallen, const void* buffer, size_t bytes, aio_onsend proc, void* param)
+{
+	socket_bufvec_t vec[1];
+	vec[0].buf = (CHAR FAR*)buffer;
+	vec[0].len = bytes;
+	return aio_socket_sendmsg_v(socket, peer, peerlen, local, locallen, vec, 1, proc, param);
+}
+
+int aio_socket_sendmsg_v(aio_socket_t socket, const struct sockaddr* peer, socklen_t peerlen, const struct sockaddr* local, socklen_t locallen, socket_bufvec_t* vec, int n, aio_onsend proc, void* param)
+{
+	DWORD bytes = 0;
+	DWORD flags = 0;
+	WSAMSG wsamsg;
+	WSACMSGHDR* cmsg;
+	char control[64];
+	struct in_pktinfo* pktinfo;
+	struct in6_pktinfo* pktinfo6;
+	struct aio_context* ctx = (struct aio_context*)socket;
+	struct aio_context_action* aio;
+
+	aio = util_alloc(ctx);
+	aio->action = iocp_send;
+	aio->send.proc = proc;
+	aio->send.param = param;
+
+	memset(control, 0, sizeof(control));
+	memset(&wsamsg, 0, sizeof(wsamsg));
+	wsamsg.name = (LPSOCKADDR)peer;
+	wsamsg.namelen = peerlen;
+	wsamsg.lpBuffers = (LPWSABUF)vec;
+	wsamsg.dwBufferCount = n;
+	wsamsg.Control.buf = control;
+	wsamsg.Control.len = sizeof(control);
+	wsamsg.dwFlags = 0;
+
+	cmsg = WSA_CMSG_FIRSTHDR(&wsamsg);
+	if (AF_INET == local->sa_family && locallen >= sizeof(struct sockaddr_in))
+	{
+		cmsg->cmsg_level = IPPROTO_IP;
+		cmsg->cmsg_type = IP_PKTINFO;
+		cmsg->cmsg_len = WSA_CMSG_LEN(sizeof(struct in_pktinfo));
+		pktinfo = (struct in_pktinfo*)WSA_CMSG_DATA(cmsg);
+		memset(pktinfo, 0, sizeof(struct in_pktinfo));
+		memcpy(&pktinfo->ipi_addr, &((struct sockaddr_in*)local)->sin_addr, sizeof(pktinfo->ipi_addr));
+		wsamsg.Control.len = WSA_CMSG_SPACE(sizeof(struct in_pktinfo));
+	}
+	else if (AF_INET6 == local->sa_family && locallen >= sizeof(struct sockaddr_in6))
+	{
+		cmsg->cmsg_level = IPPROTO_IPV6;
+		cmsg->cmsg_type = IPV6_PKTINFO;
+		cmsg->cmsg_len = WSA_CMSG_LEN(sizeof(struct in6_pktinfo));
+		pktinfo6 = (struct in6_pktinfo*)WSA_CMSG_DATA(cmsg);
+		memset(pktinfo6, 0, sizeof(struct in6_pktinfo));
+		memcpy(&pktinfo6->ipi6_addr, &((struct sockaddr_in6*)local)->sin6_addr, sizeof(pktinfo6->ipi6_addr));
+		wsamsg.Control.len = WSA_CMSG_SPACE(sizeof(struct in6_pktinfo));
+	}
+	else
+	{
+		assert(0);
+		return -1;
+	}
+
+	assert(0 == (AIO_READ & InterlockedOr(&ctx->flags, AIO_READ)));
+	if (SOCKET_ERROR == WSASendMsg(ctx->socket, &wsamsg, flags, &bytes, &aio->overlapped, NULL))
+	{
+		return aio_socket_result(aio, AIO_READ);
+	}
+	return 0;
+}
 #endif

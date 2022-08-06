@@ -576,6 +576,18 @@ static inline BOOL WINAPI wsarecvmsgcallback(PINIT_ONCE InitOnce, PVOID Paramete
 	(void)InitOnce, (void)Parameter2;
 	return TRUE;
 }
+
+//static inline BOOL WINAPI wsasendmsgcallback(PINIT_ONCE InitOnce, PVOID Parameter, PVOID* Parameter2)
+//{
+//	DWORD bytes;
+//	socket_t sock;
+//	GUID guid = WSAID_WSASENDMSG;
+//	sock = socket_tcp();
+//	WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(GUID), Parameter, sizeof(LPFN_WSASENDMSG), &bytes, NULL, NULL);
+//	socket_close(sock);
+//	(void)InitOnce, (void)Parameter2;
+//	return TRUE;
+//}
 #endif
 
 /// @param[out] local ip destination addr(local address) without port
@@ -588,11 +600,11 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 	WSACMSGHDR* cmsg;
 	struct in_pktinfo* pktinfo;
 	struct in6_pktinfo* pktinfo6;
-	static INIT_ONCE wsarecvmsgonce;
-	static LPFN_WSARECVMSG WSARecvMsg;
 
 	DWORD bytes;
 	WSAMSG wsamsg;
+	static INIT_ONCE wsarecvmsgonce;
+	static LPFN_WSARECVMSG WSARecvMsg;
 	InitOnceExecuteOnce(&wsarecvmsgonce, wsarecvmsgcallback, &WSARecvMsg, NULL);
 	memset(control, 0, sizeof(control));
 	memset(&wsamsg, 0, sizeof(wsamsg));
@@ -693,6 +705,11 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 
 	DWORD bytes;
 	WSAMSG wsamsg;
+	//static INIT_ONCE wsasendmsgonce;
+	//static LPFN_WSASENDMSG WSASendMsg;
+	//InitOnceExecuteOnce(&wsasendmsgonce, wsasendmsgcallback, &WSASendMsg, NULL);
+	memset(control, 0, sizeof(control));
+	memset(&wsamsg, 0, sizeof(wsamsg));
 	wsamsg.name = (LPSOCKADDR)peer;
 	wsamsg.namelen = peerlen;
 	wsamsg.lpBuffers = (LPWSABUF)vec;
