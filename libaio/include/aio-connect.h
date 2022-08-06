@@ -14,7 +14,7 @@ extern "C" {
 /// @param[in] onconnect user-defined callback, can't be NULL
 /// @param[in] param user-defined parameter
 /// @return 0-ok, other-error
-int aio_connect(const char* host, int port, int timeout, void (*onconnect)(void* param, int code, aio_socket_t aio), void* param);
+int aio_connect(const char* host, int port, int timeout, void (*onconnect)(void* param, int code, socket_t tcp, aio_socket_t aio), void* param);
 
 #ifdef __cplusplus
 }

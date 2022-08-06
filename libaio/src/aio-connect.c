@@ -16,7 +16,7 @@ struct aio_connect_t
 	struct aio_timeout_t timer;
 	int timeout;
 
-	void (*onconnect)(void* param, int code, aio_socket_t aio);
+	void (*onconnect)(void* param, int code, socket_t tcp, aio_socket_t aio);
 	void* param;
 };
 
@@ -27,7 +27,7 @@ static void aio_connect_ontimeout(void* param);
 
 static void aio_connect_finish(struct aio_connect_t* conn, int code)
 {
-	conn->onconnect(conn->param, code, conn->aio);
+	conn->onconnect(conn->param, code, conn->socket, conn->aio);
 
 	if (conn->addr)
 		freeaddrinfo(conn->addr);
@@ -100,7 +100,7 @@ static void aio_connect_addr(struct aio_connect_t* conn, int code)
 	aio_connect_finish(conn, code);
 }
 
-int aio_connect(const char* host, int port, int timeout, void (*onconnect)(void* param, int code, aio_socket_t aio), void* param)
+int aio_connect(const char* host, int port, int timeout, void (*onconnect)(void* param, int code, socket_t tcp, aio_socket_t aio), void* param)
 {
 	int r;
 	char portstr[16];
