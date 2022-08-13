@@ -66,7 +66,7 @@ static void aio_client_release(aio_client_t* client);
 static void aio_client_ondestroy(void* param);
 static void aio_client_onrecv(void* param, int code, size_t bytes);
 static void aio_client_onsend(void* param, int code, size_t bytes);
-static void aio_client_onconn(void* param, int code, aio_socket_t socket);
+static void aio_client_onconn(void* param, int code, socket_t tcp, aio_socket_t socket);
 
 aio_client_t* aio_client_create(const char* host, int port, struct aio_client_handler_t* handler, void* param)
 {
@@ -277,7 +277,7 @@ void aio_client_gettimeout(aio_client_t* client, int* conn, int* recv, int* send
 	if (send) *send = client->wtimeout;
 }
 
-static void aio_client_onconn(void* param, int code, aio_socket_t aio)
+static void aio_client_onconn(void* param, int code, socket_t tcp, aio_socket_t aio)
 {
 	int send = 0, recv = 0;
 	struct aio_client_t* client;

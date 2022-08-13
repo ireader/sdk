@@ -15,6 +15,10 @@ EXPORTS
 	aio_socket_recvfrom
 	aio_socket_sendto_v
 	aio_socket_recvfrom_v
+	aio_socket_recvmsg
+	aio_socket_recvmsg_v
+	aio_socket_sendmsg
+	aio_socket_sendmsg_v
 
 	aio_timeout_process
 	aio_timeout_start
