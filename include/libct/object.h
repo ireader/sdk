@@ -42,6 +42,13 @@ struct object_deleter
 	}
 };
 
+template<typename T> 
+inline T* addref(T* t)
+{
+	t->addref();
+	return t;
+}
+
 } // namespace
 
 #endif /* !_libct_object_h_ */
