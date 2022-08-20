@@ -110,10 +110,11 @@ int ip_route_get(const char* destination, char ip[65])
         return r;
     
     r = router_gateway((struct sockaddr*)&dst, &gateway);
-    if(0 == r)
+    if(0 == r) {
         r = socket_addr_to((struct sockaddr*)&gateway, socket_addr_len((struct sockaddr*)&gateway), ip, &port);
-    else
+	} else {
         r = ip_local(ip);
+	}
 	return r;
 }
 #endif

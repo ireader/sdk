@@ -117,7 +117,7 @@ int ice_agent_start(struct ice_agent_t* ice)
 	list_for_each_safe(ptr, next, &ice->streams)
 	{
 		s = list_entry(ptr, struct ice_stream_t, link);
-		if (ice_candidates_count(&s->locals) < 1 || ice_candidates_count(&s->remotes) < 1)
+		if (ice_candidates_count(&s->locals) < 1 /*|| ice_candidates_count(&s->remotes) < 1*/ )
 		{
 			assert(0);
 			continue;

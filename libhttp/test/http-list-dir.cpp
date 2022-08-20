@@ -35,7 +35,9 @@ extern "C" int http_list_dir(http_session_t* session, const char* path)
 
 	http_server_set_header(session, "content-type", "text/html");
 	http_server_set_header(session, "Access-Control-Allow-Origin", "*");
-	http_server_set_header(session, "Access-Control-Allow-Methods", "GET, POST, PUT");
+	http_server_set_header(session, "Access-Control-Allow-Headers", "*");
+	http_server_set_header(session, "Access-Control-Allow-Credentials", "true");
+	http_server_set_header(session, "Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS, CONNECT");
 	http_server_reply(session, 200, reply.c_str(), reply.length());
 	
 	printf("load path: %s\n", path);
