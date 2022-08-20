@@ -152,6 +152,8 @@ int aio_client_recv(aio_client_t* client, void* data, size_t bytes)
 	else
 	{
 		r = aio_client_connect_internal(client);
+		if (0 != r)
+			client->data[RECV].state = RW_NONE; // clear recv state
 	}
 
 	spinlock_unlock(&client->locker);
@@ -186,6 +188,8 @@ int aio_client_recv_v(aio_client_t* client, socket_bufvec_t *vec, int n)
 	else
 	{
 		r = aio_client_connect_internal(client);
+		if (0 != r)
+			client->data[RECV].state = RW_NONE; // clear recv state
 	}
 
 	spinlock_unlock(&client->locker);
@@ -220,6 +224,8 @@ int aio_client_send(aio_client_t* client, const void* data, size_t bytes)
 	else
 	{
 		r = aio_client_connect_internal(client);
+		if (0 != r)
+			client->data[SEND].state = RW_NONE; // clear send state
 	}
 
 	spinlock_unlock(&client->locker);
@@ -254,6 +260,8 @@ int aio_client_send_v(aio_client_t* client, socket_bufvec_t *vec, int n)
 	else
 	{
 		r = aio_client_connect_internal(client);
+		if (0 != r)
+			client->data[SEND].state = RW_NONE; // clear send state
 	}
 
 	spinlock_unlock(&client->locker);
