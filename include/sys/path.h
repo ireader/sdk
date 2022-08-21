@@ -126,7 +126,7 @@ static inline int path_dirname(const char* fullname)
 	const char* p = path_basename(fullname);
 	if(p == fullname)
 		return 0; // don't valid path name
-	return p - 1 - fullname; // skip /
+	return (int)(p - 1 - fullname); // skip /
 }
 
 /// path_concat("a/./b/../c.txt", "e:\dir\") => e:\dir\a\c.txt

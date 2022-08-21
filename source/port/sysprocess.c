@@ -244,8 +244,8 @@ int process_memory_usage(pid_t pid, int *memKB, int *vmemKB)
 	}
 	CloseHandle(handle);
 
-	*memKB = pmc.WorkingSetSize / 1024; // bytes -> KB
-	*vmemKB = pmc.PagefileUsage / 1024;
+	*memKB = (int)(pmc.WorkingSetSize / 1024); // bytes -> KB
+	*vmemKB = (int)(pmc.PagefileUsage / 1024);
 	return 0;
 #else
 	int r;

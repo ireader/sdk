@@ -25,10 +25,10 @@ public:
 
 public:
 	int Read(void* data, int bytes)
-	{	return fread(data, 1, bytes, m_fp);	}
+	{	return (int)fread(data, 1, bytes, m_fp);	}
 
 	int Write(const void* data, int bytes)
-	{	return fwrite(data, 1, bytes, m_fp);	}
+	{	return (int)fwrite(data, 1, bytes, m_fp);	}
 
 	int Flush()
 	{	return fflush(m_fp); }

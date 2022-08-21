@@ -134,7 +134,7 @@ int openssl_certificate_fingerprint(const X509* x509, int algorithm, char* finge
     if (0 == X509_digest(x509, hashFunction, binaryFingerprint, &n))
         return -1;
 
-    if (bytes < n * 3 || n < 1)
+    if (bytes < (int)(n * 3) || n < 1)
         return -E2BIG;
 
     for (i = 0; i < n; i++)

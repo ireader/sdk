@@ -513,7 +513,11 @@ static inline int socket_send_v_all_by_time(IN socket_t sock, IN socket_bufvec_t
 		if (n > 0)
 		{
 			count = r - count;
+#if defined(OS_WINDOWS)
+			vec[i].iov_len -= (ULONG)count;
+#else
 			vec[i].iov_len -= count;
+#endif
 			vec[i].iov_base = (char*)vec[i].iov_base + count;
 			vec += i;
 		}
