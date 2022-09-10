@@ -192,8 +192,8 @@ static inline int socket_isip(IN const char* ip); // socket_isip("192.168.1.2") 
 static inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADDRLEN]);
 static inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADDRLEN]);
 // ipv4/ipv6 netmask
-static inline int socket_ipv4_netmask(IN uint8_t prefix, OUT IN_ADDR* addr);
-static inline int socket_ipv6_netmask(IN uint8_t prefix, OUT IN6_ADDR* addr);
+static inline int socket_ipv4_netmask(IN uint8_t prefix, OUT struct in_addr* addr);
+static inline int socket_ipv6_netmask(IN uint8_t prefix, OUT struct in6_addr* addr);
 static inline int socket_addr_netmask(OUT struct sockaddr_storage* mask, IN uint8_t prefix, IN const struct sockaddr* addr);
 
 static inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const char* ip_or_dns, IN u_short port);
@@ -1304,13 +1304,13 @@ static inline int socket_addr_len(const struct sockaddr* addr)
 	}
 }
 
-static inline int socket_ipv4_netmask(IN uint8_t prefix, OUT IN_ADDR* addr)
+static inline int socket_ipv4_netmask(IN uint8_t prefix, OUT struct in_addr* addr)
 {
 	addr->s_addr = (unsigned long)ntohl(0xFFFFFFFF << (32 - prefix));
 	return prefix > 32 ? -1 : 0;
 }
 
-static inline int socket_ipv6_netmask(IN uint8_t prefix, OUT IN6_ADDR* addr)
+static inline int socket_ipv6_netmask(IN uint8_t prefix, OUT struct in6_addr* addr)
 {
 	uint8_t i;
 	for (i = 0; i < 16; i++)
@@ -1325,8 +1325,8 @@ static inline int socket_addr_netmask(OUT struct sockaddr_storage* mask, IN uint
 {
 	int r;
 	uint8_t i;
-	IN_ADDR mask4;
-	IN6_ADDR mask6;
+	struct in_addr mask4;
+	struct in6_addr mask6;
 	struct sockaddr_in* ip4;
 	struct sockaddr_in6* ip6;
 
