@@ -22,6 +22,12 @@
 #define THREAD_LOCAL 
 #endif
 
+#if !defined(OS_ANDROID) && (defined(OS_LINUX) || defined(OS_WINDOWS) || defined(OS_MAC))
+#define N_LOG_BUFFER 1024 * 8  // TLS/SDP
+#else
+#define N_LOG_BUFFER 1024 * 2
+#endif
+
 //static const char s_month[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 //static const char* s_level_tag[] = { "EMERG", "ALERT", "CRIT", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG" };
 static const char* s_level_tag[] = { "X", "A", "C", "E", "W", "N", "I", "D" };
@@ -61,7 +67,7 @@ static void app_log_syslog(int level, const char* format, va_list args)
 {
 #if defined(OS_WINDOWS)
 	int n = 0;
-	THREAD_LOCAL char log[1024 * 4]; // TLS
+	THREAD_LOCAL char log[N_LOG_BUFFER];
 #if defined(_DEBUG) || defined(DEBUG)
 	n += app_log_time(log + n, sizeof(log) - n - 1);
 #endif
@@ -82,7 +88,7 @@ static void app_log_print(int level, const char* format, va_list args)
 {
 	int n;
 	char timestr[65];
-	THREAD_LOCAL char log[1024 * 4]; // TLS
+	THREAD_LOCAL char log[N_LOG_BUFFER];
 	app_log_time(timestr, sizeof(timestr));
 	n = vsnprintf(log, sizeof(log) - 1, format, args);
 	printf("%s%s%s|%.*s%s", s_level_color[LOG_LEVEL(level) + 1], timestr, s_level_tag[LOG_LEVEL(level)], n, log, s_level_color[0]);
