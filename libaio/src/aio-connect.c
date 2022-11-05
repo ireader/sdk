@@ -20,14 +20,17 @@ struct aio_connect_t
 	void* param;
 };
 
-static int aio_connect_addr(struct aio_connect_t* conn, int code);
-static void aio_connect_finish(struct aio_connect_t* conn, int code);
+static int aio_connect_addr(struct aio_connect_t* conn, int code, int async);
+static void aio_connect_finish(struct aio_connect_t* conn, int code, int async);
 static void aio_connect_onconnect(void* param, int code);
 static void aio_connect_ontimeout(void* param);
 
-static void aio_connect_finish(struct aio_connect_t* conn, int code)
+static void aio_connect_finish(struct aio_connect_t* conn, int code, int async)
 {
-	conn->onconnect(conn->param, code, conn->socket, conn->aio);
+	if(async)
+	{
+		conn->onconnect(conn->param, code, conn->socket, conn->aio);
+	}
 
 	if (conn->addr)
 		freeaddrinfo(conn->addr);
@@ -38,7 +41,7 @@ static void aio_connect_ondestroy(void* param)
 {
 	struct aio_connect_t* conn;
 	conn = (struct aio_connect_t*)param;
-	aio_connect_addr(conn, ETIMEDOUT); // try next addr
+	aio_connect_addr(conn, ETIMEDOUT, 1); // try next addr
 }
 
 static void aio_connect_ontimeout(void* param)
@@ -57,16 +60,16 @@ static void aio_connect_onconnect(void* param, int code)
 
 	if (0 == code)
 	{
-		aio_connect_finish(conn, code);
+		aio_connect_finish(conn, code, 1);
 	}
 	else
 	{
 		aio_socket_destroy(conn->aio, NULL, NULL);
-		aio_connect_addr(conn, code);
+		aio_connect_addr(conn, code, 1);
 	}
 }
 
-static int aio_connect_addr(struct aio_connect_t* conn, int code)
+static int aio_connect_addr(struct aio_connect_t* conn, int code, int async)
 {
 	struct addrinfo *addr;
 
@@ -97,10 +100,7 @@ static int aio_connect_addr(struct aio_connect_t* conn, int code)
 		aio_socket_destroy(conn->aio, NULL, NULL); // try next addr
 	}
 
-	//aio_connect_finish(conn, code);
-	if (conn->addr)
-		freeaddrinfo(conn->addr);
-	free(conn);
+	aio_connect_finish(conn, code, async);
 	return code;
 }
 
@@ -129,5 +129,5 @@ int aio_connect(const char* host, int port, int timeout, void (*onconnect)(void*
 	conn->ptr = addr;
 	conn->port = (u_short)port;
 	conn->timeout = timeout;
-	return aio_connect_addr(conn, -1);
+	return aio_connect_addr(conn, -1, 0);
 }
