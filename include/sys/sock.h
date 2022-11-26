@@ -1167,6 +1167,7 @@ static inline int socket_addr_to(IN const struct sockaddr* sa, IN socklen_t sale
 		return -1; // unknown address family
 	}
 
+	(void)salen;
 	return 0;
 }
 
@@ -1190,6 +1191,7 @@ static inline int socket_addr_setport(IN struct sockaddr* sa, IN socklen_t salen
 		return -1;
 	}
 
+	(void)salen;
 	return 0;
 }
 
@@ -1230,6 +1232,7 @@ static inline int socket_addr_is_local(IN const struct sockaddr* sa, IN socklen_
 		assert(0);
 	}
 
+	(void)salen;
 	return 0;
 }
 
@@ -1256,6 +1259,7 @@ static inline int socket_addr_is_multicast(IN const struct sockaddr* sa, IN sock
 		assert(0);
 	}
 
+	(void)salen;
 	return 0;
 }
 
