@@ -46,13 +46,14 @@
 		4601F96A23C42E51009B797A /* sysnetconfig.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F92C23C42E50009B797A /* sysnetconfig.c */; };
 		4601F96C23C42E51009B797A /* systimeconfig.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F92E23C42E50009B797A /* systimeconfig.c */; };
 		4601F96D23C42E51009B797A /* sysntpconfig.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F92F23C42E50009B797A /* sysntpconfig.c */; };
-		4601F96F23C42E51009B797A /* route-netlink2.h in Headers */ = {isa = PBXBuildFile; fileRef = 4601F93123C42E50009B797A /* route-netlink2.h */; };
 		4601F97123C42E51009B797A /* nls_cp936.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F93423C42E50009B797A /* nls_cp936.c */; };
 		4601F97223C42E51009B797A /* task-queue.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F93523C42E50009B797A /* task-queue.c */; };
 		4601F97323C42E51009B797A /* uri-parse.c in Sources */ = {isa = PBXBuildFile; fileRef = 4601F93623C42E50009B797A /* uri-parse.c */; };
+		4638E86B2938D4590018F1E7 /* file-watcher-osx.c in Sources */ = {isa = PBXBuildFile; fileRef = 4638E86A2938D4580018F1E7 /* file-watcher-osx.c */; };
 		46CA26302425AF0E00AF5BAF /* tools.c in Sources */ = {isa = PBXBuildFile; fileRef = 46CA262F2425AF0E00AF5BAF /* tools.c */; };
 		46E55E4924681D5800D8BDBA /* strtrim.c in Sources */ = {isa = PBXBuildFile; fileRef = 46E55E4824681D5800D8BDBA /* strtrim.c */; };
 		46E55E4B24681D5F00D8BDBA /* strsplit.c in Sources */ = {isa = PBXBuildFile; fileRef = 46E55E4A24681D5F00D8BDBA /* strsplit.c */; };
+		46EDF2052938DF8C0055AF56 /* sysdirlist.c in Sources */ = {isa = PBXBuildFile; fileRef = 46EDF2042938DF8C0055AF56 /* sysdirlist.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -97,14 +98,15 @@
 		4601F92C23C42E50009B797A /* sysnetconfig.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sysnetconfig.c; sourceTree = "<group>"; };
 		4601F92E23C42E50009B797A /* systimeconfig.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = systimeconfig.c; sourceTree = "<group>"; };
 		4601F92F23C42E50009B797A /* sysntpconfig.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sysntpconfig.c; sourceTree = "<group>"; };
-		4601F93123C42E50009B797A /* route-netlink2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "route-netlink2.h"; sourceTree = "<group>"; };
 		4601F93423C42E50009B797A /* nls_cp936.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = nls_cp936.c; sourceTree = "<group>"; };
 		4601F93523C42E50009B797A /* task-queue.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "task-queue.c"; sourceTree = "<group>"; };
 		4601F93623C42E50009B797A /* uri-parse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "uri-parse.c"; sourceTree = "<group>"; };
+		4638E86A2938D4580018F1E7 /* file-watcher-osx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "file-watcher-osx.c"; sourceTree = "<group>"; };
 		46AEF4D2242AEE3500BE6A13 /* deprecated */ = {isa = PBXFileReference; lastKnownFileType = folder; path = deprecated; sourceTree = "<group>"; };
 		46CA262F2425AF0E00AF5BAF /* tools.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tools.c; path = deprecated/tools.c; sourceTree = SOURCE_ROOT; };
 		46E55E4824681D5800D8BDBA /* strtrim.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = strtrim.c; path = string/strtrim.c; sourceTree = "<group>"; };
 		46E55E4A24681D5F00D8BDBA /* strsplit.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = strsplit.c; path = string/strsplit.c; sourceTree = "<group>"; };
+		46EDF2042938DF8C0055AF56 /* sysdirlist.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sysdirlist.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -190,6 +192,8 @@
 		4601F91D23C42E50009B797A /* port */ = {
 			isa = PBXGroup;
 			children = (
+				46EDF2042938DF8C0055AF56 /* sysdirlist.c */,
+				4638E86A2938D4580018F1E7 /* file-watcher-osx.c */,
 				4601F91F23C42E50009B797A /* route-linux.h */,
 				4601F92123C42E50009B797A /* route-rtm.h */,
 				4601F92323C42E50009B797A /* route-netlink.h */,
@@ -199,7 +203,6 @@
 				4601F92C23C42E50009B797A /* sysnetconfig.c */,
 				4601F92E23C42E50009B797A /* systimeconfig.c */,
 				4601F92F23C42E50009B797A /* sysntpconfig.c */,
-				4601F93123C42E50009B797A /* route-netlink2.h */,
 			);
 			path = port;
 			sourceTree = "<group>";
@@ -237,7 +240,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				4601F96123C42E51009B797A /* route-netlink.h in Headers */,
-				4601F96F23C42E51009B797A /* route-netlink2.h in Headers */,
 				4601F95F23C42E51009B797A /* route-rtm.h in Headers */,
 				4601F95D23C42E51009B797A /* route-linux.h in Headers */,
 			);
@@ -269,7 +271,7 @@
 		4601F8E523C42DE6009B797A /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1110;
+				LastUpgradeCheck = 1240;
 				ORGANIZATIONNAME = ireader;
 				TargetAttributes = {
 					4601F8EC23C42DE6009B797A = {
@@ -303,6 +305,7 @@
 				4601F94323C42E50009B797A /* sha1.c in Sources */,
 				4601F94423C42E50009B797A /* sha384-512.c in Sources */,
 				4601F95B23C42E51009B797A /* bsearch.c in Sources */,
+				4638E86B2938D4590018F1E7 /* file-watcher-osx.c in Sources */,
 				4601F95323C42E50009B797A /* base64.c in Sources */,
 				4601F96C23C42E51009B797A /* systimeconfig.c in Sources */,
 				4601F94623C42E50009B797A /* sha.c in Sources */,
@@ -338,6 +341,7 @@
 				4601F94723C42E50009B797A /* md5.c in Sources */,
 				4601F94023C42E50009B797A /* bitmap.c in Sources */,
 				4601F94A23C42E50009B797A /* random.c in Sources */,
+				46EDF2052938DF8C0055AF56 /* sysdirlist.c in Sources */,
 				46E55E4924681D5800D8BDBA /* strtrim.c in Sources */,
 				4601F97223C42E51009B797A /* task-queue.c in Sources */,
 				4601F93923C42E50009B797A /* rbtree.c in Sources */,
@@ -374,6 +378,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -438,6 +443,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
