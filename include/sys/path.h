@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <errno.h>
+#include <sys/statvfs.h>
 #endif
 
 #include <stdio.h>
@@ -186,6 +187,23 @@ static inline int64_t path_filesize(const char* filename)
 	if (0 == stat(filename, &st) && (st.st_mode & S_IFREG))
 		return st.st_size;
 	return -1;
+#endif
+}
+
+/// @param[in] path must be a exist dir
+/// return disk free space size
+static inline int64_t path_space(const char* path)
+{
+#if defined(OS_WINDOWS)
+    ULARGE_INTEGER free;
+    if (0 != GetDiskFreeSpaceExA(path, &free, NULL, NULL))
+        return (int64_t)free.QuadPart;
+    return -1;
+#else
+    struct statvfs st;
+    if (0 == statvfs(path, &st))
+        return ((int64_t)st.f_bavail) * st.f_bsize;
+    return -1;
 #endif
 }
 
