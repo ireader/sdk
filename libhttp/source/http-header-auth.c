@@ -150,31 +150,57 @@ static void	md5_entity(char r[33], const uint8_t* entity, int bytes)
 	base16(r, md5, 16);
 }
 
-int http_header_auth(const struct http_header_www_authenticate_t* auth, const char* pwd, const char* method, const char* content, int length, char* authenrization, int bytes)
+int http_header_authorization_response(const struct http_header_www_authenticate_t* auth, const char* usr, const char* pwd, const char* method, const char* content, int length, char* response, int bytes)
 {
 	int n;
 	char A1[33];
 	char A2[33];
 	char entity[33];
-	struct http_header_www_authenticate_t auth2;
+	char buffer[sizeof(auth->response)];
 
-	memcpy(&auth2, auth, sizeof(auth2));
 	if (HTTP_AUTHENTICATION_BASIC == auth->scheme)
 	{
-		n = snprintf(authenrization, bytes, "%s:%s", auth->username, pwd);
+		n = snprintf(buffer, sizeof(buffer), "%s:%s", usr, pwd);
 		if (n < 0 || n + 1 >= bytes || (n + 2) / 3 * 4 + n / 57 + 1 > sizeof(auth->response))
 			return -E2BIG;
-		n = (int)base64_encode(auth2.response, authenrization, n);
-		return http_header_authorization_write(&auth2, authenrization, bytes);
+		return (int)base64_encode(response, buffer, n);
 	}
 	else if (HTTP_AUTHENTICATION_DIGEST == auth->scheme)
 	{
 		// username
 		md5_entity(entity, (const uint8_t*)content, length); // empty entity
-		md5_A1(A1, auth->algorithm, auth->username, pwd, auth->realm, auth->nonce, auth->cnonce);
+		md5_A1(A1, auth->algorithm, usr, pwd, auth->realm, auth->nonce, auth->cnonce);
 		md5_A2(A2, method, auth->uri, auth->qop, entity);
-		
-		md5_response(auth2.response, A1, A2, auth->nonce, auth->nc, auth->cnonce, auth->qop);
+
+		if (bytes < 32)
+			return -E2BIG;
+		md5_response(response, A1, A2, auth->nonce, auth->nc, auth->cnonce, auth->qop);
+		return 32;
+	}
+	else
+	{
+		// nothing to do
+		assert(0);
+		return -1;
+	}
+}
+
+int http_header_auth(const struct http_header_www_authenticate_t* auth, const char* pwd, const char* method, const char* content, int length, char* authenrization, int bytes)
+{
+	int r;
+	struct http_header_www_authenticate_t auth2;
+
+	memcpy(&auth2, auth, sizeof(auth2));
+	r = http_header_authorization_response(auth, auth->username, pwd, method, content, length, auth2.response, sizeof(auth2.response));
+	if (r < 0)
+		return r;
+
+	if (HTTP_AUTHENTICATION_BASIC == auth->scheme)
+	{
+		return http_header_authorization_write(&auth2, authenrization, bytes);
+	}
+	else if (HTTP_AUTHENTICATION_DIGEST == auth->scheme)
+	{
 		if (auth->userhash) md5_username(auth2.username, auth->username, auth->realm);
 		return http_header_authorization_write(&auth2, authenrization, bytes);
 	}
@@ -195,6 +221,21 @@ void http_header_auth_test(void)
     http_header_authorization("Digest username=\"34020100001180000002\", realm=\"3402000000\", nonce=\"7c4d7bbb0407d1e2\", uri=\"sip:34020000002000000001@3402000000\", response=\"a2fb4c1715872ca3d847c866c331a38a\", algorithm=MD5, cnonce=\"0a4f113b\", qop=auth, nc=00000001", &auth);
     http_header_auth(&auth, "12345678", "REGISTER", NULL, 0, buffer, sizeof(buffer));
     
+	memset(&auth, 0, sizeof(auth));
+	auth.scheme = HTTP_AUTHENTICATION_DIGEST;
+	strcpy(auth.username, "34020000001320001001");
+	//strcpy(auth.pwd, "Circle Of Life");
+	auth.nc = 1;
+	strcpy(auth.realm, "3402000000");
+	strcpy(auth.opaque, "avlines");
+	strcpy(auth.nonce, "a1ca3f87d5efd309");
+	strcpy(auth.cnonce, "0a4f113b");
+	strcpy(auth.qop, "auth");
+	strcpy(auth.algorithm, "md5");
+	strcpy(auth.uri, "sip:34020000002000000002@3402000000");
+	http_header_authorization_response(&auth, "34020000001320001001", "12345678", "REGISTER", NULL, 0, buffer, sizeof(buffer));
+	assert(strstr(buffer, "a04b9bfbb939bb76a36661a4bb2a0775"));
+
 	memset(&auth, 0, sizeof(auth));
 	auth.scheme = HTTP_AUTHENTICATION_DIGEST;
 	strcpy(auth.username, "Mufasa");
