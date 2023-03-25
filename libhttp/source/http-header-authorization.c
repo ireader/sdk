@@ -180,14 +180,14 @@ int http_header_authorization_write(const struct http_header_www_authenticate_t*
 	switch (auth->scheme)
 	{
 	case HTTP_AUTHENTICATION_DIGEST:
-		n = snprintf(ptr, len, "Digest realm=\"%s\",nonce=\"%s\",username=\"%s\",uri=\"%s\",response=\"%s\"",
-			auth->realm, auth->nonce, /*auth->userhash ? username : */ auth->username, auth->uri, auth->response);
+		n = snprintf(ptr, len, "Digest username=\"%s\",realm=\"%s\",nonce=\"%s\",uri=\"%s\",response=\"%s\"",
+			/*auth->userhash ? username : */ auth->username, auth->realm, auth->nonce, auth->uri, auth->response);
 		if (0 != auth->algorithm[0])
 			n += snprintf(ptr + n, len - n, ",algorithm=%s", auth->algorithm);
 		if (0 != auth->opaque[0])
 			n += snprintf(ptr + n, len - n, ",opaque=\"%s\"", auth->opaque);
 		if (0 != auth->qop[0])
-			n += snprintf(ptr + n, len - n, ",cnonce=\"%s\",nc=%08x,qop=%s", auth->cnonce, auth->nc, auth->qop);
+			n += snprintf(ptr + n, len - n, ",cnonce=\"%s\",qop=%s,nc=%08x", auth->cnonce, auth->qop, auth->nc);
 		return n;
 
 	case HTTP_AUTHENTICATION_BASIC:
