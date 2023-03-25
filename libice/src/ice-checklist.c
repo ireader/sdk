@@ -493,7 +493,7 @@ static void ice_checklist_ontimer(void* param)
 		// do nothing
 	}
 
-	if (waiting)
+	if (waiting && !l->ice->icelite)
 	{
 		ice_checklist_addref(l);
 		assert(ICE_CANDIDATE_PAIR_FAILED != waiting->state);

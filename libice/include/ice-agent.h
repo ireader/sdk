@@ -60,6 +60,9 @@ int ice_agent_get_remote_candidate(struct ice_agent_t* ice, uint8_t stream, uint
 int ice_agent_start(struct ice_agent_t* ice);
 int ice_agent_stop(struct ice_agent_t* ice);
 
+/// @param[in] enable 1-enable ice-lite, 0-disable ice-lite
+int ice_agent_set_icelite(struct ice_agent_t* ice, int enable);
+
 int ice_agent_input(struct ice_agent_t* ice, int protocol, const struct sockaddr* local, const struct sockaddr* remote, const void* data, int bytes);
 
 int ice_agent_send(struct ice_agent_t* ice, uint8_t stream, uint16_t component, const void* data, int bytes);

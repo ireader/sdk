@@ -93,6 +93,7 @@ struct ice_agent_t
 	enum ice_nomination_t nomination;
 	uint64_t tiebreaking; // role conflicts(network byte-order)
 	int controlling;
+	int icelite;
 
 	struct sockaddr_storage saddr; // stun/turn server addr
 	struct stun_credential_t auth; // local auth

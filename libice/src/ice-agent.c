@@ -148,6 +148,14 @@ int ice_agent_stop(struct ice_agent_t* ice)
 	return 0;
 }
 
+int ice_agent_set_icelite(struct ice_agent_t* ice, int enable)
+{
+	ice->icelite = enable;
+	ice->controlling = enable ? 0 : ice->controlling; // ice-lite must be controlled
+	ice->tiebreaking = enable ? 0 : ice->tiebreaking; // set to minimum
+	return 0;
+}
+
 // 7.2. STUN Server Procedures, on bind request
 static int ice_agent_onbind(void* param, stun_response_t* resp, const stun_request_t* req)
 {
