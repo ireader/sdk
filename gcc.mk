@@ -74,6 +74,7 @@ COMPILE.CXX = $(CXX) $(addprefix -I,$(INCLUDES)) $(addprefix -D,$(DEFINES)) $(CX
 #--------------------------------------------------------------------
 ifeq ($(STATIC_LINK),1)
     LDFLAGS += -static
+#	LDFLAGS += -static-libstdc++ -static-libgcc
 endif
 
 #-------------------------Compile Output---------------------------
