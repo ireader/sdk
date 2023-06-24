@@ -31,6 +31,7 @@ typedef INT  (PASCAL FAR * FWSARECVMSG)(SOCKET, LPWSAMSG, LPDWORD, LPWSAOVERLAPP
 #define WSAID_WSASENDMSG	{0xa441e712,0x754f,0x43ca,{0x84,0xa7,0x0d,0xee,0x44,0xcf,0x60,0x6d}}
 
 #define SO_UPDATE_ACCEPT_CONTEXT    0x700B
+#define SO_UPDATE_CONNECT_CONTEXT   0x7010
 
 static FAcceptEx AcceptEx;
 static FGetAcceptExSockaddrs GetAcceptExSockaddrs;
@@ -247,7 +248,8 @@ static void iocp_connect(struct aio_context* ctx, struct aio_context_action* aio
 	// When the ConnectEx function returns TRUE, the socket s is in the default state for a connected socket. 
 	// The socket s does not enable previously set properties or options until SO_UPDATE_CONNECT_CONTEXT is 
 	// set on the socket. Use the setsockopt function to set the SO_UPDATE_CONNECT_CONTEXT option.
-	// r = setsockopt( s, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0 );
+	setsockopt(ctx->socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0); // fix WSAENOTCONN
+
 	aio->connect.proc(aio->connect.param, error);
 }
 
