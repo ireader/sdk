@@ -285,7 +285,7 @@ static void iocp_recvmsg(struct aio_context* ctx, struct aio_context_action* aio
 	locallen = 0;
 	wsamsg = &aio->recvmsg.wsamsg;
 	memset(&local, 0, sizeof(local));
-	for (cmsg = WSA_CMSG_FIRSTHDR(wsamsg); !!cmsg; cmsg = WSA_CMSG_NXTHDR(wsamsg, cmsg))
+	for (cmsg = WSA_CMSG_FIRSTHDR(wsamsg); 0 == error && !!cmsg; cmsg = WSA_CMSG_NXTHDR(wsamsg, cmsg))
 	{
 		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO)
 		{
