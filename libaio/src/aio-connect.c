@@ -96,7 +96,8 @@ static int aio_connect_addr(struct aio_connect_t* conn, int code, int async)
 		if (0 == code)
 			return 0;
 
-		aio_timeout_stop(&conn->timer);
+		if (0 != aio_timeout_stop(&conn->timer))
+			return 0; // ontimeout
 		aio_socket_destroy(conn->aio, NULL, NULL); // try next addr
 	}
 
