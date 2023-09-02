@@ -403,9 +403,10 @@ static void aio_client_ondestroy(void* param)
 {
 	struct aio_client_t* client;
 	client = (struct aio_client_t*)param;
-	spinlock_lock(&client->locker);
-	// do nothing
-	spinlock_unlock(&client->locker);
+	// fix epoll aio_client_disconnect deadlock
+	//spinlock_lock(&client->locker);
+	//// do nothing
+	//spinlock_unlock(&client->locker);
 	aio_client_release(client);
 }
 
