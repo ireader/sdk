@@ -1,5 +1,7 @@
 #include "app-log.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <stdarg.h>
 #include <assert.h>
 
@@ -27,6 +29,9 @@
 #else
 #define N_LOG_BUFFER 1024 * 2
 #endif
+
+static app_log_provider s_provider;
+static void* s_provider_param;
 
 //static const char s_month[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 //static const char* s_level_tag[] = { "EMERG", "ALERT", "CRIT", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG" };
@@ -92,6 +97,12 @@ static void app_log_print(int level, const char* format, va_list args)
 	app_log_time(timestr, sizeof(timestr));
 	n = vsnprintf(log, sizeof(log) - 1, format, args);
 	printf("%s%s%s|%.*s%s", s_level_color[LOG_LEVEL(level) + 1], timestr, s_level_tag[LOG_LEVEL(level)], n, log, s_level_color[0]);
+
+	if (s_provider)
+	{
+		strcat(timestr, s_level_tag[LOG_LEVEL(level)]);
+		s_provider(s_provider_param, timestr, log, n);
+	}
 }
 
 static int s_syslog_level = LOG_INFO;
@@ -110,13 +121,22 @@ void app_log(int level, const char* format, ...)
 		app_log_print(level, format, args);
 		va_end(args);
 
-		va_start(args, format);
-		app_log_syslog(level, format, args);
-		va_end(args);
+		if (!s_provider)
+		{
+			va_start(args, format);
+			app_log_syslog(level, format, args);
+			va_end(args);
+		}
 	}
 }
 
 void app_log_setcolor(int enable)
 {
 	s_level_color = enable ? s_level_color_default : s_level_color_none;
+}
+
+void app_log_setprovider(app_log_provider provider, void* param)
+{
+	s_provider = provider;
+	s_provider_param = param;
 }

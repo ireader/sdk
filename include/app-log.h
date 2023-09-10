@@ -35,6 +35,9 @@ void app_log_setlevel(int level);
 
 void app_log_setcolor(int enable);
 
+typedef void (*app_log_provider)(void* param, const char* prefix, const char* log, int n);
+void app_log_setprovider(app_log_provider provider, void* param);
+
 #ifdef __cplusplus
 }
 #endif
