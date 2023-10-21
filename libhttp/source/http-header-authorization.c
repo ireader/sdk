@@ -187,7 +187,7 @@ int http_header_authorization_write(const struct http_header_www_authenticate_t*
 		if (0 != auth->opaque[0])
 			n += snprintf(ptr + n, len - n, ",opaque=\"%s\"", auth->opaque);
 		if (0 != auth->qop[0])
-			n += snprintf(ptr + n, len - n, ",cnonce=\"%s\",qop=%s,nc=%08x", auth->cnonce, auth->qop, auth->nc);
+			n += snprintf(ptr + n, len - n, ",cnonce=\"%s\",qop=\"%s\",nc=%08x", auth->cnonce, auth->qop, auth->nc);
 		return n;
 
 	case HTTP_AUTHENTICATION_BASIC:

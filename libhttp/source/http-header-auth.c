@@ -66,6 +66,7 @@ static void	md5_A1(char A1[33], const char* algorithm, const char* usr, const ch
 	// algorithm endwith -sess
 	if (0 == strncmp(algorithm + strlen(algorithm) - 5, "-sess", 5))
 	{
+		assert(nonce && *nonce);
 		MD5Init(&ctx);
 		MD5Update(&ctx, md5, 16);
 		MD5Update(&ctx, (unsigned char*)":", 1);
@@ -110,6 +111,7 @@ static void md5_response(char reponse[33], const char* A1, const char* A2, const
 	MD5Update(&ctx, (unsigned char*)":", 1);
 	if (*qop)
 	{
+		assert(nc > 0 && nonce && *nonce);
 		snprintf(hex, sizeof(hex), "%08x", nc);
 		MD5Update(&ctx, (unsigned char*)hex, (unsigned int)strlen(hex));
 		MD5Update(&ctx, (unsigned char*)":", 1);
