@@ -1,5 +1,6 @@
 #include "aio-accept.h"
 #include "sys/locker.h"
+#include "sys/system.h"
 #include <assert.h>
 #include <stdlib.h>
 
@@ -39,6 +40,13 @@ static void aio_accept_onclient(void* param, int code, socket_t socket, const st
 	{
 		// accept error or user cancel(destroy)
 		aio->onaccpet(aio->param, r, 0, NULL, 0);
+
+		// fix accept 24 too many open files
+		system_sleep(100);
+		locker_lock(&aio->locker);
+		if (invalid_aio_socket != aio->socket)
+			r = aio_socket_accept(aio->socket, aio_accept_onclient, aio);
+		locker_unlock(&aio->locker);
 	}
 }
 
