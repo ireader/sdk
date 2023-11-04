@@ -173,7 +173,7 @@ static int uri_check(const char* str, int len, struct uri_component_t* items)
 			switch (c)
 			{
 			case '@':
-				items->has_userinfo = 1;
+				items->has_userinfo++;
 				//state = URI_PARSE_HOST;
 				break;
 
@@ -201,7 +201,7 @@ static int uri_check(const char* str, int len, struct uri_component_t* items)
 			{
 			case '@':
 				items->has_port = 0;
-				items->has_userinfo = 1;
+				items->has_userinfo++;
 				state = URI_PARSE_HOST;
 				break;
 
@@ -279,7 +279,8 @@ static int uri_parse_complex(struct uri_t* uri, const char* str, int len)
 	if (items.has_userinfo)
 	{
 		uri->userinfo = p;
-		while (str < pend && '@' != *str)
+		// fix password have many '@', e.g. rtsp://admin:123@456@789@192.168.1.100/live/camera1
+		while (str < pend && ('@' != *str || --items.has_userinfo > 0))
 			*p++ = *str++;
 		*p++ = 0;
 		str += 1; // skip "@"

@@ -308,6 +308,42 @@ static void uri_character_test(void)
 	}
 }
 
+static void uri_password_test(void)
+{
+	struct uri_t* uri;
+	uri = uri_parse("rtsp://admin:123@456@192.168.1.100:554/live/test", 49);
+	assert(!uri->query && !uri->fragment);
+	assert(0 == strcmp("rtsp", uri->scheme));
+	assert(0 == strcmp("admin:123@456", uri->userinfo));
+	assert(0 == strcmp("192.168.1.100", uri->host));
+	assert(0 == strcmp("/live/test", uri->path));
+	assert(554 == uri->port);
+	uri_free(uri);
+
+	uri = uri_parse("http://admin:123@456@789@192.168.1.100/live/test", 49);
+	assert(!uri->query && !uri->fragment);
+	assert(0 == strcmp("http", uri->scheme));
+	assert(0 == strcmp("admin:123@456@789", uri->userinfo));
+	assert(0 == strcmp("192.168.1.100", uri->host));
+	assert(0 == strcmp("/live/test", uri->path));
+	uri_free(uri);
+
+	uri = uri_parse("admin:123@456@192.168.1.100:554/live/test", 42);
+	assert(!uri->scheme && !uri->query && !uri->fragment);
+	assert(0 == strcmp("admin:123@456", uri->userinfo));
+	assert(0 == strcmp("192.168.1.100", uri->host));
+	assert(0 == strcmp("/live/test", uri->path));
+	assert(554 == uri->port);
+	uri_free(uri);
+
+	uri = uri_parse("admin:123@456@789@[FEDC:BA98:7654:3210:FEDC:BA98:7654:3210]/live/test", 70);
+	assert(!uri->scheme && !uri->query && !uri->fragment);
+	assert(0 == strcmp("admin:123@456@789", uri->userinfo));
+	assert(0 == strcmp("FEDC:BA98:7654:3210:FEDC:BA98:7654:3210", uri->host));
+	assert(0 == strcmp("/live/test", uri->path));
+	uri_free(uri);
+}
+
 void uri_parse_test(void)
 {
 	struct uri_t *uri;
@@ -319,6 +355,7 @@ void uri_parse_test(void)
 	assert(0 == strcmp("/", uri->path));
 	uri_free(uri);
 
+	uri_password_test();
 	uri_character_test();
 	uri_standard();
 	uri_without_scheme();
