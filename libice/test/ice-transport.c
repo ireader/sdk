@@ -192,6 +192,23 @@ struct ice_transport_t* ice_transport_create(int controlling, struct ice_transpo
 
 int ice_transport_destroy(struct ice_transport_t* avt)
 {
+	int i;
+
+	if (avt->running)
+	{
+		avt->running = 0;
+		thread_destroy(avt->thread); // wait for thread exit
+	}
+
+	for (i = 0; i < avt->naddr; i++)
+	{
+		if (avt->udp[i] && avt->udp[i] != socket_invalid)
+		{
+			socket_close(avt->udp[i]);
+			avt->udp[i] = socket_invalid;
+		}	
+	}
+
 	if (avt->ice)
 	{
 		ice_agent_destroy(avt->ice);
