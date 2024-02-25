@@ -34,7 +34,7 @@ static inline void uuid_generate(char s[37])
 	fp = fopen("/proc/sys/kernel/random/uuid", "r");
 	if (fp)
 	{
-		s[36] = '0';
+		s[36] = '\0';
 		fread(s, 1, 36, fp);
 		fclose(fp);
 	}
