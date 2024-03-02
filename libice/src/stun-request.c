@@ -142,6 +142,8 @@ static void stun_request_ontimer(void* param)
 			if (req->elapsed > req->timeout)
 				req->interval = req->timeout + req->interval - req->elapsed;
 			// 11000 = STUN_TIMEOUT - (500 + 1500 + 3500 + 7500 + 15500)
+			if (l->timer)
+				stun_timer_stop(req->timer);
 			req->timer = stun_timer_start(req->interval, stun_request_ontimer, req);
 			if (req->timer)
 			{
@@ -182,6 +184,8 @@ int stun_request_send(struct stun_agent_t* stun, struct stun_request_t* req)
 			stun_request_addref(req);
 			req->elapsed = 0;
 			req->interval = STUN_RETRANSMISSION_INTERVAL_MIN;
+			if (l->timer)
+				stun_timer_stop(req->timer);
 			req->timer = stun_timer_start(STUN_RETRANSMISSION_INTERVAL_MIN, stun_request_ontimer, req);
 		}
 		locker_unlock(&req->locker);
