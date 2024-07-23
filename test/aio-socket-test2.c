@@ -99,7 +99,7 @@ static void aio_server_onrecv(void* param, int code, size_t bytes)
 static void aio_server_onaccept(void* param, int code, socket_t socket, const struct sockaddr* addr, socklen_t addrlen)
 {
 	int r;
-	unsigned short port;
+	unsigned short port = 0;
 	char ip[SOCKET_ADDRLEN];
 	struct aio_server_t *server = (struct aio_server_t*)param;
 
