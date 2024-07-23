@@ -612,6 +612,60 @@ static inline int socket_getopt_bool(IN socket_t sock, IN int optname, OUT int* 
 #endif
 }
 
+static inline int socket_set_ipv4opt_bool(IN socket_t sock, IN int optname, IN int enable)
+{
+#if defined(OS_WINDOWS)
+	BOOL v = enable ? TRUE : FALSE;
+	return setsockopt(sock, IPPROTO_IP, optname, (const char*)&v, sizeof(v));
+#else
+	return setsockopt(sock, IPPROTO_IP, optname, &enable, sizeof(enable));
+#endif
+}
+
+static inline int socket_get_ipv4opt_bool(IN socket_t sock, IN int optname, OUT int* enable)
+{
+	socklen_t len;
+#if defined(OS_WINDOWS)
+	int r;
+	BOOL v;
+	len = sizeof(v);
+	r = getsockopt(sock, IPPROTO_IP, optname, (char*)&v, &len);
+	if(0 == r)
+		*enable = (TRUE==v)?1:0;
+	return r;
+#else
+	len = sizeof(*enable);
+	return getsockopt(sock, IPPROTO_IP, optname, enable, &len);
+#endif
+}
+
+static inline int socket_set_ipv6opt_bool(IN socket_t sock, IN int optname, IN int enable)
+{
+#if defined(OS_WINDOWS)
+	BOOL v = enable ? TRUE : FALSE;
+	return setsockopt(sock, IPPROTO_IPV6, optname, (const char*)&v, sizeof(v));
+#else
+	return setsockopt(sock, IPPROTO_IPV6, optname, &enable, sizeof(enable));
+#endif
+}
+
+static inline int socket_get_ipv6opt_bool(IN socket_t sock, IN int optname, OUT int* enable)
+{
+	socklen_t len;
+#if defined(OS_WINDOWS)
+	int r;
+	BOOL v;
+	len = sizeof(v);
+	r = getsockopt(sock, IPPROTO_IPV6, optname, (char*)&v, &len);
+	if(0 == r)
+		*enable = (TRUE==v)?1:0;
+	return r;
+#else
+	len = sizeof(*enable);
+	return getsockopt(sock, IPPROTO_IPV6, optname, enable, &len);
+#endif
+}
+
 static inline int socket_setkeepalive(IN socket_t sock, IN int enable)
 {
 	return socket_setopt_bool(sock, SO_KEEPALIVE, enable);

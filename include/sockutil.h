@@ -362,8 +362,8 @@ static inline int socket_udp_multicast(IN socket_t sock, IN const char* group, I
     if(AF_INET == domain)
     {
         r = r ? r : socket_getname(sock, local, &port);
-        r = r ? r : socket_setopt_bool(sock, IP_MULTICAST_LOOP, 0); // disable Loop
-        r = r ? r : socket_setopt_bool(sock, IP_MULTICAST_TTL, ttl <= 0 ? 1 : ttl); // ttl default 1
+        r = r ? r : socket_set_ipv4opt_bool(sock, IP_MULTICAST_LOOP, 0); // disable Loop
+        r = r ? r : socket_set_ipv4opt_bool(sock, IP_MULTICAST_TTL, ttl <= 0 ? 1 : ttl); // ttl default 1
         // r = r ? r : setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &imr.imr_interface.s_addr, sizeof(struct in_addr)); // bind to interface
         if(source && *source)
             r = r ? r : socket_multicast_join_source(sock, group, source, local);
@@ -373,8 +373,8 @@ static inline int socket_udp_multicast(IN socket_t sock, IN const char* group, I
     }
     else if(AF_INET6 == domain)
     {
-        r = r ? r : socket_setopt_bool(sock, IPV6_MULTICAST_LOOP, 0); // disable Loop
-        r = r ? r : socket_setopt_bool(sock, IPV6_MULTICAST_HOPS, ttl <= 0 ? 1 : ttl); // ttl default 1
+        r = r ? r : socket_set_ipv6opt_bool(sock, IPV6_MULTICAST_LOOP, 0); // disable Loop
+        r = r ? r : socket_set_ipv6opt_bool(sock, IPV6_MULTICAST_HOPS, ttl <= 0 ? 1 : ttl); // ttl default 1
         r = r ? r : socket_multicast_join6(sock, group);
     }
     else
