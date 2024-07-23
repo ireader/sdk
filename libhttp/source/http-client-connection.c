@@ -9,7 +9,6 @@
 #endif
 #include <stdlib.h>
 #include <assert.h>
-#include "app-log.h"
 
 struct http_tcp_transport_t
 {
