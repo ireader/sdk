@@ -2,7 +2,6 @@
 #include "sys/sock.h"
 #include "sys/system.h"
 #include "sys/thread.h"
-#include "sys/process.h"
 #include "aio-socket.h"
 #include "thread-pool.h"
 #include "aio-thread-pool.h"
