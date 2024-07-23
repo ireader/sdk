@@ -1,6 +1,10 @@
 #ifndef _http_request_h_
 #define _http_request_h_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // HTTP version 1.0/1.1
 enum { HTTP_1_0 = 0, HTTP_1_1 };
 // HTTP method
@@ -17,5 +21,9 @@ int http_request_set_content_lenth(void* req, unsigned int bytes);
 int http_request_set_content_type(void* req, const char* value);
 int http_request_set_header(void* req, const char* name, const char* value);
 int http_request_set_header_int(void* req, const char* name, int value);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !_http_request_h_ */
