@@ -20,7 +20,7 @@ struct uuid_t
 
 static void uuid_string(struct uuid_t* uuid, char s[37])
 {
-	snprintf(s, 37, "%08x-%04x-%04x-%04x-%02x%02x%02x%02x%02x%02x",
+	snprintf(s, 37, "%08lx-%04x-%04x-%04x-%02x%02x%02x%02x%02x%02x",
 		uuid->time_low, uuid->time_mid, uuid->time_hi_and_version, uuid->clock_seq,
 		(unsigned int)uuid->node[0], (unsigned int)uuid->node[1], (unsigned int)uuid->node[2],
 		(unsigned int)uuid->node[3], (unsigned int)uuid->node[4], (unsigned int)uuid->node[5]);
