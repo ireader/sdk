@@ -7,6 +7,7 @@
 #include "thread-pool.h"
 #include "list.h"
 #include <errno.h>
+#include <string.h>
 
 enum { PRIORITY_IDLE=0, PRIORITY_LOWEST, PRIORITY_NORMAL, PRIORITY_CRITICAL };
 
