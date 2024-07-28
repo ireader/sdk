@@ -37,7 +37,7 @@ struct http_poll_transport_t
     int cap;
 
     struct {
-        uint64_t clock;
+        uint32_t clock;
         socket_bufvec_t vec[2];
         int count;
 
@@ -46,7 +46,7 @@ struct http_poll_transport_t
     } send;
 
     struct {
-        uint64_t clock;
+        uint32_t clock;
         void (*onrecv)(void* param, int code, const void* buf, int len);
         void* param;
     } recv;

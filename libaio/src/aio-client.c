@@ -50,7 +50,7 @@ struct aio_client_t
 	int ctimeout;
 	int rtimeout;
 	int wtimeout;
-	uint64_t wclock; // last sent data clock, for check connection alive
+	uint32_t wclock; // last sent data clock, for check connection alive
 
 	struct aio_recv_t recv;
 	struct aio_socket_rw_t send;
@@ -368,7 +368,7 @@ static void aio_client_onrecv(void* param, int code, size_t bytes)
 	client = (struct aio_client_t*)param;
 	
 	if (ETIMEDOUT == code
-		&& client->wclock + client->rtimeout > system_clock()
+		&& system_clock() - client->wclock > (uint32_t)client->rtimeout
 		&& 0 == aio_recv_retry(&client->recv, client->rtimeout))
 	{
 		// if we have active send connection, recv timeout maybe normal case

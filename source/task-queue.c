@@ -37,8 +37,8 @@ typedef struct _task_context_t
 	task_proc proc;
 	void* param;
 
-	uint64_t stime;
-	uint64_t etime;
+	uint32_t stime;
+	uint32_t etime;
 	tid_t thread;
 	int priority;
 } task_context_t;
@@ -120,7 +120,7 @@ static task_context_t* task_pop(task_queue_context_t* taskQ)
 
 static task_context_t* task_pop_timeout(task_queue_context_t* taskQ)
 {
-	uint64_t clock;
+	uint32_t clock;
 	task_context_t *task;
 	struct list_head *p, *next;
 
@@ -128,7 +128,7 @@ static task_context_t* task_pop_timeout(task_queue_context_t* taskQ)
 	list_for_each_safe(p, next, &taskQ->tasks)
 	{
 		task = list_entry(p, task_context_t, head);
-		if(clock - task->stime > (size_t)task->timeout)
+		if(clock - task->stime > (uint32_t)task->timeout)
 		{
 			list_remove(p);
 			return task;

@@ -11,14 +11,14 @@ struct stun_address_t;
 struct turn_permission_t
 {
 	struct sockaddr_storage addr; // Note that only addresses are compared and port numbers are not considered.
-	uint64_t expired; // expired clock
+	uint32_t expired; // expired clock
 };
 
 struct turn_channel_t
 {
 	struct sockaddr_storage addr;
 	uint16_t channel;
-	uint64_t expired; // expired clock
+	uint32_t expired; // expired clock
 };
 
 // rfc 5766 5. Allocations (p22)
@@ -32,7 +32,7 @@ struct turn_allocation_t
 
 	// By default, each Allocate or Refresh transaction resets this
 	// timer to the default lifetime value of 600 seconds (10 minutes)
-	uint64_t expire; // time-to-expiry
+	uint32_t expire; // time-to-expiry
 	uint32_t lifetime; // seconds
 
 	int reserve_next_higher_port; // EVEN-PORT

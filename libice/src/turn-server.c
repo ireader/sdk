@@ -43,7 +43,7 @@ int turn_server_onallocate(struct stun_agent_t* turn, const struct stun_request_
 	// 2. checks the 5-tuple
 	allocate = turn_agent_allocation_find_by_address(&turn->turnservers, (const struct sockaddr*)&req->addr.host, (const struct sockaddr*)&req->addr.peer);
 	if (NULL != allocate)
-		return allocate->expire < system_clock() ? stun_server_response_failure(resp, 437, "Allocation Mismatch") : turn_server_allocate_doresponse(resp, allocate);
+		return (int)(allocate->expire - system_clock()) < 0 ? stun_server_response_failure(resp, 437, "Allocation Mismatch") : turn_server_allocate_doresponse(resp, allocate);
 
 	// 3. check REQUESTED-TRANSPORT
 	transport = stun_message_attr_find(&req->msg, STUN_ATTR_REQUESTED_TRANSPORT);
@@ -80,7 +80,7 @@ int turn_server_onallocate(struct stun_agent_t* turn, const struct stun_request_
 			stun_response_destroy(&resp);
 			return 0;
 		}
-		else if (allocate->expire < system_clock())
+		else if ((int)(allocate->expire - system_clock()) < 0)
 		{
 			return stun_server_response_failure(resp, 508, "Insufficient Capacity");
 		}
@@ -350,7 +350,7 @@ static int turn_server_relay_channel_data(struct stun_agent_t* turn, const struc
 {
 	uint8_t ptr[1600];
 
-	if (channel->expired < system_clock())
+	if ((int)(channel->expired - system_clock()) < 0)
 		return 0; // expired
 
 	if (bytes + 4 > sizeof(ptr))
@@ -372,7 +372,7 @@ int turn_server_relay(struct stun_agent_t* turn, const struct turn_allocation_t*
 	const struct turn_permission_t* permission;
 
 	permission = turn_allocation_find_permission(allocate, peer);
-	if (!permission || permission->expired < system_clock())
+	if (!permission || (int)(permission->expired - system_clock()) < 0)
 		return 0; // expired
 
 	channel = turn_allocation_find_channel_by_peer(allocate, peer);
@@ -388,7 +388,7 @@ int turn_server_onsend(struct stun_agent_t* turn, const struct stun_request_t* r
 	struct turn_allocation_t* allocate;
 	
 	allocate = turn_agent_allocation_find_by_address(&turn->turnservers, (const struct sockaddr*)&req->addr.host, (const struct sockaddr*)&req->addr.peer);
-	if (NULL == allocate || allocate->expire < system_clock())
+	if (NULL == allocate || (int)(allocate->expire - system_clock()) < 0)
 		return 0; // discard
 
 	attr = stun_message_attr_find(&req->msg, STUN_ATTR_DONT_FRAGMENT);

@@ -19,7 +19,7 @@ struct aio_socket_ptr_t
 		struct aio_send_t send;
 	} u;
 	int timeout;
-	uint64_t clock;
+	uint32_t clock;
 
 	union
 	{
@@ -55,7 +55,7 @@ static void aio_socket_onrecv_v(void* param, int code, size_t bytes)
 		{
 			ptr->on.onrecv(ptr->param, code, ptr->__n);
 		}
-		else if (ptr->clock + ptr->timeout < system_clock())
+		else if (system_clock() - ptr->clock > (uint32_t)ptr->timeout)
 		{
 			code = ETIMEDOUT;
 		}
@@ -94,7 +94,7 @@ static void aio_socket_onsend_v(void* param, int code, size_t bytes)
 		{
 			ptr->on.onsend(ptr->param, code, ptr->__n);
 		}
-		else if (ptr->clock + ptr->timeout < system_clock())
+		else if (system_clock() - ptr->clock > (uint32_t)ptr->timeout)
 		{
 			code = ETIMEDOUT;
 		}

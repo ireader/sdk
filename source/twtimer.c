@@ -33,7 +33,7 @@ struct time_wheel_t
 	spinlock_t locker;
 
 	uint64_t count;
-	uint64_t clock;
+	uint32_t clock;
 	struct time_bucket_t tv1[TVR_SIZE];
 	struct time_bucket_t tv2[TVN_SIZE];
 	struct time_bucket_t tv3[TVN_SIZE];
@@ -44,7 +44,7 @@ struct time_wheel_t
 static int twtimer_add(struct time_wheel_t* tm, struct twtimer_t* timer);
 static int twtimer_cascade(struct time_wheel_t* tm, struct time_bucket_t* tv, int index);
 
-struct time_wheel_t* time_wheel_create(uint64_t clock)
+struct time_wheel_t* time_wheel_create(uint32_t clock)
 {
 	struct time_wheel_t* tm;
 	tm = (struct time_wheel_t*)calloc(1, sizeof(*tm));
@@ -91,14 +91,14 @@ int twtimer_stop(struct time_wheel_t* tm, struct twtimer_t* timer)
 	return pprev ? 0 : -1;
 }
 
-int twtimer_process(struct time_wheel_t* tm, uint64_t clock)
+int twtimer_process(struct time_wheel_t* tm, uint32_t clock)
 {
 	int index;
 	struct twtimer_t* timer;
     struct time_bucket_t bucket;
 
 	spinlock_lock(&tm->locker);
-	while(TIME(tm->clock) < TIME(clock))
+	while((int)(clock - tm->clock) >= 0 && TIME(clock - tm->clock) > 0)
 	{
 		index = TVR_INDEX(tm->clock);
 

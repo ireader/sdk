@@ -19,7 +19,7 @@ struct aio_poll_socket_t
 	socket_t fd;
 	int events;
 	int revents;
-	uint64_t expire;
+	uint32_t expire;
 	aio_poll_onpoll callback;
 	void* param;
 };
@@ -149,7 +149,7 @@ static int aio_poll_do(struct aio_poll_socket_t* s[], int n, int timeout);
 static int STDCALL aio_poll_worker(void* param)
 {
 	int i, n, r;
-	uint64_t now;
+	uint32_t now;
 	char buf[128];
 	struct list_head* ptr;
 	struct aio_poll_t* poll;
@@ -189,7 +189,7 @@ static int STDCALL aio_poll_worker(void* param)
 				links[i]->callback(0, links[i]->fd, links[i]->revents, links[i]->param);
 				aio_poll_free(poll, links[i]);
 			}
-			else if ((int64_t)(now - links[i]->expire) > 0)
+			else if ((int)(now - links[i]->expire) > 0)
 			{
 				links[i]->callback(ETIMEDOUT, links[i]->fd, 0, links[i]->param);
 				aio_poll_free(poll, links[i]);

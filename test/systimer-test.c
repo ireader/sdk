@@ -10,7 +10,7 @@
 static void OnTimer(systimer_t id, void* param)
 {
 #if defined(OS_LINUX)
-	printf("[%p]timer: %d\n", thread_self(), (int)param);
+	printf("[%p]timer: %d\n", (intptr_t)thread_self(), (int)param);
 #else
 	printf("[%u]timer: %d\n", (unsigned int)thread_getid(thread_self()), (int)param);
 #endif
@@ -26,9 +26,9 @@ static void Test1(void)
 
 static void OnTest2(systimer_t id, void* param)
 {
-	printf("[%u]Test2: enter timer %d\n", (unsigned int)thread_getid(thread_self()), (int)param);
+	printf("[%u]Test2: enter timer %d\n", (unsigned int)thread_getid(thread_self()), (int)(intptr_t)param);
 	system_sleep(10000);
-	printf("[%u]Test2: leave timer %d\n", (unsigned int)thread_getid(thread_self()), (int)param);
+	printf("[%u]Test2: leave timer %d\n", (unsigned int)thread_getid(thread_self()), (int)(intptr_t)param);
 }
 
 static void Test2(void)
@@ -58,7 +58,7 @@ static void Test4(void)
 
 	for(i=0; i<sizeof(id)/sizeof(id[0]); i++)
 	{
-		assert(0 == systimer_start(&id[i], 1000, OnTimer, (void*)(40000+i)));
+		assert(0 == systimer_start(&id[i], 1000, OnTimer, (void*)(intptr_t)(40000+i)));
 	}
 
 	for(i=0; i<sizeof(id)/sizeof(id[0]); i++)
@@ -96,7 +96,7 @@ static void OnClockTimer2(systimer_t id, void* param)
 {
 	struct timespec tp;
 	clock_gettime(CLOCK_REALTIME, &tp);
-	printf("OnClockTimer tp.tv_sec: %s, tp.tv_nsec: %ld\n", ctime(tp.tv_sec), tp.tv_nsec);
+	printf("OnClockTimer tp.tv_sec: %lld, tp.tv_nsec: %lld\n", (long long int)tp.tv_sec, (long long int)tp.tv_nsec);
 }
 
 static void systimer_clocksettime(void)
@@ -105,7 +105,7 @@ static void systimer_clocksettime(void)
 	struct timespec tp;
 
 	clock_gettime(CLOCK_REALTIME, &tp);
-	printf("systimer_clocksettime tp.tv_sec: %s, tp.tv_nsec: %ld\n", ctime(tp.tv_sec), tp.tv_nsec);
+	printf("systimer_clocksettime tp.tv_sec: %lld, tp.tv_nsec: %lld\n", (long long int)tp.tv_sec, (long long int)tp.tv_nsec);
 
 	systimer_start(&id, 10000, OnClockTimer2, (void*)NULL);
 

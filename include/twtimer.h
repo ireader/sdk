@@ -9,7 +9,7 @@ extern "C" {
 
 struct twtimer_t
 {
-	uint64_t expire; // expire clock time
+	uint32_t expire; // expire clock time
 
 	struct twtimer_t* next;
 	struct twtimer_t** pprev;
@@ -19,11 +19,11 @@ struct twtimer_t
 };
 
 typedef struct time_wheel_t time_wheel_t;
-time_wheel_t* time_wheel_create(uint64_t clock);
+time_wheel_t* time_wheel_create(uint32_t clock);
 int time_wheel_destroy(time_wheel_t* tm);
 
 /// @return sleep time(ms)
-int twtimer_process(time_wheel_t* tm, uint64_t clock);
+int twtimer_process(time_wheel_t* tm, uint32_t clock);
 
 /// one-shoot timeout timer
 /// @return 0-ok, other-error

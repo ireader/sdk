@@ -83,7 +83,7 @@ struct turn_allocation_t* turn_agent_allocation_reservation_token(struct stun_ag
 
 int turn_agent_allocation_cleanup(struct stun_agent_t* turn)
 {
-    uint64_t now;
+	uint32_t now;
     struct turn_allocation_t* allocate;
     struct list_head* pos, *next;
     
@@ -94,7 +94,7 @@ int turn_agent_allocation_cleanup(struct stun_agent_t* turn)
         allocate = list_entry(pos, struct turn_allocation_t, link);
         // TODO: check permission/channel expire
 
-        if(allocate->expire < now)
+        if((int)(allocate->expire - now) > 0)
             continue;
         
         list_remove(pos);
@@ -106,7 +106,7 @@ int turn_agent_allocation_cleanup(struct stun_agent_t* turn)
         allocate = list_entry(pos, struct turn_allocation_t, link);
         // TODO: check permission/channel expire
         
-        if(allocate->expire < now)
+		if ((int)(allocate->expire - now) > 0)
             continue;
         
         list_remove(pos);
@@ -118,7 +118,7 @@ int turn_agent_allocation_cleanup(struct stun_agent_t* turn)
         allocate = list_entry(pos, struct turn_allocation_t, link);
         // TODO: check permission/channel expire
         
-        if(allocate->expire < now)
+		if ((int)(allocate->expire - now) > 0)
             continue;
         
         list_remove(pos);

@@ -181,7 +181,7 @@ static int turn_client_send_channel_data(struct stun_agent_t* turn, const struct
 {
     uint8_t ptr[1600];
     
-    if (channel->expired < system_clock())
+    if ((int)(system_clock() - channel->expired) > 0)
         return 0; // expired
     
     if (bytes + 4 > sizeof(ptr))

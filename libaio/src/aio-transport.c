@@ -20,7 +20,7 @@ struct aio_transport_t
 
 	int rtimeout; // recv timeout
 	int wtimeout; // send timeout
-	uint64_t wclock; // last sent data clock, for check connection alive
+	uint32_t wclock; // last sent data clock, for check connection alive
 	struct aio_recv_t recv;
 	struct aio_send_t send;
 	struct aio_socket_rw_t rwall;
@@ -217,7 +217,7 @@ static void aio_socket_onrecv(void* param, int code, size_t bytes)
 	t = (struct aio_transport_t*)param;
 
 	if (ETIMEDOUT == code 
-		&& t->wclock + t->rtimeout > system_clock() 
+		&& system_clock() - t->wclock > (uint32_t)t->rtimeout
 		&& 0 == aio_recv_retry(&t->recv, t->rtimeout))
 	{
 		// if we have active send connection, recv timeout maybe normal case
@@ -236,7 +236,7 @@ static void aio_socket_onrecvfrom(void* param, int code, size_t bytes, const str
 	t = (struct aio_transport_t*)param;
 
 	if (ETIMEDOUT == code
-		&& t->wclock + t->rtimeout > system_clock()
+		&& system_clock() - t->wclock > (uint32_t)t->rtimeout
 		&& 0 == aio_recv_retry(&t->recv, t->rtimeout))
 	{
 		// if we have active send connection, recv timeout maybe normal case
