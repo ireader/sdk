@@ -200,6 +200,7 @@ void heap_test(void)
 	}
 	assert(heap_empty(heap));
 	heap_destroy(heap);
+	free(v);
 	printf("heap test ok\n");
 }
 #endif
