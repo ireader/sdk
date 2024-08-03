@@ -117,6 +117,8 @@ static thread_list_t* thread_pool_create_thread(thread_pool_context_t *context)
 		return NULL;
 	}
 
+	thread_detach(threads->thread);
+
 	return threads;
 }
 
@@ -258,7 +260,7 @@ void thread_pool_destroy(thread_pool_t pool)
 		locker_lock(&ctx->locker);
 	}
 	locker_unlock(&ctx->locker);
-	
+
 	//thread_pool_destroy_threads(ctx->task_threads);
 	thread_pool_destroy_tasks(ctx->recycle_tasks);
 	thread_pool_destroy_tasks(ctx->tasks);
