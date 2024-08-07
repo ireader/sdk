@@ -8,7 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(OS_RTOS)
+#define TIMER 1000
+#else
 #define TIMER 0x3FFFFF
+#endif
 #define TIMER_RESOLUTION 3
 #define WORKER 3
 

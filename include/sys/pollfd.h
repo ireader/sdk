@@ -1,7 +1,9 @@
 #ifndef _platform_poll_h_
 #define _platform_poll_h_
 
-#if !defined(OS_WINDOWS)
+#if defined(OS_RTOS)
+#include <sys/socket.h>
+#elif !defined(OS_WINDOWS)
 #include <poll.h>
 #else
 #include <Winsock2.h>

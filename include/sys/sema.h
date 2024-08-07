@@ -6,6 +6,19 @@
 #if defined(OS_WINDOWS)
 #include <Windows.h>
 typedef HANDLE sema_t;
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+#include "rtthread.h"
+typedef struct rt_semaphore sema_t;
+#elif defined(OS_FREERTOS)
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/semphr.h"
+typedef QueueHandle_t	sema_t;
+#else
+	#error "This rtos is not supported"
+#endif
 
 #else
 #include <time.h>
@@ -29,11 +42,13 @@ typedef struct
     dispatch_semaphore_t dispatch;
 #endif
 } sema_t;
-
-#ifndef WAIT_TIMEOUT
-#define WAIT_TIMEOUT		ETIMEDOUT
 #endif
 
+#ifndef WAIT_TIMEOUT
+#ifndef ETIMEDOUT
+#define ETIMEDOUT			110
+#endif
+#define WAIT_TIMEOUT		ETIMEDOUT
 #endif
 
 /// semaphore:
@@ -59,6 +74,19 @@ static inline int sema_create(sema_t* sema, const char* name, long value)
 		return GetLastError();
 	*sema = handle;
 	return 0;
+}
+#elif defined(OS_RTOS)
+static inline int sema_create(sema_t* sema, const char* name, long value)
+{
+	if(NULL == name)
+		name = "sema";
+#if defined(OS_RTTHREAD)
+	return rt_sem_init(sema, name, value, RT_IPC_FLAG_FIFO);
+#elif defined(OS_FREERTOS)
+	(void)name;
+	*sema = xQueueCreateCountingSemaphore(UINT32_MAX, value);
+	return (NULL != *sema) ? 0 : -1;
+#endif
 }
 #else
 static inline int sema_create(sema_t* sema, const char* name, long value)
@@ -101,6 +129,8 @@ static inline int sema_open(sema_t* sema, const char* name)
 #if defined(OS_WINDOWS)
 	*sema = OpenSemaphoreA(SEMAPHORE_ALL_ACCESS, FALSE, name);
 	return *sema ? 0 : GetLastError();
+#elif defined(OS_RTOS)
+	return -1;
 #else
     sema->semaphore = sem_open(name, 0);
 	if(SEM_FAILED == sema->semaphore)
@@ -117,6 +147,16 @@ static inline int sema_wait(sema_t* sema)
 #if defined(OS_WINDOWS)
 	DWORD r = WaitForSingleObjectEx(*sema, INFINITE, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	return rt_sem_take(sema, RT_WAITING_FOREVER);
+#elif defined(OS_FREERTOS)
+	BaseType_t ret = xSemaphoreTake(*sema, portMAX_DELAY);
+	if (pdTRUE != ret) return -1;
+	return 0;
+#endif
+
 #else
     int r;
 #if defined(OS_MAC)
@@ -148,6 +188,17 @@ static inline int sema_timewait(sema_t* sema, int timeout)
     
     // OSX don't have sem_timedwait
     return -1;
+}
+#elif defined(OS_RTOS)
+static inline int sema_timewait(sema_t* sema, int timeout)
+{
+#if defined(OS_RTTHREAD)
+	rt_err_t ret = rt_sem_take(sema, timeout / (1000 / RT_TICK_PER_SECOND));
+	return (RT_EOK == ret) ? 0 : (-RT_ETIMEOUT == ret) ? WAIT_TIMEOUT : ret;
+#elif defined(OS_FREERTOS)
+	BaseType_t ret = xSemaphoreTake(*sema, pdMS_TO_TICKS(timeout));
+	return (pdTRUE == ret) ? 0 : WAIT_TIMEOUT;
+#endif
 }
 #else
 static inline int sema_timewait(sema_t* sema, int timeout)
@@ -187,6 +238,16 @@ static inline int sema_trywait(sema_t* sema)
 #if defined(OS_WINDOWS)
 	DWORD r = WaitForSingleObjectEx(*sema, 0, TRUE);
 	return WAIT_FAILED==r ? GetLastError() : r;
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	rt_err_t ret = rt_sem_trytake(sema);
+	return (RT_EOK == ret) ? 0 : (-RT_ETIMEOUT == ret) ? WAIT_TIMEOUT : ret;
+#elif defined(OS_FREERTOS)
+	BaseType_t ret = xSemaphoreTake(*sema, 0);
+	return (pdTRUE == ret) ? 0 : WAIT_TIMEOUT;
+#endif
+
 #else
     
 #if defined(OS_MAC)
@@ -204,6 +265,15 @@ static inline int sema_post(sema_t* sema)
 #if defined(OS_WINDOWS)
 	long r;
 	return ReleaseSemaphore(*sema, 1, &r)?0:GetLastError();
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	return rt_sem_release(sema);
+#elif defined(OS_FREERTOS)
+	BaseType_t ret = xSemaphoreGive(*sema);
+	return (pdTRUE == ret) ? 0 : -1;
+#endif
+
 #else
     
 #if defined(OS_MAC)
@@ -223,6 +293,16 @@ static inline int sema_destroy(sema_t* sema)
 {
 #if defined(OS_WINDOWS)
 	return CloseHandle(*sema)?0:GetLastError();
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	return rt_sem_detach(sema);
+#elif defined(OS_FREERTOS)
+	vSemaphoreDelete(*sema);
+	*sema = NULL;
+	return 0;
+#endif
+
 #else
 	int r = -1;
 	if(sema->name[0])

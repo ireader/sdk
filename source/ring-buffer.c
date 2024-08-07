@@ -130,7 +130,11 @@ int ring_buffer_resize(struct ring_buffer_t* rb, size_t capacity)
 #include <math.h>
 #include <time.h>
 
+#if defined(OS_RTOS)
+#define N 1280
+#else
 #define N 128000
+#endif
 
 void ring_buffer_test(void)
 {

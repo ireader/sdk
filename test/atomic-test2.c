@@ -4,7 +4,17 @@
 #include "sys/system.h"
 #include <assert.h>
 
+#if defined(OS_RTOS)
+#define N_THREAD 10
+#else
 #define N_THREAD 32
+#endif
+
+#if defined(OS_RTOS)
+	#define N 10000
+#else
+	#define N 10000000
+#endif
 
 static int32_t s_v32 = 100;
 static int64_t s_v64 = 0x0011001100110011;
@@ -14,7 +24,7 @@ static int STDCALL atomic_thread(void* param)
 	int i;
 	(void)param;
 
-	for(i = 0; i < 10000000; i++)
+	for(i = 0; i < N; i++)
 	{
 		atomic_increment32(&s_v32);
 		atomic_increment64(&s_v64);

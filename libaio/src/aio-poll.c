@@ -83,7 +83,7 @@ struct aio_poll_t* aio_poll_create(void)
 		LIST_INIT_HEAD(&poll->idles);
 		aio_poll_init_idles(poll);
 
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS) || defined(OS_RTOS)
 		if (0 != socketpair(PF_INET, SOCK_DGRAM, 0, poll->pair))
 #else
         if (0 != socketpair(AF_UNIX, SOCK_STREAM, 0, poll->pair))
@@ -209,11 +209,14 @@ static int aio_poll_do(struct aio_poll_socket_t* s[], int n, int timeout)
 	int i;
 	int r;
 
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS) || defined(OS_RTOS)
 	fd_set rfds;
 	fd_set wfds;
 	fd_set efds;
 	struct timeval tv;
+#if !defined(OS_WINDOWS)
+	int maxfd = 0;
+#endif
 
 	assert(n <= FD_SETSIZE);
 	FD_ZERO(&rfds);
@@ -225,11 +228,18 @@ static int aio_poll_do(struct aio_poll_socket_t* s[], int n, int timeout)
 			FD_SET(s[i]->fd, &rfds);
 		if (s[i]->events & AIO_POLL_OUT)
 			FD_SET(s[i]->fd, &wfds);
+#if !defined(OS_WINDOWS)
+		maxfd = (maxfd > s[i]->fd) ? maxfd : s[i]->fd;
+#endif
 	}
 
 	tv.tv_sec = timeout / 1000;
 	tv.tv_usec = (timeout % 1000) * 1000;
+#if !defined(OS_WINDOWS)
+	r = select(maxfd + 1, &rfds, &wfds, &efds, timeout < 0 ? NULL : &tv);
+#else
 	r = select(n, &rfds, &wfds, &efds, timeout < 0 ? NULL : &tv);
+#endif
 	if (r <= 0)
 		return r;
 

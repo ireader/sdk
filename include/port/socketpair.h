@@ -1,7 +1,7 @@
 #ifndef _socketpair_h_
 #define _socketpair_h_
 
-#if !defined(OS_WINDOWS)
+#if !defined(OS_WINDOWS) && !defined(OS_RTOS) 
 #include <sys/types.h> /* See NOTES */
 #include <sys/socket.h>
 
@@ -27,7 +27,11 @@ static inline int socketpair(int domain, int type, int protocol, socket_t sv[2])
 	hints.ai_family = domain;
 	hints.ai_socktype = type;
 	hints.ai_flags = AI_PASSIVE;
-	if (0 != getaddrinfo("", NULL, &hints, &ai))
+#if defined(OS_RTOS)
+	if (0 != socket_getaddrinfo((AF_INET6 == domain) ? "::1" : "127.0.0.1", "0", &hints, &ai))
+#else
+	if (0 != socket_getaddrinfo("", NULL, &hints, &ai))
+#endif
 		return -1;
 
 	addrlen = ai->ai_addrlen;

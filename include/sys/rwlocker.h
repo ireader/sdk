@@ -6,6 +6,9 @@
 #if defined(OS_WINDOWS)
 #include <Windows.h>
 typedef SRWLOCK	rwlocker_t;
+#elif defined(OS_RTOS)
+#include "sys/locker.h"
+typedef locker_t rwlocker_t;
 #else
 #include <pthread.h>
 typedef pthread_rwlock_t rwlocker_t;
@@ -26,6 +29,8 @@ static inline int rwlocker_create(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	InitializeSRWLock(locker); return 0;
+#elif defined(OS_RTOS)
+	return locker_create(locker);
 #else
 	//pthread_rwlockattr_t attr;
 	//pthread_rwlockattr_init(&attr);
@@ -40,6 +45,8 @@ static inline int rwlocker_destroy(rwlocker_t* locker)
 	//MSDN: SRW locks do not need to be explicitly destroyed.
 	(void)locker;
 	return 0;
+#elif defined(OS_RTOS)
+	return locker_create(locker);
 #else
 	return pthread_rwlock_destroy(locker);
 #endif
@@ -49,6 +56,8 @@ static inline int rwlocker_rdlock(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	AcquireSRWLockShared(locker); return 0;
+#elif defined(OS_RTOS)
+	return locker_lock(locker);
 #else
 	return pthread_rwlock_rdlock(locker);
 #endif
@@ -58,6 +67,8 @@ static inline int rwlocker_wrlock(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	AcquireSRWLockExclusive(locker); return 0;
+#elif defined(OS_RTOS)
+	return locker_lock(locker);
 #else
 	return pthread_rwlock_wrlock(locker);
 #endif
@@ -67,6 +78,8 @@ static inline int rwlocker_rdunlock(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	ReleaseSRWLockShared(locker); return 0;
+#elif defined(OS_RTOS)
+	return locker_unlock(locker);
 #else
 	return pthread_rwlock_unlock(locker);
 #endif
@@ -76,6 +89,8 @@ static inline int rwlocker_wrunlock(rwlocker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	ReleaseSRWLockExclusive(locker); return 0;
+#elif defined(OS_RTOS)
+	return locker_unlock(locker);
 #else
 	return pthread_rwlock_unlock(locker);
 #endif
@@ -90,6 +105,8 @@ static inline int rwlocker_tryrdlock(rwlocker_t* locker)
 #else
 	return -1;
 #endif
+#elif defined(OS_RTOS)
+	return locker_lock(locker);
 #else
 	return pthread_rwlock_tryrdlock(locker);
 #endif
@@ -104,6 +121,8 @@ static inline int rwlocker_trywrlock(rwlocker_t* locker)
 #else
 	return -1;
 #endif
+#elif defined(OS_RTOS)
+	return locker_trylock(locker);
 #else
 	return pthread_rwlock_trywrlock(locker);
 #endif

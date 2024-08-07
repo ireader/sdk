@@ -6,6 +6,21 @@
 #if defined(OS_WINDOWS)
 #include <Windows.h>
 typedef CRITICAL_SECTION	locker_t;
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+#include "rtthread.h"
+typedef struct rt_mutex		locker_t;
+#elif defined(OS_FREERTOS)
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "freertos/semphr.h"
+typedef QueueHandle_t		locker_t;
+#else
+	#error "This rtos is not supported"
+#endif
+
 #else
 #include <pthread.h>
 typedef pthread_mutex_t		locker_t;
@@ -24,6 +39,16 @@ static inline int locker_create(locker_t* locker)
 #if defined(OS_WINDOWS)
 	InitializeCriticalSection(locker);
 	return 0;
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	return rt_mutex_init(locker, "mutex", RT_IPC_FLAG_FIFO);
+#elif defined(OS_FREERTOS)
+	*locker = xSemaphoreCreateMutex();
+	if (NULL == *locker) return -1;
+	return 0;
+#endif
+
 #else
 	// create a recusive locker
 	int r;
@@ -53,6 +78,16 @@ static inline int locker_destroy(locker_t* locker)
 #if defined(OS_WINDOWS)
 	DeleteCriticalSection(locker);
 	return 0;
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	return rt_mutex_detach(locker);
+#elif defined(OS_FREERTOS)
+	vSemaphoreDelete(*locker);
+	*locker = NULL;
+	return 0;
+#endif
+
 #else
 	return pthread_mutex_destroy(locker);
 #endif
@@ -63,8 +98,18 @@ static inline int locker_lock(locker_t* locker)
 #if defined(OS_WINDOWS)
 	EnterCriticalSection(locker);
 	return 0;
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	return rt_mutex_take(locker, RT_WAITING_FOREVER);
+#elif defined(OS_FREERTOS)
+	BaseType_t ret = xSemaphoreTake(*locker, portMAX_DELAY);
+	if (pdTRUE != ret) return -1;
+	return 0;
+#endif
+
 #else
-    // These functions shall not return an error code of [EINTR].
+	// These functions shall not return an error code of [EINTR].
 	return pthread_mutex_lock(locker);
 #endif
 }
@@ -75,6 +120,16 @@ static inline int locker_unlock(locker_t* locker)
 #if defined(OS_WINDOWS)
 	LeaveCriticalSection(locker);
 	return 0;
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	return rt_mutex_release(locker);
+#elif defined(OS_FREERTOS)
+	BaseType_t ret = xSemaphoreGive(*locker);
+	if (pdTRUE != ret) return -1;
+	return 0;
+#endif
+
 #else
 	return pthread_mutex_unlock(locker);
 #endif
@@ -84,6 +139,16 @@ static inline int locker_trylock(locker_t* locker)
 {
 #if defined(OS_WINDOWS)
 	return TryEnterCriticalSection(locker)?0:-1;
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	return rt_mutex_take(locker, 1);
+#elif defined(OS_FREERTOS)
+	BaseType_t ret = xSemaphoreTake(*locker, (TickType_t)0);
+	if (pdTRUE != ret) return -1;
+	return 0;
+#endif
+
 #else
 	return pthread_mutex_trylock(locker);
 #endif

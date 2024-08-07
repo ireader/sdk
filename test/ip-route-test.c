@@ -17,7 +17,13 @@ static void ip_valid_test(void)
 	assert(0 == socket_isip("www.abc.com"));
 	assert(0 == socket_isip("abc.com"));
 //	assert(0 == socket_isip("01.01.01.01"));
+#if defined(OS_RTOS)
+	// lwip supports both 8-bit and hexadecimal
+	assert(1 == socket_isip("01.01.01.01"));
+	assert(1 == socket_isip("0x1.0x1.0x1.0x1"));
+#else
 	assert(0 == socket_isip("0x1.0x1.0x1.0x1"));
+#endif
 
 	// IPv6
 	// http://en.wikipedia.org/wiki/IPv6_address

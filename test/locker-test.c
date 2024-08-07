@@ -3,7 +3,11 @@
 #include "sys/thread.h"
 #include "sys/system.h"
 
+#if defined(OS_RTOS)
+#define N_THREADS 10
+#else
 #define N_THREADS 100
+#endif
 
 static unsigned char value[N_THREADS];
 static locker_t locker;

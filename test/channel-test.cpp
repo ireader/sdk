@@ -7,9 +7,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(OS_RTOS)
+#define THREADS 5
+#define CAPACITY 20
+#define COUNTER 100
+#else
 #define THREADS 100
 #define CAPACITY 200
 #define COUNTER 10000
+#endif
 static int32_t s_counter = 0;
 
 static int STDCALL channel_reader(void* param)
