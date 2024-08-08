@@ -223,7 +223,7 @@ static int systimer_create(systimer_t* id, unsigned int period, int oneshot, sys
 	return 0;
 }
 #else
-static int systimer_create(systimer_t* id, int period, systimer_proc callback, void* cbparam)
+static int systimer_create(systimer_t* id, unsigned int period, int oneshot, systimer_proc callback, void* cbparam)
 {
 	ERROR: dont implemention
 }
