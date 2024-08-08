@@ -6,6 +6,20 @@
 #include <Windows.h>
 #pragma comment(lib, "Winmm.lib")
 #define OS_WINDOWS_TIMER
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+#include <stddef.h>
+#include "rtthread.h"
+typedef struct rt_event	event_t;
+#elif defined(OS_FREERTOS)
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
+typedef TimerHandle_t	event_t;
+#else
+	#error "This rtos is not supported"
+#endif
+
 #else
 #include <signal.h>
 #include <time.h>
@@ -32,6 +46,12 @@ typedef struct _timer_context_t
 #elif defined(OS_LINUX)
 	timer_t timerId;
 	int ontshot;
+#elif defined(OS_RTOS)
+#if defined(OS_RTTHREAD)
+	rt_timer_t timerId;
+#elif defined(OS_FREERTOS)
+	TimerHandle_t timerId;
+#endif
 #endif
 } timer_context_t;
 
@@ -96,6 +116,21 @@ static void timer_schd_worker(union sigval v)
 {
 	timer_context_t* ctx;
 	ctx = (timer_context_t*)v.sival_ptr;
+	ctx->callback((systimer_t)ctx, ctx->cbparam);
+}
+#elif defined(OS_RTOS)
+#if defined(OS_RTTHREAD)
+static void timer_schd_worker(void *param)
+#elif defined(OS_FREERTOS)
+static void timer_schd_worker(TimerHandle_t *timer)
+#endif
+{
+	timer_context_t* ctx;
+#if defined(OS_RTTHREAD)
+	ctx = (timer_context_t*)param;
+#elif defined(OS_FREERTOS)
+	ctx = (timer_context_t*)pvTimerGetTimerID(timer);
+#endif
 	ctx->callback((systimer_t)ctx, ctx->cbparam);
 }
 #else
@@ -222,6 +257,46 @@ static int systimer_create(systimer_t* id, unsigned int period, int oneshot, sys
 	*id = (systimer_t)ctx;
 	return 0;
 }
+#elif defined(OS_RTOS)
+static int systimer_create(systimer_t* id, unsigned int period, int oneshot, systimer_proc callback, void* cbparam)
+{
+	timer_context_t* ctx;
+
+	ctx = (timer_context_t*)malloc(sizeof(timer_context_t));
+	if(!ctx)
+		return -ENOMEM;;
+
+	memset(ctx, 0, sizeof(timer_context_t));
+	ctx->callback = callback;
+	ctx->cbparam = cbparam;
+
+#if defined(OS_RTTHREAD)
+	ctx->timerId = rt_timer_create("systimer", timer_schd_worker, ctx, period / (1000 / RT_TICK_PER_SECOND), oneshot ? RT_TIMER_FLAG_ONE_SHOT : RT_TIMER_FLAG_PERIODIC);
+#elif defined(OS_FREERTOS)
+	ctx->timerId = xTimerCreate("systimer", pdMS_TO_TICKS(period), oneshot ? pdFALSE : pdTRUE, ctx, timer_schd_worker);
+#endif
+	if (NULL == ctx->timerId)
+	{
+		free(ctx);
+		return -1;
+	}
+
+#if defined(OS_RTTHREAD)
+	if (rt_timer_start(ctx->timerId) != RT_EOK)
+	{
+		rt_timer_delete(ctx->timerId);
+#elif defined(OS_FREERTOS)
+	if (xTimerStart(ctx->timerId, portMAX_DELAY) != pdTRUE)
+	{
+		xTimerDelete(ctx->timerId, portMAX_DELAY);
+#endif
+		free(ctx);
+		return -1;
+	}
+
+	*id = (systimer_t)ctx;
+	return 0;
+}
 #else
 static int systimer_create(systimer_t* id, unsigned int period, int oneshot, systimer_proc callback, void* cbparam)
 {
@@ -258,6 +333,16 @@ int systimer_stop(systimer_t id)
 	timer_delete(ctx->timerId);
 #elif defined(OS_WINDOWS_ASYNC)
 	CloseHandle(ctx->timerId);
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	rt_timer_stop(ctx->timerId);
+	rt_timer_delete(ctx->timerId);
+#elif defined(OS_FREERTOS)
+	xTimerStop(ctx->timerId, portMAX_DELAY);
+	xTimerDelete(ctx->timerId, portMAX_DELAY);
+#endif
+
 #else
 	ERROR: dont implemention
 #endif
