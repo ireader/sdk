@@ -105,7 +105,6 @@ int aio_poll_destroy(struct aio_poll_t* poll)
 	if (!poll || 0 == poll->running)
 		return -1;
 
-	assert(list_empty(&poll->root));
 	poll->running = 0;
 	socket_send_all_by_time(poll->pair[1], poll, 1, 0, 5000);
 
