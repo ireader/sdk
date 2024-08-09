@@ -113,6 +113,7 @@ int aio_poll_destroy(struct aio_poll_t* poll)
 	locker_destroy(&poll->locker);
 	socket_close(poll->pair[0]);
 	socket_close(poll->pair[1]);
+	free(poll);
 	return 0;
 }
 
