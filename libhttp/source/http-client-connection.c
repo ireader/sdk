@@ -233,7 +233,9 @@ int http_transport_tcp(struct http_transport_t* t)
 
 static onetime_t s_once;
 static struct http_transport_t s_default;
+#if !defined(OS_RTOS)
 static struct http_transport_t s_default_aio;
+#endif
 int http_transport_tcp_aio_init(struct http_transport_t* t);
 static void http_transport_default_init(void)
 {
@@ -245,7 +247,9 @@ static void http_transport_default_init(void)
     ERR_load_crypto_strings();
 #endif
     http_transport_tcp(&s_default);
+#if !defined(OS_RTOS)
     http_transport_tcp_aio_init(&s_default_aio);
+#endif
 }
 
 struct http_transport_t* http_transport_default(void)
@@ -254,10 +258,12 @@ struct http_transport_t* http_transport_default(void)
     return &s_default;
 }
 
+#if !defined(OS_RTOS)
 struct http_transport_t* http_transport_default_aio(void)
 {
     onetime_exec(&s_once, http_transport_default_init);
     return &s_default_aio;
 }
+#endif
 
 int http_transport_tcp_poll_init(struct http_transport_t* t);

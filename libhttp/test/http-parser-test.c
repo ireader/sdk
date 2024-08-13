@@ -5,6 +5,12 @@
 #include <assert.h>
 #include "time64.h"
 
+#if defined(OS_RTOS)
+#define N 100
+#else
+#define N 10000
+#endif
+
 static void http_request_test(void)
 {
 	static const char* s = "GET / HTTP/1.1\r\n" \
@@ -240,7 +246,7 @@ void http_parser_test(void)
 	sip_response_test();
 
 	srand((unsigned int)time64_now());
-	for (i = 0; i < 10000; i++)
+	for (i = 0; i < N; i++)
 		sip_request_test2();
 }
 
