@@ -368,7 +368,7 @@ static void aio_client_onrecv(void* param, int code, size_t bytes)
 	client = (struct aio_client_t*)param;
 	
 	if (ETIMEDOUT == code
-		&& system_clock() - client->wclock > (uint32_t)client->rtimeout
+		&& system_clock() - client->wclock < (uint32_t)client->rtimeout
 		&& 0 == aio_recv_retry(&client->recv, client->rtimeout))
 	{
 		// if we have active send connection, recv timeout maybe normal case

@@ -217,7 +217,7 @@ static void aio_socket_onrecv(void* param, int code, size_t bytes)
 	t = (struct aio_transport_t*)param;
 
 	if (ETIMEDOUT == code 
-		&& system_clock() - t->wclock > (uint32_t)t->rtimeout
+		&& system_clock() - t->wclock < (uint32_t)t->rtimeout
 		&& 0 == aio_recv_retry(&t->recv, t->rtimeout))
 	{
 		// if we have active send connection, recv timeout maybe normal case
@@ -236,7 +236,7 @@ static void aio_socket_onrecvfrom(void* param, int code, size_t bytes, const str
 	t = (struct aio_transport_t*)param;
 
 	if (ETIMEDOUT == code
-		&& system_clock() - t->wclock > (uint32_t)t->rtimeout
+		&& system_clock() - t->wclock < (uint32_t)t->rtimeout
 		&& 0 == aio_recv_retry(&t->recv, t->rtimeout))
 	{
 		// if we have active send connection, recv timeout maybe normal case
