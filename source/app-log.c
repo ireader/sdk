@@ -7,6 +7,8 @@
 
 #if defined(OS_WINDOWS)
 #include <Windows.h>
+#elif defined(OS_RTOS)
+#include <sys/time.h>
 #else
 #include <sys/time.h>
 #include <pthread.h>
@@ -18,6 +20,8 @@
 
 #if defined(OS_WINDOWS)
 #define THREAD_LOCAL static __declspec(thread)
+#elif defined(OS_RTOS)
+#define THREAD_LOCAL static
 #elif defined(__GNUC__) || defined(__clang__)
 #define THREAD_LOCAL static __thread
 #else
@@ -42,7 +46,7 @@ static const char** s_level_color = s_level_color_none;
 
 #define LOG_LEVEL(level) ((LOG_EMERG <= level && level <= LOG_DEBUG) ? level : LOG_DEBUG)
 
-#if !defined(OS_WINDOWS) && !defined(OS_ANDROID)
+#if !defined(OS_WINDOWS) && !defined(OS_ANDROID) && !defined(OS_RTOS)
 static void app_log_init(void)
 {
 	//char name[256] = { 0 };
@@ -82,6 +86,7 @@ static void app_log_syslog(int level, const char* format, va_list args)
 #elif defined(OS_ANDROID)
 	static int s_level[] = { ANDROID_LOG_FATAL/*emerg*/, ANDROID_LOG_FATAL/*alert*/, ANDROID_LOG_FATAL/*critical*/, ANDROID_LOG_ERROR/*error*/, ANDROID_LOG_WARN/*warning*/, ANDROID_LOG_INFO/*notice*/, ANDROID_LOG_INFO/*info*/, ANDROID_LOG_DEBUG/*debug*/ };
 	__android_log_vprint(s_level[level % 8], "android", format, args);
+#elif defined(OS_RTOS)
 #else
 	static pthread_once_t s_onetime = PTHREAD_ONCE_INIT;
 	pthread_once(&s_onetime, app_log_init);

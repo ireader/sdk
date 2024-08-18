@@ -4,6 +4,8 @@
 #if defined(OS_WINDOWS)
 #include <Windows.h>
 
+#elif defined(OS_RTOS)
+	#error "RTOS does not support this feature"
 #else
 #include <sys/types.h>
 #include <sys/stat.h>

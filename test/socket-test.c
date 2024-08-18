@@ -138,7 +138,7 @@ void socket_test(void)
 	socket_name_ipv6_test();
 	socket_addr_is_multicast_test();
     
-#if !defined(OS_MAC)
+#if !defined(OS_MAC) && !defined(OS_RTOS)
     socket_opt_dontfrag_test();
 #endif
     

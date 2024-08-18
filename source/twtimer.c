@@ -60,7 +60,9 @@ struct time_wheel_t* time_wheel_create(uint32_t clock)
 int time_wheel_destroy(struct time_wheel_t* tm)
 {
 	assert(0 == tm->count);
-	return spinlock_destroy(&tm->locker);
+	spinlock_destroy(&tm->locker);
+	free(tm);
+	return 0;
 }
 
 int twtimer_start(struct time_wheel_t* tm, struct twtimer_t* timer)

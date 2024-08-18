@@ -21,6 +21,9 @@ typedef OSSpinLock spinlock_t;
 
 #elif defined(OS_LINUX_KERNEL)
 #include <linux/spinlock.h>
+#elif defined(OS_RTOS)
+#include "locker.h"
+#define spinlock_t locker_t
 #else
 #include <pthread.h>
 typedef pthread_spinlock_t spinlock_t;
@@ -57,6 +60,8 @@ static inline int spinlock_create(spinlock_t *locker)
 #elif defined(OS_LINUX_KERNEL)
 	spin_lock_init(locker);
 	return 0;
+#elif defined(OS_RTOS)
+	return locker_create(locker);
 #else
 	return pthread_spin_init(locker, PTHREAD_PROCESS_PRIVATE);
 #endif
@@ -71,6 +76,8 @@ static inline int spinlock_destroy(spinlock_t *locker)
 	return 0; // do nothing
 #elif defined(OS_LINUX_KERNEL)
 	return 0; // do nothing
+#elif defined(OS_RTOS)
+	return locker_destroy(locker);
 #else
 	return pthread_spin_destroy(locker);
 #endif
@@ -88,6 +95,8 @@ static inline void spinlock_lock(spinlock_t *locker)
 #endif
 #elif defined(OS_LINUX_KERNEL)
 	spin_lock(locker);
+#elif defined(OS_RTOS)
+	locker_lock(locker);
 #else
 	pthread_spin_lock(locker);
 #endif
@@ -105,6 +114,8 @@ static inline void spinlock_unlock(spinlock_t *locker)
 #endif
 #elif defined(OS_LINUX_KERNEL)
 	spin_unlock(locker);
+#elif defined(OS_RTOS)
+	locker_unlock(locker);
 #else
 	pthread_spin_unlock(locker);
 #endif
@@ -122,6 +133,8 @@ static inline int spinlock_trylock(spinlock_t *locker)
 #endif
 #elif defined(OS_LINUX_KERNEL)
 	return spin_trylock(locker);
+#elif defined(OS_RTOS)
+	return locker_trylock(locker);
 #else
 	return pthread_spin_trylock(locker);
 #endif

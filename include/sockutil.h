@@ -98,7 +98,7 @@ static inline socket_t socket_connect_host(IN const char* ipv4_or_ipv6_or_dns, I
 	hints.ai_socktype = SOCK_STREAM;
 //	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
 	snprintf(portstr, sizeof(portstr), "%hu", port);
-	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
+	r = socket_getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return socket_invalid;
 
@@ -243,7 +243,7 @@ static inline socket_t socket_tcp_listen(IN int family, IN const char* ipv4_or_i
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV | (AF_INET6 == family ? AI_V4MAPPED : 0);
 	snprintf(portstr, sizeof(portstr), "%hu", port);
-	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
+	r = socket_getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return socket_invalid;
 
@@ -311,7 +311,7 @@ static inline socket_t socket_udp_bind(IN int family, IN const char* ipv4_or_ipv
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV | (AF_INET6 == family ? AI_V4MAPPED : 0);
 	snprintf(portstr, sizeof(portstr), "%hu", port);
-	if (0 != getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr))
+	if (0 != socket_getaddrinfo(ipv4_or_ipv6_or_dns, portstr, &hints, &addr))
 		return socket_invalid;
 
     sock = socket_invalid;
@@ -362,8 +362,8 @@ static inline int socket_udp_multicast(IN socket_t sock, IN const char* group, I
     if(AF_INET == domain)
     {
         r = r ? r : socket_getname(sock, local, &port);
-        r = r ? r : socket_setopt_bool(sock, IP_MULTICAST_LOOP, 0); // disable Loop
-        r = r ? r : socket_setopt_bool(sock, IP_MULTICAST_TTL, ttl <= 0 ? 1 : ttl); // ttl default 1
+        r = r ? r : socket_set_ipv4opt_bool(sock, IP_MULTICAST_LOOP, 0); // disable Loop
+        r = r ? r : socket_set_ipv4opt_bool(sock, IP_MULTICAST_TTL, ttl <= 0 ? 1 : ttl); // ttl default 1
         // r = r ? r : setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &imr.imr_interface.s_addr, sizeof(struct in_addr)); // bind to interface
         if(source && *source)
             r = r ? r : socket_multicast_join_source(sock, group, source, local);
@@ -373,8 +373,8 @@ static inline int socket_udp_multicast(IN socket_t sock, IN const char* group, I
     }
     else if(AF_INET6 == domain)
     {
-        r = r ? r : socket_setopt_bool(sock, IPV6_MULTICAST_LOOP, 0); // disable Loop
-        r = r ? r : socket_setopt_bool(sock, IPV6_MULTICAST_HOPS, ttl <= 0 ? 1 : ttl); // ttl default 1
+        r = r ? r : socket_set_ipv6opt_bool(sock, IPV6_MULTICAST_LOOP, 0); // disable Loop
+        r = r ? r : socket_set_ipv6opt_bool(sock, IPV6_MULTICAST_HOPS, ttl <= 0 ? 1 : ttl); // ttl default 1
         r = r ? r : socket_multicast_join6(sock, group);
     }
     else
@@ -648,7 +648,7 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 
 	return bytes;
 	
-#elif defined(OS_LINUX) || defined(OS_MAC)
+#elif defined(OS_LINUX) || defined(OS_MAC) || defined(OS_RTOS)
 	struct msghdr hdr;
 	struct cmsghdr *cmsg;
 	memset(&hdr, 0, sizeof(hdr));
@@ -677,7 +677,7 @@ static inline int socket_recvfrom_addr(IN socket_t sock, OUT socket_bufvec_t* ve
 			memcpy(&((struct sockaddr_in*)local)->sin_addr, &pktinfo->ipi_addr, sizeof(pktinfo->ipi_addr));
 			break;
 		}
-#if defined(_GNU_SOURCE)
+#if defined(_GNU_SOURCE) && !defined(OS_RTOS)
 		else if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO && *locallen >= sizeof(struct sockaddr_in6))
 		{
 			struct in6_pktinfo* pktinfo6;
@@ -751,7 +751,7 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 
 	return 0 == WSASendMsg(sock, &wsamsg, flags, &bytes, NULL, NULL) ? bytes : SOCKET_ERROR;
 
-#elif defined(OS_LINUX) || defined(OS_MAC)
+#elif defined(OS_LINUX) || defined(OS_MAC) || defined(OS_RTOS)
 	struct msghdr hdr;
 	struct cmsghdr *cmsg;
 
@@ -774,10 +774,14 @@ static inline int socket_sendto_addr(IN socket_t sock, IN const socket_bufvec_t*
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 		pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
 		memset(pktinfo, 0, sizeof(struct in_pktinfo));
+#if defined(OS_RTOS)
+		memcpy(&pktinfo->ipi_addr, &((struct sockaddr_in*)local)->sin_addr, sizeof(pktinfo->ipi_addr));
+#else
 		memcpy(&pktinfo->ipi_spec_dst, &((struct sockaddr_in*)local)->sin_addr, sizeof(pktinfo->ipi_spec_dst));
+#endif
 		hdr.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
 	}
-#if defined(_GNU_SOURCE)
+#if defined(_GNU_SOURCE) && !defined(OS_RTOS)
 	else if (AF_INET6 == local->sa_family)
 	{
 		struct in6_pktinfo* pktinfo6;

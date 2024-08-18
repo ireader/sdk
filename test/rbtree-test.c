@@ -128,6 +128,11 @@ static int rbtree_find(struct rbtree_root_t* root, int v, struct rbtree_node_t**
 
 static void rbtree_iter_test(void)
 {
+#if defined(OS_RTOS)
+	#define N 1000
+#else
+	#define N 100000
+#endif
 	int r, i;
 	struct rbtree_root_t root;
 	struct rbtree_node_t **link;
@@ -136,7 +141,7 @@ static void rbtree_iter_test(void)
 	struct rbtree_value_t* value;
 
 	root.node = NULL;
-	for (i = 0; i < 100000; i++)
+	for (i = 0; i < N; i++)
 	{
 		r = rbtree_find(&root, i, &parent);
 		assert(0 != r);
@@ -148,7 +153,7 @@ static void rbtree_iter_test(void)
 	}
 
 	node = rbtree_first(&root);
-	for (i = 0; i < 100000; i++)
+	for (i = 0; i < N; i++)
 	{
 		value = rbtree_entry(node, struct rbtree_value_t, node);
 		assert(i == value->value);
@@ -156,10 +161,10 @@ static void rbtree_iter_test(void)
 	}
 
 	node = rbtree_last(&root);
-	for (i = 0; i < 100000; i++)
+	for (i = 0; i < N; i++)
 	{
 		value = rbtree_entry(node, struct rbtree_value_t, node);
-		assert(100000 - 1 - i == value->value);
+		assert(N - 1 - i == value->value);
 		node = rbtree_prev(node);
 	}
 }

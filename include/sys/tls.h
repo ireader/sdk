@@ -4,6 +4,8 @@
 #if defined(OS_WINDOWS)
 #include <windows.h>
 typedef DWORD tlskey_t;
+#elif defined(OS_RTOS)
+	#error "RTOS does not support this feature"
 #else
 #include <pthread.h>
 typedef pthread_key_t tlskey_t;

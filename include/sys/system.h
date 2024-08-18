@@ -10,6 +10,23 @@ typedef HMODULE module_t;
 typedef uint32_t useconds_t;
 typedef FARPROC funcptr_t;
 
+#elif defined(OS_RTOS)
+
+typedef void* module_t;
+typedef uint32_t useconds_t;
+typedef void (*funcptr_t)(void);
+
+#if defined(OS_RTTHREAD)
+#include <sys/time.h>
+#include "rtthread.h"
+#elif defined(OS_FREERTOS)
+#include <sys/time.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#else
+	#error "This rtos is not supported"
+#endif
+
 #else
 #include <sys/types.h>
 #include <sys/utsname.h>
@@ -54,6 +71,14 @@ static inline void system_sleep(useconds_t milliseconds)
 {
 #if defined(OS_WINDOWS)
 	Sleep(milliseconds);
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	rt_thread_mdelay(milliseconds);
+#elif defined(OS_FREERTOS)
+	vTaskDelay(pdMS_TO_TICKS(milliseconds));
+#endif
+
 #else
 	usleep(milliseconds*1000);
 #endif
@@ -95,6 +120,9 @@ static inline size_t system_getcpucount(void)
 #elif defined(_IRIX_)
 	// IRIX:
 	return sysconf(_SC_NPROC_ONLN);
+
+#elif defined(OS_RTOS)
+	return 1;
 
 #else
 	// linux, Solaris, & AIX
@@ -162,6 +190,14 @@ static inline uint32_t system_clock(void)
 	tick = mach_absolute_time();
 	mach_timebase_info(&timebase);
 	return (uint32_t)(tick * timebase.numer / timebase.denom / 1000000);
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	return (uint32_t)rt_tick_get() * (1000 / RT_TICK_PER_SECOND);
+#elif defined(OS_FREERTOS)
+	return (uint32_t)pdTICKS_TO_MS(xTaskGetTickCount());
+#endif
+
 #else
 #if defined(CLOCK_MONOTONIC)
 	struct timespec tp;
@@ -205,6 +241,18 @@ static inline int system_version(int* major, int* minor)
 	*major = (int)(version.dwMajorVersion);
 	*minor = (int)(version.dwMinorVersion);
 	return 0;
+#elif defined(OS_RTOS)
+
+#if defined(OS_RTTHREAD)
+	*major = RT_VERSION;
+	*minor = RT_SUBVERSION;
+	return 0;
+#elif defined(OS_FREERTOS)
+	*major = tskKERNEL_VERSION_MAJOR;
+	*minor = tskKERNEL_VERSION_MINOR;
+	return 0;
+#endif
+
 #else
 	struct utsname ver;
 	if(0 != uname(&ver))
@@ -228,6 +276,8 @@ static inline module_t system_load(const char* module)
 {
 #if defined(OS_WINDOWS)
 	return LoadLibraryExA(module, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+#elif defined(OS_RTOS)
+	return NULL;
 #else
 	return dlopen(module, RTLD_LAZY|RTLD_LOCAL);
 #endif
@@ -237,6 +287,8 @@ static inline int system_unload(module_t module)
 {
 #if defined(OS_WINDOWS)
 	return FreeLibrary(module);
+#elif defined(OS_RTOS)
+	return -1;
 #else
 	return dlclose(module);
 #endif
@@ -246,6 +298,8 @@ static inline funcptr_t system_getproc(module_t module, const char* producer)
 {
 #if defined(OS_WINDOWS)
 	return GetProcAddress(module, producer);
+#elif defined(OS_RTOS)
+	return NULL;
 #else
 	// https://linux.die.net/man/3/dlsym
 	// cosine = (double (*)(double)) dlsym(handle, "cos")

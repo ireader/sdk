@@ -53,7 +53,11 @@ int http_transport_pool_check(void* priv)
 
 int http_transport_release(struct http_transport_t* t)
 {
+#if !defined(OS_RTOS)
     if (t == http_transport_default() || t == http_transport_default_aio())
+#else
+    if (t == http_transport_default())
+#endif
     {
         //http_transport_pool_release(t->priv);
         return 0; // nothing to do

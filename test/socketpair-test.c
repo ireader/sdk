@@ -4,7 +4,7 @@
 static const char* s_send1 = "from s[0]";
 static const char* s_send2 = "from s[1]";
 
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS) || defined(OS_RTOS)
 void socketpair_tcp_test(void)
 {
 	char buf[128];
@@ -83,7 +83,7 @@ void socketpair_unix_dgram_test(void)
 void socketpair_test(void)
 {
 	socket_init();
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS) || defined(OS_RTOS)
 	socketpair_tcp_test();
 	socketpair_udp_test();
 #else

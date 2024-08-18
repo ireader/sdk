@@ -69,7 +69,11 @@ void aio_poll_test(void)
 	socket_connect(c, (struct sockaddr*) & addr, sizeof(addr));
 	aio_poll_poll(t.poll, c, AIO_POLL_OUT, 10 * 1000, aio_poll_test_onconnected, &t);
 
+#if defined(OS_RTOS)
+	system_sleep(10 * 1000);
+#else
 	system_sleep(1000 * 1000);
+#endif
 
 	aio_poll_destroy(t.poll);
 	socket_close(tcp);

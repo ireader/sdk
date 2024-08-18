@@ -16,7 +16,12 @@ static void aio_timeout_init(void)
 
 static void aio_timeout_clean(void)
 {
-	time_wheel_destroy(s_timer);
+	assert(NULL != s_timer);
+	if(s_timer)
+	{
+		time_wheel_destroy(s_timer);
+		s_timer = NULL;
+	}
 }
 
 void aio_timeout_process(void)

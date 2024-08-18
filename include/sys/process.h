@@ -13,6 +13,8 @@
 
 typedef DWORD pid_t;
 
+#elif defined(OS_RTOS)
+	#error "RTOS does not support this feature"
 #else
 #include <sys/types.h>
 #include <unistd.h>

@@ -4,21 +4,23 @@
 #include "sys/system.h"
 #include <stdio.h>
 
-static void aio_connect_baidu(void* param, int code, aio_socket_t aio)
+static void aio_connect_baidu(void* param, int code, socket_t tcp, aio_socket_t aio)
 {
 	uint64_t now = system_clock();
 	uint64_t* clock = (uint64_t*)param;
 	printf("connect baidu: %d, time: %d\n", code, (int)(now - *clock));
+	aio_socket_destroy(aio, NULL, NULL);
 }
 
-static void aio_connect_google(void* param, int code, aio_socket_t aio)
+static void aio_connect_google(void* param, int code, socket_t tcp, aio_socket_t aio)
 {
 	uint64_t now = system_clock();
 	uint64_t* clock = (uint64_t*)param;
 	printf("connect google: %d, time: %d\n", code, (int)(now - *clock));
+	aio_socket_destroy(aio, NULL, NULL);
 }
 
-void aio_connect_test()
+extern "C" void aio_connect_test()
 {
 	aio_socket_init(1);
 

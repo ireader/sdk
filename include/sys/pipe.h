@@ -10,6 +10,8 @@ typedef HANDLE pipe_t;
 #define PIPE_FLAG_READ	PIPE_ACCESS_INBOUND
 #define PIPE_FLAG_WRITE	PIPE_ACCESS_OUTBOUND
 
+#elif defined(OS_RTOS)
+	#error "RTOS does not support this feature"
 #else
 #include <sys/types.h>
 #include <sys/stat.h>

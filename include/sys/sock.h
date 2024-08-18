@@ -57,7 +57,9 @@ typedef WSABUF	socket_bufvec_t;
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
+#if !defined(OS_RTOS)
 #include <poll.h>
+#endif
 
 #ifndef OS_SOCKET_TYPE
 typedef int socket_t;
@@ -271,7 +273,11 @@ static inline socket_t socket_raw(void)
 
 static inline socket_t socket_rdm(void)
 {
+#if defined(OS_RTOS)
+	return -1;
+#else
 	return socket(PF_INET, SOCK_RDM, 0);
+#endif
 }
 
 static inline socket_t socket_tcp_ipv6(void)
@@ -461,7 +467,7 @@ static inline int socket_select_writefds(IN int n, IN fd_set* fds, IN struct tim
 
 static inline int socket_select_read(IN socket_t sock, IN int timeout)
 {
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS) || defined(OS_RTOS)
 	fd_set fds;
 	struct timeval tv;
 	assert(socket_invalid != sock); // linux: FD_SET error
@@ -470,7 +476,11 @@ static inline int socket_select_read(IN socket_t sock, IN int timeout)
 
 	tv.tv_sec = timeout/1000;
 	tv.tv_usec = (timeout%1000) * 1000;
-	return socket_select_readfds(0 /*sock+1*/, &fds, timeout<0?NULL:&tv);
+#if defined(OS_WINDOWS)
+	return socket_select_readfds(0, &fds, timeout<0?NULL:&tv);
+#else
+	return socket_select_readfds(sock+1, &fds, timeout<0?NULL:&tv);
+#endif
 #else
 	int r;
 	struct pollfd fds;
@@ -488,7 +498,7 @@ static inline int socket_select_read(IN socket_t sock, IN int timeout)
 
 static inline int socket_select_write(IN socket_t sock, IN int timeout)
 {
-#if defined(OS_WINDOWS)
+#if defined(OS_WINDOWS) || defined(OS_RTOS)
 	fd_set fds;
 	struct timeval tv;
 
@@ -499,7 +509,11 @@ static inline int socket_select_write(IN socket_t sock, IN int timeout)
 
 	tv.tv_sec = timeout/1000;
 	tv.tv_usec = (timeout%1000) * 1000;
-	return socket_select_writefds(0 /*sock+1*/, &fds, timeout<0?NULL:&tv);
+#if defined(OS_WINDOWS)
+	return socket_select_writefds(0, &fds, timeout<0?NULL:&tv);
+#else
+	return socket_select_writefds(sock+1, &fds, timeout<0?NULL:&tv);
+#endif
 #else
 	int r;
 	struct pollfd fds;
@@ -609,6 +623,60 @@ static inline int socket_getopt_bool(IN socket_t sock, IN int optname, OUT int* 
 #else
 	len = sizeof(*enable);
 	return getsockopt(sock, SOL_SOCKET, optname, enable, &len);
+#endif
+}
+
+static inline int socket_set_ipv4opt_bool(IN socket_t sock, IN int optname, IN int enable)
+{
+#if defined(OS_WINDOWS)
+	BOOL v = enable ? TRUE : FALSE;
+	return setsockopt(sock, IPPROTO_IP, optname, (const char*)&v, sizeof(v));
+#else
+	return setsockopt(sock, IPPROTO_IP, optname, &enable, sizeof(enable));
+#endif
+}
+
+static inline int socket_get_ipv4opt_bool(IN socket_t sock, IN int optname, OUT int* enable)
+{
+	socklen_t len;
+#if defined(OS_WINDOWS)
+	int r;
+	BOOL v;
+	len = sizeof(v);
+	r = getsockopt(sock, IPPROTO_IP, optname, (char*)&v, &len);
+	if(0 == r)
+		*enable = (TRUE==v)?1:0;
+	return r;
+#else
+	len = sizeof(*enable);
+	return getsockopt(sock, IPPROTO_IP, optname, enable, &len);
+#endif
+}
+
+static inline int socket_set_ipv6opt_bool(IN socket_t sock, IN int optname, IN int enable)
+{
+#if defined(OS_WINDOWS)
+	BOOL v = enable ? TRUE : FALSE;
+	return setsockopt(sock, IPPROTO_IPV6, optname, (const char*)&v, sizeof(v));
+#else
+	return setsockopt(sock, IPPROTO_IPV6, optname, &enable, sizeof(enable));
+#endif
+}
+
+static inline int socket_get_ipv6opt_bool(IN socket_t sock, IN int optname, OUT int* enable)
+{
+	socklen_t len;
+#if defined(OS_WINDOWS)
+	int r;
+	BOOL v;
+	len = sizeof(v);
+	r = getsockopt(sock, IPPROTO_IPV6, optname, (char*)&v, &len);
+	if(0 == r)
+		*enable = (TRUE==v)?1:0;
+	return r;
+#else
+	len = sizeof(*enable);
+	return getsockopt(sock, IPPROTO_IPV6, optname, enable, &len);
 #endif
 }
 
@@ -746,7 +814,7 @@ static inline int socket_setreuseport(IN socket_t sock, IN int enable)
 #if defined(OS_WINDOWS)
 	// Windows: SO_REUSEADDR = SO_REUSEADDR + SO_REUSEPORT
 	return socket_setopt_bool(sock, SO_REUSEADDR, enable);
-#elif defined(SO_REUSEPORT)
+#elif defined(SO_REUSEPORT) && !defined(OS_RTOS)
 	return socket_setopt_bool(sock, SO_REUSEPORT, enable);	
 #else
 	return -1;
@@ -757,7 +825,7 @@ static inline int socket_getreuseport(IN socket_t sock, OUT int* enable)
 {
 #if defined(OS_WINDOWS)
 	return socket_getopt_bool(sock, SO_REUSEADDR, enable);
-#elif defined(SO_REUSEPORT)
+#elif defined(SO_REUSEPORT) && !defined(OS_RTOS)
 	return socket_getopt_bool(sock, SO_REUSEPORT, enable);
 #else
 	return -1;
@@ -831,6 +899,27 @@ static inline int socket_getpriority(IN socket_t sock, OUT int* priority)
 	return getsockopt(sock, SOL_SOCKET, SO_PRIORITY, (char*)priority, &len);
 }
 
+// ipv6 only
+static inline int socket_settclass(IN socket_t sock, IN int dscp)
+{
+	dscp <<= 2; // 0 - ECN (Explicit Congestion Notification)
+	return setsockopt(sock, IPPROTO_IPV6, IPV6_TCLASS, (const char*)&dscp, sizeof(dscp));
+}
+
+// ipv6 only
+static inline int socket_gettclass(IN socket_t sock, OUT int* dscp)
+{
+	int r;
+	socklen_t len;
+	len = sizeof(int);
+	r = getsockopt(sock, IPPROTO_IPV6, IPV6_TCLASS, (char*)&dscp, &len);
+	if (0 == r)
+		*dscp >>= 2; // skip ECN (Explicit Congestion Notification)
+	return r;
+}
+#endif
+
+#if defined(OS_LINUX) || defined(OS_RTOS)
 // ipv4 only
 static inline int socket_settos(IN socket_t sock, IN int dscp)
 {
@@ -850,25 +939,6 @@ static inline int socket_gettos(IN socket_t sock, OUT int* dscp)
 	socklen_t len;
 	len = sizeof(int);
 	r = getsockopt(sock, IPPROTO_IP, IP_TOS, (char*)&dscp, &len);
-	if (0 == r)
-		*dscp >>= 2; // skip ECN (Explicit Congestion Notification)
-	return r;
-}
-
-// ipv6 only
-static inline int socket_settclass(IN socket_t sock, IN int dscp)
-{
-	dscp <<= 2; // 0 - ECN (Explicit Congestion Notification)
-	return setsockopt(sock, IPPROTO_IPV6, IPV6_TCLASS, (const char*)&dscp, sizeof(dscp));
-}
-
-// ipv6 only
-static inline int socket_gettclass(IN socket_t sock, OUT int* dscp)
-{
-	int r;
-	socklen_t len;
-	len = sizeof(int);
-	r = getsockopt(sock, IPPROTO_IPV6, IPV6_TCLASS, (char*)&dscp, &len);
 	if (0 == r)
 		*dscp >>= 2; // skip ECN (Explicit Congestion Notification)
 	return r;
@@ -943,7 +1013,7 @@ static inline int socket_setpktinfo(IN socket_t sock, IN int enable)
 #if defined(OS_WINDOWS)
 	BOOL v = enable ? TRUE : FALSE;
 	return setsockopt(sock, IPPROTO_IP, IP_PKTINFO, (const char*)&v, sizeof(v));
-#elif defined(OS_LINUX)
+#elif defined(OS_LINUX) || defined(OS_RTOS)
 	return setsockopt(sock, IPPROTO_IP, IP_PKTINFO, &enable, sizeof(enable));
 #else
 	return -1;
@@ -977,14 +1047,22 @@ static inline int socket_getttl(IN socket_t sock, OUT int* ttl)
 
 static inline int socket_setttl6(IN socket_t sock, IN int ttl)
 {
+#if defined(OS_RTOS)
+	return -1;
+#else
 	return setsockopt(sock, IPPROTO_IPV6, IPV6_UNICAST_HOPS, (const char*)&ttl, sizeof(ttl));
+#endif
 }
 
 static inline int socket_getttl6(IN socket_t sock, OUT int* ttl)
 {
+#if defined(OS_RTOS)
+	return -1;
+#else
 	socklen_t len;
 	len = sizeof(*ttl);
 	return getsockopt(sock, IPPROTO_IPV6, IPV6_UNICAST_HOPS, (char*)ttl, &len);
+#endif
 }
 
 static inline int socket_getdomain(IN socket_t sock, OUT int* domain)
@@ -1008,6 +1086,24 @@ static inline int socket_getdomain(IN socket_t sock, OUT int* domain)
     *domain = addr.ss_family;
 #endif
 	return r;
+}
+
+static inline int socket_getaddrinfo(const char *hostname, const char *service, const struct addrinfo *hints, struct addrinfo **result)
+{
+	int r;
+	r = getaddrinfo(hostname, service, hints, result);
+	if (0 != r)
+		return r;
+
+#if defined(OS_RTOS)
+	// fixed lwip return ai_addrlen = sizeof(struct sockaddr_storage)
+	assert(sizeof(struct sockaddr_storage) == (*result)->ai_addrlen);
+	if (AF_INET == (*result)->ai_family)
+		(*result)->ai_addrlen = sizeof(struct sockaddr_in);
+	else if (AF_INET6 == (*result)->ai_family)
+		(*result)->ai_addrlen = sizeof(struct sockaddr_in6);
+#endif
+	return 0;
 }
 
 // must be bound/connected
@@ -1044,7 +1140,7 @@ static inline int socket_isip(IN const char* ip)
 	struct addrinfo hints, *addr;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = AI_NUMERICHOST /*| AI_V4MAPPED | AI_ADDRCONFIG*/;
-	if (0 != getaddrinfo(ip, NULL, &hints, &addr))
+	if (0 != socket_getaddrinfo(ip, NULL, &hints, &addr))
 		return 0;
 	freeaddrinfo(&addr);
     return 1;
@@ -1058,7 +1154,7 @@ static inline int socket_ipv4(IN const char* ipv4_or_dns, OUT char ip[SOCKET_ADD
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
 //	hints.ai_flags = AI_ADDRCONFIG;
-	r = getaddrinfo(ipv4_or_dns, NULL, &hints, &addr);
+	r = socket_getaddrinfo(ipv4_or_dns, NULL, &hints, &addr);
 	if (0 != r)
 		return r;
 
@@ -1075,7 +1171,7 @@ static inline int socket_ipv6(IN const char* ipv6_or_dns, OUT char ip[SOCKET_ADD
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET6;
 	hints.ai_flags = /*AI_ADDRCONFIG |*/ AI_V4MAPPED; // map ipv4 address to ipv6
-	r = getaddrinfo(ipv6_or_dns, NULL, &hints, &addr);
+	r = socket_getaddrinfo(ipv6_or_dns, NULL, &hints, &addr);
 	if (0 != r)
 		return r;
 
@@ -1094,7 +1190,7 @@ static inline int socket_addr_from_ipv4(OUT struct sockaddr_in* addr4, IN const 
 	hints.ai_family = AF_INET;
 //	hints.ai_flags = AI_ADDRCONFIG;
 	snprintf(portstr, sizeof(portstr), "%hu", port);
-	r = getaddrinfo(ipv4_or_dns, portstr, &hints, &addr);
+	r = socket_getaddrinfo(ipv4_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return r;
 
@@ -1115,7 +1211,7 @@ static inline int socket_addr_from_ipv6(OUT struct sockaddr_in6* addr6, IN const
 	hints.ai_family = AF_INET6;
 	hints.ai_flags = AI_V4MAPPED /*| AI_ADDRCONFIG*/; // AI_ADDRCONFIG linux "ff00::" return -2
 	snprintf(portstr, sizeof(portstr), "%hu", port);
-	r = getaddrinfo(ipv6_or_dns, portstr, &hints, &addr);
+	r = socket_getaddrinfo(ipv6_or_dns, portstr, &hints, &addr);
 	if (0 != r)
 		return r;
 
@@ -1133,7 +1229,7 @@ static inline int socket_addr_from(OUT struct sockaddr_storage* ss, OUT socklen_
 	char portstr[16];
 	struct addrinfo *addr;
 	snprintf(portstr, sizeof(portstr), "%hu", port);
-	r = getaddrinfo(ipv4_or_ipv6_or_dns, portstr, NULL, &addr);
+	r = socket_getaddrinfo(ipv4_or_ipv6_or_dns, portstr, NULL, &addr);
 	if (0 != r)
 		return r;
 
@@ -1436,22 +1532,30 @@ static inline int socket_multicast_leave6(IN socket_t sock, IN const char* group
 
 static inline int socket_multicast_join_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
 {
+#if defined(OS_RTOS)
+	return -1;
+#else
 	struct ip_mreq_source imr;
 	memset(&imr, 0, sizeof(imr));
 	inet_pton(AF_INET, source, &imr.imr_sourceaddr);
 	inet_pton(AF_INET, group, &imr.imr_multiaddr);
 	inet_pton(AF_INET, local, &imr.imr_interface);
 	return setsockopt(sock, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, (char *) &imr, sizeof(imr));
+#endif
 }
 
 static inline int socket_multicast_leave_source(IN socket_t sock, IN const char* group, IN const char* source, IN const char* local)
 {
+#if defined(OS_RTOS)
+	return -1;
+#else
 	struct ip_mreq_source imr;
 	memset(&imr, 0, sizeof(imr));
 	inet_pton(AF_INET, source, &imr.imr_sourceaddr);
 	inet_pton(AF_INET, group, &imr.imr_multiaddr);
 	inet_pton(AF_INET, local, &imr.imr_interface);
 	return setsockopt(sock, IPPROTO_IP, IP_DROP_SOURCE_MEMBERSHIP, (char *)&imr, sizeof(imr));
+#endif
 }
 
 #if defined(_MSC_VER)

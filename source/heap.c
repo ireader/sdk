@@ -166,7 +166,11 @@ static void heap_percolate_down(struct heap_t* heap)
 #if defined(_DEBUG) || defined(DEBUG)
 #include <stdio.h>
 #include <time.h>
+#if defined(OS_RTOS)
+#define N 1000
+#else
 #define N 10000
+#endif
 static int heap_test_compare(void* param, const void* p1, const void* p2)
 {
 	(void)param;
@@ -200,6 +204,7 @@ void heap_test(void)
 	}
 	assert(heap_empty(heap));
 	heap_destroy(heap);
+	free(v);
 	printf("heap test ok\n");
 }
 #endif

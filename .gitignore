@@ -6,3 +6,9 @@ Debug
 Release
 .vs
 *.user
+*.d
+*.so
+*.a
+compile_commands.json
+.cache/
+.vscode/

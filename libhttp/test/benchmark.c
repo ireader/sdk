@@ -2,7 +2,6 @@
 #include "cstringext.h"
 #include "sys/sock.h"
 #include "sys/system.h"
-#include "sys/process.h"
 #include "aio-socket.h"
 #include "thread-pool.h"
 #include "http-server.h"

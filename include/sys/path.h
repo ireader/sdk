@@ -11,7 +11,13 @@
 #include <unistd.h>
 #include <limits.h>
 #include <errno.h>
+#ifndef OS_RTOS
 #include <sys/statvfs.h>
+#else
+#ifndef PATH_MAX
+#define PATH_MAX 256
+#endif
+#endif
 #endif
 
 #include <stdio.h>
@@ -198,6 +204,8 @@ static inline int64_t path_space(const char* path)
     ULARGE_INTEGER free;
     if (0 != GetDiskFreeSpaceExA(path, &free, NULL, NULL))
         return (int64_t)free.QuadPart;
+    return -1;
+#elif defined(OS_RTOS)
     return -1;
 #else
     struct statvfs st;

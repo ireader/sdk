@@ -1,6 +1,5 @@
 #include "cstringext.h"
 #include "sys/sock.h"
-#include "sys/process.h"
 #include <stdio.h>
 
 static socket_t socket_create_and_bind(const char* ip, int port, int backlog)

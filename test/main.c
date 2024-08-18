@@ -91,7 +91,9 @@ int main(int argc, char* argv[])
 #endif
 	onetime_test();
 	socketpair_test();
+#if !defined(OS_RTOS)
 	dir_test();
+#endif
 
 	bits_test();
 	stack_test();
@@ -119,10 +121,13 @@ int main(int argc, char* argv[])
     aio_socket_test3();
     aio_socket_test4();
 
+#if defined(OS_WINDOWS) || defined(OS_RTOS)
+	systimer_test();
+#endif
+
 #if defined(OS_WINDOWS)
 	unicode_test();
 	utf8codec_test();
-	systimer_test();
 
 	system("pause");
 #endif

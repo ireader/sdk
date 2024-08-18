@@ -268,7 +268,7 @@ static inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *ne
 // -march=i586 64-bits
 // compile with CFLAGS += -march=i586
 
-#if __GNUC__>=4 && __GNUC_MINOR__>=1
+#if __GNUC__>=4 && __GNUC_MINOR__>=1 && __ARM_ARCH != 6
 static inline int32_t atomic_increment32(volatile int32_t *value)
 {
 	assert((intptr_t)value % 4 == 0);
@@ -338,6 +338,87 @@ static inline int atomic_cas64(volatile int64_t *value, int64_t oldvalue, int64_
 //-------------------------------------ARM----------------------------------------
 #elif defined(__ARM__) || defined(__arm__)
 
+#if __ARM_ARCH == 6
+
+// ARM Cortex-M0/M0+/M1 support
+extern void __enable_irq(void);
+extern void __disable_irq(void);
+
+static inline int32_t atomic_increment32(volatile int32_t *value)
+{
+	// assert((intptr_t)value % 4 == 0);
+	int32_t temp;
+	__disable_irq();
+	temp = *value;
+	*value += 1;
+	__enable_irq();
+	return temp;
+}
+
+static inline int32_t atomic_decrement32(volatile int32_t *value)
+{
+	// assert((intptr_t)value % 4 == 0);
+	int32_t temp;
+	__disable_irq();
+	temp = *value;
+	*value -= 1;
+	__enable_irq();
+	return temp;
+}
+
+static inline int32_t atomic_add32(volatile int32_t *value, int32_t incr)
+{
+	// assert((intptr_t)value % 4 == 0);
+	int32_t temp;
+	__disable_irq();
+	temp = *value;
+	*value += incr;
+	__enable_irq();
+	return temp;
+}
+
+static inline int32_t atomic_load32(volatile int32_t *value)
+{
+	// assert((intptr_t)value % 4 == 0);
+	int32_t temp;
+	__disable_irq();
+	temp = *value;
+	__enable_irq();
+	return temp;
+}
+
+static inline int atomic_cas32(volatile int32_t *value, int32_t oldvalue, int32_t newvalue)
+{
+	// assert((intptr_t)value % 4 == 0);
+	int32_t temp;
+	__disable_irq();
+	if (*value == oldvalue) {
+		*value = newvalue;
+		temp = 1;
+	} else {
+		temp = 0;
+	}
+	__enable_irq();
+	return temp;
+}
+
+static inline int atomic_cas_ptr(void* volatile *value, void *oldvalue, void *newvalue)
+{
+	// assert(0 == (intptr_t)value % 4 && 0 == (intptr_t)oldvalue % 4 && 0 == (intptr_t)newvalue % 4);
+	int32_t temp;
+	__disable_irq();
+	if ((intptr_t)value == (intptr_t)oldvalue) {
+		*(intptr_t*)value = (intptr_t)newvalue;
+		temp = 1;
+	} else {
+		temp = 0;
+	}
+	__enable_irq();
+	return temp;
+}
+
+#else
+
 static inline int32_t atomic_add32(volatile int32_t *value, int32_t incr)
 {
 	assert((intptr_t)value % 4 == 0);
@@ -366,6 +447,7 @@ static inline int32_t atomic_decrement32(volatile int32_t *value)
 	assert((intptr_t)value % 4 == 0);
 	return atomic_add32(value, -1);
 }
+#endif
 
 //-------------------------------------INTEL----------------------------------------
 #else

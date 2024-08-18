@@ -13,7 +13,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <net/if.h>
-#if !defined(__ANDROID_API__) || __ANDROID_API__ >= 24
+#if !defined(OS_RTOS) && (!defined(__ANDROID_API__) || __ANDROID_API__ >= 24)
 #include <ifaddrs.h>
 #endif
 
@@ -23,6 +23,8 @@
 #include "route-linux.h"
 #elif defined(OS_LINUX)
 #include "route-netlink.h"
+#elif defined(OS_RTOS)
+#include "route-rtos.h"
 #endif
 
 #endif
@@ -166,6 +168,30 @@ int ip_local(char ip[40])
 
 	free(table);
 	return 0==ip[0] ? -1 : 0;
+}
+#elif defined(OS_RTOS)
+int ip_local(char ip[65])
+{
+	struct netif *netif;
+	NETIF_FOREACH(netif) {
+		if (netif->name[0] == 'l' && netif->name[1] == 'o') {
+			continue;
+		}
+#if LWIP_IPV6
+		for(int i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
+			if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i))) {
+				ip6addr_ntoa_r(netif_ip6_addr(netif, i), ip, 65);
+				return 0;
+			}
+		}
+		
+#endif
+		if (ip_addr_netmask_valid(netif_ip4_netmask(netif))) {
+			ip4addr_ntoa_r(netif_ip4_addr(netif), ip, 65);
+			return 0;
+		}
+	}
+	return -1;
 }
 #else
 
