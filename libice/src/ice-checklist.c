@@ -149,9 +149,9 @@ int ice_checklist_reset(struct ice_checklist_t* l, struct ice_stream_t* stream, 
 		stun_timer_stop(l->timer);
 	l->conclude = 0;
 	l->state = ICE_CHECKLIST_FROZEN;
-	darray_clear(&l->valids);
-	darray_clear(&l->trigger);
-	ice_candidate_components_clear(&l->components); // reset components
+	darray_free(&l->valids);
+	darray_free(&l->trigger);
+	ice_candidate_components_free(&l->components);
 
 	for (r = i = 0; i < ice_candidates_count(locals); i++)
 	{
@@ -515,6 +515,9 @@ static void ice_checklist_ontimer(void* param)
 	{
 		// timer next-tick
 		ice_checklist_addref(l);
+		if (l->timer)
+			stun_timer_stop(l->timer);
+
 		l->timer = stun_timer_start(ICE_TIMER_INTERVAL * ice_agent_active_checklist_count(l->ice), ice_checklist_ontimer, l);
 	}
 
@@ -589,6 +592,9 @@ int ice_checklist_start(struct ice_checklist_t* l, int first)
 	// start timer
 	assert(NULL == l->timer);
 	ice_checklist_addref(l);
+	if (l->timer)
+		stun_timer_stop(l->timer);
+
 	l->timer = stun_timer_start(ICE_TIMER_INTERVAL * ice_agent_active_checklist_count(l->ice), ice_checklist_ontimer, l);
 	return 0;
 }
