@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 
 static int http_client_request(struct http_client_t *http, int method, const char* uri, const struct http_header_t *headers, size_t n, const void* msg, size_t bytes, http_client_onresponse onreply, void* param);
 
@@ -236,6 +237,9 @@ static void http_client_onread_body(void* param, int code, const void* buf, int 
     http_client_t* http;
     http = (http_client_t*)param;
 
+    if (0 == code && 0 == len)
+        code = -ECONNRESET;
+
     if (0 == code)
     {
         n = len;
@@ -265,6 +269,9 @@ static void http_client_onread_header(void* param, int code, const void* buf, in
     size_t n;
     http_client_t* http;
     http = (http_client_t*)param;
+
+    if (0 == code && 0 == len)
+        code = -ECONNRESET;
 
     if (0 == code)
     {
