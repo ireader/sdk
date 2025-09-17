@@ -70,12 +70,21 @@ static int system_thread_stack_walk(HANDLE hProcess, HANDLE hThread, char* line,
         return -1;
 
     ZeroMemory(&frame, sizeof(frame));
+#if defined(_M_IX86)
+    frame.AddrPC.Offset = ctx.Eip;
+    frame.AddrPC.Mode = AddrModeFlat;
+    frame.AddrFrame.Offset = ctx.Ebp;
+    frame.AddrFrame.Mode = AddrModeFlat;
+    frame.AddrStack.Offset = ctx.Esp;
+    frame.AddrStack.Mode = AddrModeFlat;
+#else
     frame.AddrPC.Offset = ctx.Rip;
     frame.AddrPC.Mode = AddrModeFlat;
     frame.AddrFrame.Offset = ctx.Rbp;
     frame.AddrFrame.Mode = AddrModeFlat;
     frame.AddrStack.Offset = ctx.Rsp;
     frame.AddrStack.Mode = AddrModeFlat;
+#endif
 
     n = 0;
     while (n < size && StackWalk(IMAGE_FILE_MACHINE_AMD64, hProcess, hThread, &frame, &ctx, NULL, SymFunctionTableAccess, SymGetModuleBase, NULL))
