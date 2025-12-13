@@ -62,7 +62,10 @@ enum thread_priority
 #else
 #include <pthread.h>
 #include <sched.h>
+
+#if defined(OS_LINUX)
 #include <sys/prctl.h>
+#endif
 
 typedef pthread_t tid_t;
 
@@ -208,9 +211,11 @@ static inline int thread_create3(pthread_t* thread, const char *name, unsigned i
 	pthread_attr_setstacksize(&attr, stacksize);
 	r = pthread_create(thread, &attr, (linux_thread_routine)func, param);
 	pthread_attr_destroy(&attr);
+#if defined(OS_LINUX)
 	if (0 == r) {
 		return prctl(PR_SET_NAME, name);
 	}
+#endif
 	return r;
 #endif
 }

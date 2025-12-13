@@ -73,27 +73,23 @@ static inline int event_create(event_t* event)
 
 #else
 	int r;
-#if defined(OS_LINUX) && defined(CLOCK_MONOTONIC) && defined(__USE_XOPEN2K)
 	pthread_condattr_t attr;
-#endif
     pthread_mutexattr_t mutex;
 
 	pthread_mutexattr_init(&mutex);
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) && defined(__GLIBC__)
 	pthread_mutexattr_settype(&mutex, PTHREAD_MUTEX_RECURSIVE_NP);
 #else
 	pthread_mutexattr_settype(&mutex, PTHREAD_MUTEX_RECURSIVE);
 #endif
 	pthread_mutex_init(&event->mutex, &mutex);
 
-#if defined(OS_LINUX) && defined(CLOCK_MONOTONIC) && defined(__USE_XOPEN2K)
 	pthread_condattr_init(&attr);
+#if defined(OS_LINUX) && defined(CLOCK_MONOTONIC) && defined(__USE_XOPEN2K) && (!defined(__ANDROID__) || __ANDROID_API__ >= 21)
 	pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+#endif
 	r = pthread_cond_init(&event->event, &attr);
 	pthread_condattr_destroy(&attr);
-#else
-	r = pthread_cond_init(&event->event, NULL);
-#endif
 
 	event->count = 0;
 	return r;
@@ -178,7 +174,7 @@ static inline int event_timewait(event_t* event, int timeout)
 #if defined(OS_LINUX) && defined(CLOCK_REALTIME)
 	int r = 0;
 	struct timespec ts;
-#if defined(CLOCK_MONOTONIC) && defined(__USE_XOPEN2K)
+#if defined(CLOCK_MONOTONIC) && defined(__USE_XOPEN2K) && (!defined(__ANDROID__) || __ANDROID_API__ >= 21)
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 #else
 	clock_gettime(CLOCK_REALTIME, &ts);
