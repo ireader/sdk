@@ -207,6 +207,9 @@
     <ClCompile Include="source\port\win32-backtrace.c">
       <Filter>Source Files\port</Filter>
     </ClCompile>
+    <ClCompile Include="source\hashmap.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\aio-socket.h">
@@ -329,9 +332,6 @@
     <ClInclude Include="include\uuid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\xmlutil.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\sys\atomic.h">
       <Filter>Header Files\sys</Filter>
     </ClInclude>
@@ -448,6 +448,9 @@
     </ClInclude>
     <ClInclude Include="include\port\file-watcher.h">
       <Filter>Header Files\port</Filter>
+    </ClInclude>
+    <ClInclude Include="include\hashmap.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
