@@ -600,5 +600,7 @@ void* stun_timer_start(int ms, void(*ontimer)(void* param), void* param)
 
 int stun_timer_stop(void* timer)
 {
-	return aio_timeout_stop((struct aio_timeout_t*)timer);
+	int ret = aio_timeout_stop((struct aio_timeout_t*)timer);
+		free(timer);
+	return ret;
 }
