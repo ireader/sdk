@@ -63,20 +63,13 @@ static int ice_checklist_release(struct ice_checklist_t* l)
 
 int ice_checklist_destroy(struct ice_checklist_t** pl)
 {
-	int32_t ref;
 	struct ice_checklist_t* l;
 	if (!pl || !*pl)
 		return -1;
 	
 	l = *pl;
 	*pl = NULL;
-
-	if (l->timer && 0 == stun_timer_stop(l->timer))
-	{
-		ref = atomic_decrement32(&l->ref);
-		assert(ref > 0);
-	}
-
+	ice_checklist_cancel(l);
 	return ice_checklist_release(l);
 }
 
@@ -447,7 +440,13 @@ static void ice_checklist_ontimer(void* param)
 	
 	l = (struct ice_checklist_t*)param;
 	locker_lock(&l->locker);
-	assert(ICE_CHECKLIST_FROZEN != l->state);
+	l->timer = NULL;
+	if (ICE_CHECKLIST_FROZEN == l->state)
+	{
+		locker_unlock(&l->locker);
+		ice_checklist_release(l);
+		return;
+	}
 
 	waiting = NULL;
 	if(ice_candidate_pairs_count(&l->trigger) > 0)
@@ -516,6 +515,8 @@ static void ice_checklist_ontimer(void* param)
 		// timer next-tick
 		ice_checklist_addref(l);
 		l->timer = stun_timer_start(ICE_TIMER_INTERVAL * ice_agent_active_checklist_count(l->ice), ice_checklist_ontimer, l);
+		if (!l->timer)
+			ice_checklist_release(l);
 	}
 
 	locker_unlock(&l->locker);
@@ -590,13 +591,34 @@ int ice_checklist_start(struct ice_checklist_t* l, int first)
 	assert(NULL == l->timer);
 	ice_checklist_addref(l);
 	l->timer = stun_timer_start(ICE_TIMER_INTERVAL * ice_agent_active_checklist_count(l->ice), ice_checklist_ontimer, l);
+	if (!l->timer)
+	{
+		l->state = ICE_CHECKLIST_FROZEN;
+		ice_checklist_release(l);
+		return -1;
+	}
 	return 0;
 }
 
 int ice_checklist_cancel(struct ice_checklist_t* l)
 {
-	assert(0);
-	return -1;
+	int stopped;
+	if (!l)
+		return -1;
+
+	locker_lock(&l->locker);
+	stopped = l->timer && 0 == stun_timer_stop(l->timer);
+	if (stopped)
+	{
+		l->timer = NULL;
+		ice_checklist_release(l); // timer reference
+	}
+	l->conclude = 0;
+	l->state = ICE_CHECKLIST_FROZEN;
+	darray_clear(&l->valids);
+	darray_clear(&l->trigger);
+	locker_unlock(&l->locker);
+	return 0;
 }
 
 // rfc5245 7.1.3.2.3. Updating Pair States (45)

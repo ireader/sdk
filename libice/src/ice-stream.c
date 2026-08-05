@@ -112,9 +112,11 @@ int ice_stream_destroy(struct ice_stream_t** pp)
 
 	s = *pp;
 	*pp = NULL;
+	list_remove(&s->link);
 	ice_candidates_free(&s->locals);
 	ice_candidates_free(&s->remotes);
 	ice_checklist_destroy(&s->checklist);
+	free(s);
 	return 0;
 }
 
